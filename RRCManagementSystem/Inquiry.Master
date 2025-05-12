@@ -1,0 +1,461 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Inquiry.master.cs" Inherits="RRCManagementSystem.Inquiry" %>
+
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><asp:ContentPlaceHolder ID="PageTitle" runat="server" /></title>
+    
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+
+    <style>
+        /* General Styles */
+body {
+    font-family: Arial, sans-serif;
+}
+
+/* Header */
+.top-header {
+    font-size: 14px;
+}
+
+.contact-info i {
+    margin-right: 5px;
+}
+
+/* Navbar */
+.navbar {
+    padding: 15px 0;
+}
+
+.navbar-brand .logo {
+    height: 50px;
+}
+
+.navbar-nav .nav-link {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+    .navbar-nav .nav-link:hover {
+        color: #007bff;
+    }
+
+.navbar-nav .btn-success {
+    font-weight: bold;
+    padding: 8px 15px;
+    border-radius: 5px;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    font-size: 14px;
+}
+
+    .footer p {
+        margin-bottom: 5px;
+    }
+
+/* Fade-in animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Navbar & Header Slide-in Effect */
+@keyframes fadeSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Apply animations */
+body {
+    animation: fadeIn 0.8s ease-in-out;
+}
+
+header.top-header {
+    animation: fadeSlideDown 0.8s ease-in-out;
+}
+
+/* Navbar responsiveness */
+.navbar {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Navbar Brand Logo Responsiveness */
+.navbar-brand img {
+    max-height: 60px; /* Default size */
+    transition: max-height 0.3s ease-in-out;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+    .navbar-brand img {
+        max-height: 50px; /* Reduce size on tablets */
+    }
+
+    .navbar-nav {
+        text-align: center;
+    }
+
+    .navbar-toggler {
+        transition: transform 0.3s ease-in-out;
+    }
+
+        .navbar-toggler:hover {
+            transform: scale(1.1);
+        }
+}
+
+@media (max-width: 768px) {
+    .navbar-brand img {
+        max-height: 45px; /* Reduce size on mobile */
+    }
+
+    .container {
+        padding: 0 15px;
+    }
+
+    .footer p {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 576px) {
+    .top-header {
+        font-size: 14px;
+        padding: 8px 0;
+    }
+
+    .contact-info span {
+        display: block; /* Stack items */
+        margin-bottom: 5px;
+    }
+
+    .social-icons a {
+        font-size: 16px;
+    }
+}
+
+
+
+        /* Navbar initially hidden */
+       .scroll-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000; /* Ensures navbar is above other elements */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Adds slight shadow */
+}
+
+body {
+    padding-top: 70px; /* Prevents content from being hidden behind navbar */
+}
+        /* Show navbar when scrolling up */
+        .show-navbar {
+            top: 0;
+        }
+
+
+    </style>
+</head>
+<body>
+    <form id="form1" runat="server">
+
+        <!-- Header
+        <header class="top-header bg-primary text-white py-2">
+            <div class="container d-flex justify-content-between align-items-center">
+                <div class="contact-info">
+                    <span><i class="fas fa-phone"></i> +63 912 345 6789</span> |
+                    <span><i class="fas fa-envelope"></i> info@rrctermite.com</span>
+                </div>
+                <div class="social-icons">
+                    <a href="#" class="text-white me-3"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </header>
+             -->
+
+        <!-- Scroll Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white scroll-navbar" id="scrollNavbar">
+    <div class="container">
+        <!-- Logo / Brand -->
+        <a class="navbar-brand" href="Default.aspx">
+            <img src="\images\rrclogo.jpg" alt="RRC Termite" class="logo">
+        </a>
+
+        <!-- Navbar Toggler for mobile -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Navbar Links -->
+        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+            <ul class="navbar-nav align-items-center">
+                <!-- Other links can go here -->
+                
+                <!-- Login Button -->
+                <li class="nav-item">
+                    <a href="../Login.aspx" class="btn btn-primary ms-3">
+                        Login
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+
+        <!-- Main Content -->
+        <div class="container mt-4">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server"></asp:ContentPlaceHolder>
+        </div>
+
+
+
+
+
+
+        <!-- Floating Chatbot -->
+<div id="chatbotContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
+    <!-- Chat button -->
+    <button id="chatBtn" style="background-color: #007bff; color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; cursor: pointer;">
+        💬
+    </button>
+
+    <!-- Chat window -->
+    <div id="chatWindow" style="display: none; width: 300px; background: white; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-radius: 10px; overflow: hidden;">
+        <div style="background: #007bff; color: white; padding: 10px; font-weight: bold;">
+            RRC Assistant
+            <span style="float: right; cursor: pointer;" onclick="toggleChat()">✖</span>
+        </div>
+        <div id="chatMessages" style="height: 200px; overflow-y: auto; padding: 10px; font-size: 14px;"></div>
+        <div style="padding: 10px; border-top: 1px solid #ccc;">
+            <input id="chatInput" type="text" placeholder="Ask something..." style="width: 80%; padding: 5px;" onkeypress="if(event.key === 'Enter') { sendMessage(event); return false; }" />
+
+            <button type="button" onclick="sendMessage(event)" style="width: 18%; padding: 5px;">➤</button>
+
+        </div>
+    </div>
+</div>
+
+       <script>
+           const smartAnswers = [
+               {
+                   keywords: [
+                       "how can i book", "how to book", "make a booking", "set an appointment",
+                       "schedule service", "book a service", "how to avail", "avail service",
+                       "appointment", "book", "booking", "i want to book", "need to book"
+                   ],
+                   answer: "You can sign up and submit an inquiry using the form on this page. We'll contact you shortly!"
+               },
+               {
+                   keywords: [
+                       "what services", "what service", "services do you offer", "available services",
+                       "treatments", "types of service", "pest control services", "termite treatment",
+                       "general pest treatment", "what treatments", "what do you treat", "service list", "services"
+                   ],
+                   answer: "We offer Termite Control, General Pest Control, Soil Poisoning, Reticulation Systems, and many more varieties."
+               },
+               {
+                   keywords: ["contact", "how do i contact", "contact info", "email", "phone number", "call", "reach you", "get in touch", "how to contact"],
+                   answer: "You can send us an email at rrcpestcontrol28@gmail.com, or contact us at our Smart numbers at +63-947-721-7510 and +63-961-340-3036 and Globe numbers at +63-967-047-9074 and +63-967-047-9056. We're happy to assist you!"
+               },
+               {
+                   keywords: ["location", "address", "where are you located", "branch", "office", "area", "where to find you", "head office", "service area"],
+                   answer: "We are based in the Philippines and serve mainly in NCR but we can perform services in Batangas, Pangasinan."
+               },
+               {
+                   keywords: ["business hours", "schedule", "what time are you open", "office hours", "open", "opening time", "available hours", "operating hours", "when are you open"],
+                   answer: "We're available 24/7."
+               },
+               {
+                   keywords: ["free inspection", "site visit", "initial check", "check my house", "free check up", "assessment", "do you inspect for free", "inspection fee"],
+                   answer: "Yes! We offer FREE ocular site inspections within our serviceable areas. Book now and we'll visit your site for assessment."
+               },
+               {
+                   keywords: ["safe for pets", "safe for kids", "children", "pet friendly", "eco friendly", "toxic", "hazardous", "is it safe", "is your service safe"],
+                   answer: "Our treatments are pet- and child-safe! We use eco-friendly solutions approved by local authorities."
+               },
+               {
+                   keywords: ["signs of termites", "how to know", "termites", "evidence", "infestation", "check for termites", "do i have termites", "termite problem"],
+                   answer: "Signs include hollow wood, mud tubes, droppings, and discarded wings near wooden areas or windows."
+               },
+               {
+                   keywords: ["baiting system", "how baiting works", "termite bait", "station", "colony elimination", "bait station", "how to eliminate termites"],
+                   answer: "Baiting attracts termites to a poisoned station, which they carry back to the colony, eliminating the infestation."
+               },
+               {
+                   keywords: ["soil poisoning", "what is soil treatment", "termites from ground", "soil injection", "underground treatment", "treatment for soil"],
+                   answer: "Soil poisoning involves applying chemicals to the soil foundation to prevent termite entry from underground."
+               },
+               {
+                   keywords: ["reticulation", "reticulation system", "pipe treatment", "how reticulation works", "underfloor piping", "chemical pipe system"],
+                   answer: "A reticulation system is a series of pipes installed during construction that allows chemical re-application without drilling."
+               },
+               {
+                   keywords: ["general pest control", "common pests", "household pests", "cockroach", "mosquito", "rat", "mouse", "ant", "bed bug", "insects", "bugs", "pest control"],
+                   answer: "Our general pest control covers cockroaches, mosquitoes, ants, bed bugs, rats, spiders, and more."
+               },
+               {
+                   keywords: ["commercial pest control", "business", "office", "restaurant", "warehouse", "industrial", "shop", "commercial treatment"],
+                   answer: "Yes, we provide commercial pest control for offices, restaurants, food businesses, and industrial facilities."
+               },
+               {
+                   keywords: ["payment", "how to pay", "gcash", "bank", "mode of payment", "accept credit", "payment options", "how can i pay", "cash only"],
+                   answer: "We currently accept payments via cash only. No online transactions or cards are available at the moment. Bank transfers are possible if the payment is coordinated between the admin and the customer."
+               },
+               {
+                   keywords: ["how long does it take", "treatment time", "how long", "duration", "service duration", "time needed"],
+                   answer: "Most treatments take 3 to 4 hours depending on the severity and area. We'll let you know beforehand!"
+               },
+               {
+                   keywords: ["do i need to leave", "stay inside", "evacuate", "leave the house", "safe to stay", "can i stay during treatment"],
+                   answer: "In most cases, you donâ€™t have to leave. But weâ€™ll inform you if temporary evacuation is needed."
+               },
+               {
+                   keywords: ["how often", "frequency", "maintenance", "monthly", "quarterly", "when to repeat", "how many times"],
+                   answer: "For preventive care, we recommend pest control every 3 to 6 months. Frequency depends on your area and infestation level."
+               },
+               {
+                   keywords: ["smell", "odor", "does it stink", "chemical smell", "strong smell", "any smell"],
+                   answer: "Most of our treatments are odorless or have a very mild scent that disappears quickly."
+               },
+               {
+                   keywords: ["warranty", "guarantee", "after service", "follow up", "come back if not gone", "return visit"],
+                   answer: "Yes, most of our services come with a 30-day to 2-year warranty depending on which service. For more information regarding warranties, please coordinate with the technician and/or inspector assigned to your property."
+               },
+               {
+                   keywords: ["certified", "licensed", "legit", "registered", "qualified", "legal company"],
+                   answer: "We are a registered, certified pest control provider with trained and licensed technicians."
+               }
+           ];
+
+           function findSmartAnswer(userInput) {
+               const cleanInput = userInput.toLowerCase().replace(/[^\w\s]/gi, '');
+               for (const item of smartAnswers) {
+                   for (const keyword of item.keywords) {
+                       if (cleanInput.includes(keyword)) {
+                           return item.answer;
+                       }
+                   }
+               }
+               return "Sorry, I don't have an answer to that.";
+           }
+
+           function toggleChat() {
+               const chat = document.getElementById("chatWindow");
+               chat.style.display = (chat.style.display === "none" || chat.style.display === "") ? "block" : "none";
+           }
+
+           document.getElementById("chatBtn").addEventListener("click", toggleChat);
+
+           function sendMessage(event, text = null) {
+               if (event) event.preventDefault();
+
+               const input = document.getElementById("chatInput");
+               const message = text || input.value.trim();
+               if (message === "") return;
+
+               const chatMessages = document.getElementById("chatMessages");
+               chatMessages.innerHTML += `<div style="text-align: right; margin-bottom: 5px;"><strong>You:</strong> ${message}</div>`;
+
+               input.value = "";
+               const response = findSmartAnswer(message);
+
+               setTimeout(() => {
+                   chatMessages.innerHTML += `<div style="text-align: left; margin-bottom: 10px;"><strong>RRC Bot:</strong> ${response}</div>`;
+                   chatMessages.scrollTop = chatMessages.scrollHeight;
+               }, 500);
+           }
+
+           // Suggested question buttons
+           function renderSuggestedQuestions() {
+               const chatMessages = document.getElementById("chatMessages");
+               const suggestions = ["What services?", "How to book?", "Free inspection?", "Signs of termites?"];
+               let html = '<div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px;">';
+
+               for (const question of suggestions) {
+                   html += `<button onclick=\"sendMessage(null, '${question}')\" style=\"background-color:#007bff; color:white; border:none; padding:5px 10px; border-radius:5px; font-size:12px; cursor:pointer;\">${question}</button>`;
+               }
+
+               html += '</div>';
+               chatMessages.innerHTML += html;
+               chatMessages.scrollTop = chatMessages.scrollHeight;
+           }
+
+           // Render suggestions on load
+           window.addEventListener("DOMContentLoaded", renderSuggestedQuestions);
+
+
+
+       </script>
+
+
+
+        <!-- Footer -->
+        <footer class="footer bg-dark text-white py-4 mt-4">
+            <div class="container text-center">
+                <p>&copy; <%= DateTime.Now.Year %> RRC Termite & Pest Control. All rights reserved.</p>
+                <p>Follow us: 
+                    <a href="#" class="text-white mx-2"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="text-white mx-2"><i class="fab fa-instagram"></i></a>
+                </p>
+            </div>
+        </footer>
+
+
+
+
+    </form>
+
+    <!-- Bootstrap & FontAwesome -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/YOUR-FONT-AWESOME-KIT.js" crossorigin="anonymous"></script>
+
+
+
+   
+
+
+    <!-- JavaScript for Scroll Navbar -->
+    <script>
+        let lastScrollTop = 0;
+        window.addEventListener("scroll", function () {
+            let navbar = document.getElementById("scrollNavbar");
+            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+            if (scrollTop < lastScrollTop) {
+                // Scrolling up - Show navbar
+                navbar.classList.add("show-navbar");
+            } else {
+                // Scrolling down - Hide navbar
+                navbar.classList.remove("show-navbar");
+            }
+
+            lastScrollTop = scrollTop;
+        });
+    </script>
+
+</body>
+</html>

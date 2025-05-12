@@ -1,0 +1,389 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Client.master.cs" Inherits="RRCManagementSystem.Client" %>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+    <style>
+        /* GENERAL STYLING */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f6fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* NAVIGATION BAR */
+        .navbar {
+            background-color: #004085;
+        }
+        .navbar-brand {
+            color: #ffffff !important;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        .navbar-nav .nav-link {
+            color: #ffffff !important;
+            font-size: 15px;
+            padding: 8px 15px;
+        }
+        .navbar-nav .nav-link:hover {
+            color: #ffc107 !important;
+        }
+
+        /* DROPDOWN */
+        .dropdown-menu {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .dropdown-item {
+            font-size: 14px;
+            padding: 10px 20px;
+        }
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+            color: #004085;
+        }
+
+        /* NOTIFICATIONS */
+        .notification-card {
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 10px;
+            background-color: white;
+        }
+        .notification-item {
+            padding: 10px;
+            border-bottom: 1px solid #f1f1f1;
+            font-size: 14px;
+        }
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+        .notification-bell {
+            position: relative;
+            margin-left: 15px;
+            cursor: pointer;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            font-size: 10px;
+            padding: 3px 6px;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            padding: 30px;
+            min-height: calc(100vh - 120px);
+        }
+
+        /* FOOTER */
+        .footer {
+            background-color: #004085;
+            color: #ffffff;
+            text-align: center;
+            padding: 15px;
+            width: 100%;
+        }
+
+        /* CHAT BUTTON */
+        .chat-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #0078FF;
+            color: #ffffff;
+            font-size: 24px;
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            line-height: 60px;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            z-index: 9999;
+        }
+        .chat-btn:hover {
+            background-color: #0056b3;
+            text-decoration: none;
+            color: #ffffff;
+            transform: scale(1.1);
+        }
+
+        /* TOAST POPUP */
+        .toast-message {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px;
+            position: fixed;
+            z-index: 10000;
+            right: 30px;
+            bottom: 30px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.5s, bottom 0.5s;
+        }
+        .toast-message.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 60px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .navbar-nav {
+                text-align: center;
+            }
+        }
+
+        /* === RESPONSIVE MEDIA QUERIES === */
+
+@media (max-width: 768px) {
+    .navbar-nav {
+        text-align: center;
+    }
+
+    .navbar-brand {
+        font-size: 16px;
+    }
+
+    .navbar-nav .nav-link {
+        font-size: 14px;
+        padding: 6px 10px;
+    }
+
+    .dropdown-menu {
+        min-width: 100%;
+    }
+
+    .main-content {
+        padding: 20px;
+    }
+
+    .chat-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+        bottom: 20px;
+        right: 20px;
+        line-height: 50px;
+    }
+
+    .footer {
+        font-size: 13px;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand {
+        font-size: 14px;
+    }
+
+    .navbar-nav .nav-link {
+        font-size: 13px;
+    }
+
+    .chat-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+        bottom: 15px;
+        right: 15px;
+        line-height: 45px;
+    }
+
+    .footer {
+        font-size: 12px;
+        padding: 10px;
+    }
+
+    .dropdown-item {
+        padding: 8px 15px;
+        font-size: 13px;
+    }
+
+    .notification-card {
+        width: 100%;
+        max-height: 300px;
+    }
+}
+
+    </style>
+
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+</head>
+
+<body>
+    <form id="form1" runat="server">
+        <!-- NAVIGATION -->
+        <nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="Home.aspx">
+            <i class="fas fa-cogs"></i> RRC Client
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                <!-- Home Link -->
+                <li class="nav-item">
+                    <a class="nav-link" href="Home.aspx"><i class="fas fa-home"></i> Home</a>
+                </li>
+
+                <!-- 🔔 Notification Bell (now BESIDE Home) -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link notification-bell" href="#" role="button" data-bs-toggle="dropdown" onclick="markNotificationsAsRead();">
+                        <i class="fas fa-bell"></i>
+                        <span id="notifBadge" class="notification-badge">0</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width: 300px;">
+                        <div id="notifList" class="notification-card">
+                            <!-- Notifications will be injected dynamically here -->
+                        </div>
+                        <div class="text-center mt-2">
+                           <!--  <a href="MyBookings.aspx" class="btn btn-sm btn-primary">View All</a> -->
+                        </div>
+                    </ul>
+                </li>
+
+                <!-- 👤 Profile Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user-circle me-1"></i>
+                        <asp:Label ID="lblClientName" runat="server" Text="My Profile" CssClass="d-inline"></asp:Label>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="Profile.aspx"><i class="fas fa-user"></i> My Profile</a></li>
+                        <li><a class="dropdown-item" href="../Logout.aspx"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+
+        <!-- MAIN -->
+        <div class="container-fluid main-content">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="footer">
+            &copy; <%= DateTime.Now.Year %> RRC Management System. All Rights Reserved.
+        </footer>
+
+        <!-- Chat Button -->
+        <a href="ChatWithAdmin.aspx" class="chat-btn" title="Chat with Admin">
+            <i class="fab fa-facebook-messenger"></i>
+        </a>
+    </form>
+
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Notifications Script -->
+    <script>
+        let lastNotifCount = 0;
+
+        function refreshNotifications() {
+            fetch('GetNotifications.aspx', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.text())
+                .then(data => {
+                    const [notifCount, notifHtml] = data.split('|||');
+                    const notifList = document.getElementById('notifList');
+                    const notifBadge = document.getElementById('notifBadge');
+
+                    notifList.innerHTML = notifHtml;
+                    lastNotifCount = parseInt(notifCount);
+
+                    if (lastNotifCount > 0) {
+                        notifBadge.style.display = "inline-block"; // Show badge if there are notifications
+                        notifBadge.innerText = lastNotifCount;
+                    } else {
+                        notifBadge.style.display = "none"; // Hide badge if 0
+                    }
+
+                    if (parseInt(notifCount) > parseInt(lastNotifCount)) {
+                        showToast('🔔 You have a new notification!');
+
+                        // 🔥 Add yellow flash
+                        notifList.style.backgroundColor = '#fff3cd'; // Yellow
+                        setTimeout(() => {
+                            notifList.style.backgroundColor = 'white'; // Back to normal
+                        }, 1500);
+                    }
+                })
+                .catch(error => console.error('Error refreshing notifications:', error));
+        }
+
+
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast-message';
+            toast.innerHTML = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                document.body.removeChild(toast);
+            }, 4000);
+        }
+
+        setInterval(refreshNotifications, 30000); // Every 30 seconds
+        window.onload = refreshNotifications;
+
+        function markNotificationsAsRead() {
+            fetch('GetNotifications.aspx?action=markread', {
+                method: 'POST'
+            })
+                .then(response => {
+                    if (response.ok) {
+                        const notifBadge = document.getElementById('notifBadge');
+                        notifBadge.style.display = "none"; // ✅ Hide badge after click
+                    }
+                })
+                .catch(error => console.error('Error marking notifications:', error));
+        }
+
+
+
+
+
+    </script>
+
+</body>
+</html>

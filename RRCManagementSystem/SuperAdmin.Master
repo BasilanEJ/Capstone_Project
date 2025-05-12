@@ -1,0 +1,220 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="SuperAdmin.master.cs" Inherits="RRCManagementSystem.SuperAdmin" %>
+
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <title>SuperAdmin Panel</title>
+
+    <!-- FontAwesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+
+    <style type="text/css">
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 60px;
+            width: 100%;
+            background-color: #1f2937;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1000;
+        }
+
+        .header h2 {
+            margin: 0;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 280px;
+            height: calc(100vh - 60px);
+            background-color: #111827;
+            color: white;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar ul li {
+            border-bottom: 1px solid #1f2937;
+        }
+
+        .sidebar ul li a {
+            display: block;
+            padding: 15px 20px;
+            color: white;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar ul li a:hover {
+            background-color: #374151;
+        }
+
+        .sidebar ul li.has-dropdown > a {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar ul li ul.accordion {
+            display: none;
+            background-color: #1f2937;
+        }
+
+        .sidebar ul li ul.accordion li a {
+            padding-left: 40px;
+            font-size: 14px;
+        }
+
+        .sidebar ul li.active ul.accordion {
+            display: block;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            margin-top: 60px;
+            padding: 30px;
+            background-color: #f3f4f6;
+            min-height: calc(100vh - 60px);
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 280px;
+            width: calc(100% - 280px);
+            background-color: #1f2937;
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .logout-button {
+            display: block;
+            margin: 20px;
+            text-align: center;
+            background-color: #ef4444;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+
+        .logout-button:hover {
+            background-color: #dc2626;
+        }
+    </style>
+
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", function () {
+            var dropdowns = document.querySelectorAll(".has-dropdown");
+            dropdowns.forEach(function (item) {
+                item.addEventListener("click", function () {
+                    this.classList.toggle("active");
+                });
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <form id="form1" runat="server">
+        <!-- Header -->
+        <div class="header">
+            <h2>SystemAdmin Panel</h2>
+        </div>
+
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <div>
+                <ul>
+                    <!-- Dashboard -->
+                    <li>
+                        <a href="SuperAdminDashboard.aspx"><i class="fas fa-home"></i> Dashboard</a>
+                    </li>
+
+                    <!-- Manage Admins -->
+                    <li class="has-dropdown">
+                        <a href="#"><i class="fas fa-user-shield"></i> Manage Admins <i class="fas fa-chevron-down arrow"></i></a>
+                        <ul class="accordion">
+                            <li><a href="ViewAdmin.aspx"><i class="fas fa-list"></i> View Admins</a></li>
+                            <li><a href="AddAdmin.aspx"><i class="fas fa-plus"></i> Add Admin</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Manage Roles -->
+                    <li class="has-dropdown">
+                        <a href="#"><i class="fas fa-user-tag"></i> Manage Roles <i class="fas fa-chevron-down arrow"></i></a>
+                        <ul class="accordion">
+                            <li><a href="ViewRole.aspx"><i class="fas fa-list"></i> View Roles</a></li>
+                            <li><a href="AddRole.aspx"><i class="fas fa-plus"></i> Add Role</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Audit Logs -->
+                    <li>
+                        <a href="AuditLogs.aspx"><i class="fas fa-file-alt"></i> Audit Logs</a>
+                    </li>
+
+                 <!-- System Settings -->
+                    <li class="has-dropdown">
+                        <a href="#"><i class="fas fa-cogs"></i> System Settings <i class="fas fa-chevron-down arrow"></i></a>
+                        <ul class="accordion">
+                           <!-- <li><a href="SystemSettings.aspx"><i class="fas fa-sliders-h"></i> Settings</a></li> -->
+                            <li><a href="SystemChanges.aspx"><i class="fas fa-tools"></i> System Changes</a></li> <!-- ✅ New menu -->
+                        </ul>
+                    </li>
+
+
+                                        <!-- Reports -->
+                    <li>
+                        <a href="Reports.aspx"><i class="fas fa-chart-bar"></i> Reports</a>
+                    </li>
+
+                    <!-- My Profile -->
+                    <li>
+                        <a href="SuperAdminProfile.aspx"><i class="fas fa-user-cog"></i> My Profile</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Logout button at the bottom -->
+            <asp:LinkButton ID="btnLogout" runat="server" CssClass="logout-button" OnClick="btnLogout_Click">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </asp:LinkButton>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server"></asp:ContentPlaceHolder>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            &copy; 2025 RRC Management System - SuperAdmin
+        </div>
+    </form>
+</body>
+</html>
