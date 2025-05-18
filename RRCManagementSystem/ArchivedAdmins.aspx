@@ -1,4 +1,4 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="ViewAdmin.aspx.cs" Inherits="RRCManagementSystem.ViewAdmin" %>
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="ArchivedAdmins.aspx.cs" Inherits="RRCManagementSystem.ArchivedAdmins" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
     <style>
@@ -68,6 +68,10 @@
             background-color: #dc3545;
         }
 
+        .btn-restore {
+            background-color: #28a745;
+        }
+
         .btn-action:hover {
             opacity: 0.9;
         }
@@ -80,7 +84,7 @@
     </style>
 
     <div class="table-container">
-        <h2>User Accounts</h2>
+        <h2>Archived Admin Accounts</h2>
 
         <div class="search-bar">
             <asp:TextBox ID="txtSearch" runat="server" CssClass="search-input" placeholder="Search by name or email..." />
@@ -89,10 +93,10 @@
 
         <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" />
 
-        <asp:GridView ID="gvAdmins" runat="server" CssClass="grid"
+        <asp:GridView ID="gvArchivedAdmins" runat="server" CssClass="grid"
             AutoGenerateColumns="False"
-            EmptyDataText="No Admins found."
-            OnRowCommand="gvAdmins_RowCommand"
+            EmptyDataText="No archived admins found."
+            OnRowCommand="gvArchivedAdmins_RowCommand"
             DataKeyNames="UserID">
             <Columns>
                 <asp:BoundField DataField="UserID" HeaderText="ID" />
@@ -101,21 +105,23 @@
                 <asp:BoundField DataField="Role" HeaderText="Role" />
                 <asp:TemplateField HeaderText="Actions">
                     <ItemTemplate>
-                        <asp:LinkButton ID="btnEdit" runat="server"
-                            Text="Edit"
-                            CommandName="EditAdmin"
+                        <asp:LinkButton ID="btnRestore" runat="server"
+                            Text="Restore"
+                            CommandName="RestoreAdmin"
                             CommandArgument='<%# Eval("UserID") %>'
-                            CssClass="btn-action" />
+                            CssClass="btn-action btn-restore"
+                            OnClientClick="return confirm('Restore this account?');" />
 
                         <asp:LinkButton ID="btnDelete" runat="server"
-                            Text="Archive"
-                            CommandName="ArchiveAdmin"
+                            Text="Delete"
+                            CommandName="DeleteAdmin"
                             CommandArgument='<%# Eval("UserID") %>'
                             CssClass="btn-action btn-delete"
-                            OnClientClick="return confirm('Are you sure you want to archive this admin?');" />
+                            OnClientClick="return confirm('This will permanently delete the account. Continue?');" />
                     </ItemTemplate>
                 </asp:TemplateField>
             </Columns>
         </asp:GridView>
     </div>
 </asp:Content>
+

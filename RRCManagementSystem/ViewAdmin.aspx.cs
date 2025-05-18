@@ -22,21 +22,16 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-        SELECT 
-            u.UserID, 
-            u.Name, 
-            u.Email, 
-            u.Role, 
-            u.CreatedAt,
-            p.ModuleName,
-            ISNULL(p.CanView, 0) AS CanView,
-            ISNULL(p.CanAdd, 0) AS CanAdd,
-            ISNULL(p.CanEdit, 0) AS CanEdit,
-            ISNULL(p.CanDelete, 0) AS CanDelete
-        FROM Users u
-        LEFT JOIN AdminPermissions p ON u.UserID = p.UserID
-        WHERE u.Role = 'Admin' AND u.Status != 'Archived'
-        ORDER BY u.UserID, p.ModuleName";
+                SELECT 
+                    u.UserID, 
+                    u.Name, 
+                    u.Email, 
+                    u.Role, 
+                    MIN(u.CreatedAt) AS CreatedAt
+                FROM Users u
+                WHERE u.Role = 'Admin' AND u.Status != 'Archived'
+                GROUP BY u.UserID, u.Name, u.Email, u.Role
+                ORDER BY u.UserID";
 
                 SqlDataAdapter da = new SqlDataAdapter(query, conn);
                 DataTable dt = new DataTable();
@@ -61,18 +56,17 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-        SELECT 
-            u.UserID, u.Name, u.Email, u.Role, u.CreatedAt,
-            p.ModuleName,
-            ISNULL(p.CanView, 0) AS CanView,
-            ISNULL(p.CanAdd, 0) AS CanAdd,
-            ISNULL(p.CanEdit, 0) AS CanEdit,
-            ISNULL(p.CanDelete, 0) AS CanDelete
-        FROM Users u
-        LEFT JOIN AdminPermissions p ON u.UserID = p.UserID
-        WHERE u.Role = 'Admin' AND u.Status != 'Archived'
-          AND (u.Name LIKE @Keyword OR u.Email LIKE @Keyword)
-        ORDER BY u.UserID, p.ModuleName";
+                SELECT 
+                    u.UserID, 
+                    u.Name, 
+                    u.Email, 
+                    u.Role, 
+                    MIN(u.CreatedAt) AS CreatedAt
+                FROM Users u
+                WHERE u.Role = 'Admin' AND u.Status != 'Archived'
+                    AND (u.Name LIKE @Keyword OR u.Email LIKE @Keyword)
+                GROUP BY u.UserID, u.Name, u.Email, u.Role
+                ORDER BY u.UserID";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
@@ -86,7 +80,6 @@ namespace RRCManagementSystem
                 }
             }
         }
-
 
         protected void gvAdmins_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
         {
@@ -103,71 +96,38 @@ namespace RRCManagementSystem
             }
         }
 
-
-
         private void ArchiveAdmin(int userID)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                conn.Open();
+                string query = @"
+            UPDATE Users
+            SET Status = 'Archived'
+            WHERE UserID = @UserID AND Role = 'Admin'";
 
-                SqlTransaction transaction = conn.BeginTransaction();
-
-                try
+                using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    // 1. Insert user data into UserArchive table
-                    string insertArchiveQuery = @"
-                INSERT INTO UserArchive (UserID, Name, Email, Role, Status, ArchivedBy, ArchivedAt, Remarks)
-                SELECT 
-                    UserID, 
-                    Name, 
-                    Email, 
-                    Role, 
-                    Status,
-                    @ArchivedBy,
-                    GETDATE(),
-                    @Remarks
-                FROM Users
-                WHERE UserID = @UserID";
+                    cmd.Parameters.AddWithValue("@UserID", userID);
 
-                    using (SqlCommand cmdArchive = new SqlCommand(insertArchiveQuery, conn, transaction))
+                    try
                     {
-                        cmdArchive.Parameters.AddWithValue("@UserID", userID);
-                        cmdArchive.Parameters.AddWithValue("@ArchivedBy", /* your SuperAdmin ID or session value here */ 1); // Example: SuperAdminID = 1
-                        cmdArchive.Parameters.AddWithValue("@Remarks", "Archived by SuperAdmin");
+                        conn.Open();
+                        int rows = cmd.ExecuteNonQuery();
 
-                        cmdArchive.ExecuteNonQuery();
-                    }
-
-                    // 2. Update the original user record's status to 'Archived'
-                    string updateUserQuery = @"
-                UPDATE Users
-                SET Status = 'Archived'
-                WHERE UserID = @UserID AND Role = 'Admin'";
-
-                    using (SqlCommand cmdUpdate = new SqlCommand(updateUserQuery, conn, transaction))
-                    {
-                        cmdUpdate.Parameters.AddWithValue("@UserID", userID);
-                        int rowsAffected = cmdUpdate.ExecuteNonQuery();
-
-                        if (rowsAffected > 0)
+                        if (rows > 0)
                         {
                             lblMessage.Text = "✅ Admin archived successfully.";
-                            transaction.Commit(); // ✅ Commit transaction
+                            LoadAdmins(); // refresh GridView
                         }
                         else
                         {
-                            lblMessage.Text = "⚠ Admin not found or already archived.";
-                            transaction.Rollback(); // ⚠ Rollback if no rows affected
+                            lblMessage.Text = "⚠ No admin found to archive.";
                         }
                     }
-
-                    LoadAdmins(); // Refresh the grid
-                }
-                catch (Exception ex)
-                {
-                    transaction.Rollback(); // Rollback on error
-                    lblMessage.Text = "⚠ Error archiving admin: " + ex.Message;
+                    catch (Exception ex)
+                    {
+                        lblMessage.Text = "⚠ Error archiving admin: " + ex.Message;
+                    }
                 }
             }
         }

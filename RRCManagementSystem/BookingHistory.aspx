@@ -4,42 +4,102 @@
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
     <style>
-        .filter-form {
-            margin-bottom: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-        }
+    body {
+        font-family: 'Segoe UI', sans-serif;
+    }
 
-        .filter-form label {
-            font-weight: bold;
-        }
+    h2 {
+        text-align: center;
+        color: #1f2937;
+        margin-top: 30px;
+        font-weight: 600;
+    }
 
-        .grid-container {
-            margin-top: 20px;
-        }
+    .filter-form {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        background-color: #f1f5f9;
+        padding: 20px;
+        margin: 20px auto;
+        width: 95%;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
 
-        .btn-filter {
-            background-color: #004085;
-            color: #fff;
-            padding: 8px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+    .filter-form label {
+        font-weight: 500;
+        color: #374151;
+        margin-right: 5px;
+    }
 
-        .btn-filter:hover {
-            background-color: #002f6c;
-        }
+    .form-control {
+        padding: 6px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        min-width: 160px;
+        font-size: 14px;
+    }
 
-        .message {
-            margin-top: 10px;
-            font-weight: bold;
-            text-align: center;
-        }
-    </style>
+    .btn-filter {
+        padding: 8px 16px;
+        background-color: #2563eb;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn-filter:hover {
+        background-color: #1d4ed8;
+    }
+
+    .grid-container {
+        width: 95%;
+        margin: 0 auto 40px auto;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        overflow-x: auto;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th {
+        background-color: #1e3a8a;
+        color: white;
+        padding: 12px;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .table td {
+        padding: 10px;
+        border: 1px solid #e5e7eb;
+        text-align: center;
+        font-size: 14px;
+        color: #374151;
+    }
+
+    .table tr:nth-child(even) {
+        background-color: #f9fafb;
+    }
+
+    .message {
+        display: block;
+        text-align: center;
+        margin-top: 15px;
+        color: #dc2626;
+        font-weight: 500;
+    }
+</style>
+
 
     <h2>Booking History</h2>
 

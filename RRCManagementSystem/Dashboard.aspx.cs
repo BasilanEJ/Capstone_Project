@@ -1,5 +1,4 @@
-﻿using RRCManagementSystem;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -15,14 +14,21 @@ namespace RRCManagementSystem
     public partial class Dashboard : System.Web.UI.Page
     {
         protected string salesDataJson = "{}";
-
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // ✅ Allow all roles EXCEPT SuperAdmin and Inspector
+            string role = Session["Role"]?.ToString();
+            if (Session["UserID"] == null || role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
-                lblWelcome.Text = "Welcome back, " + (Session["AdminName"]?.ToString() ?? "Admin") + "!";
+                lblWelcome.Text = "Welcome back, " + (Session["Name"]?.ToString() ?? "User") + "!";
                 LoadTotalCounts();
                 LoadBlockchainLog();
                 LoadSalesChart("monthly");
@@ -31,13 +37,11 @@ namespace RRCManagementSystem
             if (Request.QueryString["type"] != null)
             {
                 string type = Request.QueryString["type"];
-
                 if (type == "custom")
                 {
                     string from = Request.QueryString["from"];
                     string to = Request.QueryString["to"];
                     string chartType = Request.QueryString["chart"];
-
                     LoadCustomSalesChart(from, to, chartType);
                 }
                 else
@@ -50,12 +54,11 @@ namespace RRCManagementSystem
                 Response.Write(salesDataJson);
                 Response.End();
             }
-
         }
 
         private void LoadTotalCounts()
         {
-            using (SqlConnection conn = DatabaseHelper.GetConnection())
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
 
@@ -69,38 +72,33 @@ namespace RRCManagementSystem
                     lblTotalWorkers.Text = cmd.ExecuteScalar().ToString();
                 }
 
-                // 🔵 Total Sales Today
                 using (SqlCommand cmd = new SqlCommand(@"
-            SELECT ISNULL(SUM(Amount), 0) 
-            FROM Transactions 
-            WHERE CAST(TransactionDate AS DATE) = CAST(GETDATE() AS DATE)", conn))
+                    SELECT ISNULL(SUM(Amount), 0) 
+                    FROM Transactions 
+                    WHERE CAST(TransactionDate AS DATE) = CAST(GETDATE() AS DATE)", conn))
                 {
                     lblTodaySales.Text = "₱" + Convert.ToDecimal(cmd.ExecuteScalar()).ToString("N2");
                 }
 
-                // 🔵 Total Sales This Month
                 using (SqlCommand cmd = new SqlCommand(@"
-            SELECT ISNULL(SUM(Amount), 0) 
-            FROM Transactions 
-            WHERE MONTH(TransactionDate) = MONTH(GETDATE()) 
-              AND YEAR(TransactionDate) = YEAR(GETDATE())", conn))
+                    SELECT ISNULL(SUM(Amount), 0) 
+                    FROM Transactions 
+                    WHERE MONTH(TransactionDate) = MONTH(GETDATE()) 
+                      AND YEAR(TransactionDate) = YEAR(GETDATE())", conn))
                 {
                     lblMonthSales.Text = "₱" + Convert.ToDecimal(cmd.ExecuteScalar()).ToString("N2");
                 }
             }
         }
 
-
         private void LoadBlockchainLog()
         {
-            using (SqlConnection conn = DatabaseHelper.GetConnection())
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-
                 string query = "SELECT LogID, TransactionID, SaleHash, Timestamp FROM BlockchainSalesLog";
                 List<SqlParameter> parameters = new List<SqlParameter>();
 
-                // If filtering by date
                 if (!string.IsNullOrEmpty(txtFromDate.Text) && !string.IsNullOrEmpty(txtToDate.Text))
                 {
                     query += " WHERE CAST(Timestamp AS DATE) BETWEEN @FromDate AND @ToDate";
@@ -124,12 +122,13 @@ namespace RRCManagementSystem
                 }
             }
         }
+
         private void LoadSalesChart(string type)
         {
             List<string> labels = new List<string>();
             List<decimal> data = new List<decimal>();
 
-            using (SqlConnection conn = DatabaseHelper.GetConnection())
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
                 string query = "";
@@ -165,30 +164,21 @@ namespace RRCManagementSystem
                     }
                 }
 
-                // 🔵 Now handle missing weeks/months automatically
                 if (salesDict.Count > 0)
                 {
-                    if (type == "daily" || type == "monthly" || type == "yearly")
+                    if (type == "weekly")
                     {
-                        // Daily / Monthly / Yearly: just fill missing dates
-                        foreach (var key in salesDict.Keys)
-                            labels.Add(key);
-                    }
-                    else if (type == "weekly")
-                    {
-                        // Weekly: Sort properly by year+week
-                        var sortedWeeks = new SortedSet<string>(salesDict.Keys, StringComparer.Ordinal);
-
-                        foreach (var week in sortedWeeks)
+                        foreach (var week in new SortedSet<string>(salesDict.Keys, StringComparer.Ordinal))
                             labels.Add(week);
+                    }
+                    else
+                    {
+                        labels.AddRange(salesDict.Keys);
                     }
 
                     foreach (var label in labels)
                     {
-                        if (salesDict.ContainsKey(label))
-                            data.Add(salesDict[label]);
-                        else
-                            data.Add(0); // 🔵 Missing week/month/year = 0 sales
+                        data.Add(salesDict.ContainsKey(label) ? salesDict[label] : 0);
                     }
                 }
 
@@ -203,16 +193,16 @@ namespace RRCManagementSystem
             List<string> labels = new List<string>();
             List<decimal> data = new List<decimal>();
 
-            using (SqlConnection conn = DatabaseHelper.GetConnection())
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
                 string query = @"
-            SELECT FORMAT(TransactionDate, 'yyyy-MM-dd') AS Period, 
-                   SUM(Amount) AS Total
-            FROM Transactions
-            WHERE CAST(TransactionDate AS DATE) BETWEEN @FromDate AND @ToDate
-            GROUP BY FORMAT(TransactionDate, 'yyyy-MM-dd')
-            ORDER BY Period";
+                    SELECT FORMAT(TransactionDate, 'yyyy-MM-dd') AS Period, 
+                           SUM(Amount) AS Total
+                    FROM Transactions
+                    WHERE CAST(TransactionDate AS DATE) BETWEEN @FromDate AND @ToDate
+                    GROUP BY FORMAT(TransactionDate, 'yyyy-MM-dd')
+                    ORDER BY Period";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
@@ -230,18 +220,10 @@ namespace RRCManagementSystem
                 }
             }
 
-            var salesData = new
-            {
-                labels = labels,
-                data = data,
-                chartType = chartType
-            };
-
+            var salesData = new { labels = labels, data = data, chartType = chartType };
             JavaScriptSerializer js = new JavaScriptSerializer();
             salesDataJson = js.Serialize(salesData);
         }
-
-
 
         protected void btnFilterBlockchain_Click(object sender, EventArgs e)
         {
@@ -253,7 +235,7 @@ namespace RRCManagementSystem
             bool allValid = true;
             int tamperedCount = 0;
 
-            using (SqlConnection conn = DatabaseHelper.GetConnection())
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
                 string query = "SELECT SaleHash, SaleDataJson FROM BlockchainSalesLog";
@@ -287,8 +269,7 @@ namespace RRCManagementSystem
                 lblVerificationResult.Text = $"❌ Warning! {tamperedCount} blockchain record(s) were tampered!";
             }
 
-            // 🔥 Add blockchain verification to Audit Logs
-            AddAuditLog(Convert.ToInt32(Session["AdminID"]), "Performed blockchain verification.");
+            AddAuditLog(Convert.ToInt32(Session["UserID"]), "Performed blockchain verification.");
         }
 
         protected void rptBlockchainLog_ItemCommand(object source, RepeaterCommandEventArgs e)
@@ -297,7 +278,7 @@ namespace RRCManagementSystem
             {
                 string transactionId = e.CommandArgument.ToString();
 
-                using (SqlConnection conn = DatabaseHelper.GetConnection())
+                using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
                     string query = "SELECT SaleDataJson FROM BlockchainSalesLog WHERE TransactionID = @TransactionID";
@@ -335,11 +316,11 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
+                string query = "INSERT INTO AuditLogs (UserID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@UserID", (object)userID ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Action", action);
 
                     try
@@ -349,7 +330,7 @@ namespace RRCManagementSystem
                     }
                     catch
                     {
-                        // Optional: log or ignore
+                        // Ignore logging error
                     }
                 }
             }

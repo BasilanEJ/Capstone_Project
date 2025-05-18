@@ -126,6 +126,8 @@
     <Content Include="AllRescheduleBooking.aspx" />
     <Content Include="ApproveRejectBookings.aspx" />
     <Content Include="ApproveRescheduleRequests.aspx" />
+    <Content Include="ArchivedAdmins.aspx" />
+    <Content Include="ArchivedClients.aspx" />
     <Content Include="AssignBooking.aspx" />
     <Content Include="AssignTeam.aspx" />
     <Content Include="AuditLogs.aspx" />
@@ -160,6 +162,7 @@
     <Content Include="Images\banner-1-01.jpg" />
     <Content Include="Images\c&amp;o.png" />
     <Content Include="Images\logorrc.png" />
+    <Content Include="Images\pestlogo.jpg" />
     <Content Include="Images\ppe.png" />
     <Content Include="Images\rrc1.png" />
     <Content Include="Images\rrclogo.jpg" />
@@ -184,6 +187,7 @@
     <Content Include="LoadInspections.ashx" />
     <Content Include="MarkAsRead.ashx" />
     <Content Include="PayMongoWebhook.ashx" />
+    <Content Include="PayPalWebhook.ashx" />
     <None Include="Scripts\jquery-3.7.1.intellisense.js" />
     <Content Include="ManageItem.aspx" />
     <Content Include="ManagePayment.aspx" />
@@ -349,6 +353,20 @@
       <DependentUpon>ApproveRescheduleRequests.aspx</DependentUpon>
     </Compile>
     <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="ArchivedAdmins.aspx.cs">
+      <DependentUpon>ArchivedAdmins.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ArchivedAdmins.aspx.designer.cs">
+      <DependentUpon>ArchivedAdmins.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ArchivedClients.aspx.cs">
+      <DependentUpon>ArchivedClients.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ArchivedClients.aspx.designer.cs">
+      <DependentUpon>ArchivedClients.aspx</DependentUpon>
+    </Compile>
     <Compile Include="AssignBooking.aspx.cs">
       <DependentUpon>AssignBooking.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -715,6 +733,9 @@
     </Compile>
     <Compile Include="PayMongoWebhook.ashx.cs">
       <DependentUpon>PayMongoWebhook.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="PayPalWebhook.ashx.cs">
+      <DependentUpon>PayPalWebhook.ashx</DependentUpon>
     </Compile>
     <Compile Include="PdfWatermark.cs" />
     <Compile Include="Profile.aspx.cs">

@@ -1,5 +1,10 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ClientsProfiles.aspx.cs" Inherits="RRCManagementSystem.ClientsProfiles" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</asp:Content>
+
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
     <style>
@@ -128,12 +133,17 @@
                         <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
                         <asp:BoundField DataField="City" HeaderText="City" />
                         <asp:BoundField DataField="Country" HeaderText="Country" />
-                        <asp:TemplateField HeaderText="Actions">
-                            <ItemTemplate>
-                                <asp:Button ID="btnView" runat="server" CssClass="btn-view" Text="View Profile"
-                                    CommandName="ViewProfile" CommandArgument='<%# Eval("ClientID") %>' />
-                            </ItemTemplate>
-                        </asp:TemplateField>
+                   <asp:TemplateField HeaderText="Actions">
+    <ItemTemplate>
+        <asp:Button ID="btnView" runat="server" CssClass="btn-view" Text="View Profile"
+            CommandName="ViewProfile" CommandArgument='<%# Eval("ClientID") %>' />
+        &nbsp;
+        <asp:Button ID="btnArchive" runat="server" CssClass="btn-view" Text="Archive"
+            CommandName="ArchiveClient" CommandArgument='<%# Eval("ClientID") %>'
+            OnClientClick="return confirm('Are you sure you want to archive this client?');" />
+    </ItemTemplate>
+</asp:TemplateField>
+
                     </Columns>
                 </asp:GridView>
             </div>

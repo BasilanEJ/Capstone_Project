@@ -51,11 +51,58 @@ namespace RRCManagementSystem
 
         protected void gvClients_RowCommand(object sender, GridViewCommandEventArgs e)
         {
+            int clientId = Convert.ToInt32(e.CommandArgument);
+
             if (e.CommandName == "ViewProfile")
             {
-                int clientId = Convert.ToInt32(e.CommandArgument);
                 Response.Redirect($"ViewClientProfile.aspx?ClientID={clientId}");
             }
+            else if (e.CommandName == "ArchiveClient")
+            {
+                ArchiveClient(clientId);
+            }
         }
+
+        private void ArchiveClient(int clientId)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                string updateQuery = "UPDATE Clients SET Status = 'Inactive' WHERE ClientID = @ClientID";
+
+                using (SqlCommand cmd = new SqlCommand(updateQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ClientID", clientId);
+
+                    try
+                    {
+                        conn.Open();
+                        cmd.ExecuteNonQuery();
+                        LoadApprovedClients(); // Refresh grid
+                        ShowSweetAlert("Archived", "Client has been archived successfully.", "success");
+                    }
+                    catch (Exception ex)
+                    {
+                        ShowSweetAlert("Error", "Failed to archive client. " + ex.Message, "error");
+                    }
+                }
+            }
+        }
+
+        private void ShowSweetAlert(string title, string message, string icon)
+        {
+            string script = $@"
+    <script>
+        Swal.fire({{
+            title: '{title}',
+            text: '{message}',
+            icon: '{icon}',
+            confirmButtonColor: '#007bff'
+        }});
+    </script>";
+
+            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert", script, false);
+        }
+
+
     }
 }

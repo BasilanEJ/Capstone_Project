@@ -1,6 +1,5 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="SuperAdminDashboard.aspx.cs" Inherits="RRCManagementSystem.SuperAdminDashboard" %>
 
-    
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
     <style>
@@ -41,6 +40,7 @@
 
         .recent-logs h2 {
             margin-bottom: 20px;
+            color: #111827;
         }
 
         .table-container {
@@ -66,26 +66,26 @@
         .table-logs tr:hover {
             background-color: #f9fafb;
         }
-
     </style>
 
     <h1>Welcome to the SuperAdmin Dashboard</h1>
 
     <div class="dashboard-container">
-
         <!-- Total Admin Accounts -->
         <div class="dashboard-card">
-            <h3><asp:Label ID="lblTotalAdmins" runat="server" Text="0"></asp:Label></h3>
+            <h3><asp:Label ID="lblTotalAdmins" runat="server" Text="0" /></h3>
             <p>Total Admin Accounts</p>
         </div>
 
-        <!-- Audit Logs -->
+        <!-- Total Audit Logs -->
         <div class="dashboard-card">
-            <h3><asp:Label ID="lblAuditLogs" runat="server" Text="0"></asp:Label></h3>
+            <h3><asp:Label ID="lblAuditLogs" runat="server" Text="0" /></h3>
             <p>Audit Logs</p>
         </div>
-
     </div>
+
+    <!-- Hidden field to trigger modal -->
+    <asp:HiddenField ID="hfShowModal" runat="server" />
 
     <!-- Recent Logs Section -->
     <div class="recent-logs">
@@ -103,4 +103,20 @@
         </div>
     </div>
 
+    <!-- SweetAlert2 Script -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="text/javascript">
+        window.onload = function () {
+            var showModal = document.getElementById('<%= hfShowModal.ClientID %>').value;
+            if (showModal === "1") {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Unusual Activity Detected',
+                    html: 'There have been <strong>50+ failed login attempts</strong> within the last 10 minutes. Please investigate immediately.',
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'Understood'
+                });
+            }
+        };
+    </script>
 </asp:Content>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Net;
 using OtpNet;
 
 namespace RRCManagementSystem
@@ -14,23 +15,36 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 lblMessage.Text = "";
+                pnlCaptcha.Visible = false;
 
                 if (Session["Pending2FA_Email"] == null || Session["Pending2FA_UserID"] == null)
                 {
                     Response.Redirect("Login.aspx");
                     return;
                 }
+
+                int userID = Convert.ToInt32(Session["Pending2FA_UserID"]);
+                if (IsLockedOut(userID))
+                {
+                    pnlCaptcha.Visible = true;
+                    lblMessage.Text = "⏳ You've been locked out. Please solve CAPTCHA to continue.";
+                }
             }
         }
 
         protected void btnVerifyTOTP_Click(object sender, EventArgs e)
         {
-            string userInputCode = txtTOTP.Value.Trim();
+            int userID = Convert.ToInt32(Session["Pending2FA_UserID"]);
+            if (pnlCaptcha.Visible && !IsCaptchaValid())
+            {
+                lblMessage.Text = "⚠ CAPTCHA verification failed.";
+                return;
+            }
 
+            string userInputCode = txtTOTP.Value.Trim();
             string email = Session["Pending2FA_Email"]?.ToString();
             string role = Session["Pending2FA_Role"]?.ToString();
             string name = Session["Pending2FA_Name"]?.ToString();
-            int userID = Convert.ToInt32(Session["Pending2FA_UserID"]);
 
             if (string.IsNullOrEmpty(userInputCode) || userInputCode.Length != 6)
             {
@@ -39,7 +53,6 @@ namespace RRCManagementSystem
             }
 
             string totpSecret = GetTOTPSecret(email);
-
             if (string.IsNullOrEmpty(totpSecret))
             {
                 lblMessage.Text = "⚠ 2FA is not enabled for this account.";
@@ -48,16 +61,15 @@ namespace RRCManagementSystem
 
             try
             {
-                byte[] secretBytes = Base32Encoding.ToBytes(totpSecret);
-                var totp = new Totp(secretBytes);
+                var totp = new Totp(Base32Encoding.ToBytes(totpSecret));
                 bool isValid = totp.VerifyTotp(userInputCode, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
 
                 if (isValid)
                 {
-                    Session["AdminID"] = userID;
-                    Session["AdminName"] = name;
-                    Session["AdminEmail"] = email;
-                    Session["UserRole"] = role;
+                    Session["UserID"] = userID;
+                    Session["Role"] = role;
+                    Session["Name"] = name;
+                    Session["Email"] = email;
 
                     Session.Remove("Pending2FA_UserID");
                     Session.Remove("Pending2FA_Email");
@@ -66,19 +78,33 @@ namespace RRCManagementSystem
 
                     AddAuditLog(userID, $"{role} {name} completed 2FA verification.");
 
-                    if (role == "SuperAdmin")
-                        Response.Redirect("SuperAdminDashboard.aspx");
-                    else
-                        Response.Redirect("Dashboard.aspx");
+                    string redirect = role == "SuperAdmin" ? "SuperAdminDashboard.aspx" :
+                                      role == "Inspector" ? "InspectorDashboard.aspx" :
+                                      "Dashboard.aspx";
+                    Response.Redirect(redirect);
                 }
                 else
                 {
                     lblMessage.Text = "⚠ Invalid code. Please try again.";
+                    pnlCaptcha.Visible = true;
                 }
             }
             catch (Exception ex)
             {
                 lblMessage.Text = $"❌ Error: {ex.Message}";
+            }
+        }
+
+        private bool IsCaptchaValid()
+        {
+            string response = Request.Form["g-recaptcha-response"];
+            if (string.IsNullOrEmpty(response)) return false;
+
+            using (var client = new WebClient())
+            {
+                string secret = "6LdFpz4rAAAAAF33FYq5f39pW0uUe6QNI4XgcWAv"; // Replace with your actual secret
+                string result = client.DownloadString($"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}");
+                return result.Contains("\"success\": true");
             }
         }
 
@@ -97,14 +123,32 @@ namespace RRCManagementSystem
             }
         }
 
+        private bool IsLockedOut(int userId)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                string query = "SELECT LockoutUntil FROM Users WHERE UserID = @UserID";
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                conn.Open();
+                object result = cmd.ExecuteScalar();
+                if (result != DBNull.Value && result != null)
+                {
+                    DateTime lockoutTime = Convert.ToDateTime(result);
+                    return lockoutTime > DateTime.Now;
+                }
+                return false;
+            }
+        }
+
         private void AddAuditLog(int userID, string action)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
+                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", userID);
+                    cmd.Parameters.AddWithValue("@UserID", userID);
                     cmd.Parameters.AddWithValue("@Action", action);
                     conn.Open();
                     cmd.ExecuteNonQuery();

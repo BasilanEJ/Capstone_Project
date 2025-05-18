@@ -5,33 +5,64 @@
 <head runat="server">
     <title>Reset Password - RRC Management System</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f3f4f6;
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Poppins', sans-serif;
+            color: #fff;
         }
 
-        .container {
-            width: 400px;
-            margin: 100px auto;
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        body {
+            background: url('images/pestlogo.jpg') no-repeat center center fixed;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .reset-container {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+            width: 380px;
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.18);
         }
 
         h2 {
-            text-align: center;
-            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #fff;
         }
 
-        .form-control {
+        .input {
             width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+            padding: 12px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .input::placeholder {
+            color: #e0e0e0;
+        }
+
+        .input:focus {
+            background: rgba(255, 255, 255, 0.25);
         }
 
         .btn-submit {
@@ -40,9 +71,11 @@
             background-color: #28a745;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
             cursor: pointer;
-            font-weight: bold;
+            transition: background-color 0.3s ease;
         }
 
         .btn-submit:hover {
@@ -51,12 +84,24 @@
 
         .validation-message {
             font-size: 13px;
+            margin-bottom: 10px;
+            text-align: left;
+            width: 100%;
         }
 
         .checkbox-container {
+            width: 100%;
+            text-align: left;
+            font-size: 13px;
             margin-top: -10px;
             margin-bottom: 20px;
-            font-size: 14px;
+        }
+
+        @media screen and (max-width: 480px) {
+            .reset-container {
+                width: 90%;
+                padding: 30px 20px;
+            }
         }
     </style>
 
@@ -76,7 +121,7 @@
                 strengthMsg.style.color = "orange";
             } else {
                 strengthMsg.innerText = "✅ Strong password.";
-                strengthMsg.style.color = "green";
+                strengthMsg.style.color = "lightgreen";
             }
 
             validatePasswordMatch();
@@ -97,7 +142,7 @@
                 matchMsg.style.color = "red";
             } else {
                 matchMsg.innerText = "✅ Passwords match.";
-                matchMsg.style.color = "green";
+                matchMsg.style.color = "lightgreen";
             }
         }
 
@@ -110,18 +155,19 @@
         }
     </script>
 </head>
+
 <body>
     <form id="form1" runat="server">
-        <div class="container">
+        <div class="reset-container">
             <h2>Reset Password</h2>
 
-            <asp:TextBox ID="txtNewPassword" runat="server" CssClass="form-control" TextMode="Password"
+            <asp:TextBox ID="txtNewPassword" runat="server" CssClass="input" TextMode="Password"
                 placeholder="Enter new password" onkeyup="validatePasswordStrength(this.value)" />
-            <span id="passwordStrengthMsg" class="validation-message" style="color: gray;"></span>
+            <span id="passwordStrengthMsg" class="validation-message"></span>
 
-            <asp:TextBox ID="txtConfirmPassword" runat="server" CssClass="form-control" TextMode="Password"
+            <asp:TextBox ID="txtConfirmPassword" runat="server" CssClass="input" TextMode="Password"
                 placeholder="Confirm new password" onkeyup="validatePasswordMatch()" />
-            <span id="passwordMatchMsg" class="validation-message" style="color: gray;"></span>
+            <span id="passwordMatchMsg" class="validation-message"></span>
 
             <div class="checkbox-container">
                 <input type="checkbox" onclick="togglePasswords()" /> Show Passwords

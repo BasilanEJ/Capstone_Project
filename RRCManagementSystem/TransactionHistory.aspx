@@ -1,57 +1,102 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="TransactionHistory.aspx.cs" Inherits="RRCManagementSystem.TransactionHistory" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        .page-title {
-            font-size: 26px;
-            text-align: center;
-            margin: 30px 0 10px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
 
-        .filter-form {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+    }
 
-        .filter-form input[type="date"] {
-            padding: 6px 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+    .page-title {
+        text-align: center;
+        color: #1e293b;
+        font-size: 26px;
+        font-weight: 600;
+        margin: 30px 0 20px;
+    }
 
-        .filter-form input[type="submit"] {
-            padding: 6px 15px;
-            background-color: #3498db;
-            border: none;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+    .filter-form {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 25px;
+        flex-wrap: wrap;
+    }
 
-        .filter-form input[type="submit"]:hover {
-            background-color: #2980b9;
-        }
+    .filter-form input[type="date"] {
+        padding: 8px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 14px;
+        min-width: 160px;
+    }
 
-        .grid-container {
-            margin: 0 auto;
-            width: 95%;
-            background-color: #fff;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
+    .filter-form input[type="submit"],
+    .filter-form input[type="button"],
+    .filter-form button,
+    .filter-form .btn-filter,
+    .filter-form input[type="submit"].btn-filter {
+        padding: 8px 18px;
+        background-color: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
 
-        .message-label {
-            text-align: center;
-            margin-bottom: 15px;
-            color: red;
-        }
-    </style>
+    .filter-form input[type="submit"]:hover,
+    .filter-form .btn-filter:hover {
+        background-color: #1d4ed8;
+    }
+
+    .message-label {
+        text-align: center;
+        color: #ef4444;
+        font-weight: 500;
+        margin-bottom: 15px;
+    }
+
+    .grid-container {
+        width: 95%;
+        margin: 0 auto 50px auto;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        overflow-x: auto;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th {
+        background-color: #1e3a8a;
+        color: white;
+        padding: 12px;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .table td {
+        padding: 10px;
+        text-align: center;
+        font-size: 14px;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+    }
+
+    .table tr:nth-child(even) {
+        background-color: #f9fafb;
+    }
+
+    .table tr:hover {
+        background-color: #f1f5f9;
+    }
+</style>
+
 
     <h2 class="page-title">📄 Transaction History</h2>
 

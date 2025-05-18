@@ -7,29 +7,24 @@ namespace RRCManagementSystem
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            // Session validation to make sure SuperAdmin is logged in
-            /* if (!IsPostBack)
-             {
-                 // Assuming you store SuperAdmin session like this:
-                 if (Session["SuperAdminID"] == null)
-                 {
-                     // Redirect to login page if not logged in
-                     Response.Redirect("~/Login.aspx");
-                 }
-             } */
-
+            // ✅ Validate session and role
+            if (!IsPostBack)
+            {
+                if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
+                {
+                    // 🚫 Not logged in or not SuperAdmin → redirect
+                    Response.Redirect("~/Login.aspx");
+                    return;
+                }
+            }
         }
-
 
         protected void btnLogout_Click(object sender, EventArgs e)
         {
-            // Clear the session variables
+            // ✅ Clear session and logout
             Session.Clear();
             Session.Abandon();
-
-            // Redirect to login page
             Response.Redirect("~/Login.aspx");
         }
     }
 }
-

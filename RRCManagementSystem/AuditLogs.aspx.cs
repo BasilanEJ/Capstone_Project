@@ -13,63 +13,68 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                LoadAuditLogs();
+                DeleteOldLogs(); // ✅ Auto-delete logs older than 30 days
+                LoadAuditLogs(); // Load current logs
             }
         }
 
+        private void DeleteOldLogs()
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                string deleteQuery = @"
+                    DELETE FROM AuditLogs
+                    WHERE Timestamp < DATEADD(DAY, -30, GETDATE());";
+
+                using (SqlCommand cmd = new SqlCommand(deleteQuery, conn))
+                {
+                    try
+                    {
+                        conn.Open();
+                        cmd.ExecuteNonQuery();
+                        // Optionally log how many rows were deleted if needed
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError("DeleteOldLogs Error", ex);
+                    }
+                }
+            }
+        }
 
         private void LoadAuditLogs()
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                // ✅ SQL Query: Join AuditLogs with Users to get the Admin Name
                 string query = @"
-                    SELECT 
-                        al.LogID,
-                        u.Name AS AdminName,
-                        al.Action,
-                        al.Timestamp
-                    FROM AuditLogs al
-                    INNER JOIN Users u ON al.AdminID = u.UserID
-                    WHERE u.Role = 'Admin'
-                    ORDER BY al.Timestamp DESC;";
+    SELECT 
+        al.LogID,
+        u.Name AS AdminName,
+        al.Action,
+        al.Timestamp
+    FROM AuditLogs al
+    INNER JOIN Users u ON al.AdminID = u.UserID
+    ORDER BY al.Timestamp DESC;";
 
-                // ✅ DataAdapter + DataTable for binding
+
                 SqlDataAdapter da = new SqlDataAdapter(query, conn);
                 DataTable dt = new DataTable();
 
                 try
                 {
                     da.Fill(dt);
-
-                    if (dt.Rows.Count > 0)
-                    {
-                        gvAuditLogs.DataSource = dt;
-                        gvAuditLogs.DataBind();
-                        lblMessage.Text = "";
-                    }
-                    else
-                    {
-                        gvAuditLogs.DataSource = null;
-                        gvAuditLogs.DataBind();
-                        lblMessage.Text = "⚠ No audit logs found.";
-                    }
+                    gvAuditLogs.DataSource = dt;
+                    gvAuditLogs.DataBind();
+                    lblMessage.Text = dt.Rows.Count == 0 ? "⚠ No audit logs found." : "";
                 }
                 catch (Exception ex)
                 {
                     lblMessage.Text = "⚠ Error loading audit logs: " + ex.Message;
-                    // Optionally log the error to a file or database
-                    // LogError("LoadAuditLogs Error", ex);
+                    LogError("LoadAuditLogs Error", ex);
                 }
             }
         }
 
-        /// <summary>
-        /// Logs an action into the AuditLogs table.
-        /// Call this method after login, edit, delete, etc.
-        /// </summary>
-        /// <param name="userId">Admin's UserID</param>
-        /// <param name="actionDescription">Description of the action</param>
         public void LogAction(int userId, string actionDescription)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -91,16 +96,12 @@ namespace RRCManagementSystem
                     }
                     catch (Exception ex)
                     {
-                        // Optional error logging
-                        // LogError("LogAction Error", ex);
+                        LogError("LogAction Error", ex);
                     }
                 }
             }
         }
 
-        /// <summary>
-        /// Optional error logging helper method (to file or database)
-        /// </summary>
         private void LogError(string context, Exception ex)
         {
             try
@@ -112,7 +113,7 @@ namespace RRCManagementSystem
             }
             catch
             {
-                // You can safely ignore errors in error logging to prevent infinite loops.
+                // Prevent recursive logging error
             }
         }
     }

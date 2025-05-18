@@ -20,7 +20,7 @@
 
         /* Background Image */
         body {
-            background: url('images/banner-1-01.jpg') no-repeat center center fixed;
+            background: url('images/pestlogo.jpg') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;
@@ -139,7 +139,7 @@
     <form id="form1" runat="server">
         <div class="forgot-container">
             <!-- Logo -->
-            <img src="images/logorrc.png" alt="RRC Logo" class="logo" />
+            <img src="images/pestlogo.jpg" alt="RRC Logo" class="logo" />
 
             <!-- Forgot Password Heading -->
             <h2>Forgot Password</h2>

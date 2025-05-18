@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.UI;
 using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
@@ -15,6 +16,13 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 LoadRoles();
+            }
+
+            string eventTarget = Request["__EVENTTARGET"];
+            if (eventTarget == "DeleteRole")
+            {
+                int roleId = int.Parse(hfRoleIDToDelete.Value);
+                DeleteRole(roleId);
             }
         }
 
@@ -32,72 +40,64 @@ namespace RRCManagementSystem
             }
         }
 
-        protected void gvRoles_RowCommand(object sender, GridViewCommandEventArgs e)
+        private void DeleteRole(int roleId)
         {
-            if (e.CommandName == "DeleteRole")
+            try
             {
-                int roleId = Convert.ToInt32(e.CommandArgument);
-
-                try
+                using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    using (SqlConnection conn = new SqlConnection(connectionString))
+                    conn.Open();
+
+                    string roleName = "";
+                    using (SqlCommand cmdGet = new SqlCommand("SELECT RoleName FROM Roles WHERE RoleID = @RoleID", conn))
                     {
-                        conn.Open();
+                        cmdGet.Parameters.AddWithValue("@RoleID", roleId);
+                        object result = cmdGet.ExecuteScalar();
+                        if (result != null) roleName = result.ToString();
+                    }
 
-                        // 1. Get the RoleName first
-                        string getRoleNameQuery = "SELECT RoleName FROM Roles WHERE RoleID = @RoleID";
-                        string roleName = "";
+                    if (string.IsNullOrEmpty(roleName))
+                    {
+                        ShowAlert("⚠ Role not found.", "error");
+                        return;
+                    }
 
-                        using (SqlCommand cmdGet = new SqlCommand(getRoleNameQuery, conn))
+                    using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Role = @RoleName", conn))
+                    {
+                        cmdCheck.Parameters.AddWithValue("@RoleName", roleName);
+                        int count = (int)cmdCheck.ExecuteScalar();
+                        if (count > 0)
                         {
-                            cmdGet.Parameters.AddWithValue("@RoleID", roleId);
-                            object result = cmdGet.ExecuteScalar();
-                            if (result != null)
-                                roleName = result.ToString();
-                        }
-
-                        if (string.IsNullOrEmpty(roleName))
-                        {
-                            lblMessage.Text = "⚠ Role not found.";
-                            lblMessage.ForeColor = System.Drawing.Color.Red;
+                            ShowAlert("⚠ Cannot delete. Users are assigned to this role.", "warning");
                             return;
-                        }
-
-                        // 2. Check if any users are using this role
-                        string checkQuery = "SELECT COUNT(*) FROM Users WHERE Role = @RoleName";
-                        using (SqlCommand cmdCheck = new SqlCommand(checkQuery, conn))
-                        {
-                            cmdCheck.Parameters.AddWithValue("@RoleName", roleName);
-                            int count = (int)cmdCheck.ExecuteScalar();
-
-                            if (count > 0)
-                            {
-                                lblMessage.Text = "⚠ Cannot delete. There are users assigned to this role.";
-                                lblMessage.ForeColor = System.Drawing.Color.Red;
-                                return;
-                            }
-                        }
-
-                        // 3. If no users found, proceed to delete
-                        string deleteQuery = "DELETE FROM Roles WHERE RoleID = @RoleID";
-                        using (SqlCommand cmdDelete = new SqlCommand(deleteQuery, conn))
-                        {
-                            cmdDelete.Parameters.AddWithValue("@RoleID", roleId);
-                            cmdDelete.ExecuteNonQuery();
                         }
                     }
 
-                    lblMessage.Text = "✅ Role deleted successfully.";
-                    lblMessage.ForeColor = System.Drawing.Color.Green;
-                    LoadRoles();
+                    using (SqlCommand cmdDelete = new SqlCommand("DELETE FROM Roles WHERE RoleID = @RoleID", conn))
+                    {
+                        cmdDelete.Parameters.AddWithValue("@RoleID", roleId);
+                        cmdDelete.ExecuteNonQuery();
+                    }
                 }
-                catch (Exception ex)
-                {
-                    lblMessage.Text = "❌ Error: " + ex.Message;
-                    lblMessage.ForeColor = System.Drawing.Color.Red;
-                }
+
+                ShowAlert("✅ Role deleted successfully.", "success");
+                LoadRoles();
+            }
+            catch (Exception ex)
+            {
+                ShowAlert("❌ Error: " + ex.Message, "error");
             }
         }
 
+        private void ShowAlert(string message, string icon)
+        {
+            string script = $"Swal.fire({{ icon: '{icon}', text: '{message.Replace("'", "\\'")}', showConfirmButton: true }});";
+            ScriptManager.RegisterStartupScript(this, GetType(), "swalMessage", script, true);
+        }
+
+        protected void gvRoles_RowCommand(object sender, GridViewCommandEventArgs e)
+        {
+            // not used anymore since we use __doPostBack for deletion
+        }
     }
 }

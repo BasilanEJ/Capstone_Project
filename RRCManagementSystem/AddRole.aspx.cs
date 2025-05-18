@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Globalization;
+using System.Web.UI;
 
 namespace RRCManagementSystem
 {
@@ -11,7 +12,6 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // Nothing needed here for now
         }
 
         protected void btnSave_Click(object sender, EventArgs e)
@@ -20,12 +20,10 @@ namespace RRCManagementSystem
 
             if (string.IsNullOrEmpty(roleName))
             {
-                lblMessage.Text = "⚠️ Role name is required.";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                ShowSweetAlert("Warning", "Role name is required.", "warning");
                 return;
             }
 
-            // 🔵 Format role name to Title Case
             TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
             roleName = textInfo.ToTitleCase(roleName.ToLower());
 
@@ -35,7 +33,6 @@ namespace RRCManagementSystem
                 {
                     conn.Open();
 
-                    // 🔵 Check if role already exists (case-insensitive)
                     string checkQuery = "SELECT COUNT(*) FROM Roles WHERE LOWER(RoleName) = LOWER(@RoleName)";
                     using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
                     {
@@ -44,13 +41,11 @@ namespace RRCManagementSystem
 
                         if (count > 0)
                         {
-                            lblMessage.Text = "❌ This role already exists.";
-                            lblMessage.ForeColor = System.Drawing.Color.Red;
+                            ShowSweetAlert("Duplicate", "This role already exists.", "error");
                             return;
                         }
                     }
 
-                    // 🔵 Insert new role
                     string insertQuery = "INSERT INTO Roles (RoleName, CreatedAt) VALUES (@RoleName, GETDATE())";
                     using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
                     {
@@ -59,15 +54,28 @@ namespace RRCManagementSystem
                     }
                 }
 
-                lblMessage.Text = "✅ New role added successfully.";
-                lblMessage.ForeColor = System.Drawing.Color.Green;
+                ShowSweetAlert("Success", "✅ Role added successfully!", "success");
                 txtRoleName.Text = string.Empty;
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "❌ Error: " + ex.Message;
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                ShowSweetAlert("Error", "❌ " + ex.Message, "error");
             }
+        }
+
+        private void ShowSweetAlert(string title, string message, string icon)
+        {
+            string script = $@"
+                <script>
+                    Swal.fire({{
+                        title: '{title}',
+                        text: '{message}',
+                        icon: '{icon}',
+                        confirmButtonColor: '#1f2937'
+                    }});
+                </script>";
+
+            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert", script, false);
         }
     }
 }

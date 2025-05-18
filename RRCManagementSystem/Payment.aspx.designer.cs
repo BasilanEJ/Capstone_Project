@@ -60,6 +60,42 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Button btnPayNow;
 
         /// <summary>
+        /// btnPayWithPayPal control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnPayWithPayPal;
+
+        /// <summary>
+        /// hfPayPalBookingID control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfPayPalBookingID;
+
+        /// <summary>
+        /// hfPayPalAmount control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfPayPalAmount;
+
+        /// <summary>
+        /// hfPayPalClientID control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfPayPalClientID;
+
+        /// <summary>
         /// hiddenCheckoutURL control.
         /// </summary>
         /// <remarks>

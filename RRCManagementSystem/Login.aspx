@@ -1,15 +1,13 @@
-﻿    <%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Login.aspx.cs" Inherits="RRCManagementSystem.Login" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Login.aspx.cs" Inherits="RRCManagementSystem.Login" %>
 
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
     <title>Login - RRC Management System</title>
-
-    <!-- Modern Font (Optional) -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
     <style>
-        /* Reset and Base Styles */
         body, html {
             margin: 0;
             padding: 0;
@@ -18,16 +16,14 @@
             color: #333;
         }
 
-        /* Background Image */
         body {
-            background: url('images/banner-1-01.jpg') no-repeat center center fixed;
+            background: url('images/pestlogo.jpg') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        /* Glassmorphism Container */
         .login-container {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px);
@@ -40,7 +36,6 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            transition: transform 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.18);
         }
 
@@ -48,21 +43,18 @@
             transform: translateY(-5px);
         }
 
-        /* Logo */
         .logo {
             width: 80px;
             height: auto;
             margin-bottom: 20px;
         }
 
-        /* Heading */
         h2 {
             color: #ffffff;
             font-size: 26px;
             margin-bottom: 25px;
         }
 
-        /* Input Fields */
         .input {
             width: 100%;
             padding: 14px 12px;
@@ -70,10 +62,8 @@
             border-radius: 8px;
             border: none;
             font-size: 15px;
-            outline: none;
             background: rgba(255, 255, 255, 0.2);
             color: #ffffff;
-            transition: background-color 0.3s ease;
         }
 
         .input::placeholder {
@@ -84,7 +74,6 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
-        /* Login Button */
         .btn-login {
             width: 100%;
             padding: 14px;
@@ -102,7 +91,6 @@
             transform: translateY(-2px);
         }
 
-        /* Links */
         .links {
             margin-top: 20px;
         }
@@ -111,21 +99,18 @@
             color: #ffffff;
             font-size: 14px;
             text-decoration: none;
-            transition: color 0.3s ease;
         }
 
-        .links a:hover {
-            color: #d1d1d1;
-        }
-
-        /* Error/Message Label */
         .message {
             margin-top: 15px;
             font-size: 14px;
             color: #ff4d4f;
         }
 
-        /* Responsive */
+        .g-recaptcha {
+            margin-bottom: 20px;
+        }
+
         @media screen and (max-width: 480px) {
             .login-container {
                 width: 90%;
@@ -134,31 +119,34 @@
         }
     </style>
 </head>
-
 <body>
     <form id="form1" runat="server">
+        <asp:ScriptManager ID="ScriptManager1" runat="server" />
         <div class="login-container">
-            <!-- RRC Logo -->
             <img src="images/logorrc.png" alt="RRC Logo" class="logo" />
-
-            <!-- Login Heading -->
             <h2>Login</h2>
 
-            <!-- Email Input -->
-            <asp:TextBox ID="txtEmail" runat="server" CssClass="input" placeholder="Email" TextMode="Email"></asp:TextBox>
+            <!-- Email -->
+            <asp:TextBox ID="txtEmail" runat="server" CssClass="input" placeholder="Email" TextMode="Email" AutoCompleteType="Disabled"></asp:TextBox>
 
-            <!-- Password Input -->
-            <asp:TextBox ID="txtPassword" runat="server" CssClass="input" placeholder="Password" TextMode="Password"></asp:TextBox>
+            <!-- Password -->
+            <asp:TextBox ID="txtPassword" runat="server" CssClass="input" placeholder="Password" TextMode="Password" AutoCompleteType="Disabled"></asp:TextBox>
+
+            <!-- CAPTCHA Panel (initially hidden in code-behind) -->
+            <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
+                <div class="g-recaptcha" data-sitekey="6LdFpz4rAAAAAFHN9JRMbSs2zRVZastQVd6GHIpz"></div>
+            </asp:Panel>
 
             <!-- Login Button -->
-            <asp:Button ID="btnLogin" runat="server" CssClass="btn-login" Text="Login" OnClick="btnLogin_Click" />
+            <asp:Button ID="btnLogin" runat="server" CssClass="btn-login" Text="Login" 
+                        OnClick="btnLogin_Click" UseSubmitBehavior="false" />
 
-            <!-- Forgot Password Link -->
+            <!-- Forgot Link -->
             <div class="links">
                 <a href="ForgotPassword.aspx">Forgot Password?</a>
             </div>
 
-            <!-- Message Label -->
+            <!-- Message -->
             <asp:Label ID="lblMessage" runat="server" CssClass="message"></asp:Label>
         </div>
     </form>

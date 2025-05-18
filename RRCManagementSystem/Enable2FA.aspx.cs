@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Configuration;
 using System.Data.SqlClient;
 using OtpNet; // Install OtpNet via NuGet
@@ -18,7 +17,7 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                if (Session["AdminEmail"] == null)
+                if (Session["Pending2FA_Email"] == null)
                 {
                     Response.Redirect("Login.aspx");
                     return;
@@ -30,20 +29,15 @@ namespace RRCManagementSystem
 
         private void GenerateQRCode()
         {
-            // Generate a random 160-bit (20-byte) secret key
             byte[] secretKey = KeyGeneration.GenerateRandomKey(20);
             string base32Secret = Base32Encoding.ToString(secretKey);
 
-            // Temporarily store the secret in session for validation
             Session["2FA_Secret"] = base32Secret;
 
-            string email = Session["AdminEmail"].ToString();
+            string email = Session["Pending2FA_Email"].ToString();
             string issuer = "RRCManagementSystem";
-
-            // Generate otpauth URL
             string otpauthUrl = $"otpauth://totp/{issuer}:{email}?secret={base32Secret}&issuer={issuer}";
 
-            // Generate QR code image
             using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
             using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(otpauthUrl, QRCodeGenerator.ECCLevel.Q))
             using (QRCode qrCode = new QRCode(qrCodeData))
@@ -60,7 +54,10 @@ namespace RRCManagementSystem
         {
             string code = txtCode.Text.Trim();
             string secret = Session["2FA_Secret"]?.ToString();
-            string email = Session["AdminEmail"]?.ToString();
+            string email = Session["Pending2FA_Email"]?.ToString();
+            string name = Session["Pending2FA_Name"]?.ToString();
+            string role = Session["Pending2FA_Role"]?.ToString();
+            int userId = Convert.ToInt32(Session["Pending2FA_UserID"]);
 
             if (string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(email))
             {
@@ -90,11 +87,28 @@ namespace RRCManagementSystem
                     }
                 }
 
-                lblMessage.ForeColor = System.Drawing.Color.Green;
-                lblMessage.Text = "✅ 2FA enabled successfully! Redirecting...";
+                // ✅ Set session as logged-in
+                Session["UserID"] = userId;
+                Session["Email"] = email;
+                Session["Name"] = name;
+                Session["Role"] = role;
 
-                // Optional redirect after enabling
-                Response.AddHeader("REFRESH", "3;URL=Login.aspx");
+                // ✅ Clean up pending session variables
+                Session.Remove("Pending2FA_Email");
+                Session.Remove("Pending2FA_Name");
+                Session.Remove("Pending2FA_Role");
+                Session.Remove("Pending2FA_UserID");
+                Session.Remove("2FA_Secret");
+
+                // ✅ Redirect to proper dashboard
+                string redirect = "~/Dashboard.aspx";
+                if (role == "SuperAdmin")
+                    redirect = "~/SuperAdminDashboard.aspx";
+                else if (role == "Inspector")
+                    redirect = "~/InspectorDashboard.aspx";
+
+
+                Response.Redirect(redirect);
             }
             else
             {
@@ -104,4 +118,3 @@ namespace RRCManagementSystem
         }
     }
 }
-

@@ -5,6 +5,7 @@
 <head runat="server">
     <title>2FA Verification - RRC Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
     <style>
         body, html {
@@ -16,7 +17,7 @@
         }
 
         body {
-            background: url('images/banner-1-01.jpg') no-repeat center center fixed;
+            background: url('images/pestlogo.jpg') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;
@@ -71,6 +72,10 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
+        .g-recaptcha {
+            margin-bottom: 15px;
+        }
+
         .btn-login {
             width: 100%;
             padding: 14px;
@@ -116,6 +121,12 @@
                 <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 4)" onkeydown="handleBackspace(event, 4)" onpaste="return false;" />
                 <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 5)" onkeydown="handleBackspace(event, 5)" onpaste="return false;" />
             </div>
+
+            <!-- Google reCAPTCHA -->
+              <!-- CAPTCHA Panel (initially hidden in code-behind) -->
+    <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
+        <div class="g-recaptcha" data-sitekey="6LdFpz4rAAAAAFHN9JRMbSs2zRVZastQVd6GHIpz"></div>
+    </asp:Panel>
 
             <asp:Button ID="btnVerifyTOTP" runat="server" Text="Verify" CssClass="btn-login" OnClick="btnVerifyTOTP_Click" />
             <asp:Label ID="lblMessage" runat="server" CssClass="message" />

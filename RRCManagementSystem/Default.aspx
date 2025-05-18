@@ -1,4 +1,5 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Inquiry.Master" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="RRCManagementSystem.Default" %>
+﻿<%@ Page Title="" Language="C#" EnableEventValidation="true" MasterPageFile="~/Inquiry.Master" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="RRCManagementSystem.Default" %>
+
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
@@ -90,10 +91,6 @@ h1 {
 
 
     </style>
-
-    <head>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-</head>
 
 
 <section class="hero">
@@ -281,78 +278,99 @@ h1 {
     </div>
 </section>
 
-<section style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: white; font-family: 'Segoe UI', sans-serif;">
-    <div style="display: flex; max-width: 1000px; width: 100%; border-radius: 12px; overflow: hidden; background: white; box-shadow: 0 8px 20px rgba(0,0,0,0.2);">
-
-        <!-- Left Form -->
-        <div style="flex: 1; padding: 40px; background: #63b3ed;">
-            <h3 style="text-transform: uppercase; font-size: 14px; font-weight: 600; color: white;">Schedule Your</h3>
-            <h1 style="font-size: 28px; font-weight: 700; color: #1a202c; margin-bottom: 20px;">Free Inspection</h1>
-            <p style="font-size: 14px; color: #1a202c; margin-bottom: 25px;">Schedule today! Please fill-in this form and RRC Pest and Termite Control Representative will contact you soon.</p>
-
-            <!-- Email -->
-            <div style="margin-bottom: 15px;">
-                <asp:Label runat="server" AssociatedControlID="txtEmail" Text="Your email *" />
-                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email"
-                    placeholder="email@gmail.com" required
-                    style="width: 100%; border: none; border-bottom: 2px solid #1a202c; padding: 10px; background: transparent; color: #1a202c; font-size: 14px;" />
-            </div>
-
-            <!-- Contact -->
-            <asp:TextBox ID="txtContactNumber" runat="server" CssClass="form-control" 
-    placeholder="09xxxxxxxxx" required MaxLength="11"
-    oninput="validateContactNumber(this)"
-    style="width: 100%; border: none; border-bottom: 2px solid #1a202c; padding: 10px; background: transparent; color: #1a202c; font-size: 14px;" />
-
-
-            <!-- Photo Upload -->
-            <div style="margin-bottom: 15px;">
-                <asp:Label runat="server" AssociatedControlID="fuPestPhoto" Text="Photo of Pest (optional)" />
-                <asp:FileUpload ID="fuPestPhoto" runat="server"
-                    style="width: 100%; background: white; padding: 8px; border-radius: 4px;" />
-                <small style="color: #1a202c;">Upload a photo if available.</small>
-            </div>
-
-            <!-- Message -->
-            <div style="margin-bottom: 15px;">
-                <asp:Label runat="server" AssociatedControlID="txtMessage" Text="Your message *" />
-                <asp:TextBox ID="txtMessage" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="4"
-                    placeholder="Describe what you observed..." required
-                    style="width: 100%; border-radius: 4px; padding: 10px; font-size: 14px;" />
-            </div>
-
-            <!-- Terms Toggle -->
-            <div style="margin-bottom: 10px;">
-                <a href="#" onclick="toggleTerms(); return false;" style="font-size: 14px; color: #1a202c; text-decoration: underline;">View Terms and Conditions</a>
-            </div>
-
-            <!-- Terms Content -->
-            <div id="termsContent" style="display: none; background: white; color: #1a202c; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-                <h3>Terms and Conditions</h3>
-                <p><strong>1.</strong> By submitting this form, you agree to our pest inspection process.</p>
-                <p><strong>2.</strong> We collect your data to coordinate inspections and services.</p>
-                <p><strong>3.</strong> Uploaded photos will only be used to assess the pest problem.</p>
-                <div style="margin-top: 10px;">
-                    <asp:CheckBox ID="chkTerms" runat="server" />
-                    <label for="chkTerms">I agree to the terms and conditions stated above.</label>
-                </div>
-                <button onclick="toggleTerms();" style="margin-top: 10px; background: #007bff; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;">Close</button>
-            </div>
-
-            <!-- Submit -->
-            <asp:Button ID="btnSubmitInquiry" runat="server" Text="Submit Inquiry" CssClass="btn-submit"
-                Style="width: 100%; padding: 12px; background-color: #1a202c; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 16px;" />
-        </div>
-
-        <!-- Right Side Image -->
-        <div style="flex: 1; background: url('/Images/service-baiting.jpg') center center / cover no-repeat;"></div>
-    </div>
-</section>
-
-
-
+    
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+<section style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: white; font-family: 'Segoe UI', sans-serif;">
+        <div style="display: flex; max-width: 1000px; width: 100%; border-radius: 12px; overflow: hidden; background: white; box-shadow: 0 8px 20px rgba(0,0,0,0.2);">
+
+            <!-- Left Side - Form -->
+            <div style="flex: 1; padding: 40px; background: #63b3ed;">
+                <h3 style="text-transform: uppercase; font-size: 14px; font-weight: 600; color: white;">Schedule Your</h3>
+                <h1 style="font-size: 28px; font-weight: 700; color: #1a202c; margin-bottom: 20px;">Free Inspection</h1>
+                <p style="font-size: 14px; color: #1a202c; margin-bottom: 25px;">Schedule today! Please fill-in this form and RRC Pest and Termite Control Representative will contact you soon.</p>
+
+                <!-- Email -->
+                <div style="margin-bottom: 15px;">
+                    <asp:Label runat="server" AssociatedControlID="txtEmail" Text="Your email *" />
+                    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email"
+                        placeholder="email@gmail.com" required
+                        style="width: 100%; border: none; border-bottom: 2px solid #1a202c; padding: 10px; background: transparent; color: #1a202c; font-size: 14px;" />
+                </div>
+
+                <!-- Contact -->
+                <asp:TextBox ID="txtContactNumber" runat="server" CssClass="form-control" 
+                    placeholder="09xxxxxxxxx" required MaxLength="11"
+                    oninput="validateContactNumber(this)"
+                    style="width: 100%; border: none; border-bottom: 2px solid #1a202c; padding: 10px; background: transparent; color: #1a202c; font-size: 14px;" />
+
+                <!-- Photo Upload -->
+                <div style="margin-bottom: 15px;">
+                    <asp:Label runat="server" AssociatedControlID="fuPestPhoto" Text="Photo of Pest (optional)" />
+                    <asp:FileUpload ID="fuPestPhoto" runat="server"
+                        style="width: 100%; background: white; padding: 8px; border-radius: 4px;" />
+                    <small style="color: #1a202c;">Upload a photo if available.</small>
+                </div>
+
+                <!-- Message -->
+                <div style="margin-bottom: 15px;">
+                    <asp:Label runat="server" AssociatedControlID="txtMessage" Text="Your message *" />
+                    <asp:TextBox ID="txtMessage" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="4"
+                        placeholder="Describe what you observed..." required
+                        style="width: 100%; border-radius: 4px; padding: 10px; font-size: 14px;" />
+                </div>
+
+<!-- Trigger Link -->
+<div style="margin-bottom: 10px;">
+    <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" style="font-size: 14px; color: #1a202c; text-decoration: underline;">
+        View Terms and Conditions
+    </a>
+</div>
+
+<!-- Terms & Conditions Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="termsModalLabel">Terms and Conditions</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body" style="color: #1a202c;">
+        <p><strong>1.</strong> By submitting this form, you agree to our pest inspection process.</p>
+        <p><strong>2.</strong> We collect your data to coordinate inspections and services.</p>
+        <p><strong>3.</strong> Uploaded photos will only be used to assess the pest problem.</p>
+
+        <div style="margin-top: 10px;">
+            <asp:CheckBox ID="chkTerms" runat="server" />
+            <label for="chkTerms">I agree to the terms and conditions stated above.</label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+                <!-- Submit Button -->
+                <asp:Button ID="btnSubmitInquiry" runat="server" Text="Submit Inquiry" CssClass="btn-submit"
+                    OnClick="btnSubmitInquiry_Click"
+                    Style="width: 100%; padding: 12px; background-color: #1a202c; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 16px;" />
+            </div>
+
+            <!-- Right Side Image -->
+            <div style="flex: 1; background: url('/Images/service-baiting.jpg') center center / cover no-repeat;"></div>
+        </div>
+    </section>  
+
+
 
 <!-- JavaScript for Toggle Functionality -->
 <script>

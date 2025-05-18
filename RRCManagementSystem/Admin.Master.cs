@@ -13,17 +13,18 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                if (Session["AdminID"] == null)
+                // ✅ Enforce only Admin role can use this MasterPage
+                if (Session["UserID"] == null || Session["Role"]?.ToString() != "Admin")
                 {
                     Response.Redirect("~/Login.aspx");
                     return;
                 }
 
-                // Show admin name from session
-                lblAdminName.Text = Session["AdminName"] != null ? Session["AdminName"].ToString() : "Admin";
+                // ✅ Display admin's name
+                lblAdminName.Text = Session["Name"]?.ToString() ?? "Admin";
 
-                // Load allowed modules for dynamic sidebar rendering
-                int adminId = Convert.ToInt32(Session["AdminID"]);
+                // ✅ Load sidebar permissions
+                int adminId = Convert.ToInt32(Session["UserID"]);
                 LoadSidebarPermissions(adminId);
             }
         }
@@ -54,7 +55,6 @@ namespace RRCManagementSystem
 
         protected void btnLogout_Click(object sender, EventArgs e)
         {
-            // Clear session and redirect to login
             Session.Clear();
             Session.Abandon();
             Response.Redirect("~/Login.aspx");

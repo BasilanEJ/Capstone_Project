@@ -6,6 +6,9 @@
     <meta charset="utf-8" />
     <title>SuperAdmin Panel</title>
 
+    <!-- 🔧 Add this so pages using ContentPlaceHolderID="HeadContent" will work -->
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+
     <!-- FontAwesome for icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
 
@@ -150,21 +153,17 @@
         <div class="sidebar">
             <div>
                 <ul>
-                    <!-- Dashboard -->
-                    <li>
-                        <a href="SuperAdminDashboard.aspx"><i class="fas fa-home"></i> Dashboard</a>
-                    </li>
+                    <li><a href="SuperAdminDashboard.aspx"><i class="fas fa-home"></i> Dashboard</a></li>
 
-                    <!-- Manage Admins -->
                     <li class="has-dropdown">
                         <a href="#"><i class="fas fa-user-shield"></i> Manage Admins <i class="fas fa-chevron-down arrow"></i></a>
                         <ul class="accordion">
-                            <li><a href="ViewAdmin.aspx"><i class="fas fa-list"></i> View Admins</a></li>
-                            <li><a href="AddAdmin.aspx"><i class="fas fa-plus"></i> Add Admin</a></li>
+                            <li><a href="ViewAdmin.aspx"><i class="fas fa-list"></i> View Users</a></li>
+                            <li><a href="AddAdmin.aspx"><i class="fas fa-plus"></i> Add User</a></li>
+                             <li><a href="ArchivedAdmins.aspx"><i class="fas fa-archive"></i> Archive User Accounts</a></li>
                         </ul>
                     </li>
 
-                    <!-- Manage Roles -->
                     <li class="has-dropdown">
                         <a href="#"><i class="fas fa-user-tag"></i> Manage Roles <i class="fas fa-chevron-down arrow"></i></a>
                         <ul class="accordion">
@@ -173,10 +172,9 @@
                         </ul>
                     </li>
 
-                    <!-- Audit Logs -->
-                    <li>
-                        <a href="AuditLogs.aspx"><i class="fas fa-file-alt"></i> Audit Logs</a>
-                    </li>
+                    <li><a href="AuditLogs.aspx"><i class="fas fa-file-alt"></i> Audit Logs</a></li>
+
+                   
 
                  <!-- System Settings -->
                     <li class="has-dropdown">
@@ -188,19 +186,11 @@
                     </li>
 
 
-                                        <!-- Reports -->
-                    <li>
-                        <a href="Reports.aspx"><i class="fas fa-chart-bar"></i> Reports</a>
-                    </li>
-
-                    <!-- My Profile -->
-                    <li>
-                        <a href="SuperAdminProfile.aspx"><i class="fas fa-user-cog"></i> My Profile</a>
-                    </li>
+                            <li><a href="Reports.aspx"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                    <li><a href="SuperAdminProfile.aspx"><i class="fas fa-user-cog"></i> My Profile</a></li>
                 </ul>
             </div>
 
-            <!-- Logout button at the bottom -->
             <asp:LinkButton ID="btnLogout" runat="server" CssClass="logout-button" OnClick="btnLogout_Click">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </asp:LinkButton>
@@ -208,7 +198,7 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <asp:ContentPlaceHolder ID="MainContent" runat="server"></asp:ContentPlaceHolder>
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </div>
 
         <!-- Footer -->

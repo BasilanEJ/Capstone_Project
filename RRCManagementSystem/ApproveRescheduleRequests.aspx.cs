@@ -32,18 +32,17 @@ namespace RRCManagementSystem
             {
                 string query = @"
                     SELECT rr.RequestID, rr.ScheduleID, rr.ClientID, c.Name AS ClientName, c.Email,
-       ss.ScheduledDate, ss.OperationNumber, rr.RequestedDate, rr.Status, b.BookingID,
-       s.Name AS ServiceName, s.ServiceType
-FROM RescheduleRequests rr
-INNER JOIN Clients c ON rr.ClientID = c.ClientID
-INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
-INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-INNER JOIN Services s ON b.ServiceID = s.ServiceID
-WHERE rr.Status = 'Pending'
-ORDER BY rr.RequestedDate DESC";
+                           ss.ScheduledDate, ss.OperationNumber, rr.RequestedDate, rr.Status, b.BookingID,
+                           s.Name AS ServiceName, s.ServiceType
+                    FROM RescheduleRequests rr
+                    INNER JOIN Clients c ON rr.ClientID = c.ClientID
+                    INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
+                    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+                    INNER JOIN Services s ON b.ServiceID = s.ServiceID
+                    WHERE rr.Status = 'Pending'
+                    ORDER BY rr.RequestedDate DESC";
 
-                SqlCommand cmd = new SqlCommand(query, con);
-                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                SqlDataAdapter da = new SqlDataAdapter(query, con);
                 DataTable dt = new DataTable();
                 da.Fill(dt);
 
@@ -62,14 +61,9 @@ ORDER BY rr.RequestedDate DESC";
             }
         }
 
-
-
-
         protected void gvRescheduleRequests_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            GridViewRow row = (GridViewRow)((Control)e.CommandSource).NamingContainer;
             int requestId = Convert.ToInt32(e.CommandArgument);
-            TextBox txtReason = (TextBox)row.FindControl("txtRejectReason");
 
             if (e.CommandName == "Approve")
             {
@@ -77,16 +71,17 @@ ORDER BY rr.RequestedDate DESC";
                 {
                     con.Open();
                     SqlCommand updateCmd = new SqlCommand(@"
-                UPDATE RescheduleRequests SET Status = 'Approved', ApprovedDate = GETDATE()
-                WHERE RequestID = @RequestID;
+                        UPDATE RescheduleRequests 
+                        SET Status = 'Approved', ApprovedDate = GETDATE()
+                        WHERE RequestID = @RequestID;
 
-                SELECT rr.ScheduleID, rr.ClientID, b.BookingID, s.Name AS ServiceName, c.Email
-                FROM RescheduleRequests rr
-                INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
-                INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                INNER JOIN Clients c ON rr.ClientID = c.ClientID
-                INNER JOIN Services s ON b.ServiceID = s.ServiceID
-                WHERE rr.RequestID = @RequestID;", con);
+                        SELECT rr.ScheduleID, rr.ClientID, b.BookingID, s.Name AS ServiceName, c.Email
+                        FROM RescheduleRequests rr
+                        INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
+                        INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+                        INNER JOIN Clients c ON rr.ClientID = c.ClientID
+                        INNER JOIN Services s ON b.ServiceID = s.ServiceID
+                        WHERE rr.RequestID = @RequestID;", con);
 
                     updateCmd.Parameters.AddWithValue("@RequestID", requestId);
 
@@ -101,7 +96,6 @@ ORDER BY rr.RequestedDate DESC";
 
                             reader.Close();
 
-                            // Get the latest scheduled date from ServiceSchedule
                             SqlCommand getDateCmd = new SqlCommand("SELECT ScheduledDate FROM ServiceSchedule WHERE ScheduleID = @ScheduleID", con);
                             getDateCmd.Parameters.AddWithValue("@ScheduleID", scheduleId);
                             object result = getDateCmd.ExecuteScalar();
@@ -110,7 +104,6 @@ ORDER BY rr.RequestedDate DESC";
                             {
                                 DateTime newScheduledDate = Convert.ToDateTime(result);
 
-                                // Update Bookings.ScheduledDate and Bookings.StartTime
                                 SqlCommand updateBookingCmd = new SqlCommand("UPDATE Bookings SET ScheduledDate = @NewDate, StartTime = @NewTime WHERE BookingID = @BookingID", con);
                                 updateBookingCmd.Parameters.AddWithValue("@NewDate", newScheduledDate.Date);
                                 updateBookingCmd.Parameters.AddWithValue("@NewTime", newScheduledDate.TimeOfDay);
@@ -119,33 +112,41 @@ ORDER BY rr.RequestedDate DESC";
                             }
 
                             SendApprovalEmail(clientEmail, serviceName);
-                            Response.Redirect("AssignBooking.aspx?BookingID=" + bookingId);
+
+                            ScriptManager.RegisterStartupScript(this, GetType(), "showSuccess", "Swal.fire('✅ Approved', 'The request has been approved.', 'success');", true);
+                            LoadRescheduleRequests();
                         }
                     }
                 }
             }
             else if (e.CommandName == "Reject")
             {
-                string reason = txtReason.Text.Trim();
+                string reason = hfRejectReason.Value.Trim();
+                if (string.IsNullOrEmpty(reason))
+                {
+                    lblMessage.Text = "❌ Rejection reason required.";
+                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                    return;
+                }
 
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     con.Open();
                     SqlCommand cmd = new SqlCommand(@"
-                UPDATE RescheduleRequests
-                SET Status = 'Rejected', ApprovedDate = GETDATE(), RejectReason = @Reason
-                WHERE RequestID = @RequestID;
+                        UPDATE RescheduleRequests
+                        SET Status = 'Rejected', ApprovedDate = GETDATE(), RejectReason = @Reason
+                        WHERE RequestID = @RequestID;
 
-                SELECT rr.ClientID, c.Email, s.Name AS ServiceName
-                FROM RescheduleRequests rr
-                INNER JOIN Clients c ON rr.ClientID = c.ClientID
-                INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
-                INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                INNER JOIN Services s ON b.ServiceID = s.ServiceID
-                WHERE rr.RequestID = @RequestID;", con);
+                        SELECT rr.ClientID, c.Email, s.Name AS ServiceName
+                        FROM RescheduleRequests rr
+                        INNER JOIN Clients c ON rr.ClientID = c.ClientID
+                        INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
+                        INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+                        INNER JOIN Services s ON b.ServiceID = s.ServiceID
+                        WHERE rr.RequestID = @RequestID;", con);
 
                     cmd.Parameters.AddWithValue("@RequestID", requestId);
-                    cmd.Parameters.AddWithValue("@Reason", string.IsNullOrEmpty(reason) ? (object)DBNull.Value : reason);
+                    cmd.Parameters.AddWithValue("@Reason", reason);
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
@@ -154,12 +155,11 @@ ORDER BY rr.RequestedDate DESC";
                             string email = reader["Email"].ToString();
                             string service = reader["ServiceName"].ToString();
                             SendRejectionEmail(email, service, reason);
-                            lblMessage.Text = "❌ Request rejected and client notified.";
-                            lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
                         }
                     }
                 }
 
+                ScriptManager.RegisterStartupScript(this, GetType(), "showRejected", "Swal.fire('❌ Rejected', 'The request has been rejected.', 'info');", true);
                 LoadRescheduleRequests();
             }
         }
@@ -183,7 +183,6 @@ ORDER BY rr.RequestedDate DESC";
             using (MailMessage mail = new MailMessage())
             {
                 mail.From = new MailAddress(ConfigurationManager.AppSettings["emailFrom"]);
-
                 mail.To.Add(toEmail);
                 mail.Subject = subject;
                 mail.Body = body;
@@ -193,7 +192,6 @@ ORDER BY rr.RequestedDate DESC";
             }
         }
 
-
         protected void gvRescheduleRequests_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
             gvRescheduleRequests.PageIndex = e.NewPageIndex;
@@ -201,3 +199,4 @@ ORDER BY rr.RequestedDate DESC";
         }
     }
 }
+    

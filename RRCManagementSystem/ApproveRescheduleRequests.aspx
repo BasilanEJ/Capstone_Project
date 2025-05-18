@@ -1,7 +1,7 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ApproveRescheduleRequests.aspx.cs" Inherits="RRCManagementSystem.ApproveRescheduleRequests" %>
 
-
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .main-content {
             padding: 30px;
@@ -50,11 +50,6 @@
             font-weight: 600;
             color: #333;
         }
-
-        .form-control {
-            padding: 6px;
-            font-size: 14px;
-        }
     </style>
 </asp:Content>
 
@@ -62,8 +57,12 @@
     <div class="main-content">
         <h3>Approve Reschedule Requests</h3>
 
+        <asp:HiddenField ID="hfRequestID" runat="server" />
+        <asp:HiddenField ID="hfRejectReason" runat="server" />
+
         <asp:GridView ID="gvRescheduleRequests" runat="server" AutoGenerateColumns="False" CssClass="booking-table"
-            AllowPaging="true" PageSize="10" OnPageIndexChanging="gvRescheduleRequests_PageIndexChanging"
+            AllowPaging="true" PageSize="10" ClientIDMode="Static"
+            OnPageIndexChanging="gvRescheduleRequests_PageIndexChanging"
             OnRowCommand="gvRescheduleRequests_RowCommand"
             OnRowDataBound="gvRescheduleRequests_RowDataBound">
             <Columns>
@@ -79,19 +78,13 @@
                         <asp:Label ID="lblNewDate" runat="server" CssClass="form-control" />
                     </ItemTemplate>
                 </asp:TemplateField>
-                <asp:TemplateField HeaderText="Rejection Reason">
-                    <ItemTemplate>
-                        <asp:TextBox ID="txtRejectReason" runat="server" CssClass="form-control" placeholder="Enter reason if rejecting" />
-                    </ItemTemplate>
-                </asp:TemplateField>
                 <asp:TemplateField HeaderText="Action">
                     <ItemTemplate>
-                        <asp:Button ID="btnApprove" runat="server" Text="Approve" CommandName="Approve"
-                            CommandArgument='<%# Eval("RequestID") %>' CssClass="btn-success"
-                            OnClientClick="return confirm('Are you sure you want to approve this request?');" />
-                        <asp:Button ID="btnReject" runat="server" Text="Reject" CommandName="Reject"
-                            CommandArgument='<%# Eval("RequestID") %>' CssClass="btn-danger"
-                            OnClientClick="return confirm('Are you sure you want to reject this request?');" />
+                        <asp:Button ID="btnApprove" runat="server" Text="Approve" CssClass="btn-success"
+                            CommandName="Approve" CommandArgument='<%# Eval("RequestID") %>' UseSubmitBehavior="false" />
+
+                        <asp:Button ID="btnReject" runat="server" Text="Reject" CssClass="btn-danger"
+                            OnClientClick="return openRejectModal(this);" CommandName="Reject" CommandArgument='<%# Eval("RequestID") %>' UseSubmitBehavior="false" />
                     </ItemTemplate>
                 </asp:TemplateField>
             </Columns>
@@ -99,4 +92,40 @@
 
         <asp:Label ID="lblMessage" runat="server" CssClass="message-label" />
     </div>
+
+    <script type="text/javascript">
+        function openRejectModal(button) {
+            var requestId = button.getAttribute("data-commandargument") || button.getAttribute("value") || button.value;
+            if (!requestId) {
+                requestId = button.name.split("$")[button.name.split("$").length - 1];
+            }
+
+            Swal.fire({
+                title: 'Reject Reschedule Request',
+                input: 'text',
+                inputLabel: 'Enter rejection reason',
+                inputPlaceholder: 'Rejection reason...',
+                inputAttributes: {
+                    'aria-label': 'Rejection reason'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Reject',
+                cancelButtonText: 'Cancel',
+                preConfirm: (reason) => {
+                    if (!reason) {
+                        Swal.showValidationMessage('Please enter a reason');
+                    }
+                    return reason;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('<%= hfRequestID.ClientID %>').value = button.getAttribute("value") || button.getAttribute("commandargument");
+                    document.getElementById('<%= hfRejectReason.ClientID %>').value = result.value;
+                    __doPostBack(button.name, '');
+                }
+            });
+
+            return false; // prevent default postback
+        }
+    </script>
 </asp:Content>

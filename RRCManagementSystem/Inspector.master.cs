@@ -14,8 +14,10 @@ namespace RRCManagementSystem
         {
             string currentPath = HttpContext.Current.Request.Url.AbsolutePath.ToLower();
 
+            // ✅ Only validate session if not on login or 2FA page
             if (!currentPath.EndsWith("/login.aspx") &&
-                !currentPath.EndsWith("/verifytotp.aspx"))
+                !currentPath.EndsWith("/verifytotp.aspx") &&
+                !currentPath.EndsWith("/enable2fa.aspx"))
             {
                 if (Session["UserID"] == null || Session["Role"]?.ToString() != "Inspector")
                 {
@@ -32,26 +34,35 @@ namespace RRCManagementSystem
 
         private void LoadInspectorName()
         {
-            int inspectorId = Convert.ToInt32(Session["UserID"]);
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = "SELECT Name FROM Users WHERE UserID = @UserID";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@UserID", inspectorId);
+                int inspectorId = Convert.ToInt32(Session["UserID"]);
 
-                conn.Open();
-                object result = cmd.ExecuteScalar();
-                if (result != null)
+                using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    lblInspectorName.Text = "👷 " + result.ToString();
+                    string query = "SELECT Name FROM Users WHERE UserID = @UserID AND Status = 'Active'";
+                    SqlCommand cmd = new SqlCommand(query, conn);
+                    cmd.Parameters.AddWithValue("@UserID", inspectorId);
+
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+
+                    if (result != null)
+                    {
+                        lblInspectorName.Text = "👷 " + result.ToString();
+                    }
                 }
+            }
+            catch
+            {
+                lblInspectorName.Text = "👷 Inspector";
             }
         }
 
         protected void btnLogout_Click(object sender, EventArgs e)
         {
             Session.Clear();
+            Session.Abandon();
             FormsAuthentication.SignOut();
             Response.Redirect("~/Login.aspx");
         }

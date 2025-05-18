@@ -4,11 +4,9 @@ using System.Data.SqlClient;
 using System.Configuration;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using Isopoh.Cryptography.Argon2;
 using System.Net.Mail;
 using System.Net;
 using System.IO;
-using System.Xml.Linq;
 
 namespace RRCManagementSystem
 {
@@ -18,6 +16,8 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Optional test for loading
+            // ClientScript.RegisterStartupScript(this.GetType(), "Log", "<script>console.log('Page Loaded');</script>", false);
         }
 
         protected void btnSubmitInquiry_Click(object sender, EventArgs e)
@@ -32,10 +32,9 @@ namespace RRCManagementSystem
             string contact = txtContactNumber.Text.Trim();
             string message = txtMessage.Text.Trim();
 
-            // ✅ Validate 11-digit numeric contact number
-            if (!System.Text.RegularExpressions.Regex.IsMatch(contact, @"^\d{11}$"))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(contact, @"^09\d{9}$"))
             {
-                ShowSweetAlert("Invalid Contact", "Please enter a valid 11-digit contact number.", "warning");
+                ShowSweetAlert("Invalid Contact", "Please enter a valid 11-digit contact number starting with 09.", "warning");
                 return;
             }
 
@@ -45,7 +44,15 @@ namespace RRCManagementSystem
                 try
                 {
                     string filename = Guid.NewGuid().ToString() + Path.GetExtension(fuPestPhoto.FileName);
-                    string savePath = Server.MapPath("~/UploadedPestPhotos/") + filename;
+                    string folderPath = Server.MapPath("~/UploadedPestPhotos/");
+
+                    // ✅ Create folder if it doesn't exist
+                    if (!Directory.Exists(folderPath))
+                    {
+                        Directory.CreateDirectory(folderPath);
+                    }
+
+                    string savePath = Path.Combine(folderPath, filename);
                     fuPestPhoto.SaveAs(savePath);
                     photoPath = "~/UploadedPestPhotos/" + filename;
                 }
@@ -61,8 +68,8 @@ namespace RRCManagementSystem
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
-        INSERT INTO InquirySimple (Email, ContactNumber, Message, PhotoPath, SubmittedAt)
-        VALUES (@Email, @ContactNumber, @Message, @PhotoPath, GETDATE());";
+                INSERT INTO InquirySimple (Email, ContactNumber, Message, PhotoPath, SubmittedAt)
+                VALUES (@Email, @ContactNumber, @Message, @PhotoPath, GETDATE());";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
@@ -76,23 +83,20 @@ namespace RRCManagementSystem
                     }
                 }
 
-
                 SendConfirmationEmail(email);
-
                 ShowSweetAlert("Submitted!", "Your inquiry was submitted successfully.", "success");
                 ClearForm();
             }
             catch (Exception ex)
             {
-                ShowSweetAlert("Database Error", "Something went wrong while saving: " + ex.Message, "error");
+                ShowSweetAlert("Error", "Something went wrong while saving: " + ex.Message, "error");
             }
         }
 
-
         private void SendConfirmationEmail(string toEmail)
         {
-            string fromEmail = ConfigurationManager.AppSettings["edgarjosephbasilan@gmail.com"];
-            string password = ConfigurationManager.AppSettings["fbryvkhttqobssjy"];
+            string fromEmail = ConfigurationManager.AppSettings["emailFrom"];
+            string password = ConfigurationManager.AppSettings["emailPassword"]; // Make sure this key exists in your Web.config
 
             MailMessage mail = new MailMessage();
             mail.From = new MailAddress(fromEmail, "RRC Management System");
@@ -115,13 +119,22 @@ namespace RRCManagementSystem
                 ShowSweetAlert("Email Error", "We saved your inquiry but failed to send confirmation: " + ex.Message, "warning");
             }
         }
-
         private void ShowSweetAlert(string title, string message, string icon)
         {
-            string script = $@"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
-                <script>Swal.fire({{title: '{title}', text: '{message}', icon: '{icon}', confirmButtonColor: '#007bff'}});</script>";
-            ClientScript.RegisterStartupScript(this.GetType(), "SweetAlert", script);
+            string script = $@"
+<script>
+    Swal.fire({{
+        title: '{title}',
+        text: '{message}',
+        icon: '{icon}',
+        confirmButtonColor: '#007bff'
+    }});
+</script>";
+            ScriptManager.RegisterStartupScript(this, this.GetType(), "SweetAlert", script, false);
+
         }
+
+
 
         private void ClearForm()
         {

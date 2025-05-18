@@ -67,6 +67,12 @@
             <i class="fas fa-user"></i>
             <div class="client-card-title">View Client Profiles</div>
         </a>
+
+        <a href="ArchivedClients.aspx" class="client-card">
+    <i class="fas fa-archive"></i>
+    <div class="client-card-title">Archive Client Accounts</div>
+</a>
+
        <!-- <a href="ClientsHistory.aspx" class="client-card">
             <i class="fas fa-history"></i>
             <div class="client-card-title">Clients History / Transactions</div>
