@@ -17,35 +17,40 @@
         }
 
         body {
-            background: url('images/pestlogo.jpg') no-repeat center center fixed;
+            background: url('images/bg.jpg') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
         }
 
         .login-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
+            background: #ffffff;
             border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
-            width: 350px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: 400px;
             padding: 40px 30px;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            border: 1px solid #ddd;
+            transition: transform 0.3s ease;
+        }
+
+        .login-container:hover {
+            transform: translateY(-5px);
         }
 
         .logo {
-            width: 80px;
+            width: 200px;
             margin-bottom: 20px;
         }
 
         h2 {
-            color: #ffffff;
-            font-size: 24px;
+            color: #333;
+            font-size: 26px;
             margin-bottom: 25px;
         }
 
@@ -57,23 +62,20 @@
         }
 
         .otp-box {
-            width: 40px;
+            width: 45px;
             height: 50px;
             text-align: center;
             font-size: 22px;
             border-radius: 8px;
-            border: none;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
+            border: 1px solid #ccc;
+            background: #f9f9f9;
+            color: #333;
             outline: none;
         }
 
         .otp-box:focus {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .g-recaptcha {
-            margin-bottom: 15px;
+            background: #fff;
+            border-color: #007bff;
         }
 
         .btn-login {
@@ -85,6 +87,7 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
         }
 
         .btn-login:hover {
@@ -94,12 +97,17 @@
         .message {
             margin-top: 15px;
             font-size: 14px;
-            color: white;
+            color: #ff4d4f;
+        }
+
+        .g-recaptcha {
+            margin-bottom: 20px;
         }
 
         @media screen and (max-width: 480px) {
             .login-container {
                 width: 90%;
+                padding: 30px 20px;
             }
         }
     </style>
@@ -107,6 +115,7 @@
 
 <body>
     <form id="form1" runat="server" autocomplete="off">
+        <asp:ScriptManager ID="ScriptManager1" runat="server" />
         <div class="login-container">
             <img src="images/logorrc.png" alt="RRC Logo" class="logo" />
             <h2>Verify Code</h2>
@@ -123,10 +132,9 @@
             </div>
 
             <!-- Google reCAPTCHA -->
-              <!-- CAPTCHA Panel (initially hidden in code-behind) -->
-    <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
-        <div class="g-recaptcha" data-sitekey="6LdFpz4rAAAAAFHN9JRMbSs2zRVZastQVd6GHIpz"></div>
-    </asp:Panel>
+            <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
+                <div class="g-recaptcha" data-sitekey="6LdFpz4rAAAAAFHN9JRMbSs2zRVZastQVd6GHIpz"></div>
+            </asp:Panel>
 
             <asp:Button ID="btnVerifyTOTP" runat="server" Text="Verify" CssClass="btn-login" OnClick="btnVerifyTOTP_Click" />
             <asp:Label ID="lblMessage" runat="server" CssClass="message" />

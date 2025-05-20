@@ -12,21 +12,37 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            string role = Session["Role"].ToString();
+
+            // 🔐 Deny access for SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Check CanAdd permission for ManageItem
+            if (!HasPermissionToAdd(userId, "ManageItem"))
+            {
+                Response.Redirect("~/Unauthorized.aspx");
+                return;
+            } 
+
             if (!IsPostBack)
             {
-                if (Session["AdminID"] == null)
-                {
-                    Response.Redirect("Unauthorized.aspx");
-                    return;
-                }
-
-                int currentUserId = Convert.ToInt32(Session["AdminID"]);
-                if (!HasPermissionToAdd(currentUserId, "ManageItem"))
-                {
-                    Response.Redirect("Unauthorized.aspx");
-                }
+                // ✅ Page logic here (e.g., populate fields, setup UI)
             }
         }
+
 
         private bool HasPermissionToAdd(int userId, string moduleName)
         {
@@ -54,7 +70,7 @@ namespace RRCManagementSystem
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            int currentUserId = Convert.ToInt32(Session["AdminID"]);
+            int currentUserId = Convert.ToInt32(Session["UserID"]);
             if (!HasPermissionToAdd(currentUserId, "ManageItem"))
             {
                 lblMessage.Text = "❌ You do not have permission to add items.";

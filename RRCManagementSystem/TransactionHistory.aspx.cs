@@ -11,6 +11,22 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            string role = Session["Role"].ToString();
+
+            // 🔐 Block SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
                 txtFromDate.Text = DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd");
@@ -18,6 +34,7 @@ namespace RRCManagementSystem
                 LoadTransactions();
             }
         }
+
 
         protected void btnFilter_Click(object sender, EventArgs e)
         {

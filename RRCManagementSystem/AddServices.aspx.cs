@@ -10,23 +10,38 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            string role = Session["Role"].ToString();
+
+            // 🔐 Deny access for SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Check CanAdd permission for ManageServices
+            if (!HasPermissionToAddService(userId, "ManageServices"))
+            {
+                Response.Redirect("~/Unauthorized.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
                 lblMessage.Text = "";
-
-                if (Session["AdminID"] == null)
-                {
-                    Response.Redirect("~/Unauthorized.aspx");
-                    return;
-                }
-
-                int adminId = Convert.ToInt32(Session["AdminID"]);
-                if (!HasPermissionToAddService(adminId, "ManageServices"))
-                {
-                    Response.Redirect("~/Unauthorized.aspx");
-                }
+                // ✅ Page logic here (e.g., populate fields, setup UI)
             }
         }
+
 
         private bool HasPermissionToAddService(int adminId, string moduleName)
         {
@@ -57,7 +72,7 @@ namespace RRCManagementSystem
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            int adminId = Convert.ToInt32(Session["UserID"]);
             if (!HasPermissionToAddService(adminId, "ManageServices"))
             {
                 lblMessage.Text = "❌ You do not have permission to add services.";

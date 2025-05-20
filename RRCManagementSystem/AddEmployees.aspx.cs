@@ -14,24 +14,40 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            string role = Session["Role"].ToString();
+
+            // 🔐 Deny access for SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Module permission check (e.g., ManageEmployees)
+            if (!HasPermissionToAdd(userId, "ManageEmployees"))
+            {
+                Response.Redirect("~/Unauthorized.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
-                if (Session["AdminID"] == null)
-                {
-                    Response.Redirect("~/Unauthorized.aspx");
-                    return;
-                }
-
-                int adminId = Convert.ToInt32(Session["AdminID"]);
-
-                if (!HasPermissionToAdd(adminId, "ManageEmployees"))
-                {
-                    Response.Redirect("~/Unauthorized.aspx");
-                }
-
+                // ✅ Your page logic (e.g., dropdown population)
                 ddlPosition.Items.Insert(0, new ListItem("Select Position", ""));
             }
         }
+
+
+
 
         private bool HasPermissionToAdd(int userId, string moduleName)
         {
@@ -64,7 +80,7 @@ namespace RRCManagementSystem
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            int adminId = Convert.ToInt32(Session["UserID"]);
 
             if (!HasPermissionToAdd(adminId, "ManageEmployees"))
             {

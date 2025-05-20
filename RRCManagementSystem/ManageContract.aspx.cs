@@ -15,11 +15,37 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            string role = Session["Role"].ToString();
+
+            // 🔐 Deny access for SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Optional: Check CanView permission (if applicable)
+            // if (!HasPermission(userId, "ManageClients"))
+            // {
+            //     Response.Redirect("~/Unauthorized.aspx");
+            //     return;
+            // }
+
             if (!IsPostBack)
             {
                 LoadClients();
             }
         }
+
 
         private void LoadClients()
         {

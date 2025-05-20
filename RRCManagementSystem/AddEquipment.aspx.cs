@@ -13,21 +13,34 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            string role = Session["Role"].ToString();
+
+            // 🔐 Deny access for SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Check CanAdd permission for ManageEquipment
+            if (!HasPermissionToAdd(userId, "ManageEquipment"))
+            {
+                Response.Redirect("~/Unauthorized.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
-                if (Session["AdminID"] == null)
-                {
-                    Response.Redirect("~/Unauthorized.aspx");
-                    return;
-                }
-
-                int adminId = Convert.ToInt32(Session["AdminID"]);
-
-                if (!HasPermissionToAdd(adminId, "ManageEquipment"))
-                {
-                    Response.Redirect("~/Unauthorized.aspx");
-                }
-
+                // ✅ Populate status dropdown
                 ddlStatus.Items.Clear();
                 ddlStatus.Items.Insert(0, new ListItem("Select Status", ""));
                 ddlStatus.Items.Insert(1, new ListItem("Available", "Available"));
@@ -67,7 +80,7 @@ namespace RRCManagementSystem
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            int adminId = Convert.ToInt32(Session["UserID"]);
 
             if (!HasPermissionToAdd(adminId, "ManageEquipment"))
             {

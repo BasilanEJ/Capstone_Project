@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Login.aspx.cs" Inherits="RRCManagementSystem.Login" %>
+﻿﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Login.aspx.cs" Inherits="RRCManagementSystem.Login" %>
 
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -7,117 +7,121 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            font-family: 'Poppins', sans-serif;
-            color: #333;
-        }
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: 'Poppins', sans-serif;
+        color: #333;
+    }
 
-        body {
-            background: url('images/pestlogo.jpg') no-repeat center center fixed;
-            background-size: cover;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    body {
+        background: url('images/bg.jpg') no-repeat center center fixed;
+        background-size: cover;
+        display: flex;
+        justify-content: center;   /* Horizontal center */
+        align-items: center;       /* Vertical center */
+        min-height: 100vh;
+    }
 
+    .login-container {
+        background: #ffffff; /* Solid white background */
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        width: 400px;
+        padding: 40px 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        border: 1px solid #ddd;
+        transition: transform 0.3s ease;
+    }
+
+    .login-container:hover {
+        transform: translateY(-5px);
+    }
+
+    .logo {
+        width: 200px;
+        height: auto;
+        margin-bottom: 20px;
+    }
+
+    h2 {
+        color: #333;
+        font-size: 26px;
+        margin-bottom: 25px;
+    }
+
+    .input {
+        width: 100%;
+        padding: 14px 12px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 15px;
+        background: #f9f9f9;
+        color: #333;
+    }
+
+    .input::placeholder {
+        color: #999;
+    }
+
+    .input:focus {
+        background: #fff;
+        border-color: #007bff;
+        outline: none;
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 14px;
+        background-color: #007bff;
+        color: #fff;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .btn-login:hover {
+        background-color: #0056b3;
+        transform: translateY(-2px);
+    }
+
+    .links {
+        margin-top: 20px;
+    }
+
+    .links a {
+        color: #007bff;
+        font-size: 14px;
+        text-decoration: none;
+    }
+
+    .message {
+        margin-top: 15px;
+        font-size: 14px;
+        color: #ff4d4f;
+    }
+
+    .g-recaptcha {
+        margin-bottom: 20px;
+    }
+
+    @media screen and (max-width: 480px) {
         .login-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
-            width: 350px;
-            padding: 40px 30px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            width: 90%;
+            padding: 30px 20px;
         }
+    }
+</style>
 
-        .login-container:hover {
-            transform: translateY(-5px);
-        }
 
-        .logo {
-            width: 80px;
-            height: auto;
-            margin-bottom: 20px;
-        }
-
-        h2 {
-            color: #ffffff;
-            font-size: 26px;
-            margin-bottom: 25px;
-        }
-
-        .input {
-            width: 100%;
-            padding: 14px 12px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            border: none;
-            font-size: 15px;
-            background: rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-        }
-
-        .input::placeholder {
-            color: #e0e0e0;
-        }
-
-        .input:focus {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            background-color: #007bff;
-            color: #fff;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        .btn-login:hover {
-            background-color: #0056b3;
-            transform: translateY(-2px);
-        }
-
-        .links {
-            margin-top: 20px;
-        }
-
-        .links a {
-            color: #ffffff;
-            font-size: 14px;
-            text-decoration: none;
-        }
-
-        .message {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #ff4d4f;
-        }
-
-        .g-recaptcha {
-            margin-bottom: 20px;
-        }
-
-        @media screen and (max-width: 480px) {
-            .login-container {
-                width: 90%;
-                padding: 30px 20px;
-            }
-        }
-    </style>
 </head>
 <body>
     <form id="form1" runat="server">

@@ -10,24 +10,38 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["AdminID"] == null)
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
+            string role = Session["Role"].ToString();
+
+            // 🔐 Deny access for SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Check CanAdd permission for ManageSupplier
+            if (!HasAddPermission(userId, "ManageSupplier"))
+            {
+                Response.Redirect("~/Unauthorized.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
-                int adminId = Convert.ToInt32(Session["AdminID"]);
-
-                if (!HasAddPermission(adminId, "ManageSupplier"))
-                {
-                    Response.Redirect("~/Unauthorized.aspx");
-                }
-
                 ddlStatus.Items.Insert(0, new System.Web.UI.WebControls.ListItem("Select Status", ""));
+                // ✅ Additional setup if needed
             }
         }
+
 
         private bool HasAddPermission(int adminId, string moduleName)
         {
@@ -57,7 +71,7 @@ namespace RRCManagementSystem
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            int adminId = Convert.ToInt32(Session["UserID"]);
 
             if (!HasAddPermission(adminId, "ManageSupplier"))
             {

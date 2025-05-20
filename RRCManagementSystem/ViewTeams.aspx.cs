@@ -15,17 +15,26 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Login check
-            if (Session["AdminID"] == null)
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            string role = Session["Role"].ToString();
+
+            // 🔐 Deny SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
 
             // 🔐 View permission check for ManageEmployees module
-            if (!HasViewPermission(adminId, "ManageEmployees"))
+            if (!HasViewPermission(userId, "ManageEmployees"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
@@ -37,6 +46,7 @@ namespace RRCManagementSystem
                 LoadTeamsAndMembers(DateTime.Today);
             }
         }
+
 
         private bool HasViewPermission(int adminId, string moduleName)
         {

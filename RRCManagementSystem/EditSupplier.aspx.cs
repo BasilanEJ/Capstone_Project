@@ -23,15 +23,26 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["AdminID"] == null)
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            string role = Session["Role"].ToString();
 
-            if (!HasEditPermission(adminId, "ManageSupplier"))
+            // 🔐 Deny SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Check Edit Permission
+            if (!HasEditPermission(userId, "ManageSupplier"))
             {
                 lblMessage.Text = "❌ You do not have permission to edit suppliers.";
                 lblMessage.ForeColor = System.Drawing.Color.Red;
@@ -45,6 +56,7 @@ namespace RRCManagementSystem
                 ddlStatus.Items.Insert(0, new System.Web.UI.WebControls.ListItem("Select Status", ""));
                 ddlBusinessType.Items.Insert(0, new System.Web.UI.WebControls.ListItem("Select Business Type", ""));
 
+
                 if (SupplierID > 0)
                 {
                     LoadSupplierDetails(SupplierID);
@@ -52,10 +64,12 @@ namespace RRCManagementSystem
                 else
                 {
                     lblMessage.Text = "⚠ No supplier selected.";
+                    lblMessage.ForeColor = System.Drawing.Color.Orange;
                     pnlEditSupplier.Visible = false;
                 }
             }
         }
+
 
         private void LoadSupplierDetails(int supplierID)
         {
@@ -100,13 +114,13 @@ namespace RRCManagementSystem
 
         protected void btnUpdate_Click(object sender, EventArgs e)
         {
-            if (Session["AdminID"] == null)
+            if (Session["UserID"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            int adminId = Convert.ToInt32(Session["UserID"]);
 
             if (!HasEditPermission(adminId, "ManageSupplier"))
             {

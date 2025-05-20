@@ -11,15 +11,26 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["AdminID"] == null)
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            string role = Session["Role"].ToString();
 
-            if (!HasEditPermission(adminId, "ManageBooking"))
+            // 🔐 Block SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Check CanEdit permission for ManageBooking
+            if (!HasEditPermission(userId, "ManageBooking"))
             {
                 lblMessage.Text = "❌ You do not have permission to approve or reject bookings.";
                 lblMessage.ForeColor = System.Drawing.Color.Red;

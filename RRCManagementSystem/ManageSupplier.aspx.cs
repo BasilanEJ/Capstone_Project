@@ -11,25 +11,37 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            string role = Session["Role"].ToString();
+
+            // 🔐 Block SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Check CanView permission for ManageSupplier
+            if (!HasPermission(userId, "ManageSupplier"))
+            {
+                Response.Redirect("~/Unauthorized.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
-                // 🔐 Require login
-                if (Session["AdminID"] == null)
-                {
-                    Response.Redirect("~/Login.aspx");
-                    return;
-                }
-
-                int adminId = Convert.ToInt32(Session["AdminID"]);
-                if (!HasPermission(adminId, "ManageSupplier"))
-                {
-                    Response.Redirect("~/Unauthorized.aspx");
-                    return;
-                }
-
-                // ✅ Page logic goes here if permission is granted
+                // ✅ Load suppliers or initialize logic here
             }
         }
+
 
         private bool HasPermission(int userId, string moduleName)
         {

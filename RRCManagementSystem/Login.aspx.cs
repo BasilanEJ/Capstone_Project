@@ -18,42 +18,29 @@ namespace RRCManagementSystem
                 lblMessage.Text = "";
             }
 
-            if (Session["UserID"] != null)
+            // Already logged-in user
+            if (Session["UserID"] != null && Session["Role"] != null)
             {
-                string role = Session["Role"]?.ToString();
+                string role = Session["Role"].ToString();
+                if (role == "SuperAdmin")
+                    Response.Redirect("~/SuperAdminDashboard.aspx", false);
+                else if (role == "Inspector")
+                    Response.Redirect("~/InspectorDashboard.aspx", false);
+                else
+                    Response.Redirect("~/Dashboard.aspx", false);
 
-                if (role != "Inspector")
-                {
-                    using (SqlConnection con = new SqlConnection(connectionString))
-                    {
-                        string query = "SELECT TwoFactorEnabled FROM Users WHERE UserID = @UserID AND Status = 'Active'";
-                        SqlCommand cmd = new SqlCommand(query, con);
-                        cmd.Parameters.AddWithValue("@UserID", Session["UserID"]);
-                        con.Open();
-
-                        object result = cmd.ExecuteScalar();
-                        if (result != null && !Convert.ToBoolean(result))
-                        {
-                            Session["Pending2FA_UserID"] = Session["UserID"];
-                            Session["Pending2FA_Email"] = Session["Email"];
-                            Session["Pending2FA_Name"] = Session["Name"];
-                            Session["Pending2FA_Role"] = Session["Role"];
-                            Response.Redirect("Enable2FA.aspx");
-                            return;
-                        }
-                    }
-                }
-
-                // Redirect
-                if (role == "SuperAdmin") Response.Redirect("~/SuperAdminDashboard.aspx");
-                else if (role == "Inspector") Response.Redirect("~/InspectorDashboard.aspx");
-                else Response.Redirect("~/Dashboard.aspx");
+                Context.ApplicationInstance.CompleteRequest();
+                return;
             }
 
+            // Logged-in client
             if (Session["ClientID"] != null)
-                Response.Redirect("Home.aspx");
+            {
+                Response.Redirect("Home.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
+                return;
+            }
         }
-
 
         protected void btnLogin_Click(object sender, EventArgs e)
         {
@@ -105,17 +92,16 @@ namespace RRCManagementSystem
                         // Lockout check
                         if (lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
                         {
-                            pnlCaptcha.Visible = true; // CAPTCHA after lockout
+                            pnlCaptcha.Visible = true;
                             lblMessage.Text = $"⏳ Account locked. Try again after {Convert.ToDateTime(lockoutObj):hh:mm tt}.";
                             reader.Close();
                             return;
                         }
 
-                        // Show CAPTCHA if previously locked
+                        // CAPTCHA after 5 failed attempts
                         if (failedAttempts >= 5)
                         {
                             pnlCaptcha.Visible = true;
-
                             if (!IsCaptchaValid())
                             {
                                 lblMessage.Text = "⚠ CAPTCHA verification failed.";
@@ -123,6 +109,7 @@ namespace RRCManagementSystem
                             }
                         }
 
+                        // Password check
                         if (PasswordHelper.VerifyPassword(hash, password))
                         {
                             ResetFailedLogin(userID);
@@ -136,7 +123,7 @@ namespace RRCManagementSystem
                             AddAuditLog(userID, $"{role} {userName} logged in.");
                             reader.Close();
 
-                            // Redirect with TOTP check
+                            // 2FA Logic (non-Inspector only)
                             if (!is2FAEnabled && role != "Inspector")
                             {
                                 Session["Pending2FA_UserID"] = userID;
@@ -155,7 +142,9 @@ namespace RRCManagementSystem
                             }
                             else
                             {
-                                Response.Redirect(role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx" : "~/InspectorDashboard.aspx", false);
+                                Response.Redirect(role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx" :
+                                                  role == "Inspector" ? "~/InspectorDashboard.aspx" :
+                                                  "~/Dashboard.aspx", false);
                             }
 
                             Context.ApplicationInstance.CompleteRequest();
@@ -169,12 +158,61 @@ namespace RRCManagementSystem
 
                             int remaining = Math.Max(0, 4 - failedAttempts);
                             lblMessage.Text = $"⚠ Invalid credentials. {remaining} attempt(s) left.";
-
                             if (failedAttempts + 1 >= 5)
                                 pnlCaptcha.Visible = true;
-                            return;
                         }
                     }
+                    else
+                    {
+                        reader.Close();
+
+                        // Check in Clients table
+                        string clientQuery = @"SELECT ClientID, Name, PasswordHash, Status FROM Clients WHERE Email = @Email";
+                        SqlCommand clientCmd = new SqlCommand(clientQuery, conn);
+                        clientCmd.Parameters.AddWithValue("@Email", email);
+
+                        SqlDataReader clientReader = clientCmd.ExecuteReader();
+
+                        if (clientReader.Read())
+                        {
+                            string status = clientReader["Status"].ToString();
+                            string hash = clientReader["PasswordHash"].ToString();
+                            int clientId = Convert.ToInt32(clientReader["ClientID"]);
+                            string name = clientReader["Name"].ToString();
+
+                            if (status != "Approved")
+                            {
+                                lblMessage.Text = "⚠ Your account is not approved yet.";
+                                clientReader.Close();
+                                return;
+                            }
+
+                            if (PasswordHelper.VerifyPassword(hash, password))
+                            {
+                                Session["ClientID"] = clientId;
+                                Session["ClientName"] = name;
+                                Session["Email"] = email;
+
+                                AddAuditLog(null, $"Client {name} logged in.");
+                                clientReader.Close();
+                                Response.Redirect("Home.aspx", false);
+                                Context.ApplicationInstance.CompleteRequest();
+                                return;
+                            }
+                            else
+                            {
+                                lblMessage.Text = "⚠ Invalid credentials for client account.";
+                            }
+
+                            clientReader.Close();
+                        }
+                        else
+                        {
+                            lblMessage.Text = "⚠ Account not found.";
+                        }
+                    }
+
+
                     reader.Close();
                 }
             }
@@ -235,12 +273,10 @@ namespace RRCManagementSystem
                         END
                     WHERE UserID = @UserID";
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", userId);
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                conn.Open();
+                cmd.ExecuteNonQuery();
             }
         }
 
@@ -249,13 +285,10 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = "UPDATE Users SET FailedAttempts = 0, LockoutUntil = NULL WHERE UserID = @UserID";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", userId);
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                conn.Open();
+                cmd.ExecuteNonQuery();
             }
         }
 
@@ -264,14 +297,11 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@UserID", (object)userID ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Action", action);
+                conn.Open();
+                cmd.ExecuteNonQuery();
             }
         }
     }

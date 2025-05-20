@@ -19,16 +19,26 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["AdminID"] == null)
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            string role = Session["Role"].ToString();
 
-            // ✅ Require CanView permission for ManageSupplier module
-            if (!HasPermission(adminId, "ManageSupplier", "CanView"))
+            // 🔐 Deny access to SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // ✅ Require CanView permission for ManageSupplier
+            if (!HasPermission(userId, "ManageSupplier", "CanView"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
@@ -36,12 +46,13 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                ViewState["CanEdit"] = HasPermission(adminId, "ManageSupplier", "CanEdit");
-                ViewState["CanDelete"] = HasPermission(adminId, "ManageSupplier", "CanDelete");
+                ViewState["CanEdit"] = HasPermission(userId, "ManageSupplier", "CanEdit");
+                ViewState["CanDelete"] = HasPermission(userId, "ManageSupplier", "CanDelete");
 
                 LoadSuppliers();
             }
         }
+
 
         private bool HasPermission(int adminId, string moduleName, string column)
         {

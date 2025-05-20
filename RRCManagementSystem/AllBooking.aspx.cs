@@ -14,16 +14,25 @@ namespace RRCManagementSystem
         protected void Page_Load(object sender, EventArgs e)
         {
             // 🔐 Require login
-            if (Session["AdminID"] == null)
+            if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            string role = Session["Role"].ToString();
+
+            // 🔐 Deny access for SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
 
             // 🔐 Check CanView permission for ManageBooking
-            if (!HasViewPermission(adminId, "ManageBooking"))
+            if (!HasViewPermission(userId, "ManageBooking"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
@@ -35,6 +44,7 @@ namespace RRCManagementSystem
                 LoadAllInquiries();
             }
         }
+
 
         private bool HasViewPermission(int adminId, string moduleName)
         {

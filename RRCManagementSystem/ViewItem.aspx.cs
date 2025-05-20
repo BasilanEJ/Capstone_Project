@@ -13,16 +13,25 @@ namespace RRCManagementSystem
         protected void Page_Load(object sender, EventArgs e)
         {
             // 🔐 Require login
-            if (Session["AdminID"] == null)
+            if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            string role = Session["Role"].ToString();
+
+            // 🔐 Block SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
 
             // 🔐 Check CanView permission for ManageItem module
-            if (!HasViewPermission(adminId, "ManageItem"))
+            if (!HasViewPermission(userId, "ManageItem"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
@@ -33,6 +42,7 @@ namespace RRCManagementSystem
                 LoadItems();
             }
         }
+
 
         private bool HasViewPermission(int adminId, string moduleName)
         {

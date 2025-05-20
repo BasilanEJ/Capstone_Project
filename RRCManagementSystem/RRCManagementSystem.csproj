@@ -160,8 +160,10 @@
     <Content Include="Images\2.jpg" />
     <Content Include="Images\banner tv.jpg" />
     <Content Include="Images\banner-1-01.jpg" />
+    <Content Include="Images\bg.jpg" />
     <Content Include="Images\c&amp;o.png" />
     <Content Include="Images\logorrc.png" />
+    <Content Include="Images\pestbg.jpg" />
     <Content Include="Images\pestlogo.jpg" />
     <Content Include="Images\ppe.png" />
     <Content Include="Images\rrc1.png" />

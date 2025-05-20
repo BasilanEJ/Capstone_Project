@@ -14,8 +14,30 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["AdminID"] == null)
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
                 Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            string role = Session["Role"].ToString();
+
+            // 🔐 Deny access for SuperAdmin and Inspector only
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Check CanView permission for CreateCustomerAccount
+            if (!HasPermission(userId, "CreateCustomerAccount"))
+            {
+                Response.Redirect("~/Unauthorized.aspx");
+                return;
+            }
 
             if (!IsPostBack)
             {
@@ -23,6 +45,8 @@ namespace RRCManagementSystem
                 txtCountry.Text = "Philippines";
             }
         }
+
+
 
         protected void btnCreate_Click(object sender, EventArgs e)
         {
@@ -152,6 +176,7 @@ VALUES
             ddlRegion.Items.Add(new ListItem("Region VII - Central Visayas", "Region VII"));
         }
 
+
         private void LoadCities(string selectedRegion)
         {
             ddlCity.Items.Clear();
@@ -186,5 +211,22 @@ VALUES
                     break;
             }
         }
+
+        private bool HasPermission(int userId, string moduleName)
+        {
+            using (SqlConnection con = new SqlConnection(connectionString))
+            {
+                string query = "SELECT COUNT(*) FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName AND CanView = 1";
+                using (SqlCommand cmd = new SqlCommand(query, con))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    con.Open();
+                    return (int)cmd.ExecuteScalar() > 0;
+                }
+            }
+        }
+
+
     }
 }

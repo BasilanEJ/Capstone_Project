@@ -13,12 +13,28 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["AdminID"] == null)
+            // ✅ Basic authentication check
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
                 Response.Redirect("~/Login.aspx");
+                return;
+            }
 
+            // ✅ Restrict page to Admins only (exclude Inspectors and SuperAdmins)
+            string role = Session["Role"].ToString();
+            if (role == "Inspector" || role == "SuperAdmin")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            // ✅ Load inquiries only on first load
             if (!IsPostBack)
+            {
                 LoadInquiries();
+            }
         }
+
 
         protected void btnAssignHidden_Click(object sender, EventArgs e)
         {
@@ -117,14 +133,20 @@ namespace RRCManagementSystem
 
         private void AssignInspector(int inquiryId, int inspectorUserId, DateTime scheduleDate, string remarks)
         {
+            if (!InquiryExists(inquiryId))
+            {
+            //    lblMessage.Text = "⚠ Inquiry does not exist. Cannot assign inspection.";
+                return;
+            }
+
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string insertQuery = @"INSERT INTO Inspections (InquiryID, InspectorID, ScheduledDate, InspectionStatus, Remarks, CreatedAt)
-                                       VALUES (@InquiryID, @InspectorID, @ScheduledDate, 'Pending', @Remarks, GETDATE())";
+                               VALUES (@InquiryID, @InspectorID, @ScheduledDate, 'Pending', @Remarks, GETDATE())";
 
                 SqlCommand cmd = new SqlCommand(insertQuery, conn);
                 cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
-                cmd.Parameters.AddWithValue("@InspectorID", inspectorUserId); // Must exist in Users table
+                cmd.Parameters.AddWithValue("@InspectorID", inspectorUserId);
                 cmd.Parameters.AddWithValue("@ScheduledDate", scheduleDate);
                 cmd.Parameters.AddWithValue("@Remarks", remarks);
                 conn.Open();
@@ -133,6 +155,20 @@ namespace RRCManagementSystem
 
             LoadInquiries();
         }
+
+        private bool InquiryExists(int inquiryId)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                string query = "SELECT COUNT(*) FROM InquirySimple WHERE InquiryID = @InquiryID";
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+                conn.Open();
+                return (int)cmd.ExecuteScalar() > 0;
+            }
+        }
+
+
 
         public string GetInspectorOptions()
         {

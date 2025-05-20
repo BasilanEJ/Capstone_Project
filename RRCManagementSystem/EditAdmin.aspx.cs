@@ -14,6 +14,22 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            string role = Session["Role"].ToString();
+
+            // 🔐 Block SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
                 if (Request.QueryString["UserID"] != null)
@@ -37,18 +53,19 @@ namespace RRCManagementSystem
                 Session.Remove("ShowSuccess"); // Clear the flag
 
                 string script = @"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
-                <script>
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Changes Saved',
-                        text: 'The admin permissions were updated successfully!',
-                        confirmButtonColor: '#007bff'
-                    });
-                </script>";
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Changes Saved',
+                text: 'The admin permissions were updated successfully!',
+                confirmButtonColor: '#007bff'
+            });
+        </script>";
 
                 ClientScript.RegisterStartupScript(this.GetType(), "SuccessAlert", script);
             }
         }
+
 
         private void LoadAdminDetails(int id)
         {

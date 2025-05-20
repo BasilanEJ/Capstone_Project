@@ -12,16 +12,26 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["AdminID"] == null)
+            // 🔐 Require login
+            if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            string role = Session["Role"].ToString();
+
+            // 🔐 Block SuperAdmin and Inspector
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
 
             // ✅ Check Edit Permission
-            if (!HasEditPermission(adminId, "ManageItem"))
+            if (!HasEditPermission(userId, "ManageItem"))
             {
                 lblMessage.Text = "❌ You do not have permission to edit items.";
                 lblMessage.ForeColor = System.Drawing.Color.Red;
@@ -29,6 +39,7 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // ✅ Validate ItemID from query string
             if (!int.TryParse(Request.QueryString["ItemID"], out itemId))
             {
                 lblMessage.Text = "⚠ Invalid Item ID.";
@@ -42,6 +53,7 @@ namespace RRCManagementSystem
                 LoadItemDetails();
             }
         }
+
 
         private bool HasEditPermission(int adminId, string moduleName)
         {
@@ -112,7 +124,7 @@ namespace RRCManagementSystem
 
         protected void btnSave_Click(object sender, EventArgs e)
         {
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            int adminId = Convert.ToInt32(Session["UserID"]);
 
             if (!HasEditPermission(adminId, "ManageItem"))
             {

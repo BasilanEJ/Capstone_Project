@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
-using System.Web;
 using System.Web.UI;
 
 namespace RRCManagementSystem
@@ -11,25 +10,36 @@ namespace RRCManagementSystem
     {
         protected void Page_Load(object sender, EventArgs e)
         {
+            // ✅ Step 1: Authentication check
+            if (Session["UserID"] == null || Session["Role"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            // ✅ Step 2: Restrict access for specific roles
+            string role = Session["Role"].ToString();
+            if (role == "Inspector" || role == "SuperAdmin")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            // ✅ Step 3: Load module permissions only once
+            if (Session["AllowedModules"] == null)
+            {
+                int userId = Convert.ToInt32(Session["UserID"]);
+                LoadSidebarPermissions(userId);
+            }
+
+            // ✅ Step 4: Update UI on first load only
             if (!IsPostBack)
             {
-                // ✅ Enforce only Admin role can use this MasterPage
-                if (Session["UserID"] == null || Session["Role"]?.ToString() != "Admin")
-                {
-                    Response.Redirect("~/Login.aspx");
-                    return;
-                }
-
-                // ✅ Display admin's name
-                lblAdminName.Text = Session["Name"]?.ToString() ?? "Admin";
-
-                // ✅ Load sidebar permissions
-                int adminId = Convert.ToInt32(Session["UserID"]);
-                LoadSidebarPermissions(adminId);
+                lblAdminName.Text = Session["Name"]?.ToString() ?? "User";
             }
         }
 
-        private void LoadSidebarPermissions(int adminId)
+        private void LoadSidebarPermissions(int userId)
         {
             List<string> allowedModules = new List<string>();
 
@@ -39,18 +49,21 @@ namespace RRCManagementSystem
 
                 using (SqlCommand cmd = new SqlCommand(query, con))
                 {
-                    cmd.Parameters.AddWithValue("@UserID", adminId);
+                    cmd.Parameters.AddWithValue("@UserID", userId);
                     con.Open();
 
-                    SqlDataReader reader = cmd.ExecuteReader();
-                    while (reader.Read())
+                    using (SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        allowedModules.Add(reader["ModuleName"].ToString());
+                        while (reader.Read())
+                        {
+                            allowedModules.Add(reader["ModuleName"].ToString());
+                        }
                     }
                 }
             }
 
-            ViewState["AllowedModules"] = allowedModules;
+            // ✅ Step 5: Store modules in Session
+            Session["AllowedModules"] = allowedModules;
         }
 
         protected void btnLogout_Click(object sender, EventArgs e)
