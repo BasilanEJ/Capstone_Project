@@ -11,17 +11,8 @@ namespace RRCManagementSystem
 {
 
 
-    public partial class AssignTeam
+    public partial class EditEquipment
     {
-
-        /// <summary>
-        /// lblBookingID control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblBookingID;
 
         /// <summary>
         /// lblMessage control.
@@ -33,40 +24,58 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblMessage;
 
         /// <summary>
-        /// ddlTeams control.
+        /// txtEquipmentID control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.DropDownList ddlTeams;
+        protected global::System.Web.UI.WebControls.TextBox txtEquipmentID;
 
         /// <summary>
-        /// gvEquipments control.
+        /// txtEquipmentName control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvEquipments;
+        protected global::System.Web.UI.WebControls.TextBox txtEquipmentName;
 
         /// <summary>
-        /// gvChemicals control.
+        /// ddlStatus control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvChemicals;
+        protected global::System.Web.UI.WebControls.DropDownList ddlStatus;
 
         /// <summary>
-        /// btnAssign control.
+        /// fuEquipmentImage control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnAssign;
+        protected global::System.Web.UI.WebControls.FileUpload fuEquipmentImage;
+
+        /// <summary>
+        /// imgPreview control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Image imgPreview;
+
+        /// <summary>
+        /// btnUpdate control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnUpdate;
 
         /// <summary>
         /// btnCancel control.

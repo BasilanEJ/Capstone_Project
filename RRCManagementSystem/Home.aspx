@@ -1,86 +1,13 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="Home.aspx.cs" Inherits="RRCManagementSystem.Home" %>
 
-
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- Font Awesome & Bootstrap already assumed to be included in Master -->
     <style>
-        body {
-            background-color: #f8f9fa;
-        }
-
-        .welcome-section {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .welcome-section h1 {
-            color: #004085;
-            font-weight: 700;
-        }
-
-        .welcome-section p {
-            color: #6c757d;
-            font-size: 1.1rem;
-        }
-
-        .card-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .card-box {
-            background: #ffffff;
-            border-radius: 10px;
-            padding: 30px 20px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            transition: 0.3s ease;
-        }
-
-        .card-box:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-box i {
-            font-size: 3rem;
-            color: #004085;
-            margin-bottom: 15px;
-        }
-
-        .card-box h5 {
-            color: #333333;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        .card-box p {
-            color: #6c757d;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-
-        .btn-action {
-            background-color: #004085;
-            color: #ffffff;
-            padding: 8px 16px;
-            font-size: 14px;
-            border-radius: 5px;
-            text-decoration: none;
-            display: inline-block;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn-action:hover {
-            background-color: #003366;
-        }
-
-        /* Floating Chat Button */
         .chat-btn {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            background-color: #0078FF; /* Messenger blue */
+            background-color: #0078FF;
             color: #ffffff;
             font-size: 24px;
             width: 60px;
@@ -95,67 +22,69 @@
 
         .chat-btn:hover {
             background-color: #0056b3;
-            text-decoration: none;
             transform: scale(1.1);
-        }
-
-        @media (max-width: 768px) {
-            .card-container {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-    <div class="container mt-4">
+    <div class="container mt-5">
 
         <!-- Welcome Section -->
-        <div class="welcome-section">
-            <h1>Welcome, <%= Session["Name"] ?? "Valued Client" %>!</h1>
-            <p>Manage your bookings, check payments, and stay connected with us.</p>
+        <div class="text-center mb-5">
+            <h1 class="text-primary fw-bold">Welcome, <%= Session["Name"] ?? "Valued Client" %>!</h1>
+            <p class="text-muted fs-5">Manage your bookings, check payments, and stay connected with us.</p>
         </div>
 
-        <!-- Card Action Section -->
-        <div class="card-container">
-
-            <!-- Book a Service -->
-            <div class="card-box">
-                <i class="fas fa-calendar-plus"></i>
-                <h5>Book a Service</h5>
-                <p>Schedule a new pest control service easily in a few clicks.</p>
-                <a href="BookService.aspx" class="btn-action">Book Now</a>
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4 justify-content-center">
+    <!-- Book a Service -->
+    <div class="col">
+        <div class="card h-100 shadow-sm text-center">
+            <div class="card-body">
+                <i class="fas fa-calendar-plus fa-3x text-primary mb-3"></i>
+                <h5 class="card-title fw-semibold">Book a Service</h5>
+                <p class="card-text text-muted">Schedule a new pest control service easily in a few clicks.</p>
+                <a href="BookService.aspx" class="btn btn-primary">Book Now</a>
             </div>
-
-            <!-- My Bookings -->
-            <div class="card-box">
-                <i class="fas fa-clipboard-list"></i>
-                <h5>My Bookings</h5>
-                <p>Track your upcoming and completed service bookings.</p>
-                <a href="MyBookings.aspx" class="btn-action">View Bookings</a>
-            </div>
-
-                        <!-- Our Contract -->
-            <div class="card-box">
-                <i class="fas fa-file-contract"></i>
-                <h5>Our Contract</h5>
-                <p>Review your current pest control contract and service terms.</p>
-                <a href="OurContract.aspx" class="btn-action">View Contract</a>
-            </div>
-
-
-            <!-- Pending Payments -->
-            <div class="card-box">
-                <i class="fas fa-wallet"></i>
-                <h5>Pending Payments</h5>
-                <p>Check and settle your pending balances easily.</p>
-                <a href="Payment.aspx" class="btn-action">Check Payments</a>
-            </div>
-
-            <!-- My Profile -->
-          
-
         </div>
+    </div>
+
+    <!-- My Bookings -->
+    <div class="col">
+        <div class="card h-100 shadow-sm text-center">
+            <div class="card-body">
+                <i class="fas fa-clipboard-list fa-3x text-primary mb-3"></i>
+                <h5 class="card-title fw-semibold">My Bookings</h5>
+                <p class="card-text text-muted">Track your upcoming and completed service bookings.</p>
+                <a href="MyBookings.aspx" class="btn btn-primary">View Bookings</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Our Contract -->
+    <div class="col">
+        <div class="card h-100 shadow-sm text-center">
+            <div class="card-body">
+                <i class="fas fa-file-contract fa-3x text-primary mb-3"></i>
+                <h5 class="card-title fw-semibold">Our Contract</h5>
+                <p class="card-text text-muted">Review your current pest control contract and service terms.</p>
+                <a href="OurContract.aspx" class="btn btn-primary">View Contract</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Payments -->
+    <div class="col">
+        <div class="card h-100 shadow-sm text-center">
+            <div class="card-body">
+                <i class="fas fa-wallet fa-3x text-primary mb-3"></i>
+                <h5 class="card-title fw-semibold">Pending Payments</h5>
+                <p class="card-text text-muted">Check and settle your pending balances easily.</p>
+                <a href="Payment.aspx" class="btn btn-primary">Check Payments</a>
+            </div>
+        </div>
+    </div>
+</div>
 
         <!-- Floating Messenger Chat Button -->
         <a href="ChatWithAdmin.aspx" class="chat-btn" title="Chat with Admin">

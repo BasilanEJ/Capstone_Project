@@ -19,7 +19,6 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -28,7 +27,6 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Deny access to SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -37,7 +35,6 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // ✅ Require CanView permission for ManageSupplier
             if (!HasPermission(userId, "ManageSupplier", "CanView"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
@@ -52,7 +49,6 @@ namespace RRCManagementSystem
                 LoadSuppliers();
             }
         }
-
 
         private bool HasPermission(int adminId, string moduleName, string column)
         {
@@ -95,6 +91,14 @@ namespace RRCManagementSystem
                         DataTable dt = new DataTable();
                         da.Fill(dt);
 
+                        // ✅ Add formatted ID for display
+                        dt.Columns.Add("FormattedSupplierID", typeof(string));
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            int id = Convert.ToInt32(row["SupplierID"]);
+                            row["FormattedSupplierID"] = "Supplier" + id.ToString("D3");
+                        }
+
                         gvSuppliers.DataSource = dt;
                         gvSuppliers.DataBind();
                     }
@@ -115,28 +119,23 @@ namespace RRCManagementSystem
                 lblSendTo.Text = $"Sending to: {selectedSupplierEmail}";
                 lblMessage.Text = "";
             }
-            else
+            else if (int.TryParse(e.CommandArgument.ToString(), out int supplierID))
             {
-                // Only parse supplierID if the CommandArgument is actually an integer
-                if (int.TryParse(e.CommandArgument.ToString(), out int supplierID))
+                if (e.CommandName == "EditSupplier" && Convert.ToBoolean(ViewState["CanEdit"]))
                 {
-                    if (e.CommandName == "EditSupplier" && Convert.ToBoolean(ViewState["CanEdit"]))
-                    {
-                        Response.Redirect($"EditSupplier.aspx?SupplierID={supplierID}");
-                    }
-
-                    if (e.CommandName == "ArchiveSupplier" && Convert.ToBoolean(ViewState["CanDelete"]))
-                    {
-                        ArchiveSupplier(supplierID);
-                    }
+                    Response.Redirect($"EditSupplier.aspx?SupplierID={supplierID}");
                 }
-                else
+
+                if (e.CommandName == "ArchiveSupplier" && Convert.ToBoolean(ViewState["CanDelete"]))
                 {
-                    lblMessage.Text = "⚠ Unable to parse SupplierID.";
+                    ArchiveSupplier(supplierID);
                 }
             }
+            else
+            {
+                lblMessage.Text = "⚠ Unable to parse SupplierID.";
+            }
         }
-
 
         protected void btnSendEmail_Click(object sender, EventArgs e)
         {

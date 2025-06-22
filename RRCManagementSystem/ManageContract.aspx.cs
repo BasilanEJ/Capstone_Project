@@ -33,17 +33,17 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 Optional: Check CanView permission (if applicable)
-            // if (!HasPermission(userId, "ManageClients"))
-            // {
-            //     Response.Redirect("~/Unauthorized.aspx");
-            //     return;
-            // }
+            /*🔐 Optional: Check CanView permission (if applicable)
+            if (!HasPermission(userId, "ManageClients"))
+            {
+                Response.Redirect("~/Unauthorized.aspx");
+                return;
+             } */
 
             if (!IsPostBack)
             {
                 LoadClients();
-            }
+            } 
         }
 
 
@@ -67,12 +67,13 @@ namespace RRCManagementSystem
         {
             lblMessage.CssClass = "message";
 
-            if (Session["AdminID"] == null)
+            if (Session["UserID"] == null)
             {
                 lblMessage.Text = "❌ You must be logged in to upload a contract.";
                 lblMessage.CssClass += " error";
                 return;
             }
+
 
             if (!fuContract.HasFile || Path.GetExtension(fuContract.FileName).ToLower() != ".pdf")
             {
@@ -91,7 +92,7 @@ namespace RRCManagementSystem
             try
             {
                 int clientId = Convert.ToInt32(ddlClients.SelectedValue);
-                int uploadedBy = Convert.ToInt32(Session["AdminID"]);
+                int uploadedBy = Convert.ToInt32(Session["UserID"]);
                 DateTime startDate = Convert.ToDateTime(txtStartDate.Text);
                 DateTime endDate = Convert.ToDateTime(txtEndDate.Text);
                 string remarks = txtRemarks.Text.Trim();

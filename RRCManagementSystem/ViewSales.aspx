@@ -63,16 +63,22 @@
     <asp:Label ID="lblMessage" runat="server" CssClass="message-label"></asp:Label>
 
     <div class="grid-container">
-        <asp:GridView ID="gvSales" runat="server" AutoGenerateColumns="False" CssClass="table table-striped table-bordered" GridLines="None">
-            <Columns>
-                <asp:BoundField DataField="SaleID" HeaderText="Sale ID" />
-                <asp:BoundField DataField="ClientName" HeaderText="Client" />
-                <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="{0:C}" />
-                <asp:BoundField DataField="PaymentMethod" HeaderText="Method" />
-                <asp:BoundField DataField="Status" HeaderText="Status" />
-                <asp:BoundField DataField="TransactionDate" HeaderText="Date" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
-            </Columns>
-        </asp:GridView>
+  
+        <asp:GridView ID="gvSales" runat="server" AutoGenerateColumns="False"
+    CssClass="table table-striped table-bordered" GridLines="None">
+    <Columns>
+        <!-- Use pre-formatted column from code-behind -->
+        <asp:BoundField DataField="FormattedSaleID" HeaderText="Sale ID" />
+
+        <asp:BoundField DataField="ClientName" HeaderText="Client" />
+        <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="{0:C}" />
+        <asp:BoundField DataField="PaymentMethod" HeaderText="Method" />
+        <asp:BoundField DataField="Status" HeaderText="Status" />
+        <asp:BoundField DataField="TransactionDate" HeaderText="Date" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
+    </Columns>
+</asp:GridView>
+
+
     </div>
 </asp:Content>
 

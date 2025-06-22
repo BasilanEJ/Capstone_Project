@@ -6,270 +6,126 @@
     <meta charset="utf-8" />
     <title>Inspector Panel</title>
 
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <!-- Bootstrap 5 & FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 
-    <style type="text/css">
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f3f4f6;
-        }
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 60px;
-            width: 100%;
-            background-color: #1f2937;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            z-index: 1000;
-        }
-
-        .inspector-name {
-            margin-right: 20px;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 60px;
-            left: 0;
-            width: 280px;
-            height: calc(100vh - 60px);
-            background-color: #111827;
-            color: white;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .sidebar ul li {
-            border-bottom: 1px solid #1f2937;
-        }
-
-        .sidebar ul li a {
-            display: block;
-            padding: 15px 20px;
-            color: white;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-
-        .sidebar ul li a:hover {
-            background-color: #374151;
-        }
-
-        .main-content {
-            margin-left: 280px;
-            margin-top: 60px;
-            padding: 30px;
-            background-color: #f3f4f6;
-            min-height: calc(100vh - 60px);
-        }
-
-        .footer {
-            position: fixed;
-            bottom: 0;
-            left: 280px;
-            width: calc(100% - 280px);
-            background-color: #1f2937;
-            color: white;
-            text-align: center;
-            padding: 10px;
-        }
-
-        .logout-button {
-            display: block;
-            margin: 20px;
-            text-align: center;
-            background-color: #ef4444;
-            color: white;
-            padding: 10px;
-            border-radius: 4px;
-            text-decoration: none;
-            transition: background-color 0.3s;
-            font-weight: bold;
-        }
-
-        .logout-button:hover {
-            background-color: #dc2626;
-        }
-
-        .notify-badge {
-            position: absolute;
-            top: -5px;
-            right: -10px;
-            background: red;
-            color: white;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 50%;
-        }
-
-        #notificationBell {
-            margin-right: 10px;
-            cursor: pointer;
-            position: relative;
-            padding-right: 30px;
-        }
-
-        #notificationList {
-            display: none;
-            position: absolute;
-            right: 0;
-            top: 30px;
-            background: white;
-            color: black;
-            width: 300px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            border-radius: 8px;
-            z-index: 9999;
-            padding-right:20px;
-        }
-
+    <style>
         @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-                top: 0;
-                flex-direction: row;
-                overflow-x: auto;
+            #sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 1040;
             }
-
-            .sidebar ul {
-                display: flex;
-                flex-direction: row;
+            #sidebar.show {
+                transform: translateX(0);
             }
-
-            .sidebar ul li {
-                border-bottom: none;
-                border-right: 1px solid #374151;
-            }
-
-            .sidebar ul li a {
-                padding: 10px 15px;
-                font-size: 14px;
-            }
-
-            .main-content {
-                margin-left: 0;
-                margin-top: 120px;
-                padding: 15px;
-            }
-
-            .header {
-                flex-wrap: wrap;
-                justify-content: space-between;
-                height: auto;
-                padding: 10px;
-            }
-
-            .footer {
-                left: 0;
-                width: 100%;
+            #mainContent {
+                margin-left: 0 !important;
             }
         }
     </style>
-</head>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    function loadNotifications() {
-        fetch('GetNotifications.ashx')
-            .then(res => res.json())
-            .then(data => {
-                const count = data.length;
-                const badge = document.getElementById('notificationCount');
-                const list = document.getElementById('notificationItems');
-                badge.textContent = count;
-
-                if (count > 0) {
-                    badge.style.display = 'inline-block';
-                    list.innerHTML = data.map(item =>
-                        `<div style="padding:5px 0; border-bottom:1px solid #eee;">
-                            <strong>Inspection #${item.id}</strong><br/>
-                            <small>${item.date}</small>
-                        </div>`).join('');
-                } else {
-                    badge.style.display = 'none';
-                    list.innerHTML = "<div style='padding:10px;'>No new inspections.</div>";
-                }
-            });
-    }
-
-    function markNotificationsAsRead() {
-        fetch('MarkAsRead.ashx', { method: 'POST' })
-            .then(() => {
-                document.getElementById('notificationCount').style.display = 'none';
-                loadNotifications();
-            });
-    }
-
-    function toggleNotificationList() {
-        const list = document.getElementById('notificationList');
-        const isVisible = list.style.display === 'block';
-        list.style.display = isVisible ? 'none' : 'block';
-        if (!isVisible) markNotificationsAsRead();
-    }
-
-    document.addEventListener('click', function (e) {
-        if (!e.target.closest('#notificationBell')) {
-            document.getElementById('notificationList').style.display = 'none';
+    <script type="text/javascript">
+        function toggleSidebar() {
+            document.getElementById("sidebar").classList.toggle("show");
         }
-    });
+    </script>
+</head>
+<body class="bg-light">
+    <form id="form1" runat="server" class="d-flex flex-column min-vh-100">
 
-    loadNotifications();
-    setInterval(loadNotifications, 30000);
-</script>
-
-<body>
-    <form id="form1" runat="server">
-        <div class="header">
-            <h2 style="flex: 1;">Inspector Panel</h2>
-            <asp:Label ID="lblInspectorName" runat="server" CssClass="inspector-name" />
-            <div id="notificationBell" onclick="toggleNotificationList()">
-                <i class="fas fa-bell" style="font-size: 20px;"></i>
-                <span id="notificationCount" class="notify-badge" style="display:none;">0</span>
-                <div id="notificationList">
-                    <div id="notificationItems" style="padding: 10px;"></div>
+        <!-- Header -->
+        <header class="bg-dark text-white d-flex align-items-center justify-content-between px-4" style="height: 60px; position: fixed; top: 0; left: 0; width: 100%; z-index: 1050;">
+            <h2 class="mb-0">Inspector Panel</h2>
+            <div class="d-flex align-items-center">
+                <asp:Label ID="lblInspectorName" runat="server" CssClass="me-4 fw-bold" />
+                <div id="notificationBell" class="position-relative me-3" onclick="toggleNotificationList()" style="cursor:pointer;">
+                    <i class="fas fa-bell fs-5"></i>
+                    <span id="notificationCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none; font-size: 10px;">0</span>
+                    <div id="notificationList" class="position-absolute bg-white text-dark rounded shadow p-3" style="right: 0; top: 30px; width: 300px; display: none; z-index: 9999;">
+                        <div id="notificationItems"></div>
+                    </div>
                 </div>
+                <button class="btn btn-outline-light d-md-none" type="button" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
-        </div>
+        </header>
 
-        <div class="sidebar">
-            <div>
-                <ul>
-                    <li><a href="/InspectorDashboard.aspx"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                    <li><a href="/MyInspections.aspx"><i class="fas fa-search"></i> Inspections</a></li>
-                    <li><a href="/CreateBooking.aspx"><i class="fas fa-tasks"></i> Assign Booking</a></li>
-                </ul>
-            </div>
-            <asp:LinkButton ID="btnLogout" runat="server" CssClass="logout-button" OnClick="btnLogout_Click">
-                <i class="fas fa-sign-out-alt"></i> Logout
+        <!-- Sidebar -->
+        <aside id="sidebar" class="bg-black text-white position-fixed d-flex flex-column" style="top: 60px; left: 0; width: 280px; height: calc(100vh - 60px); overflow-y: auto;">
+            <ul class="nav flex-column">
+                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="InspectorDashboard.aspx"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a></li>
+                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="MyInspections.aspx"><i class="fas fa-search me-2"></i> Inspections</a></li>
+                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="CreateBooking.aspx"><i class="fas fa-tasks me-2"></i> Assign Booking</a></li>
+            </ul>
+
+            <asp:LinkButton ID="btnLogout" runat="server" CssClass="btn btn-danger fw-bold w-75 mx-auto my-4 d-block" OnClick="btnLogout_Click">
+                <i class="fas fa-sign-out-alt me-2"></i> Logout
             </asp:LinkButton>
-        </div>
+        </aside>
 
-        <div class="main-content">
-            <asp:ContentPlaceHolder ID="MainContent" runat="server"></asp:ContentPlaceHolder>
-        </div>
+        <!-- Main Content -->
+        <main id="mainContent" class="flex-grow-1" style="margin-left: 280px; margin-top: 60px; padding: 30px; background-color: #f3f4f6; min-height: calc(100vh - 100px);">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+        </main>
 
-        <div class="footer">
+        <!-- Footer -->
+        <footer class="bg-dark text-white text-center py-3 position-fixed bottom-0" style="left: 280px; width: calc(100% - 280px); z-index: 1030;">
             &copy; 2025 RRC Management System - Inspector
-        </div>
+        </footer>
     </form>
+
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function loadNotifications() {
+            fetch('GetNotifications.ashx')
+                .then(res => res.json())
+                .then(data => {
+                    const count = data.length;
+                    const badge = document.getElementById('notificationCount');
+                    const list = document.getElementById('notificationItems');
+                    badge.textContent = count;
+
+                    if (count > 0) {
+                        badge.style.display = 'inline-block';
+                        list.innerHTML = data.map(item =>
+                            `<div class='border-bottom pb-2 mb-2'><strong>Inspection #${item.id}</strong><br/><small>${item.date}</small></div>`
+                        ).join('');
+                    } else {
+                        badge.style.display = 'none';
+                        list.innerHTML = "<div class='text-center'>No new inspections.</div>";
+                    }
+                });
+        }
+
+        function markNotificationsAsRead() {
+            fetch('MarkAsRead.ashx', { method: 'POST' })
+                .then(() => {
+                    document.getElementById('notificationCount').style.display = 'none';
+                    loadNotifications();
+                });
+        }
+
+        function toggleNotificationList() {
+            const list = document.getElementById('notificationList');
+            list.style.display = list.style.display === 'block' ? 'none' : 'block';
+            if (list.style.display === 'block') markNotificationsAsRead();
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#notificationBell')) {
+                document.getElementById('notificationList').style.display = 'none';
+            }
+        });
+
+        loadNotifications();
+        setInterval(loadNotifications, 30000);
+    </script>
 </body>
 </html>

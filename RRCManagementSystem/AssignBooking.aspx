@@ -1,202 +1,113 @@
-﻿    <%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AssignBooking.aspx.cs" Inherits="RRCManagementSystem.AssignBooking" %>
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AssignBooking.aspx.cs" Inherits="RRCManagementSystem.AssignBooking" %>
 
-   <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-        <style>
-            /* Main content inherits padding/margin from master */
-            .assign-section {
-                background-color: #ffffff;
-                padding: 25px;
-                border-radius: 10px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                margin-bottom: 30px;
-            }
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</asp:Content>
 
-            .assign-section h3 {
-                color: #004085;
-                margin-bottom: 15px;
-            }
+<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="container py-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white fw-bold">
+                <i class="fas fa-tasks me-2"></i> Assign Team, Equipment, Chemicals & Safety Gear
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Select Team</label>
+                    <asp:DropDownList ID="ddlTeams" runat="server" CssClass="form-select" />
+                </div>
 
-            .form-group {
-                margin-bottom: 20px;
-            }
+                <div class="mt-4">
+                    <h5 class="text-primary"><i class="fas fa-tools me-2"></i> Assign Equipment</h5>
+                    <div class="table-responsive">
+                        <asp:GridView ID="gvEquipments" runat="server" AutoGenerateColumns="False" DataKeyNames="EquipmentID" CssClass="table table-bordered">
+                            <Columns>
+                                <asp:BoundField DataField="EquipmentID" HeaderText="Equipment ID" />
+                                <asp:BoundField DataField="Name" HeaderText="Equipment Name" />
+                                <asp:BoundField DataField="Status" HeaderText="Status" />
+                                <asp:TemplateField HeaderText="Assign?">
+                                    <ItemTemplate>
+                                        <asp:CheckBox ID="chkAssignEquip" runat="server" />
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                            </Columns>
+                        </asp:GridView>
+                    </div>
+                </div>
 
-            .form-group label {
-                font-weight: bold;
-                margin-bottom: 5px;
-                display: block;
-            }
+                <div class="mt-4">
+                    <h5 class="text-primary"><i class="fas fa-vial me-2"></i> Assign Bottled Chemicals</h5>
+                    <div class="table-responsive">
+                        <asp:GridView ID="gvChemicals" runat="server" AutoGenerateColumns="False" DataKeyNames="ItemID" CssClass="table table-bordered">
+                            <Columns>
+                                <asp:BoundField DataField="ItemID" HeaderText="ID" />
+                                <asp:BoundField DataField="Name" HeaderText="Chemical Name" />
+                                <asp:TemplateField HeaderText="Bottles Available">
+                                    <ItemTemplate><asp:Label ID="lblQuantity" runat="server" Text='<%# Eval("Quantity") %>' /></ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Excess mL">
+                                    <ItemTemplate><asp:Label ID="lblExcessML" runat="server" Text='<%# Eval("ExcessML") %>' /></ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Bottle Buffer">
+                                    <ItemTemplate><asp:TextBox ID="txtBottleBuffer" runat="server" CssClass="form-control" Text="0" /></ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Use This Chemical?">
+                                    <ItemTemplate><asp:CheckBox ID="chkUseChemical" runat="server" /></ItemTemplate>
+                                </asp:TemplateField>
+                            </Columns>
+                        </asp:GridView>
+                    </div>
+                </div>
 
-            .form-group select, 
-            .form-group input[type="text"], 
-            .form-group input[type="number"] {
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #ced4da;
-                border-radius: 5px;
-            }
+                <div class="mt-4">
+                    <h5 class="text-primary"><i class="fas fa-box me-2"></i> Assign Sachet Pack Chemicals</h5>
+                    <div class="table-responsive">
+                        <asp:GridView ID="gvSachetChemicals" runat="server" AutoGenerateColumns="False" DataKeyNames="ItemID" CssClass="table table-bordered">
+                            <Columns>
+                                <asp:BoundField DataField="ItemID" HeaderText="ID" />
+                                <asp:BoundField DataField="Name" HeaderText="Sachet Name" />
+                                <asp:TemplateField HeaderText="Packs Available">
+                                    <ItemTemplate><asp:Label ID="lblSachetQuantity" runat="server" Text='<%# Eval("Quantity") %>' /></ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Assign Quantity">
+                                    <ItemTemplate>
+                                        <asp:TextBox ID="txtAssignSachet" runat="server" Text="0" CssClass="form-control" onkeypress="return isNumberKey(event);" onblur="setZeroIfEmpty(this);" />
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                            </Columns>
+                        </asp:GridView>
+                    </div>
+                </div>
 
-            .btn-primary {
-                background-color: #004085;
-                color: #ffffff;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 5px;
-                font-size: 14px;
-                cursor: pointer;
-            }
+                <div class="mt-4">
+                    <h5 class="text-primary"><i class="fas fa-hard-hat me-2"></i> Assign Safety Gear</h5>
+                    <div class="table-responsive">
+                        <asp:GridView ID="gvSafetyGears" runat="server" AutoGenerateColumns="False" DataKeyNames="ItemID" CssClass="table table-bordered">
+                            <Columns>
+                                <asp:BoundField DataField="ItemID" HeaderText="Gear ID" />
+                                <asp:BoundField DataField="Name" HeaderText="Gear Name" />
+                                <asp:BoundField DataField="Quantity" HeaderText="Available Quantity" />
+                                <asp:TemplateField HeaderText="Assign Quantity">
+                                    <ItemTemplate><asp:TextBox ID="txtGearQuantityAssign" runat="server" Text="0" CssClass="form-control" /></ItemTemplate>
+                                </asp:TemplateField>
+                            </Columns>
+                        </asp:GridView>
+                    </div>
+                </div>
 
-            .btn-primary:hover {
-                background-color: #002752;
-            }
+                <div class="mt-4 text-end">
+                    <asp:Button ID="btnAssignAll" runat="server" Text="Assign Booking" CssClass="btn btn-primary px-4" OnClick="btnAssignAll_Click" />
+                </div>
 
-            .message-label {
-                margin-top: 20px;
-                font-weight: bold;
-            }
-
-            .gridview-container {
-                margin-top: 10px;
-            }
-
-            .section-title {
-                display: flex;
-                align-items: center;
-                font-size: 18px;
-                color: #004085;
-                margin-bottom: 15px;
-            }
-
-            .section-title i {
-                margin-right: 10px;
-            }
-
-            /* GridView headers */
-            .gridview-container table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-
-            .gridview-container th {
-                background-color: #004085;
-                color: white;
-                padding: 10px;
-            }
-
-            .gridview-container td {
-                padding: 10px;
-                border: 1px solid #dee2e6;
-            }
-
-            .gridview-container input[type="text"] {
-                width: 60px;
-                text-align: center;
-            }
-        </style>
-    </asp:Content>
-
-    <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-    <div class="assign-section">
-        <h2><i class="fas fa-tasks"></i> Assign Team, Equipment, Chemicals & Safety Gear</h2>
-
-        <div class="form-group">
-            <label><i class="fas fa-users"></i> Select Team</label>
-            <asp:DropDownList ID="ddlTeams" runat="server" CssClass="form-control" />
+                <asp:Label ID="lblMessage" runat="server" CssClass="d-block mt-3 fw-semibold text-success" />
+            </div>
         </div>
-
-        <div class="gridview-container">
-            <div class="section-title"><i class="fas fa-tools"></i> Assign Equipment</div>
-            <asp:GridView ID="gvEquipments" runat="server" AutoGenerateColumns="False" DataKeyNames="EquipmentID" CssClass="table">
-                <Columns>
-                    <asp:BoundField DataField="EquipmentID" HeaderText="Equipment ID" />
-                    <asp:BoundField DataField="Name" HeaderText="Equipment Name" />
-                    <asp:BoundField DataField="Status" HeaderText="Status" />
-                    <asp:TemplateField HeaderText="Assign?">
-                        <ItemTemplate>
-                            <asp:CheckBox ID="chkAssignEquip" runat="server" />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-            </asp:GridView>
-        </div>
-
-        <div class="gridview-container">
-            <asp:GridView ID="gvChemicals" runat="server" AutoGenerateColumns="False" DataKeyNames="ItemID" CssClass="table">
-                <Columns>
-                    <asp:BoundField DataField="ItemID" HeaderText="ID" />
-                    <asp:BoundField DataField="Name" HeaderText="Chemical Name" />
-                    <asp:TemplateField HeaderText="Bottles Available">
-                        <ItemTemplate>
-                            <asp:Label ID="lblQuantity" runat="server" Text='<%# Eval("Quantity") %>' />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                    <asp:TemplateField HeaderText="Excess mL">
-                        <ItemTemplate>
-                            <asp:Label ID="lblExcessML" runat="server" Text='<%# Eval("ExcessML") %>' />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                    <asp:TemplateField HeaderText="Bottle Buffer">
-                        <ItemTemplate>
-                            <asp:TextBox ID="txtBottleBuffer" runat="server" CssClass="form-control" Text="0" Width="80px" />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                    <asp:TemplateField HeaderText="Use This Chemical?">
-                        <ItemTemplate>
-                            <asp:CheckBox ID="chkUseChemical" runat="server" />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-            </asp:GridView>
-        </div>
-
-        <div class="gridview-container">
-            <div class="section-title"><i class="fas fa-box"></i> Assign Sachet Pack Chemicals</div>
-            <asp:GridView ID="gvSachetChemicals" runat="server" AutoGenerateColumns="False" DataKeyNames="ItemID" CssClass="table">
-                <Columns>
-                    <asp:BoundField DataField="ItemID" HeaderText="ID" />
-                    <asp:BoundField DataField="Name" HeaderText="Sachet Name" />
-                    <asp:TemplateField HeaderText="Packs Available">
-                        <ItemTemplate>
-                            <asp:Label ID="lblSachetQuantity" runat="server" Text='<%# Eval("Quantity") %>' />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                    <asp:TemplateField HeaderText="Assign Quantity">
-                        <ItemTemplate>
-                            <asp:TextBox ID="txtAssignSachet" runat="server" Text="0" Width="60px"
-                                onkeypress="return isNumberKey(event);" onblur="setZeroIfEmpty(this);" />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-            </asp:GridView>
-        </div>
-
-        <div class="gridview-container">
-            <div class="section-title"><i class="fas fa-hard-hat"></i> Assign Safety Gear</div>
-            <asp:GridView ID="gvSafetyGears" runat="server" AutoGenerateColumns="False" DataKeyNames="ItemID" CssClass="table">
-                <Columns>
-                    <asp:BoundField DataField="ItemID" HeaderText="Gear ID" />
-                    <asp:BoundField DataField="Name" HeaderText="Gear Name" />
-                    <asp:BoundField DataField="Quantity" HeaderText="Available Quantity" />
-                    <asp:TemplateField HeaderText="Assign Quantity">
-                        <ItemTemplate>
-                            <asp:TextBox ID="txtGearQuantityAssign" runat="server" Text="0" CssClass="form-control" Width="60px" />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-            </asp:GridView>
-        </div>
-
-        <div style="margin-top: 20px;">
-            <asp:Button ID="btnAssignAll" runat="server" Text="Assign Booking" CssClass="btn-primary" OnClick="btnAssignAll_Click" />
-        </div>
-
-        <asp:Label ID="lblMessage" runat="server" CssClass="message-label" />
     </div>
 
-    <script type="text/javascript">
+    <script>
         function isNumberKey(evt) {
             var charCode = (evt.which) ? evt.which : evt.keyCode;
-            if (charCode != 8 && charCode != 46 && (charCode < 48 || charCode > 57)) return false;
-            return true;
+            return !(charCode != 8 && charCode != 46 && (charCode < 48 || charCode > 57));
         }
 
         function setZeroIfEmpty(input) {

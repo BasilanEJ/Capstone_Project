@@ -1,136 +1,14 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="MyBookings.aspx.cs" Inherits="RRCManagementSystem.MyBookings" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        .container {
-            padding: 30px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        h3 { color: #004085; margin-bottom: 20px; }
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .table th, .table td {
-            padding: 12px;
-            text-align: center;
-            border: 1px solid #dee2e6;
-        }
-        .table th { background-color: #004085; color: white; }
-        .table-striped tbody tr:nth-child(odd) { background-color: #f9f9f9; }
-        .message-info {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin-top: 10px;
-        }
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .modal-box {
-            background: #fff;
-            padding: 25px;
-            border-radius: 10px;
-            width: 400px;
-            text-align: center;
-        }
-
-        /* Responsive layout for tablets and below */
-@media (max-width: 768px) {
-    .container {
-        padding: 15px;
-    }
-
-    h3 {
-        font-size: 20px;
-    }
-
-    .table th, .table td {
-        font-size: 13px;
-        padding: 8px;
-    }
-
-    .btn {
-        font-size: 13px;
-        padding: 6px 12px;
-    }
-
-    .modal-box {
-        width: 90%;
-        padding: 20px;
-    }
-
-    .modal-box h4 {
-        font-size: 18px;
-        margin-bottom: 15px;
-    }
-
-    .form-control {
-        font-size: 14px;
-        margin-top: 10px;
-    }
-}
-
-/* Responsive layout for mobile phones */
-@media (max-width: 480px) {
-    .container {
-        padding: 10px;
-    }
-
-    h3 {
-        font-size: 18px;
-    }
-
-    .table th, .table td {
-        font-size: 12px;
-        padding: 6px;
-    }
-
-    .btn {
-        font-size: 12px;
-        padding: 5px 10px;
-    }
-
-    .modal-box {
-        width: 95%;
-        padding: 15px;
-    }
-
-    .modal-box h4 {
-        font-size: 16px;
-    }
-
-    .form-control {
-        font-size: 13px;
-        padding: 8px;
-    }
-
-    .message-info {
-        font-size: 13px;
-    }
-}
-
-    </style>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
-    <div class="container">
-        <h3>My Bookings</h3>
-        <asp:Label ID="lblMessage" runat="server" ForeColor="Red" />
+    <div class="container my-5 p-4 bg-white rounded shadow">
+        <h3 class="text-primary mb-4">My Bookings</h3>
+        <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-bold mb-3 d-block" />
 
         <!-- Bookings Grid -->
-        <asp:GridView ID="gvMyBookings" runat="server" AutoGenerateColumns="False" CssClass="table"
+        <asp:GridView ID="gvMyBookings" runat="server" AutoGenerateColumns="False" CssClass="table table-bordered table-striped text-center"
             AllowPaging="True" PageSize="10"
             OnPageIndexChanging="gvMyBookings_PageIndexChanging"
             OnRowDataBound="gvMyBookings_RowDataBound">
@@ -159,12 +37,12 @@
         </asp:GridView>
 
         <!-- Next Operation Reminder -->
-        <asp:Label ID="lblNextOperationNotice" runat="server" CssClass="message-info" Visible="false" />
+        <asp:Label ID="lblNextOperationNotice" runat="server" CssClass="alert alert-success fw-bold mt-3 d-block" Visible="false" />
 
         <!-- Upcoming Operations -->
         <asp:Panel ID="pnlUpcomingOps" runat="server" Visible="false">
-            <h3 style="margin-top:40px;">Upcoming Operations (Next 30 Days)</h3>
-            <asp:GridView ID="gvUpcoming" runat="server" AutoGenerateColumns="False" CssClass="table"
+            <h3 class="text-primary mt-5">Upcoming Operations (Next 30 Days)</h3>
+            <asp:GridView ID="gvUpcoming" runat="server" AutoGenerateColumns="False" CssClass="table table-bordered table-striped text-center"
                 OnRowCommand="gvUpcoming_RowCommand">
                 <Columns>
                     <asp:BoundField DataField="ScheduleID" HeaderText="ID" Visible="false" />
@@ -185,33 +63,63 @@
         </asp:Panel>
 
         <!-- All Scheduled Operations -->
-        <asp:Panel ID="pnlAllOps" runat="server" Visible="false">
-            <h3 style="margin-top:40px;">All Scheduled Operations</h3>
-            <asp:GridView ID="gvAllOps" runat="server" AutoGenerateColumns="False" CssClass="table">
-                <Columns>
-                    <asp:BoundField DataField="BookingID" HeaderText="Booking ID" />
-                    <asp:BoundField DataField="OperationNumber" HeaderText="Operation #" />
-                    <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled Date" DataFormatString="{0:yyyy-MM-dd}" />
-                    <asp:BoundField DataField="Status" HeaderText="Status" />
-                </Columns>
-            </asp:GridView>
-        </asp:Panel>
+<asp:Panel ID="pnlAllOps" runat="server" Visible="false">
+    <h3 class="text-primary mt-5">All Scheduled Operations</h3>
+    <asp:GridView ID="gvAllOps" runat="server" AutoGenerateColumns="False"
+        CssClass="table table-bordered table-striped text-center"
+        OnRowCommand="gvAllOps_RowCommand"
+        OnRowDataBound="gvAllOps_RowDataBound"
+        DataKeyNames="ScheduleID">
+        
+        <Columns>
+            <asp:BoundField DataField="BookingID" HeaderText="Booking ID" />
+            <asp:BoundField DataField="OperationNumber" HeaderText="Operation #" />
+            <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled Date" DataFormatString="{0:yyyy-MM-dd}" />
+            <asp:BoundField DataField="Status" HeaderText="Status" />
+
+            <asp:TemplateField HeaderText="Action">
+                <ItemTemplate>
+                    <asp:Button ID="btnReschedule" runat="server" CommandName="Reschedule" Text="Set New Schedule"
+                        CommandArgument='<%# Eval("ScheduleID") + "|" + Eval("ScheduledDate", "{0:yyyy-MM-ddTHH:mm}") %>'
+                        CssClass="btn btn-warning btn-sm"
+                        Visible='<%# 
+                            Convert.ToDateTime(Eval("ScheduledDate")) < DateTime.Now &&
+                            Eval("Status").ToString() != "Completed" &&
+                            Convert.ToDateTime(Eval("ScheduledDate")) <= Convert.ToDateTime(Eval("CreatedAt")).AddYears(2)
+                        %>' />
+                </ItemTemplate>
+            </asp:TemplateField>
+
+            <asp:TemplateField HeaderText="Progress">
+                <ItemTemplate>
+                    <asp:Literal ID="ltProgress" runat="server" />
+                </ItemTemplate>
+            </asp:TemplateField>
+        </Columns>
+    </asp:GridView>
+</asp:Panel>
+
 
         <!-- Contract Status -->
-        <asp:Label ID="lblContractStatus" runat="server" CssClass="message-info" Visible="false" />
+        <asp:Label ID="lblContractStatus" runat="server" CssClass="alert alert-success fw-bold mt-4 d-block" Visible="false" />
 
         <!-- Modal for Set Schedule -->
-        <div id="modalOverlay" class="modal-overlay">
-            <div class="modal-box">
-                <h4>Set New Schedule</h4>
+        <div id="modalOverlay" class="modal position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 justify-content-center align-items-center" style="display: none; z-index: 1050;">
+            <div class="bg-white p-4 rounded shadow" style="width: 100%; max-width: 400px;">
+                <h5 class="mb-3">Set New Schedule</h5>
                 <asp:HiddenField ID="hfSelectedScheduleID" runat="server" />
-                <asp:TextBox ID="txtNewScheduleDate" runat="server" TextMode="Date" CssClass="form-control" />
-                <asp:TextBox ID="txtNewScheduleTime" runat="server" TextMode="Time" CssClass="form-control" />
-               <asp:Button ID="btnConfirmSchedule" runat="server" Text="Save" CssClass="btn btn-success"
-    OnClientClick="confirmSchedule(); return false;" />
-
-                <asp:Button ID="btnCloseModal" runat="server" Text="Cancel" CssClass="btn btn-secondary"
-                    OnClientClick="hideModal(); return false;" />
+                <div class="mb-3">
+                    <asp:TextBox ID="txtNewScheduleDate" runat="server" TextMode="Date" CssClass="form-control" />
+                </div>
+                <div class="mb-3">
+                    <asp:TextBox ID="txtNewScheduleTime" runat="server" TextMode="Time" CssClass="form-control" />
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <asp:Button ID="btnConfirmSchedule" runat="server" Text="Save" CssClass="btn btn-success"
+                        OnClientClick="confirmSchedule(); return false;" />
+                    <asp:Button ID="btnCloseModal" runat="server" Text="Cancel" CssClass="btn btn-secondary"
+                        OnClientClick="hideModal(); return false;" />
+                </div>
             </div>
         </div>
 
@@ -221,11 +129,11 @@
                 const dateObj = new Date(currentDateTime);
                 document.getElementById('<%= txtNewScheduleDate.ClientID %>').value = dateObj.toISOString().split('T')[0];
                 document.getElementById('<%= txtNewScheduleTime.ClientID %>').value = dateObj.toTimeString().substring(0, 5);
-                document.getElementById('modalOverlay').style.display = 'flex';
+                document.getElementById('modalOverlay').classList.add('d-flex');
             }
 
             function hideModal() {
-                document.getElementById('modalOverlay').style.display = 'none';
+                document.getElementById('modalOverlay').classList.remove('d-flex');
             }
 
             function confirmSchedule() {
@@ -237,13 +145,12 @@
                     confirmButtonColor: '#1d4ed8',
                     cancelButtonColor: '#d33',
                     confirmButtonText: 'Yes, save it!'
-                }).then((result) => {
+                }).then((result) => {   
                     if (result.isConfirmed) {
                         __doPostBack('<%= btnConfirmSchedule.UniqueID %>', '');
                     }
                 });
             }
-
         </script>
     </div>
 </asp:Content>

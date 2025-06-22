@@ -27,6 +27,7 @@ namespace RRCManagementSystem
                 LoadAllOperations(clientId);
                 CheckIfContractCompleted(clientId);
                 CheckUpcomingContractualOperation(clientId);
+                CheckForMissedOperations(clientId);
             }
         }
 
@@ -176,7 +177,8 @@ namespace RRCManagementSystem
 
                     if (completedOps == totalOps && totalOps > 0)
                     {
-                        lblContractStatus.Text = "🎉 Your 2-year contract has been completed!";
+                        lblContractStatus.Text = $"🎉 Congratulations! Your Termite Control service contract is fully completed as of {DateTime.Today:MMMM dd, yyyy}.";
+
                         lblContractStatus.Visible = true;
                     }
                 }
@@ -211,12 +213,46 @@ namespace RRCManagementSystem
 
         protected void gvAllOps_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (e.CommandName == "SetSchedule")
+            if (e.CommandName == "SetSchedule" || e.CommandName == "Reschedule")
             {
-                string script = $"showModal({e.CommandArgument});";
-                ScriptManager.RegisterStartupScript(this, GetType(), "ShowModal", script, true);
+                string[] args = e.CommandArgument.ToString().Split('|');
+
+                if (args.Length == 2)
+                {
+                    string scheduleId = args[0];
+                    string scheduledDateTime = args[1]; // format: yyyy-MM-ddTHH:mm
+
+                    // Call the JavaScript function showModal with parameters
+                    string script = $"showModal('{scheduleId}', '{scheduledDateTime}');";
+                    ScriptManager.RegisterStartupScript(this, GetType(), "ShowSetScheduleModal", script, true);
+                }
             }
         }
+
+        protected void gvAllOps_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                int completed = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "CompletedOps"));
+                int total = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "TotalOps"));
+                int percentage = total > 0 ? (completed * 100 / total) : 0;
+
+                Literal litProgress = (Literal)e.Row.FindControl("litProgress");
+                if (litProgress != null)
+                {
+                    litProgress.Text = $@"
+                <div class='progress' style='height: 20px;'>
+                    <div class='progress-bar bg-success' role='progressbar'
+                         style='width: {percentage}%;' aria-valuenow='{percentage}' 
+                         aria-valuemin='0' aria-valuemax='100'>
+                        {percentage}%
+                    </div>
+                </div>";
+                }
+            }
+        }
+
+
 
         protected void btnConfirmSchedule_Click(object sender, EventArgs e)
         {
@@ -267,9 +303,48 @@ namespace RRCManagementSystem
                 hfSelectedScheduleID.Value = "";
                 LoadUpcomingOperations(clientId);
 
+                // First hide modal
                 ScriptManager.RegisterStartupScript(this, GetType(), "HideModal", "hideModal();", true);
+
+                // Then show SweetAlert
+                ScriptManager.RegisterStartupScript(this, GetType(), "ScheduleSuccess",
+                    "setTimeout(function() { Swal.fire('Saved!', 'Schedule updated successfully.', 'success'); }, 500);", true);
+
             }
         }
+
+        private void CheckForMissedOperations(int clientId)
+        {
+            using (SqlConnection con = new SqlConnection(connectionString))
+            {
+                string query = @"
+            SELECT TOP 1 ss.ScheduledDate, ss.OperationNumber
+            FROM ServiceSchedule ss
+            INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+            INNER JOIN Services s ON b.ServiceID = s.ServiceID
+            WHERE b.ClientID = @ClientID
+              AND s.ServiceType = 'Termite Control'
+              AND ss.Status != 'Completed'
+              AND ss.ScheduledDate < GETDATE()
+            ORDER BY ss.ScheduledDate DESC";
+
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@ClientID", clientId);
+                con.Open();
+                SqlDataReader reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    DateTime missedDate = Convert.ToDateTime(reader["ScheduledDate"]);
+                    int op = Convert.ToInt32(reader["OperationNumber"]);
+
+                    lblContractStatus.Text = $"⚠️ You missed Operation #{op} on {missedDate:MMMM dd, yyyy}. Please contact us to reschedule.";
+                    lblContractStatus.CssClass = "alert alert-warning fw-bold mt-4 d-block";
+                    lblContractStatus.Visible = true;
+                }
+            }
+        }
+
 
         protected void gvMyBookings_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {

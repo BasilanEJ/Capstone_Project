@@ -168,42 +168,57 @@
 
 
                 <div class="table-responsive">
-                    <asp:GridView ID="gvItems" runat="server" CssClass="table table-bordered table-striped"
-                        AutoGenerateColumns="False" AllowPaging="True" PageSize="10"
-                        OnPageIndexChanging="gvItems_PageIndexChanging" OnRowCommand="gvItems_RowCommand">
-                        <Columns>
-                            <asp:BoundField DataField="ItemID" HeaderText="ID" />
-                            <asp:BoundField DataField="Name" HeaderText="Item Name" />
-                            <asp:BoundField DataField="Type" HeaderText="Type" />
-                          <asp:TemplateField HeaderText="Quantity">
-    <ItemTemplate>
-        <%# 
-            Eval("Type").ToString() == "Bottled Chemical" ? Eval("Quantity") + " bottles" :
-            Eval("Type").ToString() == "Sachet Pack Chemical" ? Eval("Quantity") + " packs" :
-            Eval("Type").ToString() == "Safety Gear" ? Eval("Quantity") + " pcs" :
-            Eval("Quantity") + " unit(s)"
-        %>
-    </ItemTemplate>
-</asp:TemplateField>
-                            <asp:TemplateField HeaderText="Excess (mL)">
-    <ItemTemplate>
-        <%# string.IsNullOrEmpty(Eval("ExcessML").ToString()) ? "-" : Eval("ExcessML") + " mL" %>
-    </ItemTemplate>
-</asp:TemplateField>
+<asp:GridView ID="gvItems" runat="server" CssClass="table table-bordered table-striped"
+    AutoGenerateColumns="False" AllowPaging="True" PageSize="10"
+    OnPageIndexChanging="gvItems_PageIndexChanging" OnRowCommand="gvItems_RowCommand">
+    <Columns>
 
+        <!-- Formatted Item ID -->
+        <asp:TemplateField HeaderText="Item ID">
+            <ItemTemplate>
+                <%# "Item" + Convert.ToInt32(Eval("ItemID")).ToString("D3") %>
+            </ItemTemplate>
+        </asp:TemplateField>
 
-                            <asp:BoundField DataField="ExpirationDate" HeaderText="Expiration Date" DataFormatString="{0:yyyy-MM-dd}" />
-                            <asp:BoundField DataField="CreatedAt" HeaderText="Created At" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
-                            <asp:ImageField DataImageUrlField="ImagePath" HeaderText="Image">
-                                <ControlStyle Width="70px" Height="70px" />
-                            </asp:ImageField>
-                            <asp:TemplateField HeaderText="Actions">
-                                <ItemTemplate>
-                                    <a href='<%# "EditItem.aspx?ItemID=" + Eval("ItemID") %>' class="btn-action btn-edit" onclick="return confirm('Are you sure you want to edit this item?');">Edit</a>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                        </Columns>
-                    </asp:GridView>
+        <asp:BoundField DataField="Name" HeaderText="Item Name" />
+        <asp:BoundField DataField="Type" HeaderText="Type" />
+
+        <!-- Quantity Formatting -->
+        <asp:TemplateField HeaderText="Quantity">
+            <ItemTemplate>
+                <%# 
+                    Eval("Type").ToString() == "Bottled Chemical" ? Eval("Quantity") + " bottles" :
+                    Eval("Type").ToString() == "Sachet Pack Chemical" ? Eval("Quantity") + " packs" :
+                    Eval("Type").ToString() == "Safety Gear" ? Eval("Quantity") + " pcs" :
+                    Eval("Quantity") + " unit(s)"
+                %>
+            </ItemTemplate>
+        </asp:TemplateField>
+
+        <!-- Excess ML -->
+        <asp:TemplateField HeaderText="Excess (mL)">
+            <ItemTemplate>
+                <%# string.IsNullOrEmpty(Eval("ExcessML").ToString()) ? "-" : Eval("ExcessML") + " mL" %>
+            </ItemTemplate>
+        </asp:TemplateField>
+
+        <asp:BoundField DataField="ExpirationDate" HeaderText="Expiration Date" DataFormatString="{0:yyyy-MM-dd}" />
+        <asp:BoundField DataField="CreatedAt" HeaderText="Created At" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
+
+        <asp:ImageField DataImageUrlField="ImagePath" HeaderText="Image">
+            <ControlStyle Width="70px" Height="70px" />
+        </asp:ImageField>
+
+        <!-- Encoded Edit Link -->
+        <asp:TemplateField HeaderText="Actions">
+            <ItemTemplate>
+                <a href='<%# "EditItem.aspx?ItemID=" + EncodeID(Eval("ItemID").ToString()) %>' class="btn-action btn-edit" onclick="return confirm('Are you sure you want to edit this item?');">Edit</a>
+            </ItemTemplate>
+        </asp:TemplateField>
+
+    </Columns>
+</asp:GridView>
+
                 </div>
             </div>
         </div>

@@ -1,174 +1,118 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="EditSupplier.aspx.cs" Inherits="RRCManagementSystem.EditSupplier" %>
 
-
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style>
-        /* Main content wrapper */
-        .main-content {
-            padding: 20px;
-            background-color: #f4f4f4;
-            min-height: calc(100vh - 100px);
-        }
-
-        /* Card container for edit form */
-        .card-container {
-            background-color: #ffffff;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            max-width: 700px;
-            margin: 0 auto;
-        }
-
-        .card-container h2 {
-            color: #004085;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-
-        /* Labels */
-        #pnlEditSupplier label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #333333;
-            margin-top: 15px;
-        }
-
-        /* Form control styling */
-        .form-control {
-            width: 100%;
-            padding: 10px 12px;
-            font-size: 14px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .form-control:focus {
-            border-color: #004085;
-            box-shadow: 0 0 5px rgba(0, 64, 133, 0.3);
-            outline: none;
-        }
-
-        /* Buttons */
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            margin-top: 20px;
-            font-size: 14px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            text-decoration: none;
-            border: none;
-        }
-
-        .btn-primary {
-            background-color: #004085;
-            color: #ffffff;
-        }
-
-        .btn-primary:hover {
-            background-color: #003366;
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: #ffffff;
-        }
-
-        .btn-secondary:hover {
-            background-color: #5a6268;
-        }
-
-        /* Message label */
-        #lblMessage {
-            margin-bottom: 15px;
-            display: block;
-            font-size: 14px;
-            color: #dc3545;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .card-container {
-                padding: 15px;
-            }
-
-            .btn {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-        }
-    </style>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="container my-5" style="max-width: 700px;">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white fs-4 fw-semibold text-center">
+                Edit Supplier
+            </div>
+            <div class="card-body">
 
-    <div class="main-content">
-        <div class="card-container">
+                <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-semibold mb-3 d-block" />
 
-            <h2>Edit Supplier</h2>
+                <asp:Panel ID="pnlEditSupplier" runat="server">
+                    <div class="mb-3">
+                        <label for="txtName" class="form-label fw-semibold">Supplier Name</label>
+                        <asp:TextBox ID="txtName" runat="server" CssClass="form-control" />
+                    </div>
 
-            <asp:Label ID="lblMessage" runat="server" ForeColor="Red"></asp:Label>
+                    <div class="mb-3">
+                        <label for="txtCompanyName" class="form-label fw-semibold">Company Name</label>
+                        <asp:TextBox ID="txtCompanyName" runat="server" CssClass="form-control" />
+                    </div>
 
-            <asp:Panel ID="pnlEditSupplier" runat="server">
+                    <div class="mb-3">
+                        <label for="ddlBusinessType" class="form-label fw-semibold">Business Type</label>
+                        <asp:DropDownList ID="ddlBusinessType" runat="server" CssClass="form-select">
+                            <asp:ListItem Text="Select Business Type" Value="" />
+                            <asp:ListItem Text="Equipment" Value="Equipment" />
+                            <asp:ListItem Text="Chemicals" Value="Chemicals" />
+                        </asp:DropDownList>
+                    </div>
 
-                <!-- Supplier Name -->
-                <asp:Label ID="lblName" runat="server" Text="Supplier Name:"></asp:Label>
-                <asp:TextBox ID="txtName" runat="server" CssClass="form-control"></asp:TextBox>
+                    <div class="mb-3">
+                        <label for="txtAddress" class="form-label fw-semibold">Address</label>
+                        <asp:TextBox ID="txtAddress" runat="server" CssClass="form-control" />
+                    </div>
 
-                <!-- Company Name -->
-                <asp:Label ID="lblCompanyName" runat="server" Text="Company Name:"></asp:Label>
-                <asp:TextBox ID="txtCompanyName" runat="server" CssClass="form-control"></asp:TextBox>
+                    <div class="mb-3">
+                        <label for="txtContactNumber" class="form-label fw-semibold">Contact Number</label>
+                        <asp:TextBox ID="txtContactNumber" runat="server" CssClass="form-control" />
+                    </div>
 
-                <!-- Business Type -->
-                <asp:Label ID="lblBusinessType" runat="server" Text="Business Type:"></asp:Label>
-                <asp:DropDownList ID="ddlBusinessType" runat="server" CssClass="form-control">
-                    <asp:ListItem Text="Select Business Type" Value="" />
-                    <asp:ListItem Text="Equipment" Value="Equipment" />
-                    <asp:ListItem Text="Chemicals" Value="Chemicals" />
-                </asp:DropDownList>
+                    <div class="mb-3">
+                        <label for="txtEmail" class="form-label fw-semibold">Email</label>
+                        <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" />
+                    </div>
 
-                <!-- Address -->
-                <asp:Label ID="lblAddress" runat="server" Text="Address:"></asp:Label>
-                <asp:TextBox ID="txtAddress" runat="server" CssClass="form-control"></asp:TextBox>
+                    <div class="mb-4">
+                        <label for="ddlStatus" class="form-label fw-semibold">Status</label>
+                        <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-select">
+                            <asp:ListItem Text="Select Status" Value="" />
+                            <asp:ListItem Text="Active" Value="Active" />
+                            <asp:ListItem Text="Inactive" Value="Inactive" />
+                        </asp:DropDownList>
+                    </div>
 
-                <!-- Contact Number -->
-                <asp:Label ID="lblContactNumber" runat="server" Text="Contact Number:"></asp:Label>
-                <asp:TextBox ID="txtContactNumber" runat="server" CssClass="form-control"></asp:TextBox>
+                    <div class="d-flex gap-2 flex-wrap justify-content-center">
+                        <asp:Button ID="btnUpdate" runat="server" Text="Update Supplier" CssClass="btn btn-primary px-4"
+                            OnClientClick="return confirmUpdate();" OnClick="btnUpdate_Click" />
 
-                <!-- Email -->
-                <asp:Label ID="lblEmail" runat="server" Text="Email:"></asp:Label>
-                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control"></asp:TextBox>
-
-                <!-- Status -->
-                <asp:Label ID="lblStatus" runat="server" Text="Status:"></asp:Label>
-                <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-control">
-                    <asp:ListItem Text="Select Status" Value="" />
-                    <asp:ListItem Text="Active" Value="Active" />
-                    <asp:ListItem Text="Inactive" Value="Inactive" />
-                </asp:DropDownList>
-
-                <!-- Update Button with Confirmation -->
-                <asp:Button ID="btnUpdate" runat="server"
-                    Text="Update Supplier"
-                    CssClass="btn btn-primary"
-                    OnClientClick="return confirm('Are you sure you want to update this supplier?');"
-                    OnClick="btnUpdate_Click" />
-
-                &nbsp;
-
-                <!-- Cancel Button with Confirmation -->
-                <asp:Button ID="btnCancel" runat="server"
-                    Text="Cancel"
-                    CssClass="btn btn-secondary"
-                    PostBackUrl="~/ADMIN/ViewSupplier.aspx"
-                    OnClientClick="return confirm('Are you sure you want to cancel and go back?');" />
-
-            </asp:Panel>
+                        <asp:Button ID="btnCancel" runat="server" Text="Cancel" CssClass="btn btn-secondary px-4"
+                            PostBackUrl="~/ADMIN/ViewSupplier.aspx" OnClientClick="return confirmCancel();" />
+                    </div>
+                </asp:Panel>
+            </div>
         </div>
     </div>
 
+    <script>
+        function confirmUpdate() {
+            event.preventDefault();
+            Swal.fire({
+                title: 'Update Supplier?',
+                text: "Are you sure you want to update this supplier's information?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, update it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack('<%= btnUpdate.UniqueID %>', '');
+                }
+            });
+            return false;
+        }
+
+        function confirmCancel() {
+            event.preventDefault();
+            Swal.fire({
+                title: 'Cancel Editing?',
+                text: "Your changes will not be saved. Continue?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#6c757d',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, cancel',
+                cancelButtonText: 'Continue Editing'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '<%= ResolveUrl("~/ADMIN/ViewSupplier.aspx") %>';
+                }
+            });
+            return false;
+        }
+    </script>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </asp:Content>

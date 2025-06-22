@@ -1,5 +1,9 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AddEmployees.aspx.cs" Inherits="RRCManagementSystem.AddEmployees" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
@@ -90,7 +94,6 @@
             text-align: center;
         }
 
-        /* Profile Picture Preview */
         #imagePreview {
             display: none;
             width: 120px;
@@ -123,22 +126,18 @@
             </div>
 
             <div class="card-body">
-
                 <asp:Label ID="lblMessage" runat="server" CssClass="error-message"></asp:Label>
 
-                <!-- Full Name -->
                 <div class="form-group">
                     <label for="txtFullName">Full Name:</label>
                     <asp:TextBox ID="txtFullName" runat="server" CssClass="form-control" placeholder="Enter full name" required></asp:TextBox>
                 </div>
 
-                <!-- Email -->
                 <div class="form-group">
                     <label for="txtEmail">Email:</label>
                     <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" placeholder="Enter email address" required></asp:TextBox>
                 </div>
 
-                <!-- Phone -->
                 <div class="form-group">
                     <label for="txtPhone">Phone Number</label>
                     <asp:TextBox ID="txtPhone" runat="server" CssClass="form-control"
@@ -148,7 +147,6 @@
                     <small id="phoneError" style="color: red; display: none;">Phone number must start with 09 and be 11 digits long.</small>
                 </div>
 
-                <!-- Position -->
                 <div class="form-group">
                     <label for="ddlPosition">Position:</label>
                     <asp:DropDownList ID="ddlPosition" runat="server" CssClass="form-control">
@@ -159,37 +157,39 @@
                     </asp:DropDownList>
                 </div>
 
-                <!-- Profile Picture Upload -->
                 <div class="form-group">
                     <label for="fuProfilePicture">Profile Picture (JPG, JPEG, PNG only):</label>
                     <asp:FileUpload ID="fuProfilePicture" runat="server" accept="image/*" onchange="validateFile(); previewImage(event);" />
                     <img id="imagePreview" alt="Profile Preview" />
                 </div>
 
-                <!-- Submit Button with confirmation -->
+                <!-- SweetAlert Confirm Button -->
                 <div class="form-group text-center">
-                    <asp:Button ID="btnSubmit" runat="server" Text="Add Employee" CssClass="btn" OnClick="btnSubmit_Click"
-                        OnClientClick="return confirmSubmit();" />
+                    <asp:Button ID="btnSubmit" runat="server" Text="Add Employee" CssClass="btn" OnClientClick="return showConfirm();" UseSubmitBehavior="false" />
                 </div>
-
             </div>
         </div>
     </div>
 
-    <!-- JS for File Validation and Image Preview -->
     <script>
+        // Profile Picture Validation
         function validateFile() {
             var fileInput = document.getElementById('<%= fuProfilePicture.ClientID %>');
             var filePath = fileInput.value;
             var allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
 
             if (!allowedExtensions.exec(filePath)) {
-                alert("⚠ Only JPG, JPEG, and PNG files are allowed.");
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid File Type',
+                    text: 'Only JPG, JPEG, and PNG files are allowed.'
+                });
                 fileInput.value = '';
                 return false;
             }
         }
 
+        // Image Preview
         function previewImage(event) {
             var file = event.target.files[0];
             if (file) {
@@ -203,10 +203,28 @@
             }
         }
 
-        function confirmSubmit() {
-            return confirm("Are you sure you want to add this employee?");
+        // SweetAlert Confirmation before submit
+        function showConfirm() {
+            event.preventDefault(); // Prevents form submission
+            Swal.fire({
+                title: 'Add Employee?',
+                text: 'Are you sure you want to add this employee?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#007bff',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, add it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('<%= btnSubmit.ClientID %>').disabled = true;
+                    __doPostBack('<%= btnSubmit.UniqueID %>', '');
+                }
+            });
+
+            return false; // Prevent default postback until confirmed
         }
 
+        // Phone Number Validation
         document.addEventListener("DOMContentLoaded", function () {
             var phoneInput = document.getElementById('<%= txtPhone.ClientID %>');
             var errorLabel = document.getElementById("phoneError");
@@ -224,4 +242,3 @@
     </script>
 
 </asp:Content>
-

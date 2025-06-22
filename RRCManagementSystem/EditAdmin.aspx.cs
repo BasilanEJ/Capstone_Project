@@ -23,12 +23,13 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Block SuperAdmin and Inspector
-            if (role == "SuperAdmin" || role == "Inspector")
+            // 🔐 Allow only SuperAdmins
+            if (role != "SuperAdmin")
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
+
 
             if (!IsPostBack)
             {

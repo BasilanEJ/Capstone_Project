@@ -1,159 +1,44 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="EditEmployee.aspx.cs" Inherits="RRCManagementSystem.EditEmployee" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</asp:Content>
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- ✅ INTERNAL CSS -->
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            max-width: 700px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-
-        .card {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .card-header {
-            background-color: #007bff;
-            color: #fff;
-            padding: 16px 20px;
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-        }
-
-        .card-body {
-            padding: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            font-weight: bold;
-            margin-bottom: 8px;
-            display: block;
-            color: #333;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 14px;
-            box-sizing: border-box;
-            transition: border-color 0.3s ease-in-out;
-        }
-
-        .form-control:focus {
-            border-color: #007bff;
-            outline: none;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 20px;
-            font-size: 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            border: none;
-            transition: background-color 0.3s ease-in-out;
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            color: #fff;
-        }
-
-        .btn-success:hover {
-            background-color: #218838;
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: #fff;
-        }
-
-        .btn-secondary:hover {
-            background-color: #5a6268;
-        }
-
-        .img-thumbnail {
-            border-radius: 50%;
-            object-fit: cover;
-            margin-top: 10px;
-        }
-
-        .error-message {
-            color: red;
-            font-weight: bold;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-
-            .btn {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-        }
-    </style>
-
-    <!-- ✅ FORM START -->
-    <div class="container">
+    <div class="container my-5" style="max-width:700px;">
         <div class="card shadow-sm">
-            <div class="card-header">
+            <div class="card-header bg-primary text-white text-center fs-4 fw-bold">
                 Edit Employee
             </div>
             <div class="card-body">
 
-                <asp:Label ID="lblMessage" runat="server" CssClass="error-message" />
+                <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-semibold d-block mb-3" />
 
-                <!-- Full Name -->
-                <div class="form-group">
-                    <label for="txtFullName">Full Name:</label>
+                <div class="mb-3">
+                    <label for="txtFullName" class="form-label fw-semibold">Full Name:</label>
                     <asp:TextBox ID="txtFullName" runat="server" CssClass="form-control" placeholder="Enter full name" required></asp:TextBox>
                 </div>
 
-                <!-- Email -->
-                <div class="form-group">
-                    <label for="txtEmail">Email:</label>
+                <div class="mb-3">
+                    <label for="txtEmail" class="form-label fw-semibold">Email:</label>
                     <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" placeholder="Enter email address" required></asp:TextBox>
                 </div>
 
-                <!-- Phone -->
-                <div class="form-group">
-                    <label for="txtPhone">Phone Number:</label>
+                <div class="mb-3">
+                    <label for="txtPhone" class="form-label fw-semibold">Phone Number:</label>
                     <asp:TextBox ID="txtPhone" runat="server" CssClass="form-control"
-                        placeholder="Enter 11-digit Phone Number" required 
+                        placeholder="Enter 11-digit Phone Number" required
                         oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11)">
                     </asp:TextBox>
                 </div>
 
-                <!-- Position -->
-                <div class="form-group">
-                    <label for="ddlPosition">Position:</label>
-                    <asp:DropDownList ID="ddlPosition" runat="server" CssClass="form-control">
+                <div class="mb-3">
+                    <label for="ddlPosition" class="form-label fw-semibold">Position:</label>
+                    <asp:DropDownList ID="ddlPosition" runat="server" CssClass="form-select">
                         <asp:ListItem Text="Select Position" Value="" />
                         <asp:ListItem Text="IT" Value="IT" />
                         <asp:ListItem Text="Technician" Value="Technician" />
@@ -161,42 +46,36 @@
                     </asp:DropDownList>
                 </div>
 
-                <!-- Status -->
-                <div class="form-group">
-                    <label for="ddlStatus">Status:</label>
-                    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-control">
+                <div class="mb-3">
+                    <label for="ddlStatus" class="form-label fw-semibold">Status:</label>
+                    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-select">
                         <asp:ListItem Text="Available" Value="Available" />
                         <asp:ListItem Text="Unavailable" Value="Unavailable" />
                         <asp:ListItem Text="Resigned" Value="Resigned" />
                     </asp:DropDownList>
                 </div>
 
-                <!-- Profile Picture -->
-                <div class="form-group">
-                    <label for="fuProfilePicture">Profile Picture (JPG, JPEG, PNG only):</label>
-                    <asp:FileUpload ID="fuProfilePicture" runat="server" accept="image/*" onchange="previewImage();" />
+                <div class="mb-3">
+                    <label for="fuProfilePicture" class="form-label fw-semibold">Profile Picture (JPG, JPEG, PNG only):</label>
+                    <asp:FileUpload ID="fuProfilePicture" runat="server" accept="image/*" onchange="previewImage();" CssClass="form-control" />
                 </div>
 
-                <!-- Preview Image -->
-                <div class="form-group text-center">
-                    <asp:Image ID="imgProfilePreview" runat="server" CssClass="img-thumbnail" Width="100" Height="100" Visible="false" />
+                <div class="mb-4 text-center">
+                    <asp:Image ID="imgProfilePreview" runat="server" CssClass="rounded-circle img-thumbnail" Width="120" Height="120" Visible="false" />
                 </div>
 
-                <!-- Buttons -->
-                <div class="form-group text-center">
-                    <asp:Button ID="btnSave" runat="server" Text="Save Changes" CssClass="btn btn-success"
-                        OnClientClick="return confirm('Are you sure you want to save these changes?');" 
-                        OnClick="btnSave_Click" />
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <asp:Button ID="btnSave" runat="server" Text="Save Changes" CssClass="btn btn-success px-4"
+                        OnClientClick="return confirmSave();" OnClick="btnSave_Click" />
 
-                    <asp:Button ID="btnCancel" runat="server" Text="Cancel" CssClass="btn btn-secondary"
-                        OnClientClick="window.location.href='AllEmployee    .aspx'; return false;" />
+                    <asp:Button ID="btnCancel" runat="server" Text="Cancel" CssClass="btn btn-secondary px-4"
+                        OnClientClick="window.location.href='AllEmployee.aspx'; return false;" />
                 </div>
 
             </div>
         </div>
     </div>
 
-    <!-- ✅ JAVASCRIPT -->
     <script>
         function previewImage() {
             var fileInput = document.getElementById('<%= fuProfilePicture.ClientID %>');
@@ -208,12 +87,33 @@
 
                 reader.onload = function (e) {
                     imgPreview.src = e.target.result;
-                    imgPreview.style.display = "block";
+                    imgPreview.style.display = "inline-block";
                 };
                 reader.readAsDataURL(file);
             }
         }
+
+        function confirmSave() {
+            event.preventDefault();
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to save the changes?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, save it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack('<%= btnSave.UniqueID %>', '');
+                }
+            });
+            return false;
+        }
     </script>
 
-</asp:Content>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+</asp:Content>

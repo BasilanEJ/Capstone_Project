@@ -1,107 +1,21 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ArchivedClients.aspx.cs" Inherits="RRCManagementSystem.ArchivedClients" %>
 
-
-
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-
-        .container {
-            max-width: 1100px;
-            margin: 30px auto;
-            padding: 15px;
-        }
-
-        .card {
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            background-color: #fff;
-            transition: box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-header {
-            background-color: #0073CF;
-            color: #ffffff;
-            padding: 20px;
-            font-size: 20px;
-            font-weight: 600;
-            text-align: center;
-        }
-
-        .card-body {
-            padding: 20px;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .table th, .table td {
-            padding: 12px 15px;
-            text-align: center;
-            vertical-align: middle;
-        }
-
-        .table th {
-            background-color: #0073CF;
-            color: #ffffff;
-            font-size: 14px;
-        }
-
-        .table-striped tbody tr:nth-of-type(odd) {
-            background-color: #f9f9f9;
-        }
-
-        .table-bordered {
-            border: 1px solid #dee2e6;
-        }
-
-        .table-bordered th,
-        .table-bordered td {
-            border: 1px solid #dee2e6;
-        }
-
-        .btn-action {
-            background-color: #007bff;
-            color: white;
-            padding: 6px 14px;
-            border-radius: 5px;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-            margin: 2px;
-        }
-
-        .btn-delete {
-            background-color: #dc3545;
-        }
-
-        .btn-action:hover {
-            opacity: 0.9;
-        }
-    </style>
-
-    <div class="container mt-4">
-        <div class="card">
-            <div class="card-header">Archived Clients</div>
+    <div class="container py-5">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center fw-bold">
+                Archived Clients
+            </div>
             <div class="card-body">
                 <asp:HiddenField ID="hfClientID" runat="server" />
 
                 <asp:GridView ID="gvArchivedClients" runat="server" AutoGenerateColumns="False"
-                    CssClass="table table-bordered table-striped" AllowPaging="True" PageSize="10"
+                    CssClass="table table-bordered table-striped table-hover" AllowPaging="True" PageSize="10"
                     OnPageIndexChanging="gvArchivedClients_PageIndexChanging" OnRowCommand="gvArchivedClients_RowCommand">
                     <Columns>
                         <asp:BoundField DataField="ClientID" HeaderText="Client ID" ReadOnly="True" />
@@ -112,8 +26,8 @@
                         <asp:BoundField DataField="Country" HeaderText="Country" />
                         <asp:TemplateField HeaderText="Actions">
                             <ItemTemplate>
-                                <button type="button" class="btn-action" onclick="confirmRestore('<%# Eval("ClientID") %>')">Restore</button>
-                                <button type="button" class="btn-action btn-delete" onclick="confirmDelete('<%# Eval("ClientID") %>')">Delete</button>
+                                <button type="button" class="btn btn-primary btn-sm me-2" onclick="confirmRestore('<%# Eval("ClientID") %>')">Restore</button>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete('<%# Eval("ClientID") %>')">Delete</button>
                             </ItemTemplate>
                         </asp:TemplateField>
                     </Columns>
@@ -132,7 +46,7 @@
                 text: 'This will change the client status to Active.',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#28a745',
+                confirmButtonColor: '#198754',
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Yes, Restore'
             }).then((result) => {
@@ -161,5 +75,3 @@
         }
     </script>
 </asp:Content>
-
-

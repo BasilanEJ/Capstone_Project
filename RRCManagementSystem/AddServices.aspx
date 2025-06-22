@@ -131,65 +131,78 @@
         }
     </style>
 
-    <div class="main-content">
+       <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script type="text/javascript">
+        function confirmAddService(btn) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to add this service?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#004085',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, add it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack(btn.name, '');
+                }
+            });
+            return false; // Prevent default postback
+        }
+    </script>
+<div class="main-content">
         <div class="card">
             <div class="card-header">
                 Add New Service
             </div>
             <div class="card-body">
 
-                <!-- Message -->
-                <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" />
+                <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" Visible="false" />
 
-
-                <!-- Service Name -->
                 <div class="form-group">
                     <label for="txtName">Service Name *</label>
-                    <asp:TextBox ID="txtName" runat="server" CssClass="form-control" placeholder="Enter service name" MaxLength="100" required="required" />
+                    <asp:TextBox ID="txtName" runat="server" CssClass="form-control" placeholder="Enter service name" MaxLength="100" />
                 </div>
 
-                <!-- Service Type (Dropdown) -->
                 <div class="form-group">
                     <label for="ddlServiceType">Service Type *</label>
-                    <asp:DropDownList ID="ddlServiceType" runat="server" CssClass="form-control" required="required">
+                    <asp:DropDownList ID="ddlServiceType" runat="server" CssClass="form-control">
                         <asp:ListItem Text="Select Service Type" Value="" />
                         <asp:ListItem Text="Termite Control" Value="Termite Control" />
                         <asp:ListItem Text="General Pest Control" Value="General Pest Control" />
                     </asp:DropDownList>
                 </div>
 
-                <!-- Description -->
                 <div class="form-group">
                     <label for="txtDescription">Description</label>
-                    <asp:TextBox ID="txtDescription" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" placeholder="Optional description" MaxLength="500" />
+                    <asp:TextBox ID="txtDescription" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" MaxLength="500" />
                 </div>
 
-                <!-- Tiered Price Inputs -->
                 <div class="form-group">
                     <label for="txtPrice100">Price for 100 SQM (₱)</label>
-                    <asp:TextBox ID="txtPrice100" runat="server" CssClass="form-control" TextMode="Number" placeholder="Ex: 4000" />
+                    <asp:TextBox ID="txtPrice100" runat="server" CssClass="form-control" TextMode="Number" />
                 </div>
 
                 <div class="form-group">
                     <label for="txtPrice200">Price for 200 SQM (₱)</label>
-                    <asp:TextBox ID="txtPrice200" runat="server" CssClass="form-control" TextMode="Number" placeholder="Ex: 8000" />
+                    <asp:TextBox ID="txtPrice200" runat="server" CssClass="form-control" TextMode="Number" />
                 </div>
 
                 <div class="form-group">
                     <label for="txtPriceAbove200">Price for 200 SQM and Above (₱)</label>
-                    <asp:TextBox ID="txtPriceAbove200" runat="server" CssClass="form-control" TextMode="Number" placeholder="Ex: 10000" />
+                    <asp:TextBox ID="txtPriceAbove200" runat="server" CssClass="form-control" TextMode="Number" />
                 </div>
 
-                <!-- Buttons -->
                 <div class="form-group text-right">
                     <asp:Button ID="Button1" runat="server" Text="Add Service" CssClass="btn btn-primary"
                         OnClick="btnSubmit_Click"
-                        OnClientClick="return confirm('Are you sure you want to add this service?');" />
+                        UseSubmitBehavior="false"
+                        OnClientClick="return confirmAddService(this);" />
                     <asp:Button ID="Button2" runat="server" Text="Cancel" CssClass="btn btn-secondary"
                         PostBackUrl="~/ADMIN/ViewServices.aspx" />
                 </div>
             </div>
         </div>
     </div>
-
 </asp:Content>

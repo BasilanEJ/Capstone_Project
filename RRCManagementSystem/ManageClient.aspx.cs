@@ -29,7 +29,7 @@ namespace RRCManagementSystem
             int userId = Convert.ToInt32(Session["UserID"]);
 
             // 🔐 Check CanView permission for ManageClients
-            if (!HasPermission(userId, "ManageClients"))
+            if (!HasPermission(userId, "ManageClient"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
                 return;

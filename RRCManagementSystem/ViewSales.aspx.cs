@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Web.UI;
 
 namespace RRCManagementSystem
@@ -28,11 +29,6 @@ namespace RRCManagementSystem
                 return;
             }
 
-            int userId = Convert.ToInt32(Session["UserID"]);
-
-            // 🔐 Check permission for Sales&Transaction
-        
-
             if (!IsPostBack)
             {
                 txtFrom.Text = DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd");
@@ -40,7 +36,6 @@ namespace RRCManagementSystem
                 LoadSales();
             }
         }
-    
 
         protected void btnFilter_Click(object sender, EventArgs e)
         {
@@ -49,10 +44,8 @@ namespace RRCManagementSystem
 
         private void LoadSales()
         {
-            DateTime fromDate;
-            DateTime toDate;
-
-            if (!DateTime.TryParse(txtFrom.Text, out fromDate) || !DateTime.TryParse(txtTo.Text, out toDate))
+            if (!DateTime.TryParse(txtFrom.Text, out DateTime fromDate) ||
+                !DateTime.TryParse(txtTo.Text, out DateTime toDate))
             {
                 lblMessage.Text = "⚠ Please enter valid dates.";
                 gvSales.DataSource = null;
@@ -60,7 +53,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            toDate = toDate.AddDays(1); // Include entire 'to' day
+            toDate = toDate.AddDays(1); // Include the entire 'to' day
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -88,8 +81,18 @@ namespace RRCManagementSystem
                 try
                 {
                     da.Fill(dt);
+
+                    // Add formatted SaleID (e.g., Sale001)
+                    dt.Columns.Add("FormattedSaleID", typeof(string));
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        int rawId = Convert.ToInt32(row["SaleID"]);
+                        row["FormattedSaleID"] = "Sale" + rawId.ToString("D3");
+                    }
+
                     gvSales.DataSource = dt;
                     gvSales.DataBind();
+
                     lblMessage.Text = dt.Rows.Count == 0 ? "⚠ No sales records found." : "";
                 }
                 catch (Exception ex)

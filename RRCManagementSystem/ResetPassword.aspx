@@ -4,8 +4,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
     <title>Reset Password - RRC Management System</title>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         body, html {
@@ -13,73 +13,79 @@
             padding: 0;
             height: 100%;
             font-family: 'Poppins', sans-serif;
-            color: #fff;
+            color: #333;
         }
 
         body {
-            background: url('images/pestlogo.jpg') no-repeat center center fixed;
+            background: url('images/bg.jpg') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
         }
 
-        .reset-container {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+        .login-container {
+            background: #ffffff;
             border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
-            width: 380px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: 400px;
             padding: 40px 30px;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            border: 1px solid #ddd;
+            transition: transform 0.3s ease;
+        }
+
+        .login-container:hover {
+            transform: translateY(-5px);
         }
 
         h2 {
-            font-size: 24px;
-            margin-bottom: 20px;
-            color: #fff;
+            color: #333;
+            font-size: 26px;
+            margin-bottom: 25px;
         }
 
         .input {
             width: 100%;
-            padding: 12px;
-            margin-bottom: 16px;
+            padding: 14px 12px;
+            margin-bottom: 10px;
             border-radius: 8px;
-            border: none;
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-            font-size: 14px;
-            outline: none;
+            border: 1px solid #ccc;
+            font-size: 15px;
+            background: #f9f9f9;
+            color: #333;
         }
 
         .input::placeholder {
-            color: #e0e0e0;
+            color: #999;
         }
 
         .input:focus {
-            background: rgba(255, 255, 255, 0.25);
+            background: #fff;
+            border-color: #007bff;
+            outline: none;
         }
 
         .btn-submit {
             width: 100%;
-            padding: 12px;
-            background-color: #28a745;
+            padding: 14px;
+            background-color: #007bff;
             color: white;
             border: none;
             border-radius: 8px;
             font-weight: 600;
             font-size: 15px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s ease, transform 0.2s ease;
         }
 
         .btn-submit:hover {
-            background-color: #218838;
+            background-color: #0056b3;
+            transform: translateY(-2px);
         }
 
         .validation-message {
@@ -87,18 +93,18 @@
             margin-bottom: 10px;
             text-align: left;
             width: 100%;
+            color: #555;
         }
 
         .checkbox-container {
             width: 100%;
             text-align: left;
             font-size: 13px;
-            margin-top: -10px;
             margin-bottom: 20px;
         }
 
         @media screen and (max-width: 480px) {
-            .reset-container {
+            .login-container {
                 width: 90%;
                 padding: 30px 20px;
             }
@@ -107,7 +113,7 @@
 
     <script>
         function validatePasswordStrength(password) {
-            const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
+            const specialCharRegex = /[!@#$%^&*(),.?\":{}|<>]/;
             const strengthMsg = document.getElementById("passwordStrengthMsg");
 
             if (password.length < 8) {
@@ -121,7 +127,7 @@
                 strengthMsg.style.color = "orange";
             } else {
                 strengthMsg.innerText = "✅ Strong password.";
-                strengthMsg.style.color = "lightgreen";
+                strengthMsg.style.color = "green";
             }
 
             validatePasswordMatch();
@@ -142,7 +148,7 @@
                 matchMsg.style.color = "red";
             } else {
                 matchMsg.innerText = "✅ Passwords match.";
-                matchMsg.style.color = "lightgreen";
+                matchMsg.style.color = "green";
             }
         }
 
@@ -158,7 +164,7 @@
 
 <body>
     <form id="form1" runat="server">
-        <div class="reset-container">
+        <div class="login-container">
             <h2>Reset Password</h2>
 
             <asp:TextBox ID="txtNewPassword" runat="server" CssClass="input" TextMode="Password"
@@ -173,7 +179,8 @@
                 <input type="checkbox" onclick="togglePasswords()" /> Show Passwords
             </div>
 
-            <asp:Button ID="btnResetPassword" runat="server" Text="Reset Password" CssClass="btn-submit" OnClick="btnResetPassword_Click" />
+            <asp:Button ID="btnResetPassword" runat="server" Text="Reset Password" CssClass="btn-submit"
+                OnClick="btnResetPassword_Click" />
             <asp:Literal ID="ltScript" runat="server" />
         </div>
     </form>

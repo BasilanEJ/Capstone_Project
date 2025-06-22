@@ -294,15 +294,24 @@ namespace RRCManagementSystem
 
         private void AddAuditLog(int? userID, string action)
         {
+            if (userID == null)
+            {
+                // Skip logging if userID is null (e.g., client login or unauthenticated actions)
+                return;
+            }
+
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@UserID", (object)userID ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Action", action);
-                conn.Open();
-                cmd.ExecuteNonQuery();
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", userID);
+                    cmd.Parameters.AddWithValue("@Action", action);
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
             }
         }
+
     }
 }

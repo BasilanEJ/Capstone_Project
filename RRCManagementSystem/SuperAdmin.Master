@@ -6,205 +6,125 @@
     <meta charset="utf-8" />
     <title>SuperAdmin Panel</title>
 
-    <!-- 🔧 Add this so pages using ContentPlaceHolderID="HeadContent" will work -->
+    <!-- Bootstrap 5 & FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
-    <!-- FontAwesome for icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
-
-    <style type="text/css">
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f3f4f6;
-        }
-
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 60px;
-            width: 100%;
-            background-color: #1f2937;
-            color: white;
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            z-index: 1000;
-        }
-
-        .header h2 {
-            margin: 0;
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 60px;
-            left: 0;
-            width: 280px;
-            height: calc(100vh - 60px);
-            background-color: #111827;
-            color: white;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .sidebar ul li {
-            border-bottom: 1px solid #1f2937;
-        }
-
-        .sidebar ul li a {
-            display: block;
-            padding: 15px 20px;
-            color: white;
-            text-decoration: none;
-            transition: background-color 0.3s;
-        }
-
-        .sidebar ul li a:hover {
-            background-color: #374151;
-        }
-
-        .sidebar ul li.has-dropdown > a {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .sidebar ul li ul.accordion {
-            display: none;
-            background-color: #1f2937;
-        }
-
-        .sidebar ul li ul.accordion li a {
-            padding-left: 40px;
-            font-size: 14px;
-        }
-
-        .sidebar ul li.active ul.accordion {
-            display: block;
-        }
-
-        .main-content {
-            margin-left: 280px;
-            margin-top: 60px;
-            padding: 30px;
-            background-color: #f3f4f6;
-            min-height: calc(100vh - 60px);
-        }
-
-        .footer {
-            position: fixed;
-            bottom: 0;
-            left: 280px;
-            width: calc(100% - 280px);
-            background-color: #1f2937;
-            color: white;
-            text-align: center;
-            padding: 10px;
-        }
-
-        .logout-button {
-            display: block;
-            margin: 20px;
-            text-align: center;
-            background-color: #ef4444;
-            color: white;
-            padding: 10px;
-            border-radius: 4px;
-            text-decoration: none;
-            transition: background-color 0.3s;
-            font-weight: bold;
-        }
-
-        .logout-button:hover {
-            background-color: #dc2626;
+    <style>
+        @media (max-width: 768px) {
+            #sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 1040;
+                position: fixed;
+                background-color: #000;
+                height: 100vh;
+                top: 60px;
+                width: 280px;
+            }
+            #sidebar.show {
+                transform: translateX(0);
+            }
+            #mainContent {
+                margin-left: 0 !important;
+            }
+            #footer {
+                left: 0 !important;
+                width: 100% !important;
+            }
         }
     </style>
 
     <script type="text/javascript">
+        function toggleSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            sidebar.classList.toggle("show");
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
-            var dropdowns = document.querySelectorAll(".has-dropdown");
-            dropdowns.forEach(function (item) {
-                item.addEventListener("click", function () {
-                    this.classList.toggle("active");
+            document.querySelectorAll(".has-dropdown > a").forEach(function (toggle) {
+                toggle.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    const parent = this.closest(".has-dropdown");
+                    parent.classList.toggle("active");
+                    const submenu = parent.querySelector(".accordion");
+                    if (submenu) submenu.classList.toggle("d-none");
                 });
             });
         });
     </script>
 </head>
+<body class="bg-light">
+    <form id="form1" runat="server" class="d-flex flex-column min-vh-100">
 
-<body>
-    <form id="form1" runat="server">
         <!-- Header -->
-        <div class="header">
-            <h2>SystemAdmin Panel</h2>
-        </div>
+        <header class="bg-dark text-white d-flex align-items-center px-4 justify-content-between" style="height: 60px; position: fixed; top: 0; left: 0; width: 100%; z-index: 1050;">
+            <h2 class="mb-0">SystemAdmin Panel</h2>
+            <button class="btn btn-outline-light d-md-none" type="button" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </header>
 
-        <!-- Sidebar Navigation -->
-        <div class="sidebar">
-            <div>
-                <ul>
-                    <li><a href="SuperAdminDashboard.aspx"><i class="fas fa-home"></i> Dashboard</a></li>
+        <!-- Sidebar -->
+        <aside id="sidebar" class="bg-black text-white position-fixed d-flex flex-column" style="top: 60px; left: 0; width: 280px; height: calc(100vh - 60px); overflow-y: auto;">
+            <ul class="nav flex-column">
+                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="SuperAdminDashboard.aspx"><i class="fas fa-home me-2"></i> Dashboard</a></li>
 
-                    <li class="has-dropdown">
-                        <a href="#"><i class="fas fa-user-shield"></i> Manage Admins <i class="fas fa-chevron-down arrow"></i></a>
-                        <ul class="accordion">
-                            <li><a href="ViewAdmin.aspx"><i class="fas fa-list"></i> View Users</a></li>
-                            <li><a href="AddAdmin.aspx"><i class="fas fa-plus"></i> Add User</a></li>
-                             <li><a href="ArchivedAdmins.aspx"><i class="fas fa-archive"></i> Archive User Accounts</a></li>
-                        </ul>
-                    </li>
+                <li class="nav-item has-dropdown border-bottom">
+                    <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-user-shield me-2"></i> Manage Admins</span><i class="fas fa-chevron-down"></i>
+                    </a>
+                    <ul class="nav flex-column accordion d-none bg-dark">
+                        <li><a class="nav-link text-white ps-5 py-2" href="ViewAdmin.aspx"><i class="fas fa-list me-2"></i> View Users</a></li>
+                        <li><a class="nav-link text-white ps-5 py-2" href="AddAdmin.aspx"><i class="fas fa-plus me-2"></i> Add User</a></li>
+                        <li><a class="nav-link text-white ps-5 py-2" href="ArchivedAdmins.aspx"><i class="fas fa-archive me-2"></i> Archive User Accounts</a></li>
+                    </ul>
+                </li>
 
-                    <li class="has-dropdown">
-                        <a href="#"><i class="fas fa-user-tag"></i> Manage Roles <i class="fas fa-chevron-down arrow"></i></a>
-                        <ul class="accordion">
-                            <li><a href="ViewRole.aspx"><i class="fas fa-list"></i> View Roles</a></li>
-                            <li><a href="AddRole.aspx"><i class="fas fa-plus"></i> Add Role</a></li>
-                        </ul>
-                    </li>
+                <li class="nav-item has-dropdown border-bottom">
+                    <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-user-tag me-2"></i> Manage Roles</span><i class="fas fa-chevron-down"></i>
+                    </a>
+                    <ul class="nav flex-column accordion d-none bg-dark">
+                        <li><a class="nav-link text-white ps-5 py-2" href="ViewRole.aspx"><i class="fas fa-list me-2"></i> View Roles</a></li>
+                        <li><a class="nav-link text-white ps-5 py-2" href="AddRole.aspx"><i class="fas fa-plus me-2"></i> Add Role</a></li>
+                    </ul>
+                </li>
 
-                    <li><a href="AuditLogs.aspx"><i class="fas fa-file-alt"></i> Audit Logs</a></li>
+                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="AuditLogs.aspx"><i class="fas fa-file-alt me-2"></i> Audit Logs</a></li>
 
-                   
+                <li class="nav-item has-dropdown border-bottom">
+                    <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-cogs me-2"></i> System Settings</span><i class="fas fa-chevron-down"></i>
+                    </a>
+                    <ul class="nav flex-column accordion d-none bg-dark">
+                        <li><a class="nav-link text-white ps-5 py-2" href="SystemChanges.aspx"><i class="fas fa-tools me-2"></i> System Changes</a></li>
+                    </ul>
+                </li>
 
-                 <!-- System Settings -->
-                    <li class="has-dropdown">
-                        <a href="#"><i class="fas fa-cogs"></i> System Settings <i class="fas fa-chevron-down arrow"></i></a>
-                        <ul class="accordion">
-                           <!-- <li><a href="SystemSettings.aspx"><i class="fas fa-sliders-h"></i> Settings</a></li> -->
-                            <li><a href="SystemChanges.aspx"><i class="fas fa-tools"></i> System Changes</a></li> <!-- ✅ New menu -->
-                        </ul>
-                    </li>
+                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="Reports.aspx"><i class="fas fa-chart-bar me-2"></i> Reports</a></li>
+                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="SuperAdminProfile.aspx"><i class="fas fa-user-cog me-2"></i> My Profile</a></li>
+            </ul>
 
-
-                            <li><a href="Reports.aspx"><i class="fas fa-chart-bar"></i> Reports</a></li>
-                    <li><a href="SuperAdminProfile.aspx"><i class="fas fa-user-cog"></i> My Profile</a></li>
-                </ul>
-            </div>
-
-            <asp:LinkButton ID="btnLogout" runat="server" CssClass="logout-button" OnClick="btnLogout_Click">
-                <i class="fas fa-sign-out-alt"></i> Logout
+            <asp:LinkButton ID="btnLogout" runat="server" CssClass="btn btn-danger fw-bold w-75 mx-auto my-4 d-block" OnClick="btnLogout_Click">
+                <i class="fas fa-sign-out-alt me-2"></i> Logout
             </asp:LinkButton>
-        </div>
+        </aside>
 
         <!-- Main Content -->
-        <div class="main-content">
+        <main id="mainContent" class="flex-grow-1" style="margin-left: 280px; margin-top: 60px; padding: 30px; background-color: #f3f4f6; min-height: calc(100vh - 100px);">
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
-        </div>
+        </main>
 
         <!-- Footer -->
-        <div class="footer">
+        <footer id="footer" class="bg-dark text-white text-center py-3 position-fixed bottom-0" style="left: 280px; width: calc(100% - 280px); z-index: 1030;">
             &copy; 2025 RRC Management System - SuperAdmin
-        </div>
+        </footer>
     </form>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

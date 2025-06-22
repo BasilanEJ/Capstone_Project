@@ -4,12 +4,9 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
     <title>Reset Admin Password - RRC Management System</title>
-
-    <!-- Poppins Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
 
     <style>
-        /* Reset and Base */
         body, html {
             margin: 0;
             padding: 0;
@@ -18,65 +15,64 @@
             color: #333;
         }
 
-        /* Background */
         body {
-            background: url('images/pestlogo.jpg') no-repeat center center fixed;
+            background: url('images/bg.jpg') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
         }
 
-        /* Glass Container */
-        .reset-admin-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+        .login-container {
+            background: #ffffff;
             border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
-            width: 350px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: 400px;
             padding: 40px 30px;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.18);
+            border: 1px solid #ddd;
+            transition: transform 0.3s ease;
         }
 
-        /* Heading */
+        .login-container:hover {
+            transform: translateY(-5px);
+        }
+
         h2 {
-            color: #ffffff;
+            color: #333;
             font-size: 26px;
             margin-bottom: 25px;
         }
 
-        /* Input Fields */
         .input {
             width: 100%;
             padding: 14px 12px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             border-radius: 8px;
-            border: none;
+            border: 1px solid #ccc;
             font-size: 15px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            transition: background-color 0.3s ease;
+            background: #f9f9f9;
+            color: #333;
         }
 
         .input::placeholder {
-            color: #e0e0e0;
+            color: #999;
         }
 
         .input:focus {
-            background: rgba(255, 255, 255, 0.3);
+            background: #fff;
+            border-color: #007bff;
+            outline: none;
         }
 
-        /* Button */
         .btn-reset {
             width: 100%;
             padding: 14px;
-            background-color: #28a745;
+            background-color: #007bff;
             color: #fff;
             font-size: 16px;
             border: none;
@@ -86,26 +82,23 @@
         }
 
         .btn-reset:hover {
-            background-color: #218838;
+            background-color: #0056b3;
             transform: translateY(-2px);
         }
 
-        /* Message */
         .message {
-            margin-top: 15px;
+            margin-top: 10px;
             font-size: 14px;
             color: #ff4d4f;
         }
 
-        /* Password strength and match messages */
         .validation-message {
             font-size: 13px;
             margin-bottom: 10px;
         }
 
-        /* Responsive */
         @media screen and (max-width: 480px) {
-            .reset-admin-container {
+            .login-container {
                 width: 90%;
                 padding: 30px 20px;
             }
@@ -114,7 +107,7 @@
 
     <script>
         function validatePasswordStrength(password) {
-            const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
+            const specialCharRegex = /[!@#$%^&*(),.?\":{}|<>]/;
             const strengthMsg = document.getElementById("passwordStrengthMsg");
 
             if (password.length < 8) {
@@ -128,7 +121,7 @@
                 strengthMsg.style.color = "orange";
             } else {
                 strengthMsg.innerText = "✅ Strong password.";
-                strengthMsg.style.color = "lightgreen";
+                strengthMsg.style.color = "green";
             }
 
             validatePasswordMatch();
@@ -149,7 +142,7 @@
                 matchMsg.style.color = "red";
             } else {
                 matchMsg.innerText = "✅ Passwords match.";
-                matchMsg.style.color = "lightgreen";
+                matchMsg.style.color = "green";
             }
         }
     </script>
@@ -157,10 +150,10 @@
 
 <body>
     <form id="form1" runat="server">
-        <div class="reset-admin-container">
+        <div class="login-container">
             <h2>Reset Admin Password</h2>
 
-            <!-- Error/Success Message -->
+            <!-- Server Message -->
             <asp:Label ID="lblMessage" runat="server" CssClass="message" />
 
             <!-- New Password -->
@@ -174,7 +167,8 @@
             <span id="passwordMatchMsg" class="validation-message" style="color: gray;"></span>
 
             <!-- Reset Button -->
-            <asp:Button ID="btnResetPassword" runat="server" Text="Reset Password" CssClass="btn-reset" OnClick="btnResetPassword_Click" />
+            <asp:Button ID="btnResetPassword" runat="server" Text="Reset Password" CssClass="btn-reset"
+                OnClick="btnResetPassword_Click" />
         </div>
     </form>
 </body>

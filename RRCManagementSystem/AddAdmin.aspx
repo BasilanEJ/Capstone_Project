@@ -1,134 +1,72 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="AddAdmin.aspx.cs" Inherits="RRCManagementSystem.AddAdmin" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="container my-5">
+        <div class="card shadow mx-auto" style="max-width: 700px;">
+            <div class="card-body">
+                <h2 class="text-center mb-4 text-primary">Add New Account</h2>
 
-    <style>
-        .form-container {
-            width: 60%;
-            margin: 0 auto;
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0px 2px 10px rgba(0,0,0,0.1);
-        }
+                <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-bold d-block text-center mb-3" Visible="false"></asp:Label>
 
-        .form-container h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #1f2937;
-        }
+                <div class="alert alert-info small" role="alert">
+                    Once you create this account, an email will be sent inviting the user to set their password.
+                </div>
 
-        .form-group {
-            margin-bottom: 20px;
-        }
+                <div class="mb-3">
+                    <label for="txtName" class="form-label">Name *</label>
+                    <asp:TextBox ID="txtName" runat="server" CssClass="form-control" placeholder="Enter full name" />
+                </div>
 
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #374151;
-        }
+                <div class="mb-3">
+                    <label for="txtEmail" class="form-label">Email *</label>
+                    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" placeholder="Enter email address" TextMode="Email" />
+                </div>
 
-        .form-control {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+                <div class="mb-3">
+                    <label for="ddlRole" class="form-label">Select Role *</label>
+                    <asp:DropDownList ID="ddlRole" runat="server" CssClass="form-select" AutoPostBack="true" OnSelectedIndexChanged="ddlRole_SelectedIndexChanged"></asp:DropDownList>
+                </div>
 
-        .btn-submit {
-            background-color: #007bff;
-            color: white;
-            padding: 12px;
-            border: none;
-            border-radius: 4px;
-            width: 100%;
-            cursor: pointer;
-            font-weight: bold;
-        }
+                <asp:Button ID="btnSubmit" runat="server" Style="display:none;" OnClick="btnSubmit_Click" />
+                <button type="button" class="btn btn-primary w-100 mb-4" onclick="confirmCreate()">Create Account</button>
 
-        .btn-submit:hover {
-            background-color: #0056b3;
-        }
-
-        .note {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 20px;
-        }
-
-        .permissions-section {
-            margin-top: 30px;
-        }
-    </style>
-
-    <div class="form-container">
-        <h2>Add New Account</h2>
-
-        <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" ForeColor="Red" Visible="false"></asp:Label>
-
-        <div class="note">
-            Once you create this account, an email will be sent inviting the user to set their password.
-        </div>
-
-        <div class="form-group">
-            <label for="txtName">Name *</label>
-            <asp:TextBox ID="txtName" runat="server" CssClass="form-control" placeholder="Enter full name" />
-        </div>
-
-        <div class="form-group">
-            <label for="txtEmail">Email *</label>
-            <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" placeholder="Enter email address" TextMode="Email" />
-        </div>
-
-   <asp:DropDownList ID="ddlRole" runat="server" CssClass="form-control"
-    AutoPostBack="true" OnSelectedIndexChanged="ddlRole_SelectedIndexChanged">
-</asp:DropDownList>
-
-
-        <!-- Hidden ASP.NET Button (triggers postback) -->
-        <asp:Button ID="btnSubmit" runat="server" Style="display:none;" OnClick="btnSubmit_Click" />
-
-        <!-- Visible button with SweetAlert -->
-        <button type="button" class="btn-submit" onclick="confirmCreate()">Create Account</button>
-
-        <!-- Permissions Section -->
-        <div class="permissions-section">
-            <asp:Repeater ID="rptPermissions" runat="server" Visible="false">
-                <HeaderTemplate>
-                    <table class="table table-bordered" style="width:100%; border-collapse: collapse;">
-                        <thead style="background-color:#f0f0f0;">
-                            <tr>
-                                <th style="padding:10px;">Module</th>
-                                <th>View</th>
-                                <th>Add</th>
-                                <th>Edit</th>
-                                <th>Delete</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                </HeaderTemplate>
-                <ItemTemplate>
-                    <tr>
-                        <td style="padding:10px;"><%# Eval("ModuleName") %></td>
-                        <td><asp:CheckBox ID="chkView" runat="server" Checked='<%# Eval("CanView") %>' CssClass="chkView" /></td>
-                        <td><asp:CheckBox ID="chkAdd" runat="server" Checked='<%# Eval("CanAdd") %>' CssClass="chkAdd" onclick="ensureView(this)" /></td>
-                        <td><asp:CheckBox ID="chkEdit" runat="server" Checked='<%# Eval("CanEdit") %>' CssClass="chkEdit" onclick="ensureView(this)" /></td>
-                        <td><asp:CheckBox ID="chkDelete" runat="server" Checked='<%# Eval("CanDelete") %>' CssClass="chkDelete" onclick="ensureView(this)" /></td>
-                        <asp:HiddenField ID="hfModuleName" runat="server" Value='<%# Eval("ModuleName") %>' />
-                    </tr>
-                </ItemTemplate>
-                <FooterTemplate>
-                        </tbody>
-                    </table>
-                </FooterTemplate>
-            </asp:Repeater>
+                <asp:Repeater ID="rptPermissions" runat="server" Visible="false">
+                    <HeaderTemplate>
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Module</th>
+                                        <th>View</th>
+                                        <th>Add</th>
+                                        <th>Edit</th>
+                                        <th>Delete</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    </HeaderTemplate>
+                    <ItemTemplate>
+                        <tr>
+                            <td><%# Eval("ModuleName") %></td>
+                            <td><asp:CheckBox ID="chkView" runat="server" Checked='<%# Eval("CanView") %>' CssClass="form-check-input chkView" /></td>
+                            <td><asp:CheckBox ID="chkAdd" runat="server" Checked='<%# Eval("CanAdd") %>' CssClass="form-check-input chkAdd" onclick="ensureView(this)" /></td>
+                            <td><asp:CheckBox ID="chkEdit" runat="server" Checked='<%# Eval("CanEdit") %>' CssClass="form-check-input chkEdit" onclick="ensureView(this)" /></td>
+                            <td><asp:CheckBox ID="chkDelete" runat="server" Checked='<%# Eval("CanDelete") %>' CssClass="form-check-input chkDelete" onclick="ensureView(this)" /></td>
+                            <asp:HiddenField ID="hfModuleName" runat="server" Value='<%# Eval("ModuleName") %>' />
+                        </tr>
+                    </ItemTemplate>
+                    <FooterTemplate>
+                                </tbody>
+                            </table>
+                        </div>
+                    </FooterTemplate>
+                </asp:Repeater>
+            </div>
         </div>
     </div>
 
-    <!-- SweetAlert2 Library -->
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <script>
         function confirmCreate() {
             Swal.fire({

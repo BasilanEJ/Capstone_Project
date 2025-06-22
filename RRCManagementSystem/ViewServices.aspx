@@ -113,9 +113,16 @@
 
             <div class="card-body">
                 <asp:Label ID="lblMessage" runat="server" CssClass="alert-message"></asp:Label>
-<asp:GridView ID="gvServices" runat="server" AutoGenerateColumns="False" CssClass="table" OnRowCommand="gvServices_RowCommand" EmptyDataText="No services found.">
+<asp:GridView ID="gvServices" runat="server" AutoGenerateColumns="False" CssClass="table"
+    OnRowCommand="gvServices_RowCommand" EmptyDataText="No services found.">
     <Columns>
-        <asp:BoundField DataField="ServiceID" HeaderText="ID" />
+
+        <asp:TemplateField HeaderText="Service ID">
+            <ItemTemplate>
+                <%# "Service" + Convert.ToInt32(Eval("ServiceID")).ToString("D3") %>
+            </ItemTemplate>
+        </asp:TemplateField>
+
         <asp:BoundField DataField="Name" HeaderText="Service Name" />
         <asp:BoundField DataField="Description" HeaderText="Description" />
 
@@ -125,9 +132,17 @@
 
         <asp:TemplateField HeaderText="Actions">
             <ItemTemplate>
-                <asp:LinkButton ID="btnEdit" runat="server" CommandName="EditService" CommandArgument='<%# Eval("ServiceID") %>' CssClass="action-btn" Text="Edit" />
+                <asp:LinkButton ID="btnEdit" runat="server"
+                    CommandName="EditService"
+                    CommandArgument='<%# Eval("ServiceID") %>'
+                    CssClass="action-btn" Text="Edit" />
                 &nbsp;|&nbsp;
-                <asp:LinkButton ID="btnDelete" runat="server" CommandName="DeleteService" CommandArgument='<%# Eval("ServiceID") %>' CssClass="action-btn" Text="Delete" OnClientClick="return confirm('Are you sure you want to delete this service?');" />
+                <asp:LinkButton ID="btnDelete" runat="server"
+                    CommandName="DeleteService"
+                    CommandArgument='<%# Eval("ServiceID") %>'
+                    CssClass="action-btn"
+                    Text="Delete"
+                    OnClientClick="return confirm('Are you sure you want to delete this service?');" />
             </ItemTemplate>
         </asp:TemplateField>
     </Columns>

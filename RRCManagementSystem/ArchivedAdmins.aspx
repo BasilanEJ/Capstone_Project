@@ -83,7 +83,45 @@
         }
     </style>
 
-    <div class="table-container">
+     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="text/javascript">
+        function confirmRestore(btn, userId) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to restore this admin account?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, restore it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack(btn, userId);
+                }
+            });
+            return false;
+        }
+
+        function confirmDelete(btn, userId) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This will permanently delete the admin account.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack(btn, userId);
+                }
+            });
+            return false;
+        }
+    </script>
+
+
+   <div class="table-container">
         <h2>Archived Admin Accounts</h2>
 
         <div class="search-bar">
@@ -105,19 +143,17 @@
                 <asp:BoundField DataField="Role" HeaderText="Role" />
                 <asp:TemplateField HeaderText="Actions">
                     <ItemTemplate>
-                        <asp:LinkButton ID="btnRestore" runat="server"
-                            Text="Restore"
-                            CommandName="RestoreAdmin"
-                            CommandArgument='<%# Eval("UserID") %>'
-                            CssClass="btn-action btn-restore"
-                            OnClientClick="return confirm('Restore this account?');" />
+                        <a href="javascript:void(0);"
+                           class="btn-action btn-restore"
+                           onclick='return confirmRestore("<%= gvArchivedAdmins.UniqueID %>", "<%# Eval("UserID") %>");'>
+                            Restore
+                        </a>
 
-                        <asp:LinkButton ID="btnDelete" runat="server"
-                            Text="Delete"
-                            CommandName="DeleteAdmin"
-                            CommandArgument='<%# Eval("UserID") %>'
-                            CssClass="btn-action btn-delete"
-                            OnClientClick="return confirm('This will permanently delete the account. Continue?');" />
+                        <a href="javascript:void(0);"
+                           class="btn-action btn-delete"
+                           onclick='return confirmDelete("<%= gvArchivedAdmins.UniqueID %>", "<%# Eval("UserID") %>");'>
+                            Delete
+                        </a>
                     </ItemTemplate>
                 </asp:TemplateField>
             </Columns>

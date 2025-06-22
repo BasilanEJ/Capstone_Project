@@ -160,45 +160,44 @@
                     <asp:Button ID="btnFilter" runat="server" Text="Filter Results" CssClass="filter-btn available" OnClick="btnFilter_Click" />
                 </div>
 
-             <asp:GridView ID="gvEquipment" runat="server" AutoGenerateColumns="False" 
-    CssClass="table table-bordered table-striped mt-3" 
-    AllowPaging="true" PageSize="10" 
-    OnPageIndexChanging="gvEquipment_PageIndexChanging" 
+  <asp:GridView ID="gvEquipment" runat="server" AutoGenerateColumns="False"
+    CssClass="table table-bordered table-striped mt-3"
+    AllowPaging="true" PageSize="10"
+    OnPageIndexChanging="gvEquipment_PageIndexChanging"
     OnRowCommand="gvEquipment_RowCommand">
-    
+
     <Columns>
-        <asp:BoundField DataField="EquipmentID" HeaderText="Equipment ID" />
+        <asp:BoundField DataField="FormattedID" HeaderText="Equipment ID" />
         <asp:BoundField DataField="Name" HeaderText="Equipment Name" />
         <asp:BoundField DataField="Status" HeaderText="Status" />
         
         <asp:TemplateField HeaderText="Image">
             <ItemTemplate>
-                <asp:Image ID="imgEquipment" runat="server" CssClass="equipment-image" 
-                           ImageUrl='<%# Eval("ImagePath") %>' 
-                           AlternateText="No Image" />
+                <asp:Image ID="imgEquipment" runat="server" Width="70px" Height="70px"
+                           ImageUrl='<%# Eval("ImagePath") %>' AlternateText="No Image" />
             </ItemTemplate>
         </asp:TemplateField>
-        
-        <asp:BoundField DataField="CreatedAt" HeaderText="Date Added" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
 
+        <asp:BoundField DataField="CreatedAt" HeaderText="Date Added" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
 
         <asp:TemplateField HeaderText="Actions">
             <ItemTemplate>
-                <asp:HyperLink ID="lnkEdit" runat="server" 
-                    NavigateUrl='<%# Eval("EquipmentID", "EditEquipment.aspx?EquipmentID={0}") %>' 
-                    Text="Edit" CssClass="btn btn-sm btn-primary" />
+              <asp:HyperLink ID="lnkEdit" runat="server"
+    NavigateUrl='<%# "EditEquipment.aspx?EquipmentID=" + EncodeID(Eval("EquipmentID").ToString()) %>'
+    Text="Edit" CssClass="btn btn-sm btn-primary" />
 
                 &nbsp;
-
-                <asp:Button ID="btnDelete" runat="server" 
-                    Text="Delete" CssClass="btn btn-sm btn-danger" 
+                <asp:Button ID="btnDelete" runat="server"
+                    Text="Delete" CssClass="btn btn-sm btn-danger"
                     CommandName="DeleteEquipment"
-                    CommandArgument='<%# Eval("EquipmentID") %>' 
+                    CommandArgument='<%# Eval("EquipmentID") %>'
                     OnClientClick="return confirm('Are you sure you want to delete this equipment?');" />
             </ItemTemplate>
         </asp:TemplateField>
     </Columns>
 </asp:GridView>
+
+
 
 
                 <asp:Label ID="lblMessage" runat="server" CssClass="message-label" />

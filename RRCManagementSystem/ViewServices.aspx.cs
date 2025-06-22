@@ -45,7 +45,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         private bool HasPermission(int adminId, string moduleName, string permissionColumn)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -93,6 +92,14 @@ namespace RRCManagementSystem
                         SqlDataAdapter da = new SqlDataAdapter(cmd);
                         DataTable dt = new DataTable();
                         da.Fill(dt);
+
+                        // ✅ Add FormattedServiceID column (e.g., Service001)
+                        dt.Columns.Add("FormattedServiceID", typeof(string));
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            int id = Convert.ToInt32(row["ServiceID"]);
+                            row["FormattedServiceID"] = "Service" + id.ToString("D3");
+                        }
 
                         gvServices.DataSource = dt;
                         gvServices.DataBind();

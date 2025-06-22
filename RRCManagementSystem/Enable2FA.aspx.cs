@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Web.UI;
 
+
 namespace RRCManagementSystem
 {
     public partial class Enable2FA : Page
@@ -52,7 +53,7 @@ namespace RRCManagementSystem
 
         protected void btnVerify_Click(object sender, EventArgs e)
         {
-            string code = txtCode.Text.Trim();
+            string code = txtCode.Value?.Trim() ?? "";
             string secret = Session["2FA_Secret"]?.ToString();
             string email = Session["Pending2FA_Email"]?.ToString();
             string name = Session["Pending2FA_Name"]?.ToString();

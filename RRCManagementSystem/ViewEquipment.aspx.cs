@@ -81,9 +81,9 @@ namespace RRCManagementSystem
 
                     // Step 1: Get all equipments
                     string queryEquipments = @"
-                SELECT EquipmentID, Name, Status AS OriginalStatus, ImagePath, CreatedAt 
-                FROM EquipmentStatus 
-                ORDER BY CreatedAt DESC";
+                        SELECT EquipmentID, Name, Status AS OriginalStatus, ImagePath, CreatedAt 
+                        FROM EquipmentStatus 
+                        ORDER BY CreatedAt DESC";
 
                     SqlDataAdapter daEquipments = new SqlDataAdapter(queryEquipments, con);
                     DataTable dtEquipments = new DataTable();
@@ -91,11 +91,11 @@ namespace RRCManagementSystem
 
                     // Step 2: Get assigned equipments with count
                     string queryAssigned = @"
-                SELECT BE.EquipmentID, COUNT(*) AS AssignmentsCount
-                FROM BookingEquipments BE
-                INNER JOIN Bookings B ON BE.BookingID = B.BookingID
-                WHERE CAST(B.ScheduledDate AS DATE) = @ScheduledDate
-                GROUP BY BE.EquipmentID";
+                        SELECT BE.EquipmentID, COUNT(*) AS AssignmentsCount
+                        FROM BookingEquipments BE
+                        INNER JOIN Bookings B ON BE.BookingID = B.BookingID
+                        WHERE CAST(B.ScheduledDate AS DATE) = @ScheduledDate
+                        GROUP BY BE.EquipmentID";
 
                     SqlCommand cmdAssigned = new SqlCommand(queryAssigned, con);
                     cmdAssigned.Parameters.AddWithValue("@ScheduledDate", targetDate);
@@ -110,10 +110,11 @@ namespace RRCManagementSystem
                             r => r.Field<int>("AssignmentsCount")
                         );
 
-                    // Step 3: Add derived status
+                    // Step 3: Add derived status and formatted ID
                     var equipmentList = dtEquipments.AsEnumerable().Select(eq => new
                     {
                         EquipmentID = eq.Field<int>("EquipmentID"),
+                        FormattedID = "Equipment" + eq.Field<int>("EquipmentID").ToString("D3"),
                         Name = eq.Field<string>("Name"),
                         ImagePath = eq.Field<string>("ImagePath"),
                         CreatedAt = eq.Field<DateTime>("CreatedAt"),
@@ -134,7 +135,6 @@ namespace RRCManagementSystem
                 lblMessage.ForeColor = System.Drawing.Color.Red;
             }
         }
-
 
         protected void ddlStatus_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -197,6 +197,12 @@ namespace RRCManagementSystem
 
                 FilterAndLoadEquipment(); // Refresh
             }
+        }
+
+        public string EncodeID(string id)
+        {
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(id);
+            return Convert.ToBase64String(bytes).Replace("=", "").Replace("+", "-").Replace("/", "_");
         }
 
     }

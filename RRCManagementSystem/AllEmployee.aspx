@@ -1,5 +1,9 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AllEmployee.aspx.cs" Inherits="RRCManagementSystem.AllEmployee" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- ✅ SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
@@ -69,7 +73,6 @@
             background-color: #f1f1f1;
         }
 
-        /* Action Buttons */
         .btn {
             display: inline-block;
             padding: 8px 14px;
@@ -77,8 +80,6 @@
             border-radius: 4px;
             cursor: pointer;
             text-align: center;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
             border: none;
         }
 
@@ -100,7 +101,6 @@
             background-color: #a71d2a;
         }
 
-        /* Profile Picture Image */
         .custom-table img {
             width: 50px;
             height: 50px;
@@ -108,7 +108,6 @@
             object-fit: cover;
         }
 
-        /* Responsive adjustments */
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -138,9 +137,7 @@
 
     <div class="container">
         <div class="card">
-            <div class="card-header">
-                Employee List
-            </div>
+            <div class="card-header">Employee List</div>
             <div class="card-body">
                 <div class="table-responsive">
 
@@ -174,12 +171,14 @@
 
                             <asp:TemplateField HeaderText="Actions">
                                 <ItemTemplate>
-                                    <asp:Button ID="btnEdit" runat="server" CommandName="EditEmployee" CommandArgument='<%# Eval("EmployeeID") %>'
+                                    <asp:Button ID="btnEdit" runat="server" CommandName="EditEmployee"
+                                        CommandArgument='<%# Eval("EmployeeID") %>'
                                         CssClass="btn btn-primary" Text="Edit" />
 
-                                    <asp:Button ID="btnDelete" runat="server" CommandName="DeleteEmployee" CommandArgument='<%# Eval("EmployeeID") %>'
-                                        CssClass="btn btn-danger" Text="Archive"
-                                        OnClientClick="return confirm('Are you sure you want to archive this employee?');" />
+                                    <button type="button" class="btn btn-danger"
+                                        onclick="confirmArchive('<%# Eval("EmployeeID") %>')">
+                                        Archive
+                                    </button>
                                 </ItemTemplate>
                             </asp:TemplateField>
                         </Columns>
@@ -190,5 +189,24 @@
             </div>
         </div>
     </div>
+
+    <!-- ✅ SweetAlert Script -->
+    <script type="text/javascript">
+        function confirmArchive(employeeId) {
+            Swal.fire({
+                title: 'Archive Employee?',
+                text: "Are you sure you want to archive this employee?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, archive it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack('gvEmployees', 'DeleteEmployee$' + employeeId);
+                }
+            });
+        }
+    </script>
 
 </asp:Content>

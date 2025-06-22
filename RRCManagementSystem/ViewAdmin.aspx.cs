@@ -20,8 +20,8 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Block SuperAdmin and Inspector
-            if (role == "SuperAdmin" || role == "Inspector")
+            // 🔐 Only allow SuperAdmins
+            if (role != "SuperAdmin")
             {
                 Response.Redirect("~/Login.aspx");
                 return;
@@ -33,22 +33,19 @@ namespace RRCManagementSystem
             }
         }
 
-
         private void LoadAdmins()
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-                SELECT 
-                    u.UserID, 
-                    u.Name, 
-                    u.Email, 
-                    u.Role, 
-                    MIN(u.CreatedAt) AS CreatedAt
-                FROM Users u
-                WHERE u.Role = 'Admin' AND u.Status != 'Archived'
-                GROUP BY u.UserID, u.Name, u.Email, u.Role
-                ORDER BY u.UserID";
+                    SELECT 
+                        u.UserID, 
+                        u.Name, 
+                        u.Email, 
+                        u.Role
+                    FROM Users u
+                    WHERE u.Role = 'Admin' AND u.Status != 'Archived'
+                    ORDER BY u.UserID";
 
                 SqlDataAdapter da = new SqlDataAdapter(query, conn);
                 DataTable dt = new DataTable();
@@ -73,43 +70,51 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-                SELECT 
-                    u.UserID, 
-                    u.Name, 
-                    u.Email, 
-                    u.Role, 
-                    MIN(u.CreatedAt) AS CreatedAt
-                FROM Users u
-                WHERE u.Role = 'Admin' AND u.Status != 'Archived'
-                    AND (u.Name LIKE @Keyword OR u.Email LIKE @Keyword)
-                GROUP BY u.UserID, u.Name, u.Email, u.Role
-                ORDER BY u.UserID";
+                    SELECT 
+                        u.UserID, 
+                        u.Name, 
+                        u.Email, 
+                        u.Role
+                    FROM Users u
+                    WHERE u.Role = 'Admin' AND u.Status != 'Archived'
+                        AND (u.Name LIKE @Keyword OR u.Email LIKE @Keyword)
+                    ORDER BY u.UserID";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@Keyword", $"%{keyword}%");
+                    cmd.Parameters.AddWithValue("@Keyword", "%" + keyword + "%");
+
                     SqlDataAdapter da = new SqlDataAdapter(cmd);
                     DataTable dt = new DataTable();
-                    da.Fill(dt);
 
-                    gvAdmins.DataSource = dt;
-                    gvAdmins.DataBind();
+                    try
+                    {
+                        da.Fill(dt);
+                        gvAdmins.DataSource = dt;
+                        gvAdmins.DataBind();
+                    }
+                    catch (Exception ex)
+                    {
+                        lblMessage.Text = "⚠ Error searching admins: " + ex.Message;
+                    }
                 }
             }
         }
 
         protected void gvAdmins_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
         {
-            int userID = Convert.ToInt32(e.CommandArgument);
+            int userID;
 
-            if (e.CommandName == "EditAdmin")
+            if (int.TryParse(e.CommandArgument.ToString(), out userID))
             {
-                Response.Redirect($"EditAdmin.aspx?UserID={userID}");
-            }
-
-            if (e.CommandName == "ArchiveAdmin")
-            {
-                ArchiveAdmin(userID);
+                if (e.CommandName == "EditAdmin")
+                {
+                    Response.Redirect($"EditAdmin.aspx?UserID={userID}");
+                }
+                else if (e.CommandName == "ArchiveAdmin")
+                {
+                    ArchiveAdmin(userID);
+                }
             }
         }
 
@@ -118,9 +123,9 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-            UPDATE Users
-            SET Status = 'Archived'
-            WHERE UserID = @UserID AND Role = 'Admin'";
+                    UPDATE Users
+                    SET Status = 'Archived'
+                    WHERE UserID = @UserID AND Role = 'Admin'";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
@@ -134,11 +139,11 @@ namespace RRCManagementSystem
                         if (rows > 0)
                         {
                             lblMessage.Text = "✅ Admin archived successfully.";
-                            LoadAdmins(); // refresh GridView
+                            LoadAdmins(); // Refresh table
                         }
                         else
                         {
-                            lblMessage.Text = "⚠ No admin found to archive.";
+                            lblMessage.Text = "⚠ No matching admin found to archive.";
                         }
                     }
                     catch (Exception ex)
@@ -148,6 +153,5 @@ namespace RRCManagementSystem
                 }
             }
         }
-
     }
 }

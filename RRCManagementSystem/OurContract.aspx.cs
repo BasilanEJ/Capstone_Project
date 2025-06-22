@@ -39,20 +39,75 @@ namespace RRCManagementSystem
 
                 if (reader.Read())
                 {
-                    lblStartDate.Text = Convert.ToDateTime(reader["StartDate"]).ToString("yyyy-MM-dd");
-                    lblEndDate.Text = Convert.ToDateTime(reader["EndDate"]).ToString("yyyy-MM-dd");
-                    lblUploaded.Text = Convert.ToDateTime(reader["UploadedAt"]).ToString("yyyy-MM-dd hh:mm tt");
-                    lblRemarks.Text = reader["Remarks"].ToString();
+                    // ✅ Use null checks to avoid InvalidCastException
+                    if (reader["StartDate"] != DBNull.Value)
+                        lblStartDate.Text = Convert.ToDateTime(reader["StartDate"]).ToString("yyyy-MM-dd");
 
-                    // This is already a full physical path (e.g., D:\EncryptedContracts\...)
-                    ViewState["ContractPath"] = reader["FilePath"].ToString();
-                    pnlContract.Visible = true;
+                    if (reader["EndDate"] != DBNull.Value)
+                        lblEndDate.Text = Convert.ToDateTime(reader["EndDate"]).ToString("yyyy-MM-dd");
+
+                    if (reader["UploadedAt"] != DBNull.Value)
+                        lblUploaded.Text = Convert.ToDateTime(reader["UploadedAt"]).ToString("yyyy-MM-dd hh:mm tt");
+
+                    lblRemarks.Text = reader["Remarks"] != DBNull.Value ? reader["Remarks"].ToString() : "";
+
+                    string filePath = reader["FilePath"] != DBNull.Value ? reader["FilePath"].ToString() : "";
+
+                    if (!string.IsNullOrEmpty(filePath))
+                    {
+                        ViewState["ContractPath"] = filePath;
+                        pnlContract.Visible = true;
+
+                        // ✅ Show PDF preview
+                        ShowPDFPreview(filePath, clientId);
+                    }
+                    else
+                    {
+                        lblMessage.Text = "❌ No file path found for the contract.";
+                        pnlContract.Visible = false;
+                        pnlPreview.Visible = false;
+                    }
                 }
                 else
                 {
                     lblMessage.Text = "❌ No contract found for your account.";
                     pnlContract.Visible = false;
+                    pnlPreview.Visible = false;
                 }
+            }
+        }
+
+
+        private void ShowPDFPreview(string encryptedPath, int clientId)
+        {
+            try
+            {
+                string absoluteEncryptedPath = Server.MapPath(encryptedPath);
+                if (!File.Exists(absoluteEncryptedPath))
+                {
+                    lblMessage.Text = "❌ Contract file not found on the server.";
+                    return;
+                }
+
+                // Decrypt file for preview
+                byte[] encryptedData = File.ReadAllBytes(absoluteEncryptedPath);
+                byte[] decryptedData = AESHelper.Decrypt(encryptedData);
+
+                string previewsDir = Server.MapPath("~/Previews/");
+                if (!Directory.Exists(previewsDir))
+                    Directory.CreateDirectory(previewsDir);
+
+                string previewFilename = $"Client_{clientId}_ContractPreview.pdf";
+                string previewPath = Path.Combine(previewsDir, previewFilename);
+                File.WriteAllBytes(previewPath, decryptedData);
+
+                pdfViewer.Attributes["src"] = ResolveUrl($"~/Previews/{previewFilename}");
+                pnlPreview.Visible = true;
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "⚠️ Unable to preview contract: " + ex.Message;
+                pnlPreview.Visible = false;
             }
         }
 
@@ -62,7 +117,7 @@ namespace RRCManagementSystem
 
             if (!string.IsNullOrEmpty(filePath))
             {
-                filePath = Server.MapPath(filePath); // 🔵 Map virtual to physical
+                filePath = Server.MapPath(filePath); // Convert to physical path
             }
 
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
@@ -76,24 +131,34 @@ namespace RRCManagementSystem
                 byte[] encryptedData = File.ReadAllBytes(filePath);
                 byte[] decryptedData = AESHelper.Decrypt(encryptedData);
 
-                // ✅ Create dynamic filename (ClientName_Contract.pdf)
+                // 🔵 Auto-generate Previews folder
+                string previewsDir = Server.MapPath("~/Previews/");
+                if (!Directory.Exists(previewsDir))
+                {
+                    Directory.CreateDirectory(previewsDir);
+                }
+
+                // 🔵 Generate unique preview file
                 string clientName = Session["ClientName"]?.ToString() ?? "Client";
                 string safeClientName = clientName.Replace(" ", "_").Replace(",", "").Replace(".", "");
-                string downloadFileName = $"{safeClientName}_Contract.pdf";
+                string fileName = $"{safeClientName}_Preview_{DateTime.Now.Ticks}.pdf";
+                string previewPath = Path.Combine(previewsDir, fileName);
 
-                Response.Clear();
-                Response.ContentType = "application/pdf";
-                Response.AddHeader("Content-Disposition", $"attachment; filename={downloadFileName}");
-                Response.BinaryWrite(decryptedData);
-                Response.End();
+                File.WriteAllBytes(previewPath, decryptedData);
+
+                // 🔵 Store preview path in ViewState
+                ViewState["PreviewFilePath"] = $"~/Previews/{fileName}";
+
+                // 🔵 Show preview iframe
+                pdfViewer.Attributes["src"] = ViewState["PreviewFilePath"].ToString();
+                pnlPreview.Visible = true;
+                lblMessage.Text = "";
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "❌ Failed to download contract: " + ex.Message;
+                lblMessage.Text = "❌ Failed to load contract preview: " + ex.Message;
             }
         }
-
-
 
     }
 }

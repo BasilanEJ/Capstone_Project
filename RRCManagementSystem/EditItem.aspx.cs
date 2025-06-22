@@ -39,8 +39,18 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Validate ItemID from query string
-            if (!int.TryParse(Request.QueryString["ItemID"], out itemId))
+            // ✅ Decode the encoded ItemID from query string
+            string encodedId = Request.QueryString["ItemID"];
+            if (string.IsNullOrEmpty(encodedId))
+            {
+                lblMessage.Text = "⚠ Missing Item ID.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                btnSave.Enabled = false;
+                return;
+            }
+
+            string decodedId = DecodeID(encodedId);
+            if (!int.TryParse(decodedId, out itemId))
             {
                 lblMessage.Text = "⚠ Invalid Item ID.";
                 lblMessage.ForeColor = System.Drawing.Color.Red;
@@ -54,6 +64,25 @@ namespace RRCManagementSystem
             }
         }
 
+        private string DecodeID(string encoded)
+        {
+            try
+            {
+                string padded = encoded.Replace("-", "+").Replace("_", "/");
+                switch (padded.Length % 4)
+                {
+                    case 2: padded += "=="; break;
+                    case 3: padded += "="; break;
+                }
+
+                byte[] data = Convert.FromBase64String(padded);
+                return System.Text.Encoding.UTF8.GetString(data);
+            }
+            catch
+            {
+                return null;
+            }
+        }
 
         private bool HasEditPermission(int adminId, string moduleName)
         {
@@ -232,7 +261,7 @@ namespace RRCManagementSystem
                     }
                     catch
                     {
-                        // Fail silently or handle logging errors here
+                        // Handle audit log errors silently
                     }
                 }
             }

@@ -1,86 +1,104 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ManageEmployee.aspx.cs" Inherits="RRCManagementSystem.ManageEmployee" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
+</asp:Content>
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="container py-5">
+        <h2 class="text-center mb-4 fw-semibold">👥 Manage Employees</h2>
+
+        <div class="row g-4 justify-content-center">
+
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <a href="AllEmployee.aspx" class="text-decoration-none">
+                    <div class="card shadow-sm h-100 text-center border-0 rounded-3 hover-shadow">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center p-4">
+                            <i class="fas fa-list fa-2x text-primary mb-3"></i>
+                            <h5 class="card-title fw-semibold text-dark">View Employees</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <a href="AddEmployees.aspx" class="text-decoration-none">
+                    <div class="card shadow-sm h-100 text-center border-0 rounded-3 hover-shadow">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center p-4">
+                            <i class="fas fa-plus fa-2x text-primary mb-3"></i>
+                            <h5 class="card-title fw-semibold text-dark">Add New Employees</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <a href="EmployeeStatus.aspx" class="text-decoration-none">
+                    <div class="card shadow-sm h-100 text-center border-0 rounded-3 hover-shadow">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center p-4">
+                            <i class="fas fa-info-circle fa-2x text-primary mb-3"></i>
+                            <h5 class="card-title fw-semibold text-dark">Employee Status</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <a href="GroupEmployees.aspx" class="text-decoration-none">
+                    <div class="card shadow-sm h-100 text-center border-0 rounded-3 hover-shadow">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center p-4">
+                            <i class="fas fa-users fa-2x text-primary mb-3"></i>
+                            <h5 class="card-title fw-semibold text-dark">Employee's Team</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <a href="ViewTeams.aspx" class="text-decoration-none">
+                    <div class="card shadow-sm h-100 text-center border-0 rounded-3 hover-shadow">
+                        <div class="card-body d-flex flex-column justify-content-center align-items-center p-4">
+                            <i class="fas fa-user-group fa-2x text-primary mb-3"></i>
+                            <h5 class="card-title fw-semibold text-dark">View Teams</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle (Popper included) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
+    <script>
+        // Example SweetAlert2 usage (optional)
+        /*
+        document.addEventListener('DOMContentLoaded', function () {
+            Swal.fire({
+                icon: 'info',
+                title: 'Welcome to Manage Employees',
+                text: 'Use the cards below to navigate employee management features.',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        });
+        */
+    </script>
+
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f6fa;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
-
-        .page-title {
-            text-align: center;
-            font-size: 28px;
-            font-weight: 600;
-            color: #2c3e50;
-            margin: 30px 0 20px;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 10px;
-        }
-
-        .employee-links-container {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 20px;
-            padding: 30px 20px;
-        }
-
-        .employee-card {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            width: 280px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        /* Optional hover effect on cards */
+        .hover-shadow:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            transform: translateY(-4px);
             transition: all 0.3s ease;
-            text-decoration: none;
-            color: #2c3e50;
-        }
-
-        .employee-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transform: translateY(-3px);
-            background-color: #f9fbff;
-        }
-
-        .employee-card i {
-            font-size: 28px;
-            margin-bottom: 10px;
-            color: #2980b9;
-        }
-
-        .employee-card-title {
-            font-size: 16px;
-            font-weight: 600;
         }
     </style>
-
-    <h2 class="page-title">👥 Manage Employees</h2>
-
-    <div class="employee-links-container">
-        <a href="AllEmployee.aspx" class="employee-card">
-            <i class="fas fa-list"></i>
-            <div class="employee-card-title">View Employees</div>
-        </a>
-        <a href="AddEmployees.aspx" class="employee-card">
-            <i class="fas fa-plus"></i>
-            <div class="employee-card-title">Add New Employees</div>
-        </a>
-        <a href="EmployeeStatus.aspx" class="employee-card">
-            <i class="fas fa-info-circle"></i>
-            <div class="employee-card-title">Employee Status</div>
-        </a>
-        <a href="GroupEmployees.aspx" class="employee-card">
-            <i class="fas fa-users"></i>
-            <div class="employee-card-title">Employee's Team</div>
-        </a>
-        <a href="ViewTeams.aspx" class="employee-card">
-            <i class="fas fa-user-group"></i>
-            <div class="employee-card-title">View Teams</div>
-        </a>
-    </div>
 </asp:Content>

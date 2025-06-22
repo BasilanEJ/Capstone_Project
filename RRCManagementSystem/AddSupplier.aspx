@@ -99,6 +99,27 @@
             }
         }
     </style>
+
+     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script type="text/javascript">
+        function confirmAddSupplier(btn) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to add this supplier?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#004085',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, add it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack(btn.name, '');
+                }
+            });
+            return false; // Prevent normal postback
+        }
+    </script>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
@@ -108,37 +129,31 @@
                 <strong>Add New Supplier</strong>
             </div>
             <div class="card-body">
-                <!-- Supplier Name -->
                 <div class="form-group">
                     <label for="txtName">Supplier Name *</label>
-                    <asp:TextBox ID="txtName" runat="server" CssClass="form-control" placeholder="Enter supplier name" required="required" />
+                    <asp:TextBox ID="txtName" runat="server" CssClass="form-control" placeholder="Enter supplier name" />
                 </div>
 
-                <!-- Address -->
                 <div class="form-group">
                     <label for="txtAddress">Address *</label>
-                    <asp:TextBox ID="txtAddress" runat="server" CssClass="form-control" placeholder="Enter address" required="required" />
+                    <asp:TextBox ID="txtAddress" runat="server" CssClass="form-control" placeholder="Enter address" />
                 </div>
 
-                <!-- Contact Number -->
                 <div class="form-group">
                     <label for="txtContactNumber">Contact Number *</label>
-                    <asp:TextBox ID="txtContactNumber" runat="server" CssClass="form-control" placeholder="Enter contact number" required="required" />
+                    <asp:TextBox ID="txtContactNumber" runat="server" CssClass="form-control" placeholder="Enter contact number" />
                 </div>
 
-                <!-- Email -->
                 <div class="form-group">
                     <label for="txtEmail">Email</label>
-                    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" placeholder="Enter email (optional)" TextMode="Email" />
+                    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" placeholder="Enter email (optional)" />
                 </div>
 
-                <!-- Company Name -->
                 <div class="form-group">
                     <label for="txtCompanyName">Company Name</label>
                     <asp:TextBox ID="txtCompanyName" runat="server" CssClass="form-control" placeholder="Enter company name (optional)" />
                 </div>
 
-                <!-- Business Type -->
                 <div class="form-group">
                     <label for="ddlBusinessType">Business Type</label>
                     <asp:DropDownList ID="ddlBusinessType" runat="server" CssClass="form-control">
@@ -151,7 +166,6 @@
                     </asp:DropDownList>
                 </div>
 
-                <!-- Status -->
                 <div class="form-group">
                     <label for="ddlStatus">Status</label>
                     <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-control">
@@ -161,16 +175,16 @@
                     </asp:DropDownList>
                 </div>
 
-                <!-- Submit Button with simple confirmation prompt -->
+                <!-- SweetAlert-triggering button -->
                 <asp:Button 
                     ID="btnSubmit" 
                     runat="server" 
                     Text="Add Supplier" 
-                    CssClass="btn-submit" 
-                    OnClientClick="return confirm('Are you sure you want to add this item?');" 
+                    CssClass="btn-submit"
+                    UseSubmitBehavior="false"
+                    OnClientClick="return confirmAddSupplier(this);" 
                     OnClick="btnSubmit_Click" />
 
-                <!-- ASP.NET Server Message -->
                 <asp:Label ID="lblMessage" runat="server" CssClass="alert-message"></asp:Label>
             </div>
         </div>

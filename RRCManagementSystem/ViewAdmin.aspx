@@ -1,121 +1,49 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="ViewAdmin.aspx.cs" Inherits="RRCManagementSystem.ViewAdmin" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        .table-container {
-            width: 90%;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            border-radius: 6px;
-        }
+    <div class="container my-5">
+        <div class="card shadow">
+            <div class="card-body">
+                <h2 class="text-center mb-4 text-primary">User Accounts</h2>
 
-        .table-container h2 {
-            text-align: center;
-            margin-bottom: 10px;
-            color: #333;
-        }
+                <div class="d-flex justify-content-end mb-3 gap-2 flex-wrap">
+                    <asp:TextBox ID="txtSearch" runat="server" CssClass="form-control w-auto" placeholder="Search by name or email..." />
+                    <asp:Button ID="btnSearch" runat="server" Text="Search" CssClass="btn btn-primary" OnClick="btnSearch_Click" />
+                </div>
 
-        .search-bar {
-            text-align: right;
-            margin-bottom: 15px;
-        }
+                <asp:Label ID="lblMessage" runat="server" CssClass="text-danger text-center d-block mb-3 fw-bold" />
 
-        .search-input {
-            padding: 6px 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+                <div class="table-responsive">
+                    <asp:GridView ID="gvAdmins" runat="server" CssClass="table table-bordered table-hover text-center"
+                        AutoGenerateColumns="False"
+                        EmptyDataText="No Admins found."
+                        OnRowCommand="gvAdmins_RowCommand"
+                        DataKeyNames="UserID">
+                        <Columns>
+                            <asp:BoundField DataField="UserID" HeaderText="ID" />
+                            <asp:BoundField DataField="Name" HeaderText="Name" />
+                            <asp:BoundField DataField="Email" HeaderText="Email" />
+                            <asp:BoundField DataField="Role" HeaderText="Role" />
+                            <asp:TemplateField HeaderText="Actions">
+                                <ItemTemplate>
+                                    <asp:LinkButton ID="btnEdit" runat="server"
+                                        Text="Edit"
+                                        CommandName="EditAdmin"
+                                        CommandArgument='<%# Eval("UserID") %>'
+                                        CssClass="btn btn-sm btn-primary me-1" />
 
-        .search-button {
-            padding: 6px 14px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .grid {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .grid th, .grid td {
-            padding: 12px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-
-        .grid th {
-            background-color: #007bff;
-            color: white;
-        }
-
-        .btn-action {
-            margin: 0 5px;
-            padding: 5px 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        .btn-delete {
-            background-color: #dc3545;
-        }
-
-        .btn-action:hover {
-            opacity: 0.9;
-        }
-
-        .alert-message {
-            text-align: center;
-            margin-bottom: 10px;
-            color: red;
-        }
-    </style>
-
-    <div class="table-container">
-        <h2>User Accounts</h2>
-
-        <div class="search-bar">
-            <asp:TextBox ID="txtSearch" runat="server" CssClass="search-input" placeholder="Search by name or email..." />
-            <asp:Button ID="btnSearch" runat="server" Text="Search" CssClass="search-button" OnClick="btnSearch_Click" />
+                                    <asp:LinkButton ID="btnDelete" runat="server"
+                                        Text="Archive"
+                                        CommandName="ArchiveAdmin"
+                                        CommandArgument='<%# Eval("UserID") %>'
+                                        CssClass="btn btn-sm btn-danger"
+                                        OnClientClick="return confirm('Are you sure you want to archive this admin?');" />
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                        </Columns>
+                    </asp:GridView>
+                </div>
+            </div>
         </div>
-
-        <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" />
-
-        <asp:GridView ID="gvAdmins" runat="server" CssClass="grid"
-            AutoGenerateColumns="False"
-            EmptyDataText="No Admins found."
-            OnRowCommand="gvAdmins_RowCommand"
-            DataKeyNames="UserID">
-            <Columns>
-                <asp:BoundField DataField="UserID" HeaderText="ID" />
-                <asp:BoundField DataField="Name" HeaderText="Name" />
-                <asp:BoundField DataField="Email" HeaderText="Email" />
-                <asp:BoundField DataField="Role" HeaderText="Role" />
-                <asp:TemplateField HeaderText="Actions">
-                    <ItemTemplate>
-                        <asp:LinkButton ID="btnEdit" runat="server"
-                            Text="Edit"
-                            CommandName="EditAdmin"
-                            CommandArgument='<%# Eval("UserID") %>'
-                            CssClass="btn-action" />
-
-                        <asp:LinkButton ID="btnDelete" runat="server"
-                            Text="Archive"
-                            CommandName="ArchiveAdmin"
-                            CommandArgument='<%# Eval("UserID") %>'
-                            CssClass="btn-action btn-delete"
-                            OnClientClick="return confirm('Are you sure you want to archive this admin?');" />
-                    </ItemTemplate>
-                </asp:TemplateField>
-            </Columns>
-        </asp:GridView>
     </div>
 </asp:Content>

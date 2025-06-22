@@ -38,10 +38,8 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 lblMessage.Text = "";
-                // ✅ Page logic here (e.g., populate fields, setup UI)
             }
         }
-
 
         private bool HasPermissionToAddService(int adminId, string moduleName)
         {
@@ -95,11 +93,16 @@ namespace RRCManagementSystem
             decimal price200 = ParseDecimal(txtPrice200.Text);
             decimal priceAbove200 = ParseDecimal(txtPriceAbove200.Text);
 
+            // ✅ Determine if service is contractual
+            bool isContract = serviceType == "Termite Control";
+
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-                    INSERT INTO Services (Name, ServiceType, Description, Price100SQM, Price200SQM, PriceAbove200SQM, CreatedAt)
-                    VALUES (@Name, @ServiceType, @Description, @Price100, @Price200, @PriceAbove200, GETDATE())";
+                    INSERT INTO Services 
+                        (Name, ServiceType, Description, Price100SQM, Price200SQM, PriceAbove200SQM, IsContract, CreatedAt)
+                    VALUES 
+                        (@Name, @ServiceType, @Description, @Price100, @Price200, @PriceAbove200, @IsContract, GETDATE())";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Name", serviceName);
@@ -108,12 +111,13 @@ namespace RRCManagementSystem
                 cmd.Parameters.AddWithValue("@Price100", price100 > 0 ? price100 : (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@Price200", price200 > 0 ? price200 : (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@PriceAbove200", priceAbove200 > 0 ? priceAbove200 : (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@IsContract", isContract);
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
 
                 // ✅ Add audit log
-                AddAuditLog(adminId, $"Added new service: {serviceName} ({serviceType})");
+                AddAuditLog(adminId, $"Added new service: {serviceName} ({serviceType}) | Contractual: {isContract}");
             }
 
             lblMessage.Text = "✅ Service added successfully!";
@@ -136,7 +140,6 @@ namespace RRCManagementSystem
             txtPriceAbove200.Text = "";
         }
 
-        // ✅ Audit log method
         private void AddAuditLog(int? userID, string action)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -155,7 +158,7 @@ namespace RRCManagementSystem
                     }
                     catch
                     {
-                        // Optional: handle logging error silently
+                        // Handle logging error silently
                     }
                 }
             }

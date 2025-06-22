@@ -4,12 +4,9 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
     <title>Forgot Password - RRC Management System</title>
-
-    <!-- Modern Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
 
     <style>
-        /* Reset and Base Styles */
         body, html {
             margin: 0;
             padding: 0;
@@ -18,74 +15,67 @@
             color: #333;
         }
 
-        /* Background Image */
         body {
-            background: url('images/pestlogo.jpg') no-repeat center center fixed;
+            background: url('images/bg.jpg') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
         }
 
-        /* Glassmorphism Container */
-        .forgot-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+        .login-container {
+            background: #ffffff;
             border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
-            width: 350px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: 400px;
             padding: 40px 30px;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
+            border: 1px solid #ddd;
             transition: transform 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.18);
         }
 
-        .forgot-container:hover {
+        .login-container:hover {
             transform: translateY(-5px);
         }
 
-        /* Logo */
         .logo {
             width: 200px;
             height: auto;
             margin-bottom: 20px;
         }
 
-        /* Heading */
         h2 {
-            color: #ffffff;
+            color: #333;
             font-size: 26px;
             margin-bottom: 25px;
         }
 
-        /* Input Fields */
         .input {
             width: 100%;
             padding: 14px 12px;
             margin-bottom: 20px;
             border-radius: 8px;
-            border: none;
+            border: 1px solid #ccc;
             font-size: 15px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            transition: background-color 0.3s ease;
+            background: #f9f9f9;
+            color: #333;
         }
 
         .input::placeholder {
-            color: #e0e0e0;
+            color: #999;
         }
 
         .input:focus {
-            background: rgba(255, 255, 255, 0.3);
+            background: #fff;
+            border-color: #007bff;
+            outline: none;
         }
 
-        /* Submit Button */
-        .btn-submit {
+        .btn-login {
             width: 100%;
             padding: 14px;
             background-color: #007bff;
@@ -97,37 +87,29 @@
             transition: background-color 0.3s ease, transform 0.2s ease;
         }
 
-        .btn-submit:hover {
+        .btn-login:hover {
             background-color: #0056b3;
             transform: translateY(-2px);
         }
 
-        /* Message Label */
+        .links {
+            margin-top: 20px;
+        }
+
+        .links a {
+            color: #007bff;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
         .message {
             margin-top: 15px;
             font-size: 14px;
             color: #ff4d4f;
         }
 
-        /* Back to Login Link */
-        .back-to-login {
-            margin-top: 20px;
-        }
-
-        .back-to-login a {
-            color: #ffffff;
-            font-size: 14px;
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .back-to-login a:hover {
-            color: #d1d1d1;
-        }
-
-        /* Responsive */
         @media screen and (max-width: 480px) {
-            .forgot-container {
+            .login-container {
                 width: 90%;
                 padding: 30px 20px;
             }
@@ -137,11 +119,8 @@
 
 <body>
     <form id="form1" runat="server">
-        <div class="forgot-container">
-            <!-- Logo -->
-            <img src="images/pestlogo.jpg" alt="RRC Logo" class="logo" />
-
-            <!-- Forgot Password Heading -->
+        <div class="login-container">
+            <img src="images/logorrc.png" alt="RRC Logo" class="logo" />
             <h2>Forgot Password</h2>
 
             <!-- Email Input -->
@@ -157,7 +136,7 @@
                 ID="btnSubmit"
                 runat="server"
                 Text="Send OTP"
-                CssClass="btn-submit"
+                CssClass="btn-login"
                 OnClick="btnSubmit_Click" />
 
             <!-- Message Label -->
@@ -166,8 +145,8 @@
                 runat="server"
                 CssClass="message" />
 
-            <!-- Back to Login Link -->
-            <div class="back-to-login">
+            <!-- Back to Login -->
+            <div class="links">
                 <a href="Login.aspx">Back to Login</a>
             </div>
         </div>

@@ -1,5 +1,10 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AddEquipment.aspx.cs" Inherits="RRCManagementSystem.AddEquipment" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- ✅ SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</asp:Content>
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
     <!-- ✅ INTERNAL CSS -->
@@ -118,19 +123,19 @@
                 <!-- Equipment ID -->
                 <div class="form-group">
                     <label for="txtEquipmentID">Equipment ID:</label>
-                    <asp:TextBox ID="txtEquipmentID" runat="server" CssClass="form-control input-lg" placeholder="Enter Equipment ID" required></asp:TextBox>
+                    <asp:TextBox ID="txtEquipmentID" runat="server" CssClass="form-control" placeholder="Enter Equipment ID" required></asp:TextBox>
                 </div>
 
                 <!-- Equipment Name -->
                 <div class="form-group">
                     <label for="txtEquipmentName">Equipment Name:</label>
-                    <asp:TextBox ID="txtEquipmentName" runat="server" CssClass="form-control input-lg" placeholder="Enter Equipment Name" required></asp:TextBox>
+                    <asp:TextBox ID="txtEquipmentName" runat="server" CssClass="form-control" placeholder="Enter Equipment Name" required></asp:TextBox>
                 </div>
 
                 <!-- Status -->
                 <div class="form-group">
                     <label for="ddlStatus">Status:</label>
-                    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-control input-lg">
+                    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-control">
                         <asp:ListItem Text="Select Status" Value="" />
                         <asp:ListItem Text="Available" Value="Available" />
                         <asp:ListItem Text="Unavailable" Value="Unavailable" />
@@ -141,17 +146,19 @@
                 <!-- Equipment Image -->
                 <div class="form-group">
                     <label for="fuEquipmentImage">Equipment Image (JPG, JPEG, PNG only):</label>
-                    <asp:FileUpload ID="fuEquipmentImage" runat="server" accept="image/*" onchange="previewImage(event);" />
+                    <asp:FileUpload ID="fuEquipmentImage" runat="server" accept="image/*" onchange="validateImage(this); previewImage(event);" />
                     <img id="imagePreview" src="#" alt="Equipment Image Preview" />
                 </div>
 
-                <!-- Buttons with Confirmation Prompt -->
+                <!-- Buttons -->
                 <div class="form-group text-center">
-                    <asp:Button ID="btnSubmit" runat="server" Text="Add Equipment" CssClass="btn btn-primary btn-lg"
-                        OnClientClick="return confirmAddEquipment();" OnClick="btnSubmit_Click" />
+                    <asp:Button ID="btnSubmit" runat="server" Text="Add Equipment"
+                        CssClass="btn btn-primary" UseSubmitBehavior="false"
+                        OnClientClick="return showConfirmAdd();" OnClick="btnSubmit_Click" />
 
-                    <asp:Button ID="btnCancel" runat="server" Text="Cancel" CssClass="btn btn-secondary btn-lg"
-                        OnClientClick="return confirmCancel();" />
+                    <asp:Button ID="btnCancel" runat="server" Text="Cancel"
+                        CssClass="btn btn-secondary" UseSubmitBehavior="false"
+                        OnClientClick="return showConfirmCancel();" />
                 </div>
             </div>
         </div>
@@ -159,7 +166,6 @@
 
     <!-- ✅ JAVASCRIPT -->
     <script>
-        // Preview the uploaded image
         function previewImage(event) {
             var file = event.target.files[0];
             if (file) {
@@ -173,14 +179,56 @@
             }
         }
 
-        // Confirmation when adding equipment
-        function confirmAddEquipment() {
-            return confirm("Are you sure you want to add this equipment?");
+        function validateImage(input) {
+            var filePath = input.value;
+            var allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
+            if (!allowedExtensions.exec(filePath)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid File Type',
+                    text: 'Only JPG, JPEG, and PNG files are allowed.'
+                });
+                input.value = '';
+                document.getElementById("imagePreview").style.display = "none";
+                return false;
+            }
         }
 
-        // Confirmation when cancelling
-        function confirmCancel() {
-            return confirm("Are you sure you want to cancel? Unsaved data will be lost.");
+        function showConfirmAdd() {
+            event.preventDefault();
+            Swal.fire({
+                title: 'Add Equipment?',
+                text: 'Are you sure you want to add this equipment?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#007bff',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, add it'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('<%= btnSubmit.ClientID %>').disabled = true;
+                    __doPostBack('<%= btnSubmit.UniqueID %>', '');
+                }
+            });
+            return false;
+        }
+
+        function showConfirmCancel() {
+            event.preventDefault();
+            Swal.fire({
+                title: 'Cancel?',
+                text: 'Are you sure you want to cancel? Unsaved data will be lost.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#6c757d',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = 'ViewEquipment.aspx'; // Redirect to equipment list
+                }
+            });
+            return false;
         }
     </script>
 

@@ -1,105 +1,51 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="SuperAdminDashboard.aspx.cs" Inherits="RRCManagementSystem.SuperAdminDashboard" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="container-fluid">
+        <h1 class="mb-4 fw-bold">Welcome to the SuperAdmin Dashboard</h1>
 
-    <style>
-        .dashboard-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
+        <!-- Dashboard Summary Cards -->
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="card text-center shadow-sm h-100">
+                    <div class="card-body">
+                        <h3 class="card-title display-6 text-dark">
+                            <asp:Label ID="lblTotalAdmins" runat="server" Text="0" />
+                        </h3>
+                        <p class="text-muted mb-0">Total Admin Accounts</p>
+                    </div>
+                </div>
+            </div>
 
-        .dashboard-card {
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            flex: 1 1 250px;
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.3s;
-        }
-
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .dashboard-card h3 {
-            font-size: 28px;
-            color: #111827;
-            margin: 0;
-        }
-
-        .dashboard-card p {
-            font-size: 16px;
-            color: #6b7280;
-        }
-
-        .recent-logs {
-            margin-top: 40px;
-        }
-
-        .recent-logs h2 {
-            margin-bottom: 20px;
-            color: #111827;
-        }
-
-        .table-container {
-            overflow-x: auto;
-        }
-
-        .table-logs {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #ffffff;
-        }
-
-        .table-logs th, .table-logs td {
-            padding: 12px 15px;
-            border: 1px solid #e5e7eb;
-        }
-
-        .table-logs th {
-            background-color: #f3f4f6;
-            color: #374151;
-        }
-
-        .table-logs tr:hover {
-            background-color: #f9fafb;
-        }
-    </style>
-
-    <h1>Welcome to the SuperAdmin Dashboard</h1>
-
-    <div class="dashboard-container">
-        <!-- Total Admin Accounts -->
-        <div class="dashboard-card">
-            <h3><asp:Label ID="lblTotalAdmins" runat="server" Text="0" /></h3>
-            <p>Total Admin Accounts</p>
+            <div class="col-md-6 col-lg-4">
+                <div class="card text-center shadow-sm h-100">
+                    <div class="card-body">
+                        <h3 class="card-title display-6 text-dark">
+                            <asp:Label ID="lblAuditLogs" runat="server" Text="0" />
+                        </h3>
+                        <p class="text-muted mb-0">Audit Logs</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Total Audit Logs -->
-        <div class="dashboard-card">
-            <h3><asp:Label ID="lblAuditLogs" runat="server" Text="0" /></h3>
-            <p>Audit Logs</p>
-        </div>
-    </div>
+        <!-- Hidden field to trigger modal -->
+        <asp:HiddenField ID="hfShowModal" runat="server" />
 
-    <!-- Hidden field to trigger modal -->
-    <asp:HiddenField ID="hfShowModal" runat="server" />
+        <!-- Recent Logs Section -->
+        <div class="mt-5">
+            <h2 class="mb-3 fw-semibold">Recent Audit Logs</h2>
 
-    <!-- Recent Logs Section -->
-    <div class="recent-logs">
-        <h2>Recent Audit Logs</h2>
-
-        <div class="table-container">
-            <asp:GridView ID="gvAuditLogs" runat="server" AutoGenerateColumns="False" CssClass="table-logs">
-                <Columns>
-                    <asp:BoundField DataField="LogID" HeaderText="Log ID" />
-                    <asp:BoundField DataField="AdminName" HeaderText="Admin Name" />
-                    <asp:BoundField DataField="Action" HeaderText="Action" />
-                    <asp:BoundField DataField="Timestamp" HeaderText="Timestamp" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
-                </Columns>
-            </asp:GridView>
+            <div class="table-responsive">
+                <asp:GridView ID="gvAuditLogs" runat="server" AutoGenerateColumns="False" CssClass="table table-bordered table-hover">
+                    <Columns>
+                        <asp:BoundField DataField="LogID" HeaderText="Log ID" />
+                        <asp:BoundField DataField="AdminName" HeaderText="Admin Name" />
+                        <asp:BoundField DataField="Action" HeaderText="Action" />
+                        <asp:BoundField DataField="Timestamp" HeaderText="Timestamp" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
+                    </Columns>
+                </asp:GridView>
+            </div>
         </div>
     </div>
 

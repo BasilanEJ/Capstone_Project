@@ -43,7 +43,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         private bool HasViewPermission(int adminId, string moduleName)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -137,13 +136,22 @@ namespace RRCManagementSystem
             LoadItems(ddlType.SelectedValue);
         }
 
+        // 🔐 You can remove this handler if you're now using direct URL in the GridView Action link
         protected void gvItems_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName == "EditItem")
             {
                 int itemId = Convert.ToInt32(e.CommandArgument);
-                Response.Redirect($"EditItem.aspx?ItemID={itemId}");
+                string encodedId = EncodeID(itemId.ToString());
+                Response.Redirect($"EditItem.aspx?ItemID={encodedId}");
             }
+        }
+
+        // ✅ Encoding the ItemID to hide the real database ID
+        public string EncodeID(string id)
+        {
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(id);
+            return Convert.ToBase64String(bytes).Replace("=", "").Replace("+", "-").Replace("/", "_");
         }
     }
 }

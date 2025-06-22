@@ -15,6 +15,14 @@ namespace RRCManagementSystem
 {
     public partial class AdminReports : System.Web.UI.Page
     {
+        protected Label lblTotalInquiries;
+        protected Label lblTotalClients;
+        protected Label lblTotalEquipment;
+        protected Label lblTotalBookings;
+        protected TextBox txtFromDate;
+        protected TextBox txtToDate;
+        protected GridView gvUserAccounts, gvInquiries, gvApprovedClients, gvInventorySnapshots, gvInventory, gvEquipment, gvBookings, gvInspections;
+
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
@@ -25,32 +33,28 @@ namespace RRCManagementSystem
                 txtToDate.Text = DateTime.Now.ToString("yyyy-MM-dd");
                 LoadReports();
                 LoadUserAccounts();
-
             }
+        }
+
+        protected void btnFilter_Click(object sender, EventArgs e)
+        {
+            LoadReports();
+            AddAuditLog(Convert.ToInt32(Session["UserID"]), "Filtered Admin Reports");
         }
 
         protected void btnExportPDF_Click(object sender, EventArgs e)
         {
             Document doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
-            MemoryStream ms = new MemoryStream();
-            PdfWriter writer = null;
-
-            try
+            using (MemoryStream ms = new MemoryStream())
             {
-                writer = PdfWriter.GetInstance(doc, ms);
-
-                // ✅ Set watermark
+                PdfWriter writer = PdfWriter.GetInstance(doc, ms);
                 writer.PageEvent = new PdfWatermark();
-
-                // ✅ Use password from session
-                string userPassword = Session["Password"] != null ? Session["Password"].ToString() : "default123";
-
+                string userPassword = Session["Password"]?.ToString() ?? "default123";
                 writer.SetEncryption(
                     Encoding.UTF8.GetBytes(userPassword),
                     Encoding.UTF8.GetBytes(userPassword),
                     PdfWriter.ALLOW_PRINTING,
-                    PdfWriter.ENCRYPTION_AES_128
-                );
+                    PdfWriter.ENCRYPTION_AES_128);
 
                 doc.Open();
 
@@ -68,62 +72,63 @@ namespace RRCManagementSystem
                 Response.Clear();
                 Response.ContentType = "application/pdf";
                 Response.AddHeader("content-disposition", $"attachment;filename=All_Reports_{DateTime.Now:yyyyMMdd}.pdf");
-                Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+                Response.Cache.SetCacheability(HttpCacheability.NoCache);
                 Response.BinaryWrite(ms.ToArray());
                 Response.Flush();
                 Response.SuppressContent = true;
                 HttpContext.Current.ApplicationInstance.CompleteRequest();
             }
-            catch (Exception ex)
-            {
-                // ✅ Display user-friendly error message
-                lblMessage.Text = $"❌ Error exporting PDF: {ex.Message}";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
-            }
-            finally
-            {
-                // 🔥 Always clear password no matter what
-                Session.Remove("Password");
-
-                if (doc.IsOpen())
-                    doc.Close();
-
-                ms.Dispose();
-            }
 
             AddAuditLog(Convert.ToInt32(Session["UserID"]), "Exported All Reports to PDF");
         }
 
-
-
-
-        private void LoadUserAccounts()
+        private void AddGridToPDF(Document doc, GridView grid, string title)
         {
-            try
+            if (grid.Rows.Count == 0) return;
+
+            doc.NewPage();
+            doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
+            doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+            doc.Add(new Paragraph(" "));
+
+            PdfPTable table = new PdfPTable(grid.Columns.Count)
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                WidthPercentage = 100,
+                SpacingBefore = 10f
+            };
+
+            foreach (DataControlField column in grid.Columns)
+            {
+                PdfPCell headerCell = new PdfPCell(new Phrase(column.HeaderText, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
                 {
-                    string query = @"
-                SELECT UserID, FullName, Email, Role, CreatedAt
-                FROM Users
-                WHERE Role <> 'SuperAdmin'
-                ORDER BY CreatedAt DESC";
+                    BackgroundColor = BaseColor.DARK_GRAY,
+                    HorizontalAlignment = Element.ALIGN_CENTER,
+                    Padding = 6
+                };
+                table.AddCell(headerCell);
+            }
 
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
+            foreach (GridViewRow row in grid.Rows)
+            {
+                foreach (TableCell cell in row.Cells)
+                {
+                    string text = HttpUtility.HtmlDecode(cell.Text).Trim();
+                    if (string.IsNullOrWhiteSpace(text) || text == "&nbsp;") text = "";
 
-                    gvUserAccounts.DataSource = dt;
-                    gvUserAccounts.DataBind();
+                    int align = decimal.TryParse(text.Replace(",", ""), out _) ? Element.ALIGN_RIGHT : Element.ALIGN_LEFT;
+
+                    PdfPCell bodyCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
+                    {
+                        HorizontalAlignment = align,
+                        Padding = 5
+                    };
+
+                    table.AddCell(bodyCell);
                 }
             }
-            catch (Exception)
-            {
-                // Optional error handling
-            }
+
+            doc.Add(table);
         }
-
-
 
         private void LoadReports()
         {
@@ -148,102 +153,67 @@ namespace RRCManagementSystem
             lblTotalBookings.Text = GetCount("Bookings", "BookingDate", from, to).ToString();
         }
 
-        private void LoadInquiries(DateTime from, DateTime to)
+        private void LoadUserAccounts()
         {
-            BindGrid(@"
-        SELECT 
-            InquiryID, 
-            Email, 
-            ContactNumber, 
-            Name,
-            StreetAndUnit + ', ' + Barangay + ', ' + City + ', ' + Region + ', ' + Country AS Address,
-            SubmittedAt
-        FROM InquirySimple
-        WHERE SubmittedAt BETWEEN @from AND @to
-        ORDER BY SubmittedAt DESC",
-                gvInquiries, from, to);
+            string query = "SELECT UserID, Name, Email, Role, CreatedAt FROM Users WHERE Role <> 'SuperAdmin' ORDER BY CreatedAt DESC";
+            BindGrid(query, gvUserAccounts);
         }
 
-
+        private void LoadInquiries(DateTime from, DateTime to)
+        {
+            string query = @"SELECT InquiryID, Email, ContactNumber, Name,
+                             StreetAndUnit + ', ' + Barangay + ', ' + City + ', ' + Region + ', ' + Country AS Address,
+                             SubmittedAt FROM InquirySimple WHERE SubmittedAt BETWEEN @from AND @to ORDER BY SubmittedAt DESC";
+            BindGrid(query, gvInquiries, from, to);
+        }
 
         private void LoadApprovedClients(DateTime from, DateTime to)
         {
-            string query = @"
-        SELECT 
-            ClientID, 
-            Name, 
-            Email, 
-            CreatedAt,
-            CONCAT(StreetAndUnit, ', ', Barangay, ', ', City, ', ', Region, ', ', Country) AS Address
-        FROM Clients 
-        WHERE Status = 'Approved' AND CreatedAt BETWEEN @from AND @to";
-
+            string query = @"SELECT ClientID, Name, Email, CreatedAt,
+                             CONCAT(StreetAndUnit, ', ', Barangay, ', ', City, ', ', Region, ', ', Country) AS Address
+                             FROM Clients WHERE Status = 'Approved' AND CreatedAt BETWEEN @from AND @to";
             BindGrid(query, gvApprovedClients, from, to);
         }
 
+        private void LoadInventorySnapshots(DateTime from, DateTime to)
+        {
+            string query = "SELECT Name, Type, Quantity, ExcessML, SnapshotDate FROM InventorySnapshots WHERE SnapshotDate BETWEEN @from AND @to";
+            BindGrid(query, gvInventorySnapshots, from, to);
+        }
 
+        private void LoadInventory()
+        {
+            string query = "SELECT ItemID, Name, Quantity FROM Inventory";
+            BindGrid(query, gvInventory);
+        }
 
+        private void LoadEquipment()
+        {
+            string query = "SELECT EquipmentID, Name, Status FROM EquipmentStatus WHERE Status = 'Available'";
+            BindGrid(query, gvEquipment);
+        }
 
-        private void LoadInventorySnapshots(DateTime from, DateTime to) =>
-            BindGrid(@"SELECT Name, Type, Quantity, ExcessML, SnapshotDate 
-                       FROM InventorySnapshots 
-                       WHERE SnapshotDate BETWEEN @from AND @to", gvInventorySnapshots, from, to);
-
-        private void LoadInventory() =>
-            BindGrid("SELECT ItemID, Name, Quantity FROM Inventory", gvInventory);
-
-        private void LoadEquipment() =>
-            BindGrid("SELECT EquipmentID, Name, Status FROM EquipmentStatus WHERE Status = 'Available'", gvEquipment);
-
-        private void LoadBookings(DateTime from, DateTime to) =>
-            BindGrid(@"SELECT b.BookingID, c.Name AS ClientName, s.Name AS Service, 
-                              t.GroupName AS TeamName, b.ScheduledDate, b.Status 
-                       FROM Bookings b 
-                       LEFT JOIN Clients c ON b.ClientID = c.ClientID 
-                       LEFT JOIN Services s ON b.ServiceID = s.ServiceID 
-                       LEFT JOIN Teams t ON b.TeamID = t.TeamID 
-                       WHERE b.BookingDate BETWEEN @from AND @to", gvBookings, from, to);
+        private void LoadBookings(DateTime from, DateTime to)
+        {
+            string query = @"SELECT b.BookingID, c.Name AS ClientName, s.Name AS Service, t.GroupName AS TeamName,
+                             b.ScheduledDate, b.Status FROM Bookings b
+                             LEFT JOIN Clients c ON b.ClientID = c.ClientID
+                             LEFT JOIN Services s ON b.ServiceID = s.ServiceID
+                             LEFT JOIN Teams t ON b.TeamID = t.TeamID
+                             WHERE b.BookingDate BETWEEN @from AND @to";
+            BindGrid(query, gvBookings, from, to);
+        }
 
         private void LoadInspections(DateTime from, DateTime to)
         {
-            BindGrid(@"
-        SELECT 
-            ins.InspectionID,
-            usr.Name AS InspectorName,
-            iq.Name AS ClientName,
-            (iq.StreetAndUnit + ', ' + iq.Barangay + ', ' + iq.City + ', ' + iq.Region + ', ' + iq.Country) AS ClientAddress,
-            ins.ScheduledDate,
-            ins.InspectionStatus,
-            ins.Remarks
-        FROM Inspections ins
-        LEFT JOIN InquirySimple iq ON ins.InquiryID = iq.InquiryID
-        LEFT JOIN Users usr ON ins.InspectorID = usr.UserID
-        WHERE ins.ScheduledDate BETWEEN @from AND @to
-        ORDER BY ins.ScheduledDate DESC",
-            gvInspections, from, to);
-        }
-
-
-
-        private int GetCount(string table, string dateField, DateTime from, DateTime to, string where = null)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = $"SELECT COUNT(*) FROM {table} WHERE 1=1";
-                if (!string.IsNullOrEmpty(dateField)) query += $" AND {dateField} BETWEEN @from AND @to";
-                if (!string.IsNullOrEmpty(where)) query += $" AND {where}";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    if (!string.IsNullOrEmpty(dateField))
-                    {
-                        cmd.Parameters.AddWithValue("@from", from);
-                        cmd.Parameters.AddWithValue("@to", to);
-                    }
-                    conn.Open();
-                    return (int)cmd.ExecuteScalar();
-                }
-            }
+            string query = @"SELECT ins.InspectionID, usr.Name AS InspectorName, iq.Name AS ClientName,
+                             (iq.StreetAndUnit + ', ' + iq.Barangay + ', ' + iq.City + ', ' + iq.Region + ', ' + iq.Country) AS ClientAddress,
+                             ins.ScheduledDate, ins.InspectionStatus, ins.Remarks
+                             FROM Inspections ins
+                             LEFT JOIN InquirySimple iq ON ins.InquiryID = iq.InquiryID
+                             LEFT JOIN Users usr ON ins.InspectorID = usr.UserID
+                             WHERE ins.ScheduledDate BETWEEN @from AND @to ORDER BY ins.ScheduledDate DESC";
+            BindGrid(query, gvInspections, from, to);
         }
 
         private void BindGrid(string query, GridView grid, DateTime? from = null, DateTime? to = null)
@@ -264,85 +234,105 @@ namespace RRCManagementSystem
             }
         }
 
-        private void AddGridToPDF(Document doc, GridView grid, string title)
+        private int GetCount(string table, string dateField, DateTime from, DateTime to, string where = null)
         {
-            if (grid.Rows.Count == 0) return;
-
-            doc.NewPage();
-
-            // Add title and timestamp
-            doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
-            doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
-            doc.Add(new Paragraph(" "));
-
-            int columnCount = grid.Columns.Count;
-            PdfPTable table = new PdfPTable(columnCount)
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                WidthPercentage = 100, // Fill the page width
-                SpacingBefore = 10f
-                // ✨ Don't set SetWidths() → this lets iTextSharp autosize based on content
-            };
+                string query = $"SELECT COUNT(*) FROM {table} WHERE 1=1";
+                if (!string.IsNullOrEmpty(dateField)) query += $" AND {dateField} BETWEEN @from AND @to";
+                if (!string.IsNullOrEmpty(where)) query += $" AND {where}";
 
-            // 🔹 Add header row (center-aligned)
-            foreach (DataControlField column in grid.Columns)
-            {
-                PdfPCell headerCell = new PdfPCell(new Phrase(column.HeaderText, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
+                SqlCommand cmd = new SqlCommand(query, conn);
+                if (!string.IsNullOrEmpty(dateField))
                 {
-                    BackgroundColor = BaseColor.DARK_GRAY,
-                    HorizontalAlignment = Element.ALIGN_CENTER,
-                    Padding = 6
-                };
-                table.AddCell(headerCell);
+                    cmd.Parameters.AddWithValue("@from", from);
+                    cmd.Parameters.AddWithValue("@to", to);
+                }
+                conn.Open();
+                return (int)cmd.ExecuteScalar();
             }
+        }
 
-            // 🔹 Add data rows
-            foreach (GridViewRow row in grid.Rows)
+        protected void btnExportUsers_Click(object sender, EventArgs e)
+        {
+            if (gvUserAccounts.Rows.Count > 0)
+                ExportGridViewToPDF(gvUserAccounts, "Users_Report");
+        }
+
+        protected void btnExportInquiries_Click(object sender, EventArgs e)
+        {
+            if (gvInquiries.Rows.Count > 0)
+                ExportGridViewToPDF(gvInquiries, "Inquiry_Report");
+        }
+
+        protected void btnExportClients_Click(object sender, EventArgs e)
+        {
+            if (gvApprovedClients.Rows.Count > 0)
+                ExportGridViewToPDF(gvApprovedClients, "ApprovedClients_Report");
+        }
+
+        protected void btnExportInventory_Click(object sender, EventArgs e)
+        {
+            if (gvInventory.Rows.Count > 0)
+                ExportGridViewToPDF(gvInventory, "Inventory_Report");
+        }
+
+        protected void btnExportEquipment_Click(object sender, EventArgs e)
+        {
+            if (gvEquipment.Rows.Count > 0)
+                ExportGridViewToPDF(gvEquipment, "Equipment_Report");
+        }
+
+        protected void btnExportBookings_Click(object sender, EventArgs e)
+        {
+            if (gvBookings.Rows.Count > 0)
+                ExportGridViewToPDF(gvBookings, "Bookings_Report");
+        }
+
+        protected void btnExportInspections_Click(object sender, EventArgs e)
+        {
+            if (gvInspections.Rows.Count > 0)
+                ExportGridViewToPDF(gvInspections, "Inspections_Report");
+        }
+
+
+        private void AddAuditLog(int? userID, string action)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                foreach (TableCell cell in row.Cells)
+                string query = "INSERT INTO AuditLogs (UserID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    string text = HttpUtility.HtmlDecode(cell.Text).Trim();
-                    if (string.IsNullOrWhiteSpace(text) || text == "&nbsp;") text = "";
-
-                    // Align numbers to the right
-                    int align = decimal.TryParse(text.Replace(",", ""), out _) ? Element.ALIGN_RIGHT : Element.ALIGN_LEFT;
-
-                    PdfPCell bodyCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
+                    cmd.Parameters.AddWithValue("@UserID", (object)userID ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Action", action);
+                    try
                     {
-                        HorizontalAlignment = align,
-                        Padding = 5
-                    };
-
-                    table.AddCell(bodyCell);
+                        conn.Open();
+                        cmd.ExecuteNonQuery();
+                    }
+                    catch
+                    {
+                        // Optional logging
+                    }
                 }
             }
-
-            doc.Add(table);
         }
-
-        protected void btnFilter_Click(object sender, EventArgs e)
-        {
-            LoadReports(); // 📥 Reload the data based on the new date range
-            AddAuditLog(Convert.ToInt32(Session["UserID"]), "Filtered Admin Reports");
-        }
-
         private void ExportGridViewToPDF(GridView grid, string title)
         {
+            if (grid.Rows.Count == 0) return; // ⛔ Skip empty grids
+
             Document doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
             MemoryStream ms = new MemoryStream();
 
             PdfWriter writer = PdfWriter.GetInstance(doc, ms);
-
-            // 🔵 Watermark setup
             writer.PageEvent = new PdfWatermark();
 
-            // 🔵 Get current user's password from Session
-            string userPassword = Session["Password"] != null ? Session["Password"].ToString() : "default123";
+            string userPassword = Session["Password"]?.ToString() ?? "default123";
 
-            // 🔵 Set password using user's own password
             writer.SetEncryption(
-                Encoding.UTF8.GetBytes(userPassword), // Open password (user's login password)
-                Encoding.UTF8.GetBytes(userPassword), // Owner password
-                PdfWriter.ALLOW_PRINTING, // 🔥 Allow Printing Only (Block Copy)
+                Encoding.UTF8.GetBytes(userPassword),
+                Encoding.UTF8.GetBytes(userPassword),
+                PdfWriter.ALLOW_PRINTING,
                 PdfWriter.ENCRYPTION_AES_128
             );
 
@@ -352,32 +342,68 @@ namespace RRCManagementSystem
             doc.Add(new Paragraph(" "));
 
             int columnCount = grid.Columns.Count > 0 ? grid.Columns.Count : 1;
-            PdfPTable table = new PdfPTable(columnCount);
-            table.WidthPercentage = 100;
-
-            if (grid.HeaderRow != null)
+            PdfPTable table = new PdfPTable(columnCount)
             {
-                foreach (TableCell cell in grid.HeaderRow.Cells)
+                WidthPercentage = 100 // Let iTextSharp auto-resize
+            };
+
+            // Add header
+            foreach (TableCell cell in grid.HeaderRow.Cells)
+            {
+                PdfPCell headerCell = new PdfPCell(new Phrase(cell.Text, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
                 {
-                    PdfPCell pdfCell = new PdfPCell(new Phrase(cell.Text, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
-                    {
-                        BackgroundColor = BaseColor.GRAY,
-                        HorizontalAlignment = Element.ALIGN_CENTER,
-                        Padding = 5
-                    };
-                    table.AddCell(pdfCell);
-                }
+                    BackgroundColor = BaseColor.DARK_GRAY,
+                    HorizontalAlignment = Element.ALIGN_CENTER,
+                    Padding = 6
+                };
+                table.AddCell(headerCell);
             }
 
+            // Add data
             foreach (GridViewRow row in grid.Rows)
             {
-                foreach (TableCell cell in row.Cells)
+                for (int i = 0; i < row.Cells.Count; i++)
                 {
-                    PdfPCell pdfCell = new PdfPCell(new Phrase(cell.Text, FontFactory.GetFont("Arial", 11, Font.NORMAL, BaseColor.BLACK)))
+                    string rawText = HttpUtility.HtmlDecode(row.Cells[i].Text).Trim();
+                    string text = string.IsNullOrWhiteSpace(rawText) || rawText == "&nbsp;" ? "" : rawText;
+                    string header = grid.HeaderRow.Cells[i].Text.ToLower();
+                    int alignment = Element.ALIGN_LEFT;
+
+                    // Format known ID fields
+                    if (int.TryParse(text, out int numericId))
                     {
-                        HorizontalAlignment = Element.ALIGN_CENTER,
+                        if (header.Contains("user id"))
+                            text = "User" + String.Format("{0:D4}", numericId);
+                        else if (header.Contains("client id"))
+                            text = "Client" + String.Format("{0:D4}", numericId);
+                        else if (header.Contains("booking id"))
+                            text = "Booking" + String.Format("{0:D4}", numericId);
+                        else if (header.Contains("item id"))
+                            text = "Itemid" + String.Format("{0:D4}", numericId);
+                        else if (header.Contains("inspection id"))
+                            text = "Inspect" + String.Format("{0:D4}", numericId);
+                        else if (header.Contains("snapshot id"))
+                            text = "Snap" + String.Format("{0:D4}", row.RowIndex + 1);
+                        else if (header.Contains("id"))
+                            text = "ID" + String.Format("{0:D4}", numericId);
+
+                        alignment = Element.ALIGN_CENTER;
+                    }
+
+                    // Auto-align by type
+                    if (header.Contains("quantity") || header.Contains("price") || header.Contains("amount") || header.Contains("sqm") || header.Contains("ml"))
+                        alignment = Element.ALIGN_RIGHT;
+                    else if (header.Contains("status") || header.Contains("date"))
+                        alignment = Element.ALIGN_CENTER;
+                    else if (header.Contains("name") || header.Contains("remarks") || header.Contains("address"))
+                        alignment = Element.ALIGN_LEFT;
+
+                    PdfPCell pdfCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
+                    {
+                        HorizontalAlignment = alignment,
                         Padding = 5
                     };
+
                     table.AddCell(pdfCell);
                 }
             }
@@ -385,61 +411,16 @@ namespace RRCManagementSystem
             doc.Add(table);
             doc.Close();
 
-            byte[] pdfBytes = ms.ToArray();
-
+            // Return file
             Response.Clear();
             Response.ContentType = "application/pdf";
             Response.AddHeader("content-disposition", $"attachment;filename={title.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf");
-            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
-            Response.BinaryWrite(pdfBytes);
+            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            Response.BinaryWrite(ms.ToArray());
             Response.End();
         }
 
-        private string GetUserHashedPassword(int userId)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = "SELECT PasswordHash FROM Users WHERE UserID = @UserID";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@UserID", userId);
-                conn.Open();
-                return cmd.ExecuteScalar()?.ToString() ?? "default123";
-            }
-        }
 
 
-
-        protected void btnExportInquiries_Click(object sender, EventArgs e) => ExportGridViewToPDF(gvInquiries, "Inquiry_Report");
-        protected void btnExportClients_Click(object sender, EventArgs e) => ExportGridViewToPDF(gvApprovedClients, "ApprovedClients_Report");
-        protected void btnExportInventory_Click(object sender, EventArgs e) => ExportGridViewToPDF(gvInventory, "Inventory_Report");
-        protected void btnExportEquipment_Click(object sender, EventArgs e) => ExportGridViewToPDF(gvEquipment, "Equipment_Report");
-        protected void btnExportBookings_Click(object sender, EventArgs e) => ExportGridViewToPDF(gvBookings, "Bookings_Report");
-        protected void btnExportInspections_Click(object sender, EventArgs e) => ExportGridViewToPDF(gvInspections, "Inspections_Report");
-        protected void btnExportUsers_Click(object sender, EventArgs e) => ExportGridViewToPDF(gvUserAccounts, "Users_Report");
-
-
-        private void AddAuditLog(int? userID, string action)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = "INSERT INTO AuditLogs (UserID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // Optional: log error
-                    }
-                }
-            }
-        }
     }
 }

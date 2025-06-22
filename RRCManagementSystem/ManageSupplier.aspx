@@ -73,10 +73,6 @@
         <i class="fas fa-list"></i>
         <div class="supplier-card-title">View All Suppliers</div>
     </a>
-    <a href="ViewSupplier.aspx" class="supplier-card">
-        <i class="fas fa-users"></i>
-        <div class="supplier-card-title">View Suppliers</div>
-    </a>
     
 </div>
 

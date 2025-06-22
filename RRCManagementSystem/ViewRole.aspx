@@ -5,93 +5,35 @@
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        .card-container {
-            max-width: 900px;
-            margin: 50px auto;
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
-            padding: 30px 40px;
-        }
-
-        .card-title {
-            text-align: center;
-            font-size: 26px;
-            font-weight: 600;
-            margin-bottom: 25px;
-            color: #1f2937;
-        }
-
-        .styled-gridview {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .styled-gridview th {
-            background-color: #1f2937;
-            color: white;
-            padding: 12px;
-            font-weight: 600;
-            text-align: center;
-        }
-
-        .styled-gridview td {
-            padding: 12px;
-            text-align: center;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .styled-gridview tr:hover {
-            background-color: #f9fafb;
-        }
-
-        .btn-delete {
-            background-color: #dc3545;
-            border: none;
-            color: white;
-            padding: 6px 14px;
-            border-radius: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn-delete:hover {
-            background-color: #c82333;
-        }
-
-        .message-label {
-            text-align: center;
-            margin-top: 20px;
-            font-weight: 500;
-            color: #dc2626;
-        }
-    </style>
-
     <asp:HiddenField ID="hfRoleIDToDelete" runat="server" />
 
-    <div class="card-container">
-        <div class="card-title">Manage Roles</div>
+    <div class="container my-5">
+        <div class="card shadow mx-auto" style="max-width: 900px;">
+            <div class="card-body">
+                <h2 class="text-center text-primary fw-bold mb-4">Manage Roles</h2>
 
-        <asp:GridView ID="gvRoles" runat="server" AutoGenerateColumns="False" CssClass="styled-gridview"
-            OnRowCommand="gvRoles_RowCommand"
-            DataKeyNames="RoleID"
-            EmptyDataText="No roles found.">
-            <Columns>
-                <asp:BoundField DataField="RoleName" HeaderText="Role Name" />
-                <asp:TemplateField HeaderText="Actions">
-                    <ItemTemplate>
-                        <button type="button" class="btn-delete"
-                                onclick="confirmDelete('<%# Eval("RoleID") %>')">
-                            Delete
-                        </button>
-                    </ItemTemplate>
-                </asp:TemplateField>
-            </Columns>
-        </asp:GridView>
+                <div class="table-responsive">
+                    <asp:GridView ID="gvRoles" runat="server" AutoGenerateColumns="False" CssClass="table table-bordered table-hover text-center"
+                        OnRowCommand="gvRoles_RowCommand"
+                        DataKeyNames="RoleID"
+                        EmptyDataText="No roles found.">
+                        <Columns>
+                            <asp:BoundField DataField="RoleName" HeaderText="Role Name" />
+                            <asp:TemplateField HeaderText="Actions">
+                                <ItemTemplate>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="confirmDelete('<%# Eval("RoleID") %>')">
+                                        Delete
+                                    </button>
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                        </Columns>
+                    </asp:GridView>
+                </div>
 
-        <asp:Label ID="lblMessage" runat="server" CssClass="message-label"></asp:Label>
+                <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-semibold text-center d-block mt-3"></asp:Label>
+            </div>
+        </div>
     </div>
 
     <script type="text/javascript">

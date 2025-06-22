@@ -1,79 +1,47 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Inspector.master" AutoEventWireup="true" CodeBehind="MyInspections.aspx.cs" Inherits="RRCManagementSystem.MyInspections" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        .card-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-        }
+    <div class="container py-4">
+        <h2 class="text-primary mb-4 fw-bold">🕵️ My Inspections</h2>
 
-        .card {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border-left: 6px solid #007bff;
-            position: relative;
-        }
+        <!-- Status Filter -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <asp:DropDownList ID="ddlStatusFilter" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlStatusFilter_SelectedIndexChanged" CssClass="form-select">
+                    <asp:ListItem Text="All" Value="All" />
+                    <asp:ListItem Text="Pending" Value="Pending" />
+                    <asp:ListItem Text="Completed" Value="Completed" />
+                </asp:DropDownList>
+            </div>
+        </div>
 
-        .card h4 {
-            margin: 0 0 10px;
-            color: #004085;
-        }
+        <!-- Inspections List -->
+        <div class="row g-4">
+            <asp:Repeater ID="rptInspections" runat="server">
+                <ItemTemplate>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-start border-primary shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary">Inspection #<%# Eval("InspectionID") %></h5>
+                                <p class="mb-1"><strong>Name:</strong> <%# Eval("Name") %></p>
+                                <p class="mb-1"><strong>Address:</strong> <%# Eval("StreetAndUnit") %>, <%# Eval("Barangay") %>, <%# Eval("City") %>, <%# Eval("Region") %>, <%# Eval("Country") %></p>
+                                <p class="mb-1"><strong>Scheduled:</strong> <%# Eval("ScheduledDate", "{0:yyyy-MM-dd hh:mm tt}") %></p>
+                                <p class="mb-1"><strong>Status:</strong> <%# Eval("InspectionStatus") %></p>
+                                <p class="mb-1"><strong>Remarks:</strong> <%# Eval("Remarks") %></p>
+                                <p class="mb-3"><strong>Assigned:</strong> <%# Eval("CreatedAt", "{0:yyyy-MM-dd}") %></p>
 
-        .card .info {
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .card .actions button {
-            margin-right: 8px;
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .btn-done {
-            background-color: #28a745;
-            color: white;
-        }
-
-        .filter-row {
-            margin-bottom: 20px;
-        }
-    </style>
-
-    <h2 style="color:#004085;">🕵️ My Inspections</h2>
-
-    <div class="filter-row">
-        <asp:DropDownList ID="ddlStatusFilter" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlStatusFilter_SelectedIndexChanged" CssClass="form-control" Width="200px">
-            <asp:ListItem Text="All" Value="All" />
-            <asp:ListItem Text="Pending" Value="Pending" />
-            <asp:ListItem Text="Completed" Value="Completed" />
-        </asp:DropDownList>
+                                <%# Eval("InspectionStatus").ToString() == "Pending" 
+                                    ? "<button type='button' class='btn btn-success btn-sm' onclick=\"markDone('" + Eval("InspectionID") + "')\">Mark Done</button>" 
+                                    : "" %>
+                            </div>
+                        </div>
+                    </div>
+                </ItemTemplate>
+            </asp:Repeater>
+        </div>
     </div>
 
-    <asp:Repeater ID="rptInspections" runat="server">
-        <ItemTemplate>
-            <div class="card">
-                <h4>Inspection #<%# Eval("InspectionID") %></h4>
-                <div class="info"><strong>Name:</strong> <%# Eval("Name") %></div>
-                <div class="info"><strong>Address:</strong> <%# Eval("StreetAndUnit") %>, <%# Eval("Barangay") %>, <%# Eval("City") %>, <%# Eval("Region") %>, <%# Eval("Country") %></div>
-                <div class="info"><strong>Scheduled:</strong> <%# Eval("ScheduledDate", "{0:yyyy-MM-dd hh:mm tt}") %></div>
-                <div class="info"><strong>Status:</strong> <%# Eval("InspectionStatus") %></div>
-                <div class="info"><strong>Remarks:</strong> <%# Eval("Remarks") %></div>
-                <div class="info"><strong>Assigned:</strong> <%# Eval("CreatedAt", "{0:yyyy-MM-dd}") %></div>
-                <div class="actions">
-                    <%# Eval("InspectionStatus").ToString() == "Pending" 
-                        ? "<button type='button' class='btn-done' onclick=\"markDone('" + Eval("InspectionID") + "')\">Done</button>" 
-                        : "" %>
-                </div>
-            </div>
-        </ItemTemplate>
-    </asp:Repeater>
-
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function markDone(inspectionId) {
