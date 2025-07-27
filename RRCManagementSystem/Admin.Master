@@ -1,97 +1,99 @@
-﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Admin.master.cs" Inherits="RRCManagementSystem.Admin" %>
+﻿    <%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Admin.master.cs" Inherits="RRCManagementSystem.Admin" %>
 
-<!DOCTYPE html>
-<html lang="en">
-<head runat="server">
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title><asp:ContentPlaceHolder ID="PageTitle" runat="server" /> | RRC Termite & Pest Control</title>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head runat="server">
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title><asp:ContentPlaceHolder ID="PageTitle" runat="server" /> | RRC Termite & Pest Control</title>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 
-    <style>
-        body { margin: 0; font-family: 'Arial', sans-serif; background-color: #f4f4f4; }
-        .header {
-            display: flex; align-items: center; justify-content: space-between;
-            background-color: #004085; color: white; padding: 15px 20px;
-            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .logo-container { display: flex; align-items: center; }
-        .logo { height: 40px; margin-right: 15px; }
-        .header h1 { margin: 0; font-size: 20px; }
-        .sidebar {
-            position: fixed; top: 70px; left: 0; width: 260px; height: calc(100% - 70px);
-            background-color: #1f2937; color: white; overflow-y: auto;
-            transition: left 0.3s ease; padding-top: 20px;
-        }
-        .sidebar_menu { list-style: none; margin: 0; padding: 0; }
-        .sidebar_menu li { border-bottom: 1px solid #374151; }
-        .sidebar_menu li a {
-            display: flex; align-items: center; padding: 12px 20px;
-            color: white; text-decoration: none; transition: background-color 0.3s;
-        }
-        .sidebar_menu li a:hover { background-color: #4b5563; }
-        .sidebar_menu li a i { margin-right: 10px; }
-        .logout-button {
-            display: block; text-align: left; padding: 12px 20px;
-            color: white; background-color: #dc3545; border: none;
-            width: 100%; cursor: pointer; transition: background-color 0.3s;
-        }
-        .logout-button:hover { background-color: #c82333; }
-        .content { margin-left: 260px; margin-top: 70px; padding: 30px; transition: margin-left 0.3s ease; }
-        .burger-menu {
-            display: none; position: fixed; top: 15px; left: 20px; font-size: 24px;
-            color: white; background: none; border: none; cursor: pointer; z-index: 1001;
-        }
-        .chat-client-button {
-            color: #fff; padding: 8px 15px; border-radius: 4px;
-            text-decoration: none; font-weight: bold; display: flex;
-            align-items: center; gap: 8px;
-        }
-        .chat-client-button:hover { background-color: #e0a800; color: #fff; }
-        .chat-client-button i { font-size: 25px; }
-        .admin-info { color: #fff; display: flex; align-items: center; font-weight: 600; font-size: 14px; }
-        .admin-info i { margin-right: 6px; font-size: 18px; }
-        .admin-name-label { color: #fff; }
+        <style>
+            body { margin: 0; font-family: 'Arial', sans-serif; background-color: #f4f4f4; }
+            .header {
+                display: flex; align-items: center; justify-content: space-between;
+                background-color: #004085; color: white; padding: 15px 20px;
+                position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            .logo-container { display: flex; align-items: center; }
+            .logo { height: 40px; margin-right: 15px; }
+            .header h1 { margin: 0; font-size: 20px; }
+            .sidebar {
+                position: fixed; top: 70px; left: 0; width: 260px; height: calc(100% - 70px);
+                background-color: #1f2937; color: white; overflow-y: auto;
+                transition: left 0.3s ease; padding-top: 20px;
+            }
+            .sidebar_menu { list-style: none; margin: 0; padding: 0; }
+            .sidebar_menu li { border-bottom: 1px solid #374151; }
+            .sidebar_menu li a {
+                display: flex; align-items: center; padding: 12px 20px;
+                color: white; text-decoration: none; transition: background-color 0.3s;
+            }
+            .sidebar_menu li a:hover { background-color: #4b5563; }
+            .sidebar_menu li a i { margin-right: 10px; }
+            .logout-button {
+                display: block; text-align: left; padding: 12px 20px;
+                color: white; background-color: #dc3545; border: none;
+                width: 100%; cursor: pointer; transition: background-color 0.3s;
+            }
+            .logout-button:hover { background-color: #c82333; }
+            .content { margin-left: 260px; margin-top: 70px; padding: 30px; transition: margin-left 0.3s ease; }
+            .burger-menu {
+                display: none; position: fixed; top: 15px; left: 20px; font-size: 24px;
+                color: white; background: none; border: none; cursor: pointer; z-index: 1001;
+            }
+            .chat-client-button {
+                color: #fff; padding: 8px 15px; border-radius: 4px;
+                text-decoration: none; font-weight: bold; display: flex;
+                align-items: center; gap: 8px;
+            }
+            .chat-client-button:hover { background-color: #e0a800; color: #fff; }
+            .chat-client-button i { font-size: 25px; }
+            .admin-info { color: #fff; display: flex; align-items: center; font-weight: 600; font-size: 14px; }
+            .admin-info i { margin-right: 6px; font-size: 18px; }
+            .admin-name-label { color: #fff; }
 
-        @media (max-width: 992px) {
-            .sidebar { left: -260px; }
-            .sidebar.open { left: 0; }
-            .burger-menu { display: block; }
-            .content { margin-left: 0; }
-        }
-    </style>
+            @media (max-width: 992px) {
+                .sidebar { left: -260px; }
+                .sidebar.open { left: 0; }
+                .burger-menu { display: block; }
+                .content { margin-left: 0; }
+            }
+        </style>
 
-    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-</head>
+        <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+    </head>
 
-<body>
-    <form id="form1" runat="server">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo-container">
-                <img src="\images\logorrc.png" class="logo" alt="RRC Logo" />
-                <h1>Admin Dashboard</h1>
-            </div>
+    <body>
+        <form id="form1" runat="server">
+            <!-- Header -->
+            <header class="header">
+                <div class="logo-container">
+                    <img src="\images\logorrc.png" class="logo" alt="RRC Logo" />
+                    <h1>Admin Dashboard</h1>
+                </div>
 
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <a href="../ChatWithClient.aspx" class="chat-client-button" title="Chat with Clients">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                <a href="../ChatWithClient.aspx" class="chat-client-button" title="Chat with Clients"
+                   onclick="window.location.href=this.href; return false;">
                     <i class="fab fa-facebook-messenger"></i>
                 </a>
-                <div class="admin-info">
-                    <i class="fas fa-user-circle"></i>
-                    <asp:Label ID="lblAdminName" runat="server" CssClass="admin-name-label" />
+
+                    <div class="admin-info">
+                        <i class="fas fa-user-circle"></i>
+                        <asp:Label ID="lblAdminName" runat="server" CssClass="admin-name-label" />
+                    </div>
+                    <button id="burgerMenu" class="burger-menu"><i class="fas fa-bars"></i></button>
                 </div>
-                <button id="burgerMenu" class="burger-menu"><i class="fas fa-bars"></i></button>
-            </div>
-        </header>
+            </header>
 
 <!-- Sidebar -->
 <nav class="sidebar">
     <ul class="sidebar_menu">
-        <% 
-            var allowed = Session["AllowedModules"] as List<string>; 
+        <%
+            List<string> allowed = Session["AllowedModules"] as List<string>;
             if (allowed != null)
             {
         %>
@@ -146,13 +148,15 @@
             <% if (allowed.Contains("AdminGuide")) { %>
                 <li><a href='<%= ResolveUrl("~/AdminGuide.aspx") %>'><i class="fas fa-book-open"></i> Admin Guide</a></li>
             <% } %>
-        <% 
-            } 
-            else 
-            { 
+        <%
+            }
+            else
+            {
         %>
             <li style="color:red; padding:12px;">⚠ Session permissions not loaded</li>
-        <% } %>
+        <%
+            }
+        %>
 
         <li>
             <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="logout-button">
@@ -165,21 +169,22 @@
 
 
 
-        <!-- Main Content -->
-        <main class="content">
-            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
-        </main>
-    </form>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            let burgerMenu = document.getElementById("burgerMenu");
-            let sidebar = document.querySelector(".sidebar");
+            <!-- Main Content -->
+            <main class="content">
+                <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+            </main>
+        </form>
 
-            burgerMenu.addEventListener("click", function () {
-                sidebar.classList.toggle("open");
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                let burgerMenu = document.getElementById("burgerMenu");
+                let sidebar = document.querySelector(".sidebar");
+
+                burgerMenu.addEventListener("click", function () {
+                    sidebar.classList.toggle("open");
+                });
             });
-        });
-    </script>
-</body>
-</html>
+        </script>
+    </body>
+    </html>

@@ -3,6 +3,7 @@
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+            
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
@@ -98,20 +99,64 @@
                 <div class="mt-4 text-end">
                     <asp:Button ID="btnAssignAll" runat="server" Text="Assign Booking" CssClass="btn btn-primary px-4" OnClick="btnAssignAll_Click" />
                 </div>
+                <asp:Label ID="lblMessage" runat="server" Visible="false" />
 
-                <asp:Label ID="lblMessage" runat="server" CssClass="d-block mt-3 fw-semibold text-success" />
             </div>
         </div>
     </div>
 
-    <script>
-        function isNumberKey(evt) {
-            var charCode = (evt.which) ? evt.which : evt.keyCode;
-            return !(charCode != 8 && charCode != 46 && (charCode < 48 || charCode > 57));
+<script>
+    function isNumberKey(evt) {
+        var charCode = (evt.which) ? evt.which : evt.keyCode;
+        return !(charCode != 8 && charCode != 46 && (charCode < 48 || charCode > 57));
+    }
+
+    function setZeroIfEmpty(input) {
+        if (input.value.trim() === '') input.value = '0';
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    window.onload = function () {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('status') === 'assigned') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: '✅ Booking, chemical, and buffer assignment successful.',
+                confirmButtonColor: '#4caf50'
+            }).then(() => {
+                // Optional: remove query string so it doesn't show again on refresh
+                window.history.replaceState({}, document.title, window.location.pathname);
+            });
         }
 
-        function setZeroIfEmpty(input) {
-            if (input.value.trim() === '') input.value = '0';
+        // Safe to attach the event listener now
+        const assignBtn = document.getElementById('<%= btnAssignAll.ClientID %>');
+        if (assignBtn) {
+            assignBtn.addEventListener('click', function (e) {
+                e.preventDefault(); // Stop postback
+
+                Swal.fire({
+                    title: 'Assign Booking?',
+                    text: "This will assign the team, chemicals, and safety gear.",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes, assign it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        __doPostBack('<%= btnAssignAll.UniqueID %>', '');
+                    }
+                });
+            });
         }
-    </script>
+    };
+</script>
+
+
+
 </asp:Content>

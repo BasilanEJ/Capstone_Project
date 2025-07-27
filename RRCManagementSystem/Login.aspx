@@ -164,9 +164,7 @@
                 <div class="password-wrapper">
                     <asp:TextBox ID="txtPassword" runat="server" CssClass="input" placeholder="Password"
                                  TextMode="Password" AutoCompleteType="Disabled" />
-                    <button type="button" class="toggle-password" onclick="togglePassword()">
-                        <i class="fas fa-eye"></i>
-                    </button>
+                  
                 </div>
 
                 <!-- CAPTCHA Panel -->

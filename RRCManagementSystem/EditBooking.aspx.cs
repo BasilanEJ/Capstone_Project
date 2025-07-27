@@ -87,12 +87,22 @@ namespace RRCManagementSystem
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     string query = @"
-                        SELECT b.BookingID, c.Name AS ClientName, s.Name AS ServiceName, 
-                               b.ScheduledDate, b.StartTime, b.Status, b.Notes
-                        FROM Bookings b
-                        LEFT JOIN Clients c ON b.ClientID = c.ClientID
-                        LEFT JOIN Services s ON b.ServiceID = s.ServiceID
-                        WHERE b.BookingID = @BookingID";
+                SELECT 
+                    b.BookingID,
+                    c.Name AS ClientName,
+                    b.ScheduledDate,
+                    b.StartTime,
+                    b.Status,
+                    b.Notes,
+                    (
+                        SELECT STRING_AGG(s.Name, ', ')
+                        FROM BookingServices bs
+                        INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+                        WHERE bs.BookingID = b.BookingID
+                    ) AS ServiceNames
+                FROM Bookings b
+                LEFT JOIN Clients c ON b.ClientID = c.ClientID
+                WHERE b.BookingID = @BookingID";
 
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
@@ -104,7 +114,7 @@ namespace RRCManagementSystem
                         {
                             lblBookingID.Text = reader["BookingID"].ToString();
                             txtClientName.Text = reader["ClientName"].ToString();
-                            txtServiceName.Text = reader["ServiceName"].ToString();
+                            txtServiceName.Text = reader["ServiceNames"].ToString(); // Update label or textbox name accordingly
                             txtScheduledDate.Text = Convert.ToDateTime(reader["ScheduledDate"]).ToString("yyyy-MM-dd");
                             txtStartTime.Text = reader["StartTime"].ToString();
                             ddlStatus.SelectedValue = reader["Status"].ToString();
@@ -124,6 +134,7 @@ namespace RRCManagementSystem
                 lblMessage.ForeColor = System.Drawing.Color.Red;
             }
         }
+
 
         protected void btnSave_Click(object sender, EventArgs e)
         {

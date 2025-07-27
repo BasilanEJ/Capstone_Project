@@ -36,19 +36,15 @@ namespace RRCManagementSystem
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
-            SELECT b.BookingID, b.ServiceNames, b.ScheduledDate,
-                   CONVERT(varchar(5), b.StartTime, 108) AS StartTime,
-                   ISNULL(b.Status, 'Pending') AS Status,
-                   b.Notes, b.CreatedAt,
-                   (
-                     SELECT COUNT(*) FROM ServiceSchedule ss WHERE ss.BookingID = b.BookingID
-                   ) AS TotalOps,
-                   (
-                     SELECT COUNT(*) FROM ServiceSchedule ss WHERE ss.BookingID = b.BookingID AND ss.Status = 'Completed'
-                   ) AS CompletedOps
-            FROM Bookings b
-            WHERE b.ClientID = @ClientID
-            ORDER BY b.CreatedAt DESC";
+                    SELECT b.BookingID, b.ServiceNames, b.ScheduledDate,
+                           CONVERT(varchar(5), b.StartTime, 108) AS StartTime,
+                           ISNULL(b.Status, 'Pending') AS Status,
+                           b.Notes, b.CreatedAt,
+                           (SELECT COUNT(*) FROM ServiceSchedule ss WHERE ss.BookingID = b.BookingID) AS TotalOps,
+                           (SELECT COUNT(*) FROM ServiceSchedule ss WHERE ss.BookingID = b.BookingID AND ss.Status = 'Completed') AS CompletedOps
+                    FROM Bookings b
+                    WHERE b.ClientID = @ClientID
+                    ORDER BY b.CreatedAt DESC";
 
                 SqlCommand cmd = new SqlCommand(query, con);
                 cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -57,7 +53,6 @@ namespace RRCManagementSystem
                 da.Fill(dt);
 
                 con.Open();
-
                 foreach (DataRow row in dt.Rows)
                 {
                     int total = Convert.ToInt32(row["TotalOps"]);
@@ -80,12 +75,9 @@ namespace RRCManagementSystem
                 lblMessage.Text = dt.Rows.Count > 0
                     ? $"✅ You have {dt.Rows.Count} booking(s)."
                     : "⚠️ You have no bookings yet.";
-                lblMessage.ForeColor = dt.Rows.Count > 0
-                    ? System.Drawing.Color.Green
-                    : System.Drawing.Color.Orange;
+                lblMessage.ForeColor = dt.Rows.Count > 0 ? System.Drawing.Color.Green : System.Drawing.Color.Orange;
             }
         }
-
 
         private void LoadUpcomingOperations(int clientId)
         {
@@ -95,11 +87,12 @@ namespace RRCManagementSystem
                     SELECT ss.ScheduleID, ss.ScheduledDate, ss.OperationNumber, ss.Status
                     FROM ServiceSchedule ss
                     INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN Services s ON b.ServiceID = s.ServiceID
+                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
+                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
                     WHERE b.ClientID = @ClientID
-                    AND s.ServiceType = 'Termite Control'
-                    AND ss.Status != 'Completed'
-                    AND ss.ScheduledDate BETWEEN GETDATE() AND DATEADD(DAY, 30, GETDATE())
+                      AND s.ServiceType = 'Termite Control'
+                      AND ss.Status != 'Completed'
+                      AND ss.ScheduledDate BETWEEN GETDATE() AND DATEADD(DAY, 30, GETDATE())
                     ORDER BY ss.ScheduledDate";
 
                 SqlCommand cmd = new SqlCommand(query, con);
@@ -130,13 +123,17 @@ namespace RRCManagementSystem
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT ss.ScheduleID, ss.BookingID, ss.OperationNumber, ss.ScheduledDate, ss.Status
+                    SELECT ss.ScheduleID, ss.BookingID, ss.OperationNumber, ss.ScheduledDate, ss.Status, b.CreatedAt
                     FROM ServiceSchedule ss
                     INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN Services s ON b.ServiceID = s.ServiceID
+                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
+                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
                     WHERE b.ClientID = @ClientID
-                    AND s.ServiceType = 'Termite Control'
-                    AND EXISTS (SELECT 1 FROM ServiceSchedule s2 WHERE s2.BookingID = b.BookingID AND s2.OperationNumber = 1 AND s2.Status = 'Completed')
+                      AND s.ServiceType = 'Termite Control'
+                      AND EXISTS (
+                        SELECT 1 FROM ServiceSchedule s2 
+                        WHERE s2.BookingID = b.BookingID AND s2.OperationNumber = 1 AND s2.Status = 'Completed'
+                      )
                     ORDER BY ss.ScheduledDate";
 
                 SqlCommand cmd = new SqlCommand(query, con);
@@ -151,19 +148,49 @@ namespace RRCManagementSystem
             }
         }
 
+        protected void gvAllOps_RowCommand(object sender, GridViewCommandEventArgs e)
+        {
+            if (e.CommandName == "Reschedule")
+            {
+                string[] args = e.CommandArgument.ToString().Split('|');
+                if (args.Length == 2)
+                {
+                    string scheduleId = args[0];
+                    string scheduledDateTime = args[1];
+                    string script = $"showModal('{scheduleId}', '{scheduledDateTime}');";
+                    ScriptManager.RegisterStartupScript(this, GetType(), "ShowRescheduleModal", script, true);
+                }
+            }
+        }
+
+        protected void gvAllOps_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                string status = DataBinder.Eval(e.Row.DataItem, "Status").ToString();
+                Label lbl = e.Row.FindControl("ltProgress") as Label;
+
+                if (lbl != null)
+                {
+                    lbl.Text = status == "Completed"
+                        ? "<span class='badge bg-success'>Done</span>"
+                        : "<span class='badge bg-secondary'>Pending</span>";
+                }
+            }
+        }
+
         private void CheckIfContractCompleted(int clientId)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
                     SELECT COUNT(*) AS TotalOps,
-                           SUM(CASE WHEN ss.Status = 'Completed' THEN 1 ELSE 0 END) AS CompletedOps,
-                           s.ServiceType
+                           SUM(CASE WHEN ss.Status = 'Completed' THEN 1 ELSE 0 END) AS CompletedOps
                     FROM ServiceSchedule ss
                     INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN Services s ON b.ServiceID = s.ServiceID
-                    WHERE b.ClientID = @ClientID AND s.ServiceType = 'Termite Control'
-                    GROUP BY s.ServiceType";
+                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
+                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+                    WHERE b.ClientID = @ClientID AND s.ServiceType = 'Termite Control'";
 
                 SqlCommand cmd = new SqlCommand(query, con);
                 cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -173,15 +200,15 @@ namespace RRCManagementSystem
                 if (reader.Read())
                 {
                     int totalOps = Convert.ToInt32(reader["TotalOps"]);
-                    int completedOps = Convert.ToInt32(reader["CompletedOps"]);
+                    int completedOps = reader["CompletedOps"] != DBNull.Value ? Convert.ToInt32(reader["CompletedOps"]) : 0;
 
                     if (completedOps == totalOps && totalOps > 0)
                     {
                         lblContractStatus.Text = $"🎉 Congratulations! Your Termite Control service contract is fully completed as of {DateTime.Today:MMMM dd, yyyy}.";
-
                         lblContractStatus.Visible = true;
                     }
                 }
+
             }
         }
 
@@ -190,17 +217,21 @@ namespace RRCManagementSystem
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT TOP 1 ss.ScheduledDate, s.ServiceType, ss.OperationNumber
+                    SELECT TOP 1 ss.ScheduledDate, ss.OperationNumber
                     FROM ServiceSchedule ss
                     INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN Services s ON b.ServiceID = s.ServiceID
-                    WHERE b.ClientID = @ClientID AND s.ServiceType = 'Termite Control'
-                    AND ss.Status = 'Scheduled' AND DATEDIFF(DAY, GETDATE(), ss.ScheduledDate) = 3
+                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
+                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+                    WHERE b.ClientID = @ClientID 
+                      AND s.ServiceType = 'Termite Control'
+                      AND ss.Status = 'Scheduled'
+                      AND DATEDIFF(DAY, GETDATE(), ss.ScheduledDate) = 3
                     ORDER BY ss.ScheduledDate";
 
                 SqlCommand cmd = new SqlCommand(query, con);
                 cmd.Parameters.AddWithValue("@ClientID", clientId);
                 con.Open();
+
                 SqlDataReader reader = cmd.ExecuteReader();
                 if (reader.Read())
                 {
@@ -211,48 +242,74 @@ namespace RRCManagementSystem
             }
         }
 
-        protected void gvAllOps_RowCommand(object sender, GridViewCommandEventArgs e)
+        private void CheckForMissedOperations(int clientId)
         {
-            if (e.CommandName == "SetSchedule" || e.CommandName == "Reschedule")
+            using (SqlConnection con = new SqlConnection(connectionString))
+            {
+                string query = @"
+                    SELECT TOP 1 ss.ScheduledDate, ss.OperationNumber
+                    FROM ServiceSchedule ss
+                    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
+                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+                    WHERE b.ClientID = @ClientID
+                      AND s.ServiceType = 'Termite Control'
+                      AND ss.Status != 'Completed'
+                      AND ss.ScheduledDate < GETDATE()
+                    ORDER BY ss.ScheduledDate DESC";
+
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@ClientID", clientId);
+                con.Open();
+                SqlDataReader reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    DateTime missedDate = Convert.ToDateTime(reader["ScheduledDate"]);
+                    int op = Convert.ToInt32(reader["OperationNumber"]);
+
+                    lblContractStatus.Text = $"⚠️ You missed Operation #{op} on {missedDate:MMMM dd, yyyy}. Please contact us to reschedule.";
+                    lblContractStatus.CssClass = "alert alert-warning fw-bold mt-4 d-block";
+                    lblContractStatus.Visible = true;
+                }
+            }
+        }
+
+        protected void gvMyBookings_PageIndexChanging(object sender, GridViewPageEventArgs e)
+        {
+            gvMyBookings.PageIndex = e.NewPageIndex;
+            LoadMyBookings(Convert.ToInt32(Session["ClientID"]));
+        }
+
+        protected void gvMyBookings_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                string status = DataBinder.Eval(e.Row.DataItem, "Status").ToString();
+                if (status == "Assigned")
+                    e.Row.Cells[4].CssClass = "status-assigned";
+                else if (status == "Pending")
+                    e.Row.Cells[4].CssClass = "status-pending";
+                else if (status == "Cancelled")
+                    e.Row.Cells[4].CssClass = "status-cancelled";
+            }
+        }
+
+        protected void gvUpcoming_RowCommand(object sender, GridViewCommandEventArgs e)
+        {
+            if (e.CommandName == "SetSchedule")
             {
                 string[] args = e.CommandArgument.ToString().Split('|');
-
                 if (args.Length == 2)
                 {
                     string scheduleId = args[0];
-                    string scheduledDateTime = args[1]; // format: yyyy-MM-ddTHH:mm
+                    string scheduledDateTime = args[1];
 
-                    // Call the JavaScript function showModal with parameters
                     string script = $"showModal('{scheduleId}', '{scheduledDateTime}');";
                     ScriptManager.RegisterStartupScript(this, GetType(), "ShowSetScheduleModal", script, true);
                 }
             }
         }
-
-        protected void gvAllOps_RowDataBound(object sender, GridViewRowEventArgs e)
-        {
-            if (e.Row.RowType == DataControlRowType.DataRow)
-            {
-                int completed = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "CompletedOps"));
-                int total = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "TotalOps"));
-                int percentage = total > 0 ? (completed * 100 / total) : 0;
-
-                Literal litProgress = (Literal)e.Row.FindControl("litProgress");
-                if (litProgress != null)
-                {
-                    litProgress.Text = $@"
-                <div class='progress' style='height: 20px;'>
-                    <div class='progress-bar bg-success' role='progressbar'
-                         style='width: {percentage}%;' aria-valuenow='{percentage}' 
-                         aria-valuemin='0' aria-valuemax='100'>
-                        {percentage}%
-                    </div>
-                </div>";
-                }
-            }
-        }
-
-
 
         protected void btnConfirmSchedule_Click(object sender, EventArgs e)
         {
@@ -299,116 +356,32 @@ namespace RRCManagementSystem
                 }
 
                 ScriptManager.RegisterStartupScript(this, GetType(), "ScheduleSuccess", "Swal.fire('Saved!', 'Schedule updated successfully.', 'success');", true);
-
                 hfSelectedScheduleID.Value = "";
                 LoadUpcomingOperations(clientId);
-
-                // First hide modal
                 ScriptManager.RegisterStartupScript(this, GetType(), "HideModal", "hideModal();", true);
-
-                // Then show SweetAlert
-                ScriptManager.RegisterStartupScript(this, GetType(), "ScheduleSuccess",
-                    "setTimeout(function() { Swal.fire('Saved!', 'Schedule updated successfully.', 'success'); }, 500);", true);
-
             }
         }
-
-        private void CheckForMissedOperations(int clientId)
-        {
-            using (SqlConnection con = new SqlConnection(connectionString))
-            {
-                string query = @"
-            SELECT TOP 1 ss.ScheduledDate, ss.OperationNumber
-            FROM ServiceSchedule ss
-            INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-            INNER JOIN Services s ON b.ServiceID = s.ServiceID
-            WHERE b.ClientID = @ClientID
-              AND s.ServiceType = 'Termite Control'
-              AND ss.Status != 'Completed'
-              AND ss.ScheduledDate < GETDATE()
-            ORDER BY ss.ScheduledDate DESC";
-
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@ClientID", clientId);
-                con.Open();
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                if (reader.Read())
-                {
-                    DateTime missedDate = Convert.ToDateTime(reader["ScheduledDate"]);
-                    int op = Convert.ToInt32(reader["OperationNumber"]);
-
-                    lblContractStatus.Text = $"⚠️ You missed Operation #{op} on {missedDate:MMMM dd, yyyy}. Please contact us to reschedule.";
-                    lblContractStatus.CssClass = "alert alert-warning fw-bold mt-4 d-block";
-                    lblContractStatus.Visible = true;
-                }
-            }
-        }
-
-
-        protected void gvMyBookings_PageIndexChanging(object sender, GridViewPageEventArgs e)
-        {
-            gvMyBookings.PageIndex = e.NewPageIndex;
-            int clientId = Convert.ToInt32(Session["ClientID"]);
-            LoadMyBookings(clientId);
-        }
-
-        protected void gvMyBookings_RowDataBound(object sender, GridViewRowEventArgs e)
-        {
-            if (e.Row.RowType == DataControlRowType.DataRow)
-            {
-                string status = DataBinder.Eval(e.Row.DataItem, "Status").ToString();
-
-                if (status == "Assigned")
-                    e.Row.Cells[4].CssClass = "status-assigned";
-                else if (status == "Pending")
-                    e.Row.Cells[4].CssClass = "status-pending";
-                else if (status == "Cancelled")
-                    e.Row.Cells[4].CssClass = "status-cancelled";
-            }
-        }
-
-        protected void gvUpcoming_RowCommand(object sender, GridViewCommandEventArgs e)
-        {
-            if (e.CommandName == "SetSchedule")
-            {
-                string[] args = e.CommandArgument.ToString().Split('|');
-                if (args.Length == 2)
-                {
-                    string scheduleId = args[0];
-                    string scheduledDateTime = args[1]; // format: yyyy-MM-ddTHH:mm
-
-                    string script = $"showModal('{scheduleId}', '{scheduledDateTime}');";
-                    ScriptManager.RegisterStartupScript(this, GetType(), "ShowSetScheduleModal", script, true);
-                }
-            }
-        }
-
 
         protected void gvMyBookings_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName == "CancelBooking")
             {
                 int bookingId = Convert.ToInt32(e.CommandArgument);
-
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     string query = "UPDATE Bookings SET Status = 'Cancelled' WHERE BookingID = @BookingID AND Status = 'Pending'";
                     SqlCommand cmd = new SqlCommand(query, con);
                     cmd.Parameters.AddWithValue("@BookingID", bookingId);
-
                     con.Open();
                     int rowsAffected = cmd.ExecuteNonQuery();
 
                     if (rowsAffected > 0)
                     {
                         ScriptManager.RegisterStartupScript(this, GetType(), "CancelSuccess", "Swal.fire('Cancelled!', 'Booking cancelled successfully.', 'success');", true);
-
                     }
                     else
                     {
                         ScriptManager.RegisterStartupScript(this, GetType(), "CancelFail", "Swal.fire('Oops!', 'Unable to cancel. Booking may already be processed.', 'warning');", true);
-
                     }
                 }
 

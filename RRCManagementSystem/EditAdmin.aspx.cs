@@ -144,9 +144,21 @@ namespace RRCManagementSystem
 
         protected void rptPermissions_ItemDataBound(object sender, RepeaterItemEventArgs e)
         {
-            // No need to modify class here since we're handling class in markup
-        }
+            if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
+            {
+                var chkView = (CheckBox)e.Item.FindControl("chkView");
+                var chkAdd = (CheckBox)e.Item.FindControl("chkAdd");
+                var chkEdit = (CheckBox)e.Item.FindControl("chkEdit");
+                var chkDelete = (CheckBox)e.Item.FindControl("chkDelete");
 
+                string scaleStyle = "transform: scale(1.8); cursor: pointer;";
+
+                chkView.InputAttributes["style"] = scaleStyle;
+                chkAdd.InputAttributes["style"] = scaleStyle;
+                chkEdit.InputAttributes["style"] = scaleStyle;
+                chkDelete.InputAttributes["style"] = scaleStyle;
+            }
+        }
 
         protected void btnSave_Click(object sender, EventArgs e)
         {

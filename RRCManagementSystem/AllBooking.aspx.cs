@@ -13,7 +13,6 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -21,8 +20,6 @@ namespace RRCManagementSystem
             }
 
             string role = Session["Role"].ToString();
-
-            // 🔐 Deny access for SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -30,8 +27,6 @@ namespace RRCManagementSystem
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
-
-            // 🔐 Check CanView permission for ManageBooking
             if (!HasViewPermission(userId, "ManageBooking"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
@@ -41,17 +36,14 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 LoadAllBookings();
-                LoadAllInquiries();
             }
         }
-
 
         private bool HasViewPermission(int adminId, string moduleName)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = "SELECT CanView FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserID", adminId);
@@ -65,7 +57,7 @@ namespace RRCManagementSystem
                     }
                     catch
                     {
-                        return false; // Fail-safe: deny access if permission check fails
+                        return false;
                     }
                 }
             }
@@ -89,24 +81,27 @@ SELECT
     b.Status,
     b.CreatedAt,
     b.Price,
-    ISNULL(b.Price, 0) - ISNULL((
-        SELECT SUM(t.Amount) 
-        FROM Transactions t 
-        WHERE t.SaleID = b.BookingID
-    ), 0) AS RemainingBalance
+    ISNULL(b.Price, 0) - ISNULL((SELECT SUM(t.Amount) FROM Transactions t WHERE t.SaleID = b.BookingID), 0) AS RemainingBalance,
+    (SELECT TOP 1 Status FROM ServiceSchedule WHERE BookingID = b.BookingID AND OperationNumber = 1) AS Op1Status
 FROM Bookings b
 INNER JOIN Clients c ON b.ClientID = c.ClientID
-ORDER BY b.CreatedAt DESC
-";
+WHERE 
+    (@SearchTerm IS NULL OR c.Name LIKE '%' + @SearchTerm + '%' OR b.ServiceNames LIKE '%' + @SearchTerm + '%')
+    AND (@Status IS NULL OR b.Status = @Status)
+ORDER BY b.CreatedAt DESC";
 
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
+                    SqlCommand cmd = new SqlCommand(query, con);
+                    cmd.Parameters.AddWithValue("@SearchTerm", string.IsNullOrEmpty(txtSearch.Text.Trim()) ? (object)DBNull.Value : txtSearch.Text.Trim());
+                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrEmpty(ddlStatusFilter.SelectedValue) ? (object)DBNull.Value : ddlStatusFilter.SelectedValue);
+
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
                     DataTable dt = new DataTable();
                     da.Fill(dt);
 
                     gvBookings.DataSource = dt;
                     gvBookings.DataBind();
 
-                    lblMessage.Text = $"{dt.Rows.Count} booking(s) loaded.";
+                    lblMessage.Text = $"{dt.Rows.Count} booking(s) found.";
                     lblMessage.ForeColor = System.Drawing.Color.Green;
                 }
             }
@@ -117,54 +112,16 @@ ORDER BY b.CreatedAt DESC
             }
         }
 
-
-        private void LoadAllInquiries()
+        protected void txtSearch_TextChanged(object sender, EventArgs e)
         {
-            try
-            {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.Open();
-
-                    string query = @"
-                        SELECT 
-                            i.InquiryID,
-                            ISNULL(c.Name, 'N/A') AS ClientName,
-                            i.Email,
-                            ISNULL(c.ContactNumber, 'N/A') AS ContactNumber,
-                            ISNULL(s.Name, 'N/A') AS ServiceName,
-                            ISNULL(i.Message, '') AS Message,
-                            ISNULL(i.SentAt, GETDATE()) AS SentAt
-                        FROM Inquiry i
-                        INNER JOIN Clients c ON i.ClientID = c.ClientID
-                        LEFT JOIN Services s ON i.ServiceID = s.ServiceID
-                        ORDER BY i.SentAt DESC";
-
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-
-                    gvInquiries.DataSource = dt;
-                    gvInquiries.DataBind();
-
-                    lblMessageInquiry.Text = $"{dt.Rows.Count} inquiry(s) loaded.";
-                    lblMessageInquiry.ForeColor = System.Drawing.Color.Green;
-                }
-            }
-            catch (Exception ex)
-            {
-                lblMessageInquiry.Text = $"❌ Error loading inquiries: {ex.Message}";
-                lblMessageInquiry.ForeColor = System.Drawing.Color.Red;
-            }
+            gvBookings.PageIndex = 0;
+            LoadAllBookings();
         }
 
-        protected void gvBookings_RowCommand(object sender, GridViewCommandEventArgs e)
+        protected void ddlStatusFilter_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (e.CommandName == "EditBooking")
-            {
-                string bookingId = e.CommandArgument.ToString();
-                Response.Redirect($"EditBooking.aspx?BookingID={bookingId}");
-            }
+            gvBookings.PageIndex = 0;
+            LoadAllBookings();
         }
 
         protected void gvBookings_PageIndexChanging(object sender, GridViewPageEventArgs e)
@@ -173,10 +130,56 @@ ORDER BY b.CreatedAt DESC
             LoadAllBookings();
         }
 
-        protected void gvInquiries_PageIndexChanging(object sender, GridViewPageEventArgs e)
+        protected void gvBookings_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            gvInquiries.PageIndex = e.NewPageIndex;
-            LoadAllInquiries();
+            string bookingId = e.CommandArgument.ToString();
+
+            if (e.CommandName == "EditBooking")
+            {
+                Response.Redirect($"EditBooking.aspx?BookingID={bookingId}");
+            }
+            else if (e.CommandName == "CompleteOp1")
+            {
+                MarkOp1AsCompleted(Convert.ToInt32(bookingId));
+                LoadAllBookings();
+            }
+        }
+
+        private void MarkOp1AsCompleted(int bookingId)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    string updateQuery = @"
+UPDATE ServiceSchedule
+SET Status = 'Completed'
+WHERE BookingID = @BookingID AND OperationNumber = 1";
+
+                    using (SqlCommand cmd = new SqlCommand(updateQuery, con))
+                    {
+                        cmd.Parameters.AddWithValue("@BookingID", bookingId);
+                        con.Open();
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            lblMessage.Text = "✅ Operation 1 marked as completed.";
+                            lblMessage.ForeColor = System.Drawing.Color.Green;
+                        }
+                        else
+                        {
+                            lblMessage.Text = "⚠️ Operation 1 not found or already completed.";
+                            lblMessage.ForeColor = System.Drawing.Color.Orange;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = $"❌ Error updating Op1: {ex.Message}";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+            }
         }
 
         protected void gvBookings_RowDataBound(object sender, GridViewRowEventArgs e)

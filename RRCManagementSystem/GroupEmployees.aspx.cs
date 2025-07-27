@@ -202,6 +202,18 @@ namespace RRCManagementSystem
             LoadTechnicians();
         }
 
+        protected void GridView1_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                CheckBox chk = (CheckBox)e.Row.FindControl("chkSelect");
+                if (chk != null)
+                {
+                    chk.InputAttributes.Add("style", "transform: scale(3); cursor: pointer;");
+                }
+            }
+        }
+
 
         private bool AssignOrUpdateEmployeeTeam(int employeeId, int teamId)
         {

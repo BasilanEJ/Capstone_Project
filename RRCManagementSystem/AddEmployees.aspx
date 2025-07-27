@@ -165,7 +165,14 @@
 
                 <!-- SweetAlert Confirm Button -->
                 <div class="form-group text-center">
-                    <asp:Button ID="btnSubmit" runat="server" Text="Add Employee" CssClass="btn" OnClientClick="return showConfirm();" UseSubmitBehavior="false" />
+               <asp:Button ID="btnSubmit" runat="server" Text="Add Employee"
+    CssClass="btn"
+    OnClick="btnSubmit_Click"
+    OnClientClick="return showConfirm(this);" 
+    UseSubmitBehavior="false" />
+
+
+
                 </div>
             </div>
         </div>
@@ -204,8 +211,11 @@
         }
 
         // SweetAlert Confirmation before submit
-        function showConfirm() {
-            event.preventDefault(); // Prevents form submission
+        function showConfirm(button) {
+            if (window.event) {
+                window.event.preventDefault();
+            }
+
             Swal.fire({
                 title: 'Add Employee?',
                 text: 'Are you sure you want to add this employee?',
@@ -216,13 +226,22 @@
                 confirmButtonText: 'Yes, add it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    document.getElementById('<%= btnSubmit.ClientID %>').disabled = true;
+                    button.disabled = true;
+                    // ✅ Explicitly trigger the correct ASP.NET postback
                     __doPostBack('<%= btnSubmit.UniqueID %>', '');
-                }
-            });
-
-            return false; // Prevent default postback until confirmed
         }
+    });
+
+            return false;
+        }
+
+
+    // Attach the event properly on page load
+    document.addEventListener("DOMContentLoaded", function () {
+        var btn = document.getElementById('<%= btnSubmit.ClientID %>');
+        btn.addEventListener('click', showConfirm);
+    });
+
 
         // Phone Number Validation
         document.addEventListener("DOMContentLoaded", function () {

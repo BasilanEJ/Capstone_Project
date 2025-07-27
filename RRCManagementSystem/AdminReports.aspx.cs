@@ -195,12 +195,25 @@ namespace RRCManagementSystem
 
         private void LoadBookings(DateTime from, DateTime to)
         {
-            string query = @"SELECT b.BookingID, c.Name AS ClientName, s.Name AS Service, t.GroupName AS TeamName,
-                             b.ScheduledDate, b.Status FROM Bookings b
-                             LEFT JOIN Clients c ON b.ClientID = c.ClientID
-                             LEFT JOIN Services s ON b.ServiceID = s.ServiceID
-                             LEFT JOIN Teams t ON b.TeamID = t.TeamID
-                             WHERE b.BookingDate BETWEEN @from AND @to";
+            string query = @"
+        SELECT 
+            b.BookingID,
+            c.Name AS ClientName,
+            (
+                SELECT STRING_AGG(s.Name, ', ')
+                FROM BookingServices bs
+                INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+                WHERE bs.BookingID = b.BookingID
+            ) AS Services,
+            t.GroupName AS TeamName,
+            b.ScheduledDate,
+            b.Status
+        FROM Bookings b
+        LEFT JOIN Clients c ON b.ClientID = c.ClientID
+        LEFT JOIN Teams t ON b.TeamID = t.TeamID
+        WHERE b.BookingDate BETWEEN @from AND @to
+        ORDER BY b.ScheduledDate DESC";
+
             BindGrid(query, gvBookings, from, to);
         }
 
@@ -228,7 +241,7 @@ namespace RRCManagementSystem
                 }
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
                 DataTable dt = new DataTable();
-                da.Fill(dt);
+                    da.Fill(dt);
                 grid.DataSource = dt;
                 grid.DataBind();
             }

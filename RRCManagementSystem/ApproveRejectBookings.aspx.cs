@@ -227,10 +227,10 @@ ORDER BY b.ScheduledDate ASC
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT s.Name 
-                    FROM Bookings b 
-                    INNER JOIN Services s ON b.ServiceID = s.ServiceID 
-                    WHERE b.BookingID = @BookingID";
+            SELECT STRING_AGG(s.Name, ', ') AS ServiceNames
+            FROM BookingServices bs
+            INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+            WHERE bs.BookingID = @BookingID";
 
                 SqlCommand cmd = new SqlCommand(query, con);
                 cmd.Parameters.AddWithValue("@BookingID", bookingID);
@@ -238,6 +238,7 @@ ORDER BY b.ScheduledDate ASC
                 return cmd.ExecuteScalar()?.ToString() ?? "";
             }
         }
+
 
         private DateTime GetScheduledDate(int bookingID)
         {

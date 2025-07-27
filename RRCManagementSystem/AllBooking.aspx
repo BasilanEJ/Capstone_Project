@@ -1,6 +1,5 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AllBooking.aspx.cs" Inherits="RRCManagementSystem.AllBooking" %>
 
-
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
     <style>
         .container {
@@ -12,6 +11,15 @@
         h3 {
             margin-bottom: 20px;
             color: #004085;
+        }
+
+        .filters {
+            margin-bottom: 20px;
+        }
+
+        .filters input, .filters select {
+            padding: 6px;
+            margin-right: 10px;
         }
 
         .table {
@@ -53,67 +61,77 @@
             color: red;
             font-weight: bold;
         }
+
+        .btn {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        .btn-complete {
+            background-color: #28a745;
+            color: white;
+            border: none;
+        }
+
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+            border: none;
+        }
     </style>
 
-  <div class="container">
-
-
+    <div class="container">
         <h3>All Bookings Overview</h3>
 
-    <asp:GridView ID="gvBookings" runat="server" AutoGenerateColumns="False"
-    CssClass="table table-striped"
-    AllowPaging="True" PageSize="10"
-    OnPageIndexChanging="gvBookings_PageIndexChanging"
-    OnRowDataBound="gvBookings_RowDataBound"
-    OnRowCommand="gvBookings_RowCommand">
-    
-    <Columns>
-        <asp:BoundField DataField="BookingID" HeaderText="Booking ID" />
-        <asp:BoundField DataField="ClientName" HeaderText="Client Name" />
-        <asp:BoundField DataField="ServiceName" HeaderText="Service" />
-        <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled Date" DataFormatString="{0:yyyy-MM-dd}" />
-        <asp:BoundField DataField="StartTime" HeaderText="Start Time" />
-          <asp:BoundField DataField="Price" HeaderText="Price" DataFormatString="₱ {0:N2}" HtmlEncode="false" />
-        <asp:BoundField DataField="RemainingBalance" HeaderText="Remaining Balance" DataFormatString="₱ {0:N2}" HtmlEncode="false" />
-        <asp:BoundField DataField="Status" HeaderText="Status" />
-        <asp:BoundField DataField="CreatedAt" HeaderText="Date Booked" DataFormatString="{0:yyyy-MM-dd}" />
-        
+        <div class="filters">
+            <asp:TextBox ID="txtSearch" runat="server" Placeholder="Search by Client or Service" AutoPostBack="true" OnTextChanged="txtSearch_TextChanged" />
+            <asp:DropDownList ID="ddlStatusFilter" runat="server" AutoPostBack="true" OnSelectedIndexChanged="ddlStatusFilter_SelectedIndexChanged">
+                <asp:ListItem Text="All Statuses" Value="" />
+                <asp:ListItem Text="Pending" Value="Pending" />
+                <asp:ListItem Text="Ongoing" Value="Ongoing" />
+                <asp:ListItem Text="Completed" Value="Completed" />
+                <asp:ListItem Text="Cancelled" Value="Cancelled" />
+            </asp:DropDownList>
+        </div>
 
-        <asp:TemplateField HeaderText="Actions">
-            <ItemTemplate>
-                <asp:Button ID="btnEdit" runat="server" Text="Edit" CommandName="EditBooking" CommandArgument='<%# Eval("BookingID") %>' CssClass="btn btn-primary btn-sm" />
-            </ItemTemplate>
-        </asp:TemplateField>
-
-    </Columns>
-</asp:GridView>
-
-
-        <asp:Label ID="lblMessage" runat="server" ForeColor="Red" />
-
-
-    <!--    <div class="section-divider"></div>
-
-        <h3>Client Inquiries Overview</h3>
-
-        <asp:GridView ID="gvInquiries" runat="server" AutoGenerateColumns="False" CssClass="table table-striped"
-            AllowPaging="True" PageSize="10"
-            OnPageIndexChanging="gvInquiries_PageIndexChanging">
-
+        <asp:GridView ID="gvBookings" runat="server" AutoGenerateColumns="False"
+                      CssClass="table table-striped"
+                      AllowPaging="True" PageSize="10"
+                      OnPageIndexChanging="gvBookings_PageIndexChanging"
+                      OnRowCommand="gvBookings_RowCommand"
+                      OnRowDataBound="gvBookings_RowDataBound">
             <Columns>
-                <asp:BoundField DataField="InquiryID" HeaderText="Inquiry ID" />
+                <asp:BoundField DataField="BookingID" HeaderText="Booking ID" />
                 <asp:BoundField DataField="ClientName" HeaderText="Client Name" />
-                <asp:BoundField DataField="Email" HeaderText="Email" />
-                <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
                 <asp:BoundField DataField="ServiceName" HeaderText="Service" />
-                <asp:BoundField DataField="Message" HeaderText="Message" />
-                <asp:BoundField DataField="SentAt" HeaderText="Date Sent" DataFormatString="{0:yyyy-MM-dd}" />
-            </Columns>
+                <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled Date" DataFormatString="{0:yyyy-MM-dd}" />
+                <asp:BoundField DataField="StartTime" HeaderText="Start Time" />
+                <asp:BoundField DataField="Price" HeaderText="Price" DataFormatString="₱ {0:N2}" HtmlEncode="false" />
+                <asp:BoundField DataField="RemainingBalance" HeaderText="Remaining Balance" DataFormatString="₱ {0:N2}" HtmlEncode="false" />
+                <asp:BoundField DataField="Status" HeaderText="Booking Status" />
+                <asp:BoundField DataField="CreatedAt" HeaderText="Date Booked" DataFormatString="{0:yyyy-MM-dd}" />
 
+                <asp:TemplateField HeaderText="Op1 Status">
+                    <ItemTemplate>
+                        <%# Eval("Status").ToString() == "Ongoing" ? Eval("Op1Status") : "—" %>
+                    </ItemTemplate>
+                </asp:TemplateField>
+
+                <asp:TemplateField HeaderText="Actions">
+                    <ItemTemplate>
+                        <asp:Button ID="btnEdit" runat="server" Text="Edit" CommandName="EditBooking" 
+                                    CommandArgument='<%# Eval("BookingID") %>' CssClass="btn btn-edit btn-sm" />
+
+                        <asp:Button ID="btnCompleteOp1" runat="server" Text="Mark Op1 Complete" 
+                                    CssClass="btn btn-complete btn-sm" 
+                                    CommandName="CompleteOp1" CommandArgument='<%# Eval("BookingID") %>' 
+                                    Visible='<%# Eval("Status").ToString() == "Ongoing" && Eval("Op1Status").ToString() != "Completed" %>' />
+                    </ItemTemplate>
+                </asp:TemplateField>
+            </Columns>
         </asp:GridView>
 
-        <asp:Label ID="lblMessageInquiry" runat="server" ForeColor="Red" />
-        -->
+        <asp:Label ID="lblMessage" runat="server" ForeColor="Red" />
     </div>
-
 </asp:Content>

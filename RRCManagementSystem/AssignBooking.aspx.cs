@@ -160,7 +160,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            int adminId = Convert.ToInt32(Session["UserID"]);
 
             using (SqlConnection con = new SqlConnection(connectionString))
             {
@@ -283,20 +283,71 @@ namespace RRCManagementSystem
                         }
                     }
 
+                    foreach (GridViewRow row in gvSafetyGears.Rows)
+                    {
+                        TextBox txtQty = (TextBox)row.FindControl("txtAssignSafety");
+                        Label lblStock = row.FindControl("lblSafetyQuantity") as Label;
+
+                        if (txtQty != null && int.TryParse(txtQty.Text.Trim(), out int qtyAssigned) && qtyAssigned > 0)
+                        {
+                            int itemId = Convert.ToInt32(gvSafetyGears.DataKeys[row.RowIndex].Value);
+                            int currentStock = 0;
+                            if (lblStock != null)
+                                int.TryParse(lblStock.Text, out currentStock);
+
+                            if (qtyAssigned > currentStock)
+                            {
+                                lblMessage.Text = $"⚠️ Not enough safety gear for Item ID {itemId}. Available: {currentStock}, Requested: {qtyAssigned}";
+                                lblMessage.ForeColor = System.Drawing.Color.Red;
+                                trans.Rollback();
+                                return;
+                            }
+
+                            SqlCommand updateSafety = new SqlCommand("UPDATE Inventory SET Quantity = Quantity - @QtyAssigned WHERE ItemID = @ItemID", con, trans);
+                            updateSafety.Parameters.AddWithValue("@QtyAssigned", qtyAssigned);
+                            updateSafety.Parameters.AddWithValue("@ItemID", itemId);
+                            updateSafety.ExecuteNonQuery();
+
+                            SqlCommand insertSafety = new SqlCommand("INSERT INTO BookingChemicals (BookingID, ItemID, QuantityAssigned, AssignedAt) VALUES (@BookingID, @ItemID, @QuantityAssigned, GETDATE())", con, trans);
+                            insertSafety.Parameters.AddWithValue("@BookingID", bookingID);
+                            insertSafety.Parameters.AddWithValue("@ItemID", itemId);
+                            insertSafety.Parameters.AddWithValue("@QuantityAssigned", qtyAssigned);
+                            insertSafety.ExecuteNonQuery();
+                        }
+                    }
+
+                    SqlCommand updateBookingStatus = new SqlCommand("UPDATE Bookings SET Status = @Status WHERE BookingID = @BookingID", con, trans);
+                    updateBookingStatus.Parameters.AddWithValue("@Status", "Ongoing");
+                    updateBookingStatus.Parameters.AddWithValue("@BookingID", bookingID);
+                    updateBookingStatus.ExecuteNonQuery();
+
+
+
                     trans.Commit();
-                    lblMessage.Text = "✅ Booking, chemical, and buffer assignment successful.";
-                    lblMessage.ForeColor = System.Drawing.Color.Green;
 
                     AddAuditLog(adminId, $"Assigned team, chemicals, buffer, and sachets to Booking ID {bookingID}");
+                    // Pass a success flag in the URL
+                    Response.Redirect("~/AllBooking.aspx?status=assigned");
                 }
+
                 catch (Exception ex)
                 {
-                    trans.Rollback();
+                    try
+                    {
+                        if (trans != null)
+                            trans.Rollback();
+                    }
+                    catch (Exception rollbackEx)
+                    {
+                        // Optional: log rollbackEx.Message if needed
+                    }
+
                     lblMessage.Text = "❌ Error: " + ex.Message;
                     lblMessage.ForeColor = System.Drawing.Color.Red;
                 }
+    
+                }
             }
-        }
 
         private decimal GetChemicalUsageBasedOnSQM(int sqm)
         {

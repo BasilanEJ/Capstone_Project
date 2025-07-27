@@ -41,22 +41,35 @@ namespace RRCManagementSystem
             }
         }
 
-
         private void LoadRescheduleRequests()
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT rr.RequestID, rr.ScheduleID, rr.ClientID, c.Name AS ClientName, c.Email,
-                           ss.ScheduledDate, ss.OperationNumber, rr.RequestedDate, rr.Status, b.BookingID,
-                           s.Name AS ServiceName, s.ServiceType
-                    FROM RescheduleRequests rr
-                    INNER JOIN Clients c ON rr.ClientID = c.ClientID
-                    INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
-                    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN Services s ON b.ServiceID = s.ServiceID
-                    WHERE rr.Status = 'Pending'
-                    ORDER BY rr.RequestedDate DESC";
+            SELECT 
+                rr.RequestID, 
+                rr.ScheduleID, 
+                rr.ClientID, 
+                c.Name AS ClientName, 
+                c.Email,
+                ss.ScheduledDate, 
+                ss.OperationNumber, 
+                rr.RequestedDate, 
+                rr.Status, 
+                b.BookingID,
+                svc.ServiceNames
+            FROM RescheduleRequests rr
+            INNER JOIN Clients c ON rr.ClientID = c.ClientID
+            INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
+            INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+            LEFT JOIN (
+                SELECT bs.BookingID, STRING_AGG(s.Name, ', ') AS ServiceNames
+                FROM BookingServices bs
+                INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+                GROUP BY bs.BookingID
+            ) svc ON b.BookingID = svc.BookingID
+            WHERE rr.Status = 'Pending'
+            ORDER BY rr.RequestedDate DESC";
 
                 SqlDataAdapter da = new SqlDataAdapter(query, con);
                 DataTable dt = new DataTable();
@@ -87,17 +100,27 @@ namespace RRCManagementSystem
                 {
                     con.Open();
                     SqlCommand updateCmd = new SqlCommand(@"
-                        UPDATE RescheduleRequests 
-                        SET Status = 'Approved', ApprovedDate = GETDATE()
-                        WHERE RequestID = @RequestID;
+                UPDATE RescheduleRequests 
+                SET Status = 'Approved', ApprovedDate = GETDATE()
+                WHERE RequestID = @RequestID;
 
-                        SELECT rr.ScheduleID, rr.ClientID, b.BookingID, s.Name AS ServiceName, c.Email
-                        FROM RescheduleRequests rr
-                        INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
-                        INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                        INNER JOIN Clients c ON rr.ClientID = c.ClientID
-                        INNER JOIN Services s ON b.ServiceID = s.ServiceID
-                        WHERE rr.RequestID = @RequestID;", con);
+                SELECT 
+                    rr.ScheduleID, 
+                    rr.ClientID, 
+                    b.BookingID, 
+                    svc.ServiceNames, 
+                    c.Email
+                FROM RescheduleRequests rr
+                INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
+                INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+                INNER JOIN Clients c ON rr.ClientID = c.ClientID
+                LEFT JOIN (
+                    SELECT bs.BookingID, STRING_AGG(s.Name, ', ') AS ServiceNames
+                    FROM BookingServices bs
+                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+                    GROUP BY bs.BookingID
+                ) svc ON b.BookingID = svc.BookingID
+                WHERE rr.RequestID = @RequestID;", con);
 
                     updateCmd.Parameters.AddWithValue("@RequestID", requestId);
 
@@ -107,7 +130,7 @@ namespace RRCManagementSystem
                         {
                             int bookingId = Convert.ToInt32(reader["BookingID"]);
                             int scheduleId = Convert.ToInt32(reader["ScheduleID"]);
-                            string serviceName = reader["ServiceName"].ToString();
+                            string serviceName = reader["ServiceNames"]?.ToString() ?? "(No Service)";
                             string clientEmail = reader["Email"].ToString();
 
                             reader.Close();
@@ -149,17 +172,25 @@ namespace RRCManagementSystem
                 {
                     con.Open();
                     SqlCommand cmd = new SqlCommand(@"
-                        UPDATE RescheduleRequests
-                        SET Status = 'Rejected', ApprovedDate = GETDATE(), RejectReason = @Reason
-                        WHERE RequestID = @RequestID;
+                UPDATE RescheduleRequests
+                SET Status = 'Rejected', ApprovedDate = GETDATE(), RejectReason = @Reason
+                WHERE RequestID = @RequestID;
 
-                        SELECT rr.ClientID, c.Email, s.Name AS ServiceName
-                        FROM RescheduleRequests rr
-                        INNER JOIN Clients c ON rr.ClientID = c.ClientID
-                        INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
-                        INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                        INNER JOIN Services s ON b.ServiceID = s.ServiceID
-                        WHERE rr.RequestID = @RequestID;", con);
+                SELECT 
+                    rr.ClientID, 
+                    c.Email, 
+                    svc.ServiceNames
+                FROM RescheduleRequests rr
+                INNER JOIN Clients c ON rr.ClientID = c.ClientID
+                INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
+                INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+                LEFT JOIN (
+                    SELECT bs.BookingID, STRING_AGG(s.Name, ', ') AS ServiceNames
+                    FROM BookingServices bs
+                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+                    GROUP BY bs.BookingID
+                ) svc ON b.BookingID = svc.BookingID
+                WHERE rr.RequestID = @RequestID;", con);
 
                     cmd.Parameters.AddWithValue("@RequestID", requestId);
                     cmd.Parameters.AddWithValue("@Reason", reason);
@@ -169,7 +200,7 @@ namespace RRCManagementSystem
                         if (reader.Read())
                         {
                             string email = reader["Email"].ToString();
-                            string service = reader["ServiceName"].ToString();
+                            string service = reader["ServiceNames"]?.ToString() ?? "(No Service)";
                             SendRejectionEmail(email, service, reason);
                         }
                     }

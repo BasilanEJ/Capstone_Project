@@ -24,6 +24,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblMessage;
 
         /// <summary>
+        /// hfEquipmentID control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfEquipmentID;
+
+        /// <summary>
         /// txtEquipmentID control.
         /// </summary>
         /// <remarks>
@@ -60,13 +69,13 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.FileUpload fuEquipmentImage;
 
         /// <summary>
-        /// imgPreview control.
+        /// imagePreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Image imgPreview;
+        protected global::System.Web.UI.HtmlControls.HtmlImage imagePreview;
 
         /// <summary>
         /// btnUpdate control.

@@ -1,6 +1,9 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Inspector.master" AutoEventWireup="true" CodeBehind="CreateBooking.aspx.cs" Inherits="RRCManagementSystem.CreateBooking" %>
+<%@ Register Assembly="AjaxControlToolkit" Namespace="AjaxControlToolkit" TagPrefix="ajaxToolkit" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+    <asp:ScriptManager ID="ScriptManager1" runat="server" />
+
     <div class="container py-5">
         <div class="card shadow mx-auto" style="max-width: 700px;">
             <div class="card-body">
@@ -8,24 +11,34 @@
 
                 <asp:Label ID="lblMessage" runat="server" CssClass="text-center d-block fw-semibold text-danger mb-3" />
 
-                <!-- Client Dropdown -->
+                <!-- Search Client -->
                 <div class="mb-3">
-                    <label for="ddlClients" class="form-label fw-bold">Select Client:</label>
-                    <asp:DropDownList ID="ddlClients" runat="server" CssClass="form-select" />
+                    <label for="txtClientSearch" class="form-label fw-bold">Search Client:</label>
+                    <asp:TextBox ID="txtClientSearch" runat="server" CssClass="form-control" />
+                    <ajaxToolkit:AutoCompleteExtender 
+                        ID="AutoCompleteExtender1" 
+                        runat="server"
+                        TargetControlID="txtClientSearch"
+                        ServiceMethod="SearchClients"
+                        MinimumPrefixLength="1"
+                        CompletionSetCount="10"
+                        EnableCaching="true"
+                        FirstRowSelected="true" />
+                    <asp:HiddenField ID="hfClientID" runat="server" />
                 </div>
 
                 <!-- Services CheckBoxList -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Select Services:</label>
-                    <asp:CheckBoxList 
-                        ID="cblServices" 
-                        runat="server" 
-                        RepeatLayout="Flow" 
-                        CssClass="d-flex flex-column gap-2"
-                        DataTextField="Name"
-                        DataValueField="ServiceID">
-                    </asp:CheckBoxList>
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Services:</label>
+                        <asp:CheckBoxList 
+                            ID="cblServices" 
+                            runat="server" 
+                            RepeatLayout="Table"
+                            CssClass="form-check-list"
+                            DataTextField="Name"
+                            DataValueField="ServiceID">
+                        </asp:CheckBoxList>
+                    </div>
 
                 <!-- SQM Input -->
                 <div class="mb-3">
@@ -47,4 +60,40 @@
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+    .form-check-list table {
+        width: 100%;
+    }
+
+    .form-check-list td {
+        padding: 8px 0;
+    }
+
+    .form-check-list input[type="checkbox"] {
+        margin-right: 8px;
+    }
+
+    .form-check-list label {
+        display: inline-block;
+        margin-left: 4px;
+        font-weight: normal;
+    }
+</style>
+
+
+    <!-- JS to handle extracting client ID -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var txt = document.getElementById('<%= txtClientSearch.ClientID %>');
+            txt.addEventListener('blur', function () {
+                var value = txt.value;
+                if (value.includes('|')) {
+                    var parts = value.split('|');
+                    txt.value = parts[0]; // Show just the client name
+                    document.getElementById('<%= hfClientID.ClientID %>').value = parts[1]; // Save the ClientID
+                }
+            });
+        });
+    </script>
 </asp:Content>

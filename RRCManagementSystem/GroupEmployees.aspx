@@ -33,7 +33,9 @@
                     <Columns>
                         <asp:TemplateField HeaderText="Select" ItemStyle-HorizontalAlign="Center" ItemStyle-Width="5%">
                             <ItemTemplate>
-                                <asp:CheckBox ID="chkSelect" runat="server" CssClass="form-check-input" />
+                                <div class="form-check d-flex justify-content-center">
+                                    <asp:CheckBox ID="chkSelect" runat="server" CssClass="form-check-input checkbox-scale" />
+                                </div>
                             </ItemTemplate>
                         </asp:TemplateField>
 
@@ -141,5 +143,14 @@
             });
             return false; // prevent default postback; redirect manually if confirmed
         }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".checkbox-scale").forEach(function (checkbox) {
+                checkbox.style.transform = "scale(2)";
+                checkbox.style.cursor = "pointer";
+                checkbox.style.margin = "5px";
+            });
+        });
+
     </script>
 </asp:Content>

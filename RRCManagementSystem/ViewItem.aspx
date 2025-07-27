@@ -147,15 +147,14 @@
         </div>
 
         <div class="card-body">
-            <!-- 🔴 Error Message -->
+  
             <asp:Label ID="lblMessage" runat="server" ForeColor="Red" CssClass="error-message" />
 
-            <!-- 🟡 Restocking Alert Message -->
             <div class="form-group" style="margin-bottom: 30px;">
                 <asp:Label ID="lblRestockNotice" runat="server" CssClass="alert-message" />
             </div>
 
-            <!-- 🟢 Dropdown Filter -->
+ 
             <div class="form-group" style="margin-bottom: 25px;">
                 <label for="ddlType">Filter by Item Type:</label>
                 <asp:DropDownList ID="ddlType" runat="server" CssClass="form-control input-lg" AutoPostBack="true" OnSelectedIndexChanged="ddlType_SelectedIndexChanged">
@@ -173,7 +172,6 @@
     OnPageIndexChanging="gvItems_PageIndexChanging" OnRowCommand="gvItems_RowCommand">
     <Columns>
 
-        <!-- Formatted Item ID -->
         <asp:TemplateField HeaderText="Item ID">
             <ItemTemplate>
                 <%# "Item" + Convert.ToInt32(Eval("ItemID")).ToString("D3") %>
@@ -183,7 +181,6 @@
         <asp:BoundField DataField="Name" HeaderText="Item Name" />
         <asp:BoundField DataField="Type" HeaderText="Type" />
 
-        <!-- Quantity Formatting -->
         <asp:TemplateField HeaderText="Quantity">
             <ItemTemplate>
                 <%# 
@@ -195,7 +192,6 @@
             </ItemTemplate>
         </asp:TemplateField>
 
-        <!-- Excess ML -->
         <asp:TemplateField HeaderText="Excess (mL)">
             <ItemTemplate>
                 <%# string.IsNullOrEmpty(Eval("ExcessML").ToString()) ? "-" : Eval("ExcessML") + " mL" %>
@@ -209,7 +205,6 @@
             <ControlStyle Width="70px" Height="70px" />
         </asp:ImageField>
 
-        <!-- Encoded Edit Link -->
         <asp:TemplateField HeaderText="Actions">
             <ItemTemplate>
                 <a href='<%# "EditItem.aspx?ItemID=" + EncodeID(Eval("ItemID").ToString()) %>' class="btn-action btn-edit" onclick="return confirm('Are you sure you want to edit this item?');">Edit</a>
