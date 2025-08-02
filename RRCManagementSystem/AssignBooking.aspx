@@ -3,7 +3,6 @@
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-            
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
@@ -13,6 +12,8 @@
                 <i class="fas fa-tasks me-2"></i> Assign Team, Equipment, Chemicals & Safety Gear
             </div>
             <div class="card-body">
+                <asp:ScriptManager ID="ScriptManager1" runat="server" />
+
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Select Team</label>
                     <asp:DropDownList ID="ddlTeams" runat="server" CssClass="form-select" />
@@ -87,9 +88,11 @@
                             <Columns>
                                 <asp:BoundField DataField="ItemID" HeaderText="Gear ID" />
                                 <asp:BoundField DataField="Name" HeaderText="Gear Name" />
-                                <asp:BoundField DataField="Quantity" HeaderText="Available Quantity" />
+                                <asp:TemplateField HeaderText="Available Quantity">
+                                    <ItemTemplate><asp:Label ID="lblSafetyQuantity" runat="server" Text='<%# Eval("Quantity") %>' /></ItemTemplate>
+                                </asp:TemplateField>
                                 <asp:TemplateField HeaderText="Assign Quantity">
-                                    <ItemTemplate><asp:TextBox ID="txtGearQuantityAssign" runat="server" Text="0" CssClass="form-control" /></ItemTemplate>
+                                    <ItemTemplate><asp:TextBox ID="txtAssignSafety" runat="server" Text="0" CssClass="form-control" /></ItemTemplate>
                                 </asp:TemplateField>
                             </Columns>
                         </asp:GridView>
@@ -97,10 +100,9 @@
                 </div>
 
                 <div class="mt-4 text-end">
-                    <asp:Button ID="btnAssignAll" runat="server" Text="Assign Booking" CssClass="btn btn-primary px-4" OnClick="btnAssignAll_Click" />
+                    <asp:Button ID="btnAssignAll" runat="server" Text="Assign Booking" CssClass="btn btn-primary px-4" OnClick="btnAssignAll_Click" UseSubmitBehavior="false" />
                 </div>
                 <asp:Label ID="lblMessage" runat="server" Visible="false" />
-
             </div>
         </div>
     </div>
@@ -116,8 +118,6 @@
     }
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
     window.onload = function () {
         const params = new URLSearchParams(window.location.search);
@@ -128,17 +128,14 @@
                 text: '✅ Booking, chemical, and buffer assignment successful.',
                 confirmButtonColor: '#4caf50'
             }).then(() => {
-                // Optional: remove query string so it doesn't show again on refresh
                 window.history.replaceState({}, document.title, window.location.pathname);
             });
         }
 
-        // Safe to attach the event listener now
         const assignBtn = document.getElementById('<%= btnAssignAll.ClientID %>');
         if (assignBtn) {
-            assignBtn.addEventListener('click', function (e) {
-                e.preventDefault(); // Stop postback
-
+            assignBtn.onclick = function (e) {
+                e.preventDefault();
                 Swal.fire({
                     title: 'Assign Booking?',
                     text: "This will assign the team, chemicals, and safety gear.",
@@ -149,14 +146,12 @@
                     confirmButtonText: 'Yes, assign it!'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        __doPostBack('<%= btnAssignAll.UniqueID %>', '');
+                        document.getElementById('<%= btnAssignAll.ClientID %>').click();
                     }
                 });
-            });
+            }
         }
     };
 </script>
-
-
 
 </asp:Content>

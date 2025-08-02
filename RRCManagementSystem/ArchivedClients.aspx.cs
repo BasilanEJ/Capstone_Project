@@ -46,10 +46,17 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT ClientID, Name, Email, ContactNumber, City, Country
-                    FROM Clients
-                    WHERE Status = 'Inactive'
-                    ORDER BY CreatedAt DESC";
+    SELECT ClientID,
+           LastName + ', ' + FirstName +
+           CASE 
+               WHEN MiddleName IS NULL OR LTRIM(RTRIM(MiddleName)) = '' THEN ''
+               ELSE ' ' + MiddleName
+           END AS Name,
+           Email, ContactNumber, City, Country
+    FROM Clients
+    WHERE Status = 'Inactive'
+    ORDER BY CreatedAt DESC";
+
 
                 SqlDataAdapter adapter = new SqlDataAdapter(query, conn);
                 DataTable dt = new DataTable();

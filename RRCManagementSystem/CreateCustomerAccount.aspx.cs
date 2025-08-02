@@ -50,7 +50,9 @@ namespace RRCManagementSystem
 
         protected void btnCreate_Click(object sender, EventArgs e)
         {
-            string name = txtName.Text.Trim();
+            string lastName = txtLastName.Text.Trim();
+            string firstName = txtFirstName.Text.Trim();
+            string middleName = txtMiddleName.Text.Trim();
             string email = txtEmail.Text.Trim();
             string contact = txtContact.Text.Trim();
             string street = txtStreet.Text.Trim();
@@ -60,9 +62,11 @@ namespace RRCManagementSystem
             string country = txtCountry.Text.Trim();
             string landmark = txtLandmark.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(contact) ||
-                string.IsNullOrWhiteSpace(street) || string.IsNullOrWhiteSpace(brgy) || string.IsNullOrWhiteSpace(city) ||
-                string.IsNullOrWhiteSpace(region) || string.IsNullOrWhiteSpace(country))
+            if (string.IsNullOrWhiteSpace(lastName) || string.IsNullOrWhiteSpace(firstName) ||
+                string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(contact) ||
+                string.IsNullOrWhiteSpace(street) || string.IsNullOrWhiteSpace(brgy) ||
+                string.IsNullOrWhiteSpace(city) || string.IsNullOrWhiteSpace(region) ||
+                string.IsNullOrWhiteSpace(country))
             {
                 ShowSweetAlert("Error", "Please fill in all required fields.", "error");
                 return;
@@ -77,14 +81,16 @@ namespace RRCManagementSystem
 
                 string query = @"
 INSERT INTO Clients
-(Name, Email, ContactNumber, StreetAndUnit, Barangay, City, Region, Country, Landmark,
+(LastName, FirstName, MiddleName, Email, ContactNumber, StreetAndUnit, Barangay, City, Region, Country, Landmark,
  Status, CreatedAt, UserRole, PasswordHash, PasswordSalt, TermsAccepted, ResetToken, ResetTokenExpiry)
 VALUES
-(@Name, @Email, @ContactNumber, @StreetAndUnit, @Barangay, @City, @Region, @Country, @Landmark,
+(@LastName, @FirstName, @MiddleName, @Email, @ContactNumber, @StreetAndUnit, @Barangay, @City, @Region, @Country, @Landmark,
  'Approved', GETDATE(), 'Client', '', '', 0, @ResetToken, @ResetTokenExpiry);";
 
                 SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@Name", name);
+                cmd.Parameters.AddWithValue("@LastName", lastName);
+                cmd.Parameters.AddWithValue("@FirstName", firstName);
+                cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrEmpty(middleName) ? (object)DBNull.Value : middleName);
                 cmd.Parameters.AddWithValue("@Email", email);
                 cmd.Parameters.AddWithValue("@ContactNumber", contact);
                 cmd.Parameters.AddWithValue("@StreetAndUnit", street);

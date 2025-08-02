@@ -70,13 +70,18 @@ namespace RRCManagementSystem
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT ss.ScheduleID, b.BookingID, c.Name AS ClientName, s.Name AS ServiceName, 
-                           ss.OperationNumber, ss.ScheduledDate, ss.Status
-                    FROM ServiceSchedule ss
-                    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN Clients c ON b.ClientID = c.ClientID
-                    INNER JOIN Services s ON b.ServiceID = s.ServiceID
-                    ORDER BY ss.ScheduledDate DESC";
+            SELECT 
+                ss.ScheduleID,
+                b.BookingID,
+                (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName, '')) AS ClientName,
+                b.ServiceNames AS ServiceName,
+                ss.OperationNumber,
+                ss.ScheduledDate,
+                ss.Status
+            FROM ServiceSchedule ss
+            INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+            INNER JOIN Clients c ON b.ClientID = c.ClientID
+            ORDER BY ss.ScheduledDate DESC";
 
                 SqlDataAdapter da = new SqlDataAdapter(query, con);
                 DataTable dt = new DataTable();
@@ -86,6 +91,7 @@ namespace RRCManagementSystem
                 gvReschedules.DataBind();
             }
         }
+
 
         protected void gvReschedules_RowCommand(object sender, GridViewCommandEventArgs e)
         {

@@ -123,10 +123,19 @@
 
         <!-- VIEW MODE -->
         <asp:Panel ID="pnlViewMode" runat="server">
-            <div class="profile-field">
-                <span class="profile-label">Full Name</span>
-                <asp:Label ID="lblName" runat="server" CssClass="profile-value" />
-            </div>
+       <div class="profile-field">
+    <span class="profile-label">First Name</span>
+    <asp:TextBox ID="txtFirstName" runat="server" CssClass="form-control" />
+</div>
+<div class="profile-field">
+    <span class="profile-label">Middle Name</span>
+    <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-control" />
+</div>
+<div class="profile-field">
+    <span class="profile-label">Last Name</span>
+    <asp:TextBox ID="txtLastName" runat="server" CssClass="form-control" />
+</div>
+
 
             <div class="profile-field">
                 <span class="profile-label">Email</span>

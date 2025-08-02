@@ -39,17 +39,18 @@ namespace RRCManagementSystem
         protected void btnAssignHidden_Click(object sender, EventArgs e)
         {
             string[] parts = hfAssignData.Value.Split('|');
-            if (parts.Length >= 9)
+            if (parts.Length >= 10)
             {
                 int inspectorId = int.Parse(parts[0]);
                 DateTime schedule = DateTime.Parse(parts[1]);
                 string remarks = parts[2];
-                string name = parts[3];
-                string street = parts[4];
-                string barangay = parts[5];
-                string city = parts[6];
-                string region = parts[7];
-                string country = parts[8];
+                string firstName = parts[3];
+                string lastName = parts[4];
+                string street = parts[5];
+                string barangay = parts[6];
+                string city = parts[7];
+                string region = parts[8];
+                string country = parts[9];
                 int inquiryId = int.Parse(hfSelectedInquiryID.Value);
 
                 int maxPerDay = GetSystemSettingInt("MaxInspectionsPerDay");
@@ -60,20 +61,26 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                UpdateInquiryInfo(inquiryId, name, street, barangay, city, region, country);
+                UpdateInquiryInfo(inquiryId, firstName, lastName, street, barangay, city, region, country);
                 AssignInspector(inquiryId, inspectorId, schedule, remarks);
+
                 ScriptManager.RegisterStartupScript(this, GetType(), "Success",
                     "Swal.fire('Success', 'Inspector assigned successfully.', 'success');", true);
             }
         }
 
+
         private void LoadInquiries()
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = @"SELECT InquiryID, Email, ContactNumber, Message, SubmittedAt FROM InquirySimple
-                                 WHERE NOT EXISTS (SELECT 1 FROM Inspections WHERE Inspections.InquiryID = InquirySimple.InquiryID)
-                                 ORDER BY SubmittedAt DESC";
+                string query = @"
+    SELECT InquiryID, Email, ContactNumber, Message, SubmittedAt, PhotoPath
+    FROM InquirySimple
+    WHERE NOT EXISTS (
+        SELECT 1 FROM Inspections WHERE Inspections.InquiryID = InquirySimple.InquiryID
+    )
+    ORDER BY SubmittedAt DESC";
 
                 SqlDataAdapter da = new SqlDataAdapter(query, conn);
                 DataTable dt = new DataTable();
@@ -109,17 +116,19 @@ namespace RRCManagementSystem
             }
         }
 
-        private void UpdateInquiryInfo(int inquiryId, string name, string street, string barangay, string city, string region, string country)
+        private void UpdateInquiryInfo(int inquiryId, string firstName, string lastName, string street, string barangay, string city, string region, string country)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"UPDATE InquirySimple
-                                 SET Name = @Name, StreetAndUnit = @Street, Barangay = @Barangay,
-                                     City = @City, Region = @Region, Country = @Country
-                                 WHERE InquiryID = @InquiryID";
+                         SET FirstName = @FirstName, LastName = @LastName,
+                             StreetAndUnit = @Street, Barangay = @Barangay,
+                             City = @City, Region = @Region, Country = @Country
+                         WHERE InquiryID = @InquiryID";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Name", name);
+                cmd.Parameters.AddWithValue("@FirstName", firstName);
+                cmd.Parameters.AddWithValue("@LastName", lastName);
                 cmd.Parameters.AddWithValue("@Street", street);
                 cmd.Parameters.AddWithValue("@Barangay", barangay);
                 cmd.Parameters.AddWithValue("@City", city);

@@ -100,9 +100,10 @@ namespace RRCManagementSystem
                     daTeams.Fill(dtTeams);
 
                     string queryMembers = @"
-                SELECT tm.TeamID, e.EmployeeID, e.FullName, e.Department
-                FROM TeamMembers tm
-                INNER JOIN Employees e ON tm.EmployeeID = e.EmployeeID";
+    SELECT tm.TeamID, e.EmployeeID, e.LastName, e.FirstName, e.MiddleName, e.Department
+    FROM TeamMembers tm
+    INNER JOIN Employees e ON tm.EmployeeID = e.EmployeeID";
+
                     SqlDataAdapter daMembers = new SqlDataAdapter(queryMembers, con);
                     DataTable dtMembers = new DataTable();
                     daMembers.Fill(dtMembers);

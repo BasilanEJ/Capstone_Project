@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.SqlClient;
 using System.Web.UI;
 
 namespace RRCManagementSystem
@@ -21,28 +22,19 @@ namespace RRCManagementSystem
             }
         }
 
+
+
         private void LoadClientInfo()
         {
-            // Example: You can fetch more client information from database here if needed
-
-            // If Session["ClientName"] isn't set already, fetch and assign it
             if (Session["Name"] == null)
             {
                 int clientId = Convert.ToInt32(Session["ClientID"]);
-
-                // Sample query to get the ClientName from DB (optional)
                 string clientName = GetClientNameFromDatabase(clientId);
 
-                if (!string.IsNullOrEmpty(clientName))
-                {
-                    Session["Name"] = clientName;
-                }
-                else
-                {
-                    Session["Name"] = "Valued Client";
-                }
+                Session["Name"] = string.IsNullOrEmpty(clientName) ? "Valued Client" : clientName;
             }
         }
+
 
         private string GetClientNameFromDatabase(int clientId)
         {
@@ -52,7 +44,7 @@ namespace RRCManagementSystem
 
             using (System.Data.SqlClient.SqlConnection con = new System.Data.SqlClient.SqlConnection(connectionString))
             {
-                string query = "SELECT Name FROM Clients WHERE ClientID = @ClientID";
+                string query = "SELECT FirstName, MiddleName, LastName FROM Clients WHERE ClientID = @ClientID";
 
                 using (System.Data.SqlClient.SqlCommand cmd = new System.Data.SqlClient.SqlCommand(query, con))
                 {
@@ -61,16 +53,24 @@ namespace RRCManagementSystem
                     try
                     {
                         con.Open();
-                        object result = cmd.ExecuteScalar();
-
-                        if (result != null)
+                        using (System.Data.SqlClient.SqlDataReader reader = cmd.ExecuteReader())
                         {
-                            clientName = result.ToString();
+                            if (reader.Read())
+                            {
+                                string firstName = reader["FirstName"].ToString();
+                                string middleName = reader["MiddleName"].ToString();
+                                string lastName = reader["LastName"].ToString();
+
+                                // Optional: Format as "LastName, FirstName MiddleName"
+                                if (!string.IsNullOrWhiteSpace(middleName))
+                                    clientName = $"{lastName}, {firstName} {middleName}";
+                                else
+                                    clientName = $"{lastName}, {firstName}";
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
-                        // Log or handle error as needed
                         throw new Exception("Error fetching client name: " + ex.Message);
                     }
                 }
@@ -78,5 +78,6 @@ namespace RRCManagementSystem
 
             return clientName;
         }
+
     }
 }

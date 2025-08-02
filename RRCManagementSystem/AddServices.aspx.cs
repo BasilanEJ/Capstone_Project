@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Web.UI;
 
 namespace RRCManagementSystem
 {
-    public partial class AddServices : System.Web.UI.Page
+    public partial class AddServices : Page
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
@@ -19,7 +20,6 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Deny access for SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -28,7 +28,6 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 Check CanAdd permission for ManageServices
             if (!HasPermissionToAddService(userId, "ManageServices"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
@@ -38,8 +37,27 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 lblMessage.Text = "";
+
+                // ✅ Inject SweetAlert only on initial load
+                if (Session["ServiceAdded"] != null && (bool)Session["ServiceAdded"])
+                {
+                    litScript.Text = @"
+<script>
+    Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Service added successfully.',
+        confirmButtonColor: '#004085'
+    }).then(() => {
+        window.location.href = 'ViewServices.aspx';
+    });
+</script>";
+
+                    Session["ServiceAdded"] = null;
+                }
             }
         }
+
 
         private bool HasPermissionToAddService(int adminId, string moduleName)
         {
@@ -92,8 +110,6 @@ namespace RRCManagementSystem
             decimal price100 = ParseDecimal(txtPrice100.Text);
             decimal price200 = ParseDecimal(txtPrice200.Text);
             decimal priceAbove200 = ParseDecimal(txtPriceAbove200.Text);
-
-            // ✅ Determine if service is contractual
             bool isContract = serviceType == "Termite Control";
 
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -116,13 +132,16 @@ namespace RRCManagementSystem
                 conn.Open();
                 cmd.ExecuteNonQuery();
 
-                // ✅ Add audit log
                 AddAuditLog(adminId, $"Added new service: {serviceName} ({serviceType}) | Contractual: {isContract}");
             }
 
+            // ✅ Trigger SweetAlert script on next page load
+            Session["ServiceAdded"] = true;
+
+            lblMessage.Visible = true; // ✅ Add this
             lblMessage.Text = "✅ Service added successfully!";
             lblMessage.ForeColor = System.Drawing.Color.Green;
-            ClearForm();
+
         }
 
         private decimal ParseDecimal(string input)
@@ -158,7 +177,7 @@ namespace RRCManagementSystem
                     }
                     catch
                     {
-                        // Handle logging error silently
+                        // Fail silently
                     }
                 }
             }

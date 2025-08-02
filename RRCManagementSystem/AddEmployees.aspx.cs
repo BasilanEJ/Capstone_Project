@@ -88,17 +88,19 @@ namespace RRCManagementSystem
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(txtFullName.Text))
+            if (string.IsNullOrWhiteSpace(txtLastName.Text) || string.IsNullOrWhiteSpace(txtFirstName.Text))
             {
-                ShowMessage("⚠ Full Name is required.", false);
+                ShowMessage("⚠ Last Name and First Name are required.", false);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(txtEmail.Text) || !Regex.IsMatch(txtEmail.Text, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            if (string.IsNullOrWhiteSpace(txtEmail.Text) ||
+    !Regex.IsMatch(txtEmail.Text.Trim(), @"^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook)\.com$", RegexOptions.IgnoreCase))
             {
-                ShowMessage("⚠ Please enter a valid Email.", false);
+                ShowMessage("⚠ Please enter a valid Gmail, Yahoo, or Outlook email address.", false);
                 return;
             }
+
 
             string phoneNumber = txtPhone.Text.Trim();
             if (!Regex.IsMatch(phoneNumber, @"^\d{11}$"))
@@ -148,28 +150,36 @@ namespace RRCManagementSystem
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
-                        INSERT INTO Employees (FullName, Email, Phone, Position, ProfileImage) 
-                        VALUES (@FullName, @Email, @Phone, @Position, @ProfileImage)";
+        INSERT INTO Employees (LastName, FirstName, MiddleName, Email, Phone, Position, ProfileImage, Status) 
+        VALUES (@LastName, @FirstName, @MiddleName, @Email, @Phone, @Position, @ProfileImage, @Status)";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
-                        cmd.Parameters.AddWithValue("@FullName", txtFullName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@LastName", txtLastName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@FirstName", txtFirstName.Text.Trim());
+                        cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrWhiteSpace(txtMiddleName.Text) ? (object)DBNull.Value : txtMiddleName.Text.Trim());
                         cmd.Parameters.AddWithValue("@Email", txtEmail.Text.Trim());
                         cmd.Parameters.AddWithValue("@Phone", phoneNumber);
                         cmd.Parameters.AddWithValue("@Position", ddlPosition.SelectedValue);
                         cmd.Parameters.AddWithValue("@ProfileImage", imagePath);
+                        cmd.Parameters.AddWithValue("@Status", "Active");
 
                         conn.Open();
                         cmd.ExecuteNonQuery();
 
-                        // ✅ Audit Log here
-                        AddAuditLog(adminId, $"Added a new employee: {txtFullName.Text.Trim()}");
+                        string fullName = $"{txtLastName.Text.Trim()}, {txtFirstName.Text.Trim()}" +
+                                          (string.IsNullOrWhiteSpace(txtMiddleName.Text) ? "" : $" {txtMiddleName.Text.Trim()}");
+
+                        AddAuditLog(adminId, $"Added a new employee: {fullName}");
                     }
                 }
 
+
                 ShowMessage("✅ Employee added successfully!", true);
 
-                txtFullName.Text = "";
+                txtLastName.Text = "";
+                txtFirstName.Text = "";
+                txtMiddleName.Text = "";
                 txtEmail.Text = "";
                 txtPhone.Text = "";
                 ddlPosition.SelectedIndex = 0;
@@ -179,6 +189,7 @@ namespace RRCManagementSystem
                 ShowMessage("❌ Error: " + ex.Message, false);
             }
         }
+
 
         private void ShowMessage(string message, bool isSuccess)
         {

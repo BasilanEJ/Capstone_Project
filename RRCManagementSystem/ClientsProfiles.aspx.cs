@@ -45,10 +45,10 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT ClientID, Name, Email, ContactNumber, City, Country
-                    FROM Clients
-                    WHERE Status = 'Approved'
-                    ORDER BY CreatedAt DESC";
+            SELECT ClientID, LastName, FirstName, MiddleName, Email, ContactNumber, City, Country
+            FROM Clients
+            WHERE Status = 'Approved'
+            ORDER BY CreatedAt DESC";
 
                 SqlDataAdapter adapter = new SqlDataAdapter(query, conn);
                 DataTable dt = new DataTable();
@@ -58,6 +58,7 @@ namespace RRCManagementSystem
                 gvClients.DataBind();
             }
         }
+
 
         protected void gvClients_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
@@ -102,7 +103,7 @@ namespace RRCManagementSystem
                     }
                 }
             }
-        }
+        }   
 
         private void ShowSweetAlert(string title, string message, string icon)
         {

@@ -12,7 +12,6 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -21,7 +20,6 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Block SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -30,7 +28,6 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 Check Edit permission for ManageEmployees
             if (!HasEditPermission(userId, "ManageEmployees"))
             {
                 lblMessage.Text = "❌ You do not have permission to edit employees.";
@@ -53,7 +50,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         private bool HasEditPermission(int adminId, string moduleName)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
@@ -69,7 +65,7 @@ namespace RRCManagementSystem
                     {
                         con.Open();
                         object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
+                        return result != null && Convert.ToBoolean(result);
                     }
                     catch (Exception ex)
                     {
@@ -85,7 +81,7 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "SELECT FullName, Email, Phone, Position, Status, ProfileImage FROM Employees WHERE EmployeeID = @EmployeeID";
+                string query = "SELECT LastName, FirstName, MiddleName, Email, Phone, Position, Status, ProfileImage FROM Employees WHERE EmployeeID = @EmployeeID";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@EmployeeID", employeeID);
@@ -94,7 +90,9 @@ namespace RRCManagementSystem
 
                     if (reader.Read())
                     {
-                        txtFullName.Text = reader["FullName"].ToString();
+                        txtLastName.Text = reader["LastName"].ToString();
+                        txtFirstName.Text = reader["FirstName"].ToString();
+                        txtMiddleName.Text = reader["MiddleName"].ToString();
                         txtEmail.Text = reader["Email"].ToString();
                         txtPhone.Text = reader["Phone"].ToString();
                         ddlPosition.SelectedValue = reader["Position"].ToString();
@@ -123,7 +121,9 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string fullName = txtFullName.Text.Trim();
+            string lastName = txtLastName.Text.Trim();
+            string firstName = txtFirstName.Text.Trim();
+            string middleName = txtMiddleName.Text.Trim();
             string email = txtEmail.Text.Trim();
             string phone = txtPhone.Text.Trim();
             string position = ddlPosition.SelectedValue;
@@ -166,7 +166,8 @@ namespace RRCManagementSystem
             {
                 string updateQuery = @"
                     UPDATE Employees 
-                    SET FullName = @FullName, Email = @Email, Phone = @Phone, 
+                    SET LastName = @LastName, FirstName = @FirstName, MiddleName = @MiddleName,
+                        Email = @Email, Phone = @Phone, 
                         Position = @Position, Status = @Status, ProfileImage = @ProfileImage
                     WHERE EmployeeID = @EmployeeID";
 
@@ -175,7 +176,9 @@ namespace RRCManagementSystem
                     string employeeID = Request.QueryString["EmployeeID"];
 
                     cmd.Parameters.AddWithValue("@EmployeeID", employeeID);
-                    cmd.Parameters.AddWithValue("@FullName", fullName);
+                    cmd.Parameters.AddWithValue("@LastName", lastName);
+                    cmd.Parameters.AddWithValue("@FirstName", firstName);
+                    cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName);
                     cmd.Parameters.AddWithValue("@Email", email);
                     cmd.Parameters.AddWithValue("@Phone", phone);
                     cmd.Parameters.AddWithValue("@Position", position);
@@ -185,7 +188,7 @@ namespace RRCManagementSystem
                     conn.Open();
                     cmd.ExecuteNonQuery();
 
-                    // ✅ Audit log after successful update
+                    string fullName = $"{lastName}, {firstName}" + (string.IsNullOrWhiteSpace(middleName) ? "" : $" {middleName}");
                     AddAuditLog(adminId, $"Updated employee (ID: {employeeID}) - Name: {fullName}, Position: {position}, Status: {status}");
                 }
             }
@@ -194,7 +197,6 @@ namespace RRCManagementSystem
             lblMessage.ForeColor = System.Drawing.Color.Green;
         }
 
-        // ✅ Audit Log Method
         private void AddAuditLog(int? userID, string action)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -213,7 +215,7 @@ namespace RRCManagementSystem
                     }
                     catch
                     {
-                        // Optionally handle or log failure
+                        // Silent fail
                     }
                 }
             }

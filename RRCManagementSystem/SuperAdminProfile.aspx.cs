@@ -13,12 +13,12 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                // Ensure only logged-in SuperAdmin can access
-               /* if (Session["SuperAdminID"] == null)
+                // ✅ Ensure only logged-in SuperAdmin can access
+                if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
                 {
                     Response.Redirect("~/Login.aspx");
                     return;
-                } */
+                }
 
                 LoadProfile();
             }
@@ -26,7 +26,13 @@ namespace RRCManagementSystem
 
         private void LoadProfile()
         {
-            int superAdminId = Convert.ToInt32(Session["SuperAdminID"]);
+            if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int superAdminId = Convert.ToInt32(Session["UserID"]);
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -59,9 +65,16 @@ namespace RRCManagementSystem
             }
         }
 
+
         protected void btnSaveProfile_Click(object sender, EventArgs e)
         {
-            int superAdminId = Convert.ToInt32(Session["SuperAdminID"]);
+            if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int superAdminId = Convert.ToInt32(Session["UserID"]);
             string newName = txtName.Text.Trim();
             string newEmail = txtEmail.Text.Trim();
             string newPassword = txtNewPassword.Text.Trim();
@@ -78,64 +91,45 @@ namespace RRCManagementSystem
 
                 if (!string.IsNullOrEmpty(newPassword))
                 {
-                    // 🔐 Hash new password using Argon2
                     string hashedPassword = PasswordHelper.HashPassword(newPassword);
 
                     query = @"UPDATE Users
-                              SET Name = @Name,
-                                  Email = @Email,
-                                  PasswordHash = @PasswordHash
-                              WHERE UserID = @UserID AND Role = 'SuperAdmin'";
-
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@Name", newName);
-                        cmd.Parameters.AddWithValue("@Email", newEmail);
-                        cmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
-                        cmd.Parameters.AddWithValue("@UserID", superAdminId);
-
-                        try
-                        {
-                            conn.Open();
-                            cmd.ExecuteNonQuery();
-                            lblMessage.CssClass = "alert success";
-                            lblMessage.Text = "✅ Profile and password updated successfully!";
-                        }
-                        catch (Exception ex)
-                        {
-                            lblMessage.Text = "⚠ Error saving profile: " + ex.Message;
-                        }
-                    }
+                      SET Name = @Name,
+                          Email = @Email,
+                          PasswordHash = @PasswordHash
+                      WHERE UserID = @UserID AND Role = 'SuperAdmin'";
                 }
                 else
                 {
-                    // No password change
                     query = @"UPDATE Users
-                              SET Name = @Name,
-                                  Email = @Email
-                              WHERE UserID = @UserID AND Role = 'SuperAdmin'";
+                      SET Name = @Name,
+                          Email = @Email
+                      WHERE UserID = @UserID AND Role = 'SuperAdmin'";
+                }
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Name", newName);
+                    cmd.Parameters.AddWithValue("@Email", newEmail);
+                    if (!string.IsNullOrEmpty(newPassword))
+                        cmd.Parameters.AddWithValue("@PasswordHash", PasswordHelper.HashPassword(newPassword));
+                    cmd.Parameters.AddWithValue("@UserID", superAdminId);
+
+                    try
                     {
-                        cmd.Parameters.AddWithValue("@Name", newName);
-                        cmd.Parameters.AddWithValue("@Email", newEmail);
-                        cmd.Parameters.AddWithValue("@UserID", superAdminId);
-
-                        try
-                        {
-                            conn.Open();
-                            cmd.ExecuteNonQuery();
-                            lblMessage.CssClass = "alert success";
-                            lblMessage.Text = "✅ Profile updated successfully!";
-                        }
-                        catch (Exception ex)
-                        {
-                            lblMessage.Text = "⚠ Error saving profile: " + ex.Message;
-                        }
+                        conn.Open();
+                        cmd.ExecuteNonQuery();
+                        lblMessage.CssClass = "alert success";
+                        lblMessage.Text = "✅ Profile updated successfully!";
+                    }
+                    catch (Exception ex)
+                    {
+                        lblMessage.Text = "⚠ Error saving profile: " + ex.Message;
                     }
                 }
             }
         }
+
     }
 }
     

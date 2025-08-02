@@ -96,7 +96,7 @@
                 confirmButtonText: 'Yes, restore it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    __doPostBack(btn, userId);
+                    __doPostBack(btn, 'RestoreAdmin$' + userId); // ✅ CommandName$UserID
                 }
             });
             return false;
@@ -113,11 +113,12 @@
                 confirmButtonText: 'Yes, delete it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    __doPostBack(btn, userId);
+                    __doPostBack(btn, 'DeletePermanently$' + userId); // ✅ CommandName$UserID
                 }
             });
             return false;
         }
+
     </script>
 
 

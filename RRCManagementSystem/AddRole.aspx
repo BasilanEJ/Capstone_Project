@@ -33,7 +33,7 @@
         </div>
 
         <div style="text-align:center;">
-            <asp:Button ID="btnSave" runat="server" Text="Save Role"
+            <asp:Button ID="btnSave" runat="server" Text="Add Role"
                 OnClientClick="return showSaveConfirmation();" UseSubmitBehavior="false"
                 Style="padding:10px 20px; background-color:#1f2937; color:white; border:none; border-radius:5px; cursor:pointer;" />
         </div>

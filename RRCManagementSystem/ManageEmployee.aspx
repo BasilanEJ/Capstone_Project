@@ -37,6 +37,18 @@
                 </a>
             </div>
 
+
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+    <a href="ArchiveEmployee.aspx" class="text-decoration-none">
+        <div class="card shadow-sm h-100 text-center border-0 rounded-3 hover-shadow">
+            <div class="card-body d-flex flex-column justify-content-center align-items-center p-4">
+                <i class="fas fa-archive fa-2x text-primary mb-3"></i>
+                <h5 class="card-title fw-semibold text-dark">Archive Employees</h5>
+            </div>
+        </div>
+    </a>
+</div>
+
             <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                 <a href="EmployeeStatus.aspx" class="text-decoration-none">
                     <div class="card shadow-sm h-100 text-center border-0 rounded-3 hover-shadow">

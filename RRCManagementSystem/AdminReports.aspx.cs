@@ -169,9 +169,17 @@ namespace RRCManagementSystem
 
         private void LoadApprovedClients(DateTime from, DateTime to)
         {
-            string query = @"SELECT ClientID, Name, Email, CreatedAt,
-                             CONCAT(StreetAndUnit, ', ', Barangay, ', ', City, ', ', Region, ', ', Country) AS Address
-                             FROM Clients WHERE Status = 'Approved' AND CreatedAt BETWEEN @from AND @to";
+            string query = @"
+        SELECT 
+            ClientID, 
+            CONCAT(Lastname, ', ', Firstname, ' ', Middlename) AS FullName,
+            Email, 
+            CreatedAt,
+            CONCAT(StreetAndUnit, ', ', Barangay, ', ', City, ', ', Region, ', ', Country) AS Address
+        FROM Clients 
+        WHERE Status = 'Approved' 
+        AND CreatedAt BETWEEN @from AND @to";
+
             BindGrid(query, gvApprovedClients, from, to);
         }
 
@@ -196,36 +204,45 @@ namespace RRCManagementSystem
         private void LoadBookings(DateTime from, DateTime to)
         {
             string query = @"
-        SELECT 
-            b.BookingID,
-            c.Name AS ClientName,
-            (
-                SELECT STRING_AGG(s.Name, ', ')
-                FROM BookingServices bs
-                INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-                WHERE bs.BookingID = b.BookingID
-            ) AS Services,
-            t.GroupName AS TeamName,
-            b.ScheduledDate,
-            b.Status
-        FROM Bookings b
-        LEFT JOIN Clients c ON b.ClientID = c.ClientID
-        LEFT JOIN Teams t ON b.TeamID = t.TeamID
-        WHERE b.BookingDate BETWEEN @from AND @to
-        ORDER BY b.ScheduledDate DESC";
+    SELECT 
+        b.BookingID,
+        CONCAT(c.Lastname, ', ', c.Firstname, ' ', c.Middlename) AS ClientName,
+        (
+            SELECT STRING_AGG(s.Name, ', ')
+            FROM BookingServices bs
+            INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+            WHERE bs.BookingID = b.BookingID
+        ) AS Services,
+        t.GroupName AS TeamName,
+        b.ScheduledDate,
+        b.Status
+    FROM Bookings b
+    LEFT JOIN Clients c ON b.ClientID = c.ClientID
+    LEFT JOIN Teams t ON b.TeamID = t.TeamID
+    WHERE b.BookingDate BETWEEN @from AND @to
+    ORDER BY b.ScheduledDate DESC";
 
             BindGrid(query, gvBookings, from, to);
         }
 
+
         private void LoadInspections(DateTime from, DateTime to)
         {
-            string query = @"SELECT ins.InspectionID, usr.Name AS InspectorName, iq.Name AS ClientName,
-                             (iq.StreetAndUnit + ', ' + iq.Barangay + ', ' + iq.City + ', ' + iq.Region + ', ' + iq.Country) AS ClientAddress,
-                             ins.ScheduledDate, ins.InspectionStatus, ins.Remarks
-                             FROM Inspections ins
-                             LEFT JOIN InquirySimple iq ON ins.InquiryID = iq.InquiryID
-                             LEFT JOIN Users usr ON ins.InspectorID = usr.UserID
-                             WHERE ins.ScheduledDate BETWEEN @from AND @to ORDER BY ins.ScheduledDate DESC";
+            string query = @"
+        SELECT 
+            ins.InspectionID,
+            usr.Name AS InspectorName,
+            iq.Name AS ClientName,
+            (iq.StreetAndUnit + ', ' + iq.Barangay + ', ' + iq.City + ', ' + iq.Region + ', ' + iq.Country) AS ClientAddress,
+            ins.ScheduledDate,
+            ins.InspectionStatus,
+            ins.Remarks
+        FROM Inspections ins
+        LEFT JOIN InquirySimple iq ON ins.InquiryID = iq.InquiryID
+        LEFT JOIN Users usr ON ins.InspectorID = usr.UserID
+        WHERE ins.ScheduledDate BETWEEN @from AND @to
+        ORDER BY ins.ScheduledDate DESC";
+
             BindGrid(query, gvInspections, from, to);
         }
 
@@ -340,7 +357,9 @@ namespace RRCManagementSystem
             PdfWriter writer = PdfWriter.GetInstance(doc, ms);
             writer.PageEvent = new PdfWatermark();
 
-            string userPassword = Session["Password"]?.ToString() ?? "default123";
+           string userPassword = "default123";
+
+
 
             writer.SetEncryption(
                 Encoding.UTF8.GetBytes(userPassword),

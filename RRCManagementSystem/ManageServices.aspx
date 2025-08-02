@@ -63,13 +63,14 @@
     <h2 class="page-title">🪲 Manage Pest Control Services</h2>
 
     <div class="services-links-container">
+           <a href="AddServices.aspx" class="services-card">
+       <i class="fas fa-plus"></i>
+       <div class="services-card-title">Add New Service</div>
+   </a>
         <a href="ViewServices.aspx" class="services-card">
             <i class="fas fa-list"></i>
             <div class="services-card-title">View Services</div>
         </a>
-        <a href="AddServices.aspx" class="services-card">
-            <i class="fas fa-plus"></i>
-            <div class="services-card-title">Add New Service</div>
-        </a>
+    
     </div>
 </asp:Content>

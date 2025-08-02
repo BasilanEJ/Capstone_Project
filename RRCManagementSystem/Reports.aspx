@@ -1,105 +1,49 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="Reports.aspx.cs" Inherits="RRCManagementSystem.Reports" %>
-
+﻿<%@ Page Title="Reports" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="Reports.aspx.cs" Inherits="RRCManagementSystem.Reports" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        .report-container {
-            width: 90%;
-            margin: 20px auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .report-container h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .filters {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .filters label {
-            font-weight: bold;
-        }
-
-        .filters input, .filters select {
-            padding: 8px;
-            width: 200px;
-            margin-left: 10px;
-        }
-
-        .grid {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .grid th, .grid td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-
-        .grid th {
-            background-color: #007bff;
-            color: #fff;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            background-color: #0056b3;
-        }
-
-        .message {
-            text-align: center;
-            color: red;
-            margin-bottom: 10px;
-        }
-    </style>
-
-    <div class="report-container">
-        <h2>Reports</h2>
-
-        <asp:Label ID="lblMessage" runat="server" CssClass="message"></asp:Label>
-
-        <div class="filters">
-            <div>
-                <label for="ddlReportType">Select Report:</label>
-                <asp:DropDownList ID="ddlReportType" runat="server" AutoPostBack="true" CssClass="form-control" OnSelectedIndexChanged="ddlReportType_SelectedIndexChanged">
-                    <asp:ListItem Text="Select Report" Value="" />
-                    <asp:ListItem Text="Admin Activity" Value="AdminActivity" />
-                    <asp:ListItem Text="Sales" Value="Sales" />
-                    <asp:ListItem Text="Audit Logs" Value="AuditLogs" />
-                    <asp:ListItem Text="Work Orders" Value="WorkOrders" />
-                </asp:DropDownList>
+    <div class="container my-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white fw-bold text-center">
+                Reports Dashboard
             </div>
+            <div class="card-body">
 
-            <div>
-                <label for="txtDateFrom">Date From:</label>
-                <asp:TextBox ID="txtDateFrom" runat="server" CssClass="form-control" TextMode="Date" />
+                <!-- Feedback Message -->
+                <asp:Label ID="lblMessage" runat="server" CssClass="text-danger d-block text-center mb-3" />
 
-                <label for="txtDateTo" style="margin-left: 10px;">Date To:</label>
-                <asp:TextBox ID="txtDateTo" runat="server" CssClass="form-control" TextMode="Date" />
-            </div>
+                  <asp:Label ID="lblDebug" runat="server" CssClass="text-muted small d-block text-center mb-3" />
+                <!-- Filter Section -->
+                <div class="row g-3 align-items-end mb-4">
+                    <div class="col-md-4">
+                        <label for="ddlModule" class="form-label">Select Module</label>
+                        <asp:DropDownList ID="ddlModule" runat="server" CssClass="form-select">
+                            <asp:ListItem Text="-- Select Module --" Value="" />
+                            <asp:ListItem Text="User Accounts" Value="Admins" />
+                            <asp:ListItem Text="Archived Admins" Value="ArchivedAdmins" />
+                            <asp:ListItem Text="Roles" Value="Roles" />
+                            <asp:ListItem Text="Audit Logs" Value="AuditLogs" />
+                            <asp:ListItem Text="System Changes" Value="SystemChanges" />
+                        </asp:DropDownList>
+                    </div>
 
-            <div>
-                <asp:Button ID="btnGenerate" runat="server" Text="Generate Report" CssClass="btn" OnClick="btnGenerate_Click" />
+                    <div class="col-md-3">
+                        <label for="txtDateFrom" class="form-label">Date From</label>
+                        <asp:TextBox ID="txtDateFrom" runat="server" CssClass="form-control" TextMode="Date" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="txtDateTo" class="form-label">Date To</label>
+                        <asp:TextBox ID="txtDateTo" runat="server" CssClass="form-control" TextMode="Date" />
+                    </div>
+
+                    <div class="col-md-2 d-grid">
+                        <asp:Button ID="btnGenerate" runat="server" Text="Generate" CssClass="btn btn-success" OnClick="btnGenerate_Click" />
+                    </div>
+                </div>
+
+                <!-- Grid View -->
+                <asp:GridView ID="gvReports" runat="server" CssClass="table table-bordered table-striped text-center" AutoGenerateColumns="True" EmptyDataText="No records found." />
             </div>
         </div>
-
-        <asp:GridView ID="gvReports" runat="server" CssClass="grid" AutoGenerateColumns="True" EmptyDataText="No data available."></asp:GridView>
     </div>
 </asp:Content>
-

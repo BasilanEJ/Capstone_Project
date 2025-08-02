@@ -19,7 +19,12 @@
                     OnRowCommand="gvClients_RowCommand">
                     <Columns>
                         <asp:BoundField DataField="ClientID" HeaderText="Client ID" ReadOnly="True" />
-                        <asp:BoundField DataField="Name" HeaderText="Name" />
+                        <asp:TemplateField HeaderText="Name">
+                            <ItemTemplate>
+                                <%# Eval("LastName") %>, <%# Eval("FirstName") %> <%# Eval("MiddleName") %>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+
                         <asp:BoundField DataField="Email" HeaderText="Email" />
                         <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
                         <asp:BoundField DataField="City" HeaderText="City" />

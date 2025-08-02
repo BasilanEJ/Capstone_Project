@@ -74,7 +74,7 @@ namespace RRCManagementSystem
                     string query = @"
 SELECT 
     b.BookingID,
-    c.Name AS ClientName,
+    (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName, '')) AS ClientName,
     b.ServiceNames AS ServiceName,
     b.ScheduledDate,
     b.StartTime,
@@ -86,7 +86,9 @@ SELECT
 FROM Bookings b
 INNER JOIN Clients c ON b.ClientID = c.ClientID
 WHERE 
-    (@SearchTerm IS NULL OR c.Name LIKE '%' + @SearchTerm + '%' OR b.ServiceNames LIKE '%' + @SearchTerm + '%')
+    (@SearchTerm IS NULL OR c.LastName LIKE '%' + @SearchTerm + '%' 
+     OR c.FirstName LIKE '%' + @SearchTerm + '%' 
+     OR b.ServiceNames LIKE '%' + @SearchTerm + '%')
     AND (@Status IS NULL OR b.Status = @Status)
 ORDER BY b.CreatedAt DESC";
 

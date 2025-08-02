@@ -61,6 +61,12 @@
                 .burger-menu { display: block; }
                 .content { margin-left: 0; }
             }
+
+            .sidebar_menu li a.active {
+    background-color: #2563eb; /* or any highlight color */
+    font-weight: bold;
+}
+
         </style>
 
         <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
@@ -68,6 +74,7 @@
 
     <body>
         <form id="form1" runat="server">
+            <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="false" />
             <!-- Header -->
             <header class="header">
                 <div class="logo-container">
@@ -98,55 +105,107 @@
             {
         %>
             <% if (allowed.Contains("Dashboard")) { %>
-                <li><a href='<%= ResolveUrl("~/Dashboard.aspx") %>'><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("Dashboard.aspx") %>' href='<%= ResolveUrl("~/Dashboard.aspx") %>'>
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("ManageInquiry")) { %>
-                <li><a href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'><i class="fas fa-file-alt"></i> Manage Inquiry</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("ManageInquiry.aspx") %>' href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'>
+                        <i class="fas fa-file-alt"></i> Manage Inquiry
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("CreateCustomerAccount")) { %>
-                <li><a href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'><i class="fas fa-user-plus"></i> Create Customer Account</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("CreateCustomerAccount.aspx") %>' href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
+                        <i class="fas fa-user-plus"></i> Create Customer Account
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("ManageEmployees")) { %>
-                <li><a href='<%= ResolveUrl("~/ManageEmployee.aspx") %>'><i class="fas fa-user-tie"></i> Manage Employees</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("ManageEmployee.aspx") %>' href='<%= ResolveUrl("~/ManageEmployee.aspx") %>'>
+                        <i class="fas fa-user-tie"></i> Manage Employees
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("ManageItem")) { %>
-                <li><a href='<%= ResolveUrl("~/ManageItem.aspx") %>'><i class="fas fa-boxes"></i> Manage Items</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("ManageItem.aspx") %>' href='<%= ResolveUrl("~/ManageItem.aspx") %>'>
+                        <i class="fas fa-boxes"></i> Manage Items
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("ManageEquipment")) { %>
-                <li><a href='<%= ResolveUrl("~/ManageEquipment.aspx") %>'><i class="fas fa-tools"></i> Manage Equipment</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("ManageEquipment.aspx") %>' href='<%= ResolveUrl("~/ManageEquipment.aspx") %>'>
+                        <i class="fas fa-tools"></i> Manage Equipment
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("ManageClient")) { %>
-                <li><a href='<%= ResolveUrl("~/ManageClient.aspx") %>'><i class="fas fa-users"></i> Clients</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("ManageClient.aspx") %>' href='<%= ResolveUrl("~/ManageClient.aspx") %>'>
+                        <i class="fas fa-users"></i> Clients
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("ManageBooking")) { %>
-                <li><a href='<%= ResolveUrl("~/ManageBooking.aspx") %>'><i class="fas fa-book"></i> Bookings</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("ManageBooking.aspx") %>' href='<%= ResolveUrl("~/ManageBooking.aspx") %>'>
+                        <i class="fas fa-book"></i> Bookings
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("Sales&Transaction")) { %>
-                <li><a href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'><i class="fas fa-receipt"></i> Sales & Transactions</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("SalesAndTransactions.aspx") %>' href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'>
+                        <i class="fas fa-receipt"></i> Sales & Transactions
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("ManageSupplier")) { %>
-                <li><a href='<%= ResolveUrl("~/ManageSupplier.aspx") %>'><i class="fas fa-box"></i> Manage Supplier</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("ManageSupplier.aspx") %>' href='<%= ResolveUrl("~/ManageSupplier.aspx") %>'>
+                        <i class="fas fa-box"></i> Manage Supplier
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("ManageServices")) { %>
-                <li><a href='<%= ResolveUrl("~/ManageServices.aspx") %>'><i class="fas fa-bug"></i> Manage Services</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("ManageServices.aspx") %>' href='<%= ResolveUrl("~/ManageServices.aspx") %>'>
+                        <i class="fas fa-bug"></i> Manage Services
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("AdminReports")) { %>
-                <li><a href='<%= ResolveUrl("~/AdminReports.aspx") %>'><i class="fas fa-chart-bar"></i> Reports</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("AdminReports.aspx") %>' href='<%= ResolveUrl("~/AdminReports.aspx") %>'>
+                        <i class="fas fa-chart-bar"></i> Reports
+                    </a>
+                </li>
             <% } %>
 
             <% if (allowed.Contains("AdminGuide")) { %>
-                <li><a href='<%= ResolveUrl("~/AdminGuide.aspx") %>'><i class="fas fa-book-open"></i> Admin Guide</a></li>
+                <li>
+                    <a class='<%= GetActiveClass("AdminGuide.aspx") %>' href='<%= ResolveUrl("~/AdminGuide.aspx") %>'>
+                        <i class="fas fa-book-open"></i> Admin Guide
+                    </a>
+                </li>
             <% } %>
         <%
             }
@@ -165,6 +224,7 @@
         </li>
     </ul>
 </nav>
+
 
 
 

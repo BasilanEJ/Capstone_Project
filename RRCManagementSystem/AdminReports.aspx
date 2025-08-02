@@ -172,12 +172,13 @@
                 <%# "Client" + String.Format("{0:D4}", Eval("ClientID")) %>
             </ItemTemplate>
         </asp:TemplateField>
-        <asp:BoundField DataField="Name" HeaderText="Name" />
+        <asp:BoundField DataField="FullName" HeaderText="Name" />
         <asp:BoundField DataField="Email" HeaderText="Email" />
         <asp:BoundField DataField="Address" HeaderText="Address" />
         <asp:BoundField DataField="CreatedAt" HeaderText="Date Created" DataFormatString="{0:yyyy-MM-dd}" />
     </Columns>
 </asp:GridView>
+
 <asp:Button ID="btnExportClients" runat="server" Text="Export Clients to PDF" CssClass="btn-sales" OnClick="btnExportClients_Click" />
 
 <h3>📦 Total Stocks Snapshot (Daily)</h3>

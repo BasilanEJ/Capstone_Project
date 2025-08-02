@@ -4,7 +4,7 @@
 <html lang="en">
 <head runat="server">
     <meta charset="utf-8" />
-    <title>SuperAdmin Panel</title>
+    <title>SystemAdmin Panel</title>
 
     <!-- Bootstrap 5 & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -35,6 +35,11 @@
                 width: 100% !important;
             }
         }
+        .nav-link.active {
+    background-color: #198754 !important;
+    font-weight: bold;
+}
+
     </style>
 
     <script type="text/javascript">
@@ -68,50 +73,92 @@
         </header>
 
         <!-- Sidebar -->
-        <aside id="sidebar" class="bg-black text-white position-fixed d-flex flex-column" style="top: 60px; left: 0; width: 280px; height: calc(100vh - 60px); overflow-y: auto;">
-            <ul class="nav flex-column">
-                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="SuperAdminDashboard.aspx"><i class="fas fa-home me-2"></i> Dashboard</a></li>
+       <aside id="sidebar" class="bg-black text-white position-fixed d-flex flex-column" style="top: 60px; left: 0; width: 280px; height: calc(100vh - 60px); overflow-y: auto;">
+    <ul class="nav flex-column">
+        <li class="nav-item border-bottom">
+            <a class='nav-link text-white px-4 py-3 <%= GetActiveClass("SuperAdminDashboard.aspx") %>' href="SuperAdminDashboard.aspx">
+                <i class="fas fa-home me-2"></i> Dashboard
+            </a>
+        </li>
 
-                <li class="nav-item has-dropdown border-bottom">
-                    <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-user-shield me-2"></i> Manage Admins</span><i class="fas fa-chevron-down"></i>
+        <li class="nav-item has-dropdown border-bottom">
+            <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-user-shield me-2"></i> Manage Admins</span><i class="fas fa-chevron-down"></i>
+            </a>
+            <ul class="nav flex-column accordion d-none bg-dark">
+                <li>
+                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("ViewAdmin.aspx") %>' href="ViewAdmin.aspx">
+                        <i class="fas fa-list me-2"></i> View Users
                     </a>
-                    <ul class="nav flex-column accordion d-none bg-dark">
-                        <li><a class="nav-link text-white ps-5 py-2" href="ViewAdmin.aspx"><i class="fas fa-list me-2"></i> View Users</a></li>
-                        <li><a class="nav-link text-white ps-5 py-2" href="AddAdmin.aspx"><i class="fas fa-plus me-2"></i> Add User</a></li>
-                        <li><a class="nav-link text-white ps-5 py-2" href="ArchivedAdmins.aspx"><i class="fas fa-archive me-2"></i> Archive User Accounts</a></li>
-                    </ul>
                 </li>
-
-                <li class="nav-item has-dropdown border-bottom">
-                    <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-user-tag me-2"></i> Manage Roles</span><i class="fas fa-chevron-down"></i>
+                <li>
+                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("AddAdmin.aspx") %>' href="AddAdmin.aspx">
+                        <i class="fas fa-plus me-2"></i> Add User
                     </a>
-                    <ul class="nav flex-column accordion d-none bg-dark">
-                        <li><a class="nav-link text-white ps-5 py-2" href="ViewRole.aspx"><i class="fas fa-list me-2"></i> View Roles</a></li>
-                        <li><a class="nav-link text-white ps-5 py-2" href="AddRole.aspx"><i class="fas fa-plus me-2"></i> Add Role</a></li>
-                    </ul>
                 </li>
-
-                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="AuditLogs.aspx"><i class="fas fa-file-alt me-2"></i> Audit Logs</a></li>
-
-                <li class="nav-item has-dropdown border-bottom">
-                    <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-cogs me-2"></i> System Settings</span><i class="fas fa-chevron-down"></i>
+                <li>
+                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("ArchivedAdmins.aspx") %>' href="ArchivedAdmins.aspx">
+                        <i class="fas fa-archive me-2"></i> Archive User Accounts
                     </a>
-                    <ul class="nav flex-column accordion d-none bg-dark">
-                        <li><a class="nav-link text-white ps-5 py-2" href="SystemChanges.aspx"><i class="fas fa-tools me-2"></i> System Changes</a></li>
-                    </ul>
                 </li>
-
-                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="Reports.aspx"><i class="fas fa-chart-bar me-2"></i> Reports</a></li>
-                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="SuperAdminProfile.aspx"><i class="fas fa-user-cog me-2"></i> My Profile</a></li>
             </ul>
+        </li>
 
-            <asp:LinkButton ID="btnLogout" runat="server" CssClass="btn btn-danger fw-bold w-75 mx-auto my-4 d-block" OnClick="btnLogout_Click">
-                <i class="fas fa-sign-out-alt me-2"></i> Logout
-            </asp:LinkButton>
-        </aside>
+        <li class="nav-item has-dropdown border-bottom">
+            <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-user-tag me-2"></i> Manage Roles</span><i class="fas fa-chevron-down"></i>
+            </a>
+            <ul class="nav flex-column accordion d-none bg-dark">
+                <li>
+                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("ViewRole.aspx") %>' href="ViewRole.aspx">
+                        <i class="fas fa-list me-2"></i> View Roles
+                    </a>
+                </li>
+                <li>
+                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("AddRole.aspx") %>' href="AddRole.aspx">
+                        <i class="fas fa-plus me-2"></i> Add Role
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="nav-item border-bottom">
+            <a class='nav-link text-white px-4 py-3 <%= GetActiveClass("AuditLogs.aspx") %>' href="AuditLogs.aspx">
+                <i class="fas fa-file-alt me-2"></i> Audit Logs
+            </a>
+        </li>
+
+        <li class="nav-item has-dropdown border-bottom">
+            <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-cogs me-2"></i> System Settings</span><i class="fas fa-chevron-down"></i>
+            </a>
+            <ul class="nav flex-column accordion d-none bg-dark">
+                <li>
+                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("SystemChanges.aspx") %>' href="SystemChanges.aspx">
+                        <i class="fas fa-tools me-2"></i> System Changes
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="nav-item border-bottom">
+            <a class='nav-link text-white px-4 py-3 <%= GetActiveClass("Reports.aspx") %>' href="Reports.aspx">
+                <i class="fas fa-chart-bar me-2"></i> Reports
+            </a>
+        </li>
+
+        <li class="nav-item border-bottom">
+            <a class='nav-link text-white px-4 py-3 <%= GetActiveClass("SuperAdminProfile.aspx") %>' href="SuperAdminProfile.aspx">
+                <i class="fas fa-user-cog me-2"></i> My Profile
+            </a>
+        </li>
+    </ul>
+
+    <asp:LinkButton ID="btnLogout" runat="server" CssClass="btn btn-danger fw-bold w-75 mx-auto my-4 d-block" OnClick="btnLogout_Click">
+        <i class="fas fa-sign-out-alt me-2"></i> Logout
+    </asp:LinkButton>
+</aside>
+
 
         <!-- Main Content -->
         <main id="mainContent" class="flex-grow-1" style="margin-left: 280px; margin-top: 60px; padding: 30px; background-color: #f3f4f6; min-height: calc(100vh - 100px);">
@@ -120,7 +167,7 @@
 
         <!-- Footer -->
         <footer id="footer" class="bg-dark text-white text-center py-3 position-fixed bottom-0" style="left: 280px; width: calc(100% - 280px); z-index: 1030;">
-            &copy; 2025 RRC Management System - SuperAdmin
+            &copy; 2025 RRC Management System - SystemAdmin
         </footer>
     </form>
 

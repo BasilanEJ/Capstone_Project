@@ -185,11 +185,12 @@ h1 {
         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; cursor: pointer;">
 
     <!-- Vimeo Embedded Video (Initially Hidden) -->
-    <iframe id="vimeoVideo" 
-        src="https://player.vimeo.com/video/1009218555?autoplay=1&loop=1&muted=0"
-        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; display: none;"
-        frameborder="0" allow="autoplay; fullscreen" allowfullscreen>
-    </iframe>
+   <iframe id="vimeoVideo" 
+    src="https://player.vimeo.com/video/1009218555?loop=1&muted=0"
+    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; display: none;"
+    frameborder="0" allow="autoplay; fullscreen" allowfullscreen>
+</iframe>
+
 
     <!-- Play Button -->
     <div id="playButton" 
@@ -212,15 +213,19 @@ h1 {
     const vimeoVideo = document.getElementById("vimeoVideo");
 
     playButton.addEventListener("click", function () {
+        // Replace src to trigger autoplay
+        const src = vimeoVideo.getAttribute("src");
+        vimeoVideo.setAttribute("src", src + "&autoplay=1");
+
         videoThumbnail.style.display = "none"; // Hide thumbnail
-        playButton.style.display = "none"; // Hide play button
-        vimeoVideo.style.display = "block"; // Show the video iframe
+        playButton.style.display = "none";     // Hide play button
+        vimeoVideo.style.display = "block";    // Show video
     });
 </script>
 
 <section style="text-align: center; padding: 40px 0;">
     <h2 style="color: #0B2A63; font-size: 2rem; font-weight: bold;">
-        Our Certifications & Organizations
+         Certifications & Organizations
     </h2>
     
     <div style="display: flex; justify-content: center; align-items: center; margin-top: 20px;">
@@ -230,51 +235,39 @@ h1 {
 </section>
 
 
-    <section style="text-align: center; padding: 40px 20px; font-family: Arial, sans-serif;">
+<section style="text-align: center; padding: 40px 20px; font-family: Arial, sans-serif;">
     <h2 style="font-size: 24px; font-weight: bold; color: #121481;">What our customers are saying</h2>
 
-    <div style="display: flex; align-items: center; justify-content: center; margin-top: 20px; gap: 20px;">
-
-        <!-- Left Side: Facebook Reviews Box -->
-        <div style="width: 250px; text-align: left; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fff;">
-            <img src="/Images/rrclogo.jpg" alt="RRC Termite and Pest Control Logo" style="width: 100px; height: auto;">
-            <h3 style="font-size: 16px; margin: 10px 0;">RRC Termite and Pest Control Services</h3>
-            <p style="margin: 5px 0; font-size: 14px;">★★★★★</p>
-            <p style="font-size: 12px; color: #777;">41 Facebook reviews</p>
-          
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 20px;">
+        
+        <!-- Review 1 -->
+        <div style="width: 250px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <strong>Czarina Joy T. Chang</strong>
+            <p style="font-size: 12px; color: red;">❤️ recommends</p>
+            <p style="font-size: 14px; color: #333;">They were on time, very professional and mababait mga staff ni RRC team. Mabusisi sila sa bawat sulok ng bahay at maayos silang magtrabaho. Very polite and courteous pa yun technicians and staff na nag execute ng baiting system. Highly recommended! Good job!</p>
         </div>
 
-        <!-- Reviews Carousel (using simple flex scroll) -->
-        <div style="display: flex; overflow-x: auto; gap: 10px; scroll-snap-type: x mandatory; width: 70%; padding-bottom: 10px;">
-            
-            <!-- Review 1 -->
-            <div style="flex: 0 0 auto; width: 250px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); scroll-snap-align: start;">
-                <strong>Czarina Joy T. Chang</strong>
-                <p style="font-size: 12px; color: red;">❤️ recommends</p>
-                <p style="font-size: 14px; color: #333;">They were on time, very professional and mababait mga staff ni RRC team. Mabusisi sila sa bawat sulok ng bahay at maayos silang magtrabaho. Very polite and courteous pa yun technicians and staff na nag execute ng baiting system. Highly recommended! Good job!</p>
-            </div>
-
-            <!-- Review 2 -->
-            <div style="flex: 0 0 auto; width: 250px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); scroll-snap-align: start;">
-                <strong>Mel Lareza</strong>
-                <p style="font-size: 12px; color: red;">❤️ recommends</p>
-                <p style="font-size: 14px; color: #333;">Excellent Service!!! ⭐️⭐️⭐️⭐️⭐️</p>
-            </div>
-
-            <!-- Review 3 -->
-            <div style="flex: 0 0 auto; width: 250px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); scroll-snap-align: start;">
-                <strong>Dannica Manaluz.</strong>
-                <p style="font-size: 12px; color: red;">❤️ recommends</p>
-                <p style="font-size: 14px; color: #333;">very satisfied client here 5/5 stars ⭐️⭐️⭐️⭐️⭐️</p>
-            </div>
-
-               <div style="flex: 0 0 auto; width: 250px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); scroll-snap-align: start;">
-       <strong>Chelsea Erese Ong</strong>
-       <p style="font-size: 12px; color: red;">❤️ recommends</p>
-       <p style="font-size: 14px; color: #333;">RRC/Sir Victor and staff of technicians were very accommodating and understanding despite us having to change schedule of termite treatment. Packages were reasonably priced and they were open to discussion regarding payment terms. Team was also professional and they carefully discussed post treatment care with us.</p>
-   </div>
-
+        <!-- Review 2 -->
+        <div style="width: 250px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <strong>Mel Lareza</strong>
+            <p style="font-size: 12px; color: red;">❤️ recommends</p>
+            <p style="font-size: 14px; color: #333;">Excellent Service!!! ⭐️⭐️⭐️⭐️⭐️</p>
         </div>
+
+        <!-- Review 3 -->
+        <div style="width: 250px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <strong>Dannica Manaluz.</strong>
+            <p style="font-size: 12px; color: red;">❤️ recommends</p>
+            <p style="font-size: 14px; color: #333;">Very satisfied client here 5/5 stars ⭐️⭐️⭐️⭐️⭐️</p>
+        </div>
+
+        <!-- Review 4 -->
+        <div style="width: 250px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <strong>Chelsea Erese Ong</strong>
+            <p style="font-size: 12px; color: red;">❤️ recommends</p>
+            <p style="font-size: 14px; color: #333;">RRC/Sir Victor and staff of technicians were very accommodating and understanding despite us having to change schedule of termite treatment...</p>
+        </div>
+
     </div>
 </section>
 
@@ -292,13 +285,21 @@ h1 {
                 <h1 style="font-size: 28px; font-weight: 700; color: #1a202c; margin-bottom: 20px;">Free Inspection</h1>
                 <p style="font-size: 14px; color: #1a202c; margin-bottom: 25px;">Schedule today! Please fill-in this form and RRC Pest and Termite Control Representative will contact you soon.</p>
 
-                <!-- Email -->
-                <div style="margin-bottom: 15px;">
-                    <asp:Label runat="server" AssociatedControlID="txtEmail" Text="Your email *" />
-                    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email"
-                        placeholder="email@gmail.com" required
-                        style="width: 100%; border: none; border-bottom: 2px solid #1a202c; padding: 10px; background: transparent; color: #1a202c; font-size: 14px;" />
-                </div>
+               <!-- Email -->
+<div style="margin-bottom: 15px;">
+    <asp:Label runat="server" AssociatedControlID="txtEmail" Text="Your email *" />
+    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email"
+        placeholder="email@gmail.com" required
+        style="width: 100%; border: none; border-bottom: 2px solid #1a202c; padding: 10px; background: transparent; color: #1a202c; font-size: 14px;" />
+    
+    <!-- Email domain validator -->
+    <asp:RegularExpressionValidator ID="revEmail" runat="server" ControlToValidate="txtEmail"
+        ErrorMessage="Please enter a valid Gmail, Yahoo, or Outlook email address."
+        ForeColor="Red"
+        Display="Dynamic"
+        ValidationExpression="^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$" />
+</div>
+
 
                 <!-- Contact -->
                 <asp:TextBox ID="txtContactNumber" runat="server" CssClass="form-control" 
@@ -310,13 +311,15 @@ h1 {
                 <div style="margin-bottom: 15px;">
                     <asp:Label runat="server" AssociatedControlID="fuPestPhoto" Text="Photo of Pest (optional)" />
                     <asp:FileUpload ID="fuPestPhoto" runat="server"
-                        style="width: 100%; background: white; padding: 8px; border-radius: 4px;" />
+    style="width: 100%; background: white; padding: 8px; border-radius: 4px;"
+    accept=".png,.jpg,.jpeg,image/png,image/jpeg" />
+
                     <small style="color: #1a202c;">Upload a photo if available.</small>
                 </div>
 
                 <!-- Message -->
                 <div style="margin-bottom: 15px;">
-                    <asp:Label runat="server" AssociatedControlID="txtMessage" Text="Your message *" />
+                    <asp:Label runat="server" AssociatedControlID="txtMessage" Text="Describe what you observed*" />
                     <asp:TextBox ID="txtMessage" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="4"
                         placeholder="Describe what you observed..." required
                         style="width: 100%; border-radius: 4px; padding: 10px; font-size: 14px;" />
@@ -351,7 +354,7 @@ h1 {
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
       </div>
 
     </div>
@@ -395,7 +398,7 @@ h1 {
 
     window.onload = function () {
         // Commenting this out for now so you always see the popup
-        // if (!localStorage.getItem('cookieConsentAccepted')) {
+        if (!localStorage.getItem('cookieConsentAccepted')) {
         setTimeout(function () {
             document.getElementById('cookieConsentBanner').classList.add('show');
         }, 500); // Delay 0.5s before showing
@@ -406,7 +409,7 @@ h1 {
         const checkbox = document.getElementById('chkCookiePolicy');
         if (checkbox.checked) {
             // Commented out so it won't save to localStorage for now
-            // localStorage.setItem('cookieConsentAccepted', 'true');
+             localStorage.setItem('cookieConsentAccepted', 'true');
 
             // Fade out smoothly
             const banner = document.getElementById('cookieConsentBanner');

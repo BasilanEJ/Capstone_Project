@@ -51,7 +51,17 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "SELECT ClientID, Name FROM Clients WHERE Status = 'Approved'";
+                string query = @"
+            SELECT 
+                ClientID, 
+                LastName + ', ' + FirstName +
+                CASE 
+                    WHEN MiddleName IS NULL OR LTRIM(RTRIM(MiddleName)) = '' THEN ''
+                    ELSE ' ' + MiddleName
+                END AS Name
+            FROM Clients
+            WHERE Status = 'Approved'";
+
                 SqlCommand cmd = new SqlCommand(query, conn);
                 conn.Open();
                 SqlDataReader reader = cmd.ExecuteReader();
@@ -62,6 +72,7 @@ namespace RRCManagementSystem
                 ddlClients.Items.Insert(0, new ListItem("-- Select Client --", ""));
             }
         }
+
 
         protected void btnUpload_Click(object sender, EventArgs e)
         {

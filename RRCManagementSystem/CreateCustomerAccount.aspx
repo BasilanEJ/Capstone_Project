@@ -8,83 +8,110 @@
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
     <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="true" />
 
-    <div class="container my-5">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white text-center fw-bold">
-                Create Customer Account
+   <div class="container my-5">
+    <div class="card shadow-sm mx-auto" style="max-width: 800px;">
+        <div class="card-header bg-primary text-white text-center fw-bold fs-5">
+            Create Customer Account
+        </div>
+        <div class="card-body px-4 py-4">
+            <p class="text-muted text-center mb-4">
+                An email will be sent to the client to set their password.
+            </p>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Last Name *</label>
+                    <asp:TextBox ID="txtLastName" runat="server" CssClass="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">First Name *</label>
+                    <asp:TextBox ID="txtFirstName" runat="server" CssClass="form-control" />
+                </div>
             </div>
-            <div class="card-body">
-                <p class="text-muted text-center mb-4">An email will be sent to the client to set their password.</p>
 
-                <div class="mb-3">
-                    <label class="form-label">Name *</label>
-                    <asp:TextBox ID="txtName" runat="server" CssClass="form-control" />
+          <div class="row mb-3">
+    <div class="col-md-4">
+        <label class="form-label">Middle Name</label>
+        <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-control" />
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Email *</label>
+        <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" />
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Contact Number *</label>
+        <asp:TextBox ID="txtContact" runat="server" CssClass="form-control" />
+    </div>
+</div>
+
+          <div class="row mb-3">
+    <div class="col-md-4">
+        <label class="form-label">Country *</label>
+        <asp:TextBox ID="txtCountry" runat="server" CssClass="form-control" Text="Philippines" />
+    </div>
+
+    <asp:UpdatePanel ID="UpdatePanel1" runat="server" class="col-md-8">
+        <ContentTemplate>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Region *</label>
+                    <asp:DropDownList ID="ddlRegion" runat="server" AutoPostBack="true" CssClass="form-select" OnSelectedIndexChanged="ddlRegion_SelectedIndexChanged" />
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Email *</label>
-                    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" />
+                <div class="col-md-6">
+                    <label class="form-label">City *</label>
+                    <asp:DropDownList ID="ddlCity" runat="server" CssClass="form-select" />
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Contact Number *</label>
-                    <asp:TextBox ID="txtContact" runat="server" CssClass="form-control" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Country *</label>
-                    <asp:TextBox ID="txtCountry" runat="server" CssClass="form-control" Text="Philippines" />
-                </div>
-
-                <asp:UpdatePanel ID="UpdatePanel1" runat="server">
-                    <ContentTemplate>
-                        <div class="mb-3">
-                            <label class="form-label">Region *</label>
-                            <asp:DropDownList ID="ddlRegion" runat="server" AutoPostBack="true" CssClass="form-select" OnSelectedIndexChanged="ddlRegion_SelectedIndexChanged" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">City *</label>
-                            <asp:DropDownList ID="ddlCity" runat="server" CssClass="form-select" />
-                        </div>
-                    </ContentTemplate>
-                    <Triggers>
-                        <asp:AsyncPostBackTrigger ControlID="ddlRegion" EventName="SelectedIndexChanged" />
-                    </Triggers>
-                </asp:UpdatePanel>
-
-                <div class="mb-3">
-                    <label class="form-label">Barangay *</label>
-                    <asp:TextBox ID="txtBarangay" runat="server" CssClass="form-control" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Street & Unit *</label>
-                    <asp:TextBox ID="txtStreet" runat="server" CssClass="form-control" />
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label">Landmark</label>
-                    <asp:TextBox ID="txtLandmark" runat="server" CssClass="form-control" />
-                </div>
-
-                <asp:Button ID="btnCreate" runat="server" Text="Create Account" CssClass="btn btn-primary w-100" OnClick="btnCreate_Click" />
             </div>
+        </ContentTemplate>
+        <Triggers>
+            <asp:AsyncPostBackTrigger ControlID="ddlRegion" EventName="SelectedIndexChanged" />
+        </Triggers>
+    </asp:UpdatePanel>
+</div>
+
+
+           <div class="row mb-4">
+    <div class="col-md-4">
+        <label class="form-label">Barangay *</label>
+        <asp:TextBox ID="txtBarangay" runat="server" CssClass="form-control" />
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Street & Unit *</label>
+        <asp:TextBox ID="txtStreet" runat="server" CssClass="form-control" />
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Landmark</label>
+        <asp:TextBox ID="txtLandmark" runat="server" CssClass="form-control" />
+    </div>
+</div>
+
+
+            <asp:Button ID="btnCreate" runat="server" Text="Create Account" CssClass="btn btn-primary w-100" OnClick="btnCreate_Click" />
         </div>
     </div>
+</div>
+
 
     <asp:Literal ID="ltScript" runat="server" />
 
     <script type="text/javascript">
         window.onload = function () {
-            const nameInput = document.getElementById('<%= txtName.ClientID %>');
+            const lastNameInput = document.getElementById('<%= txtLastName.ClientID %>');
+            const firstNameInput = document.getElementById('<%= txtFirstName.ClientID %>');
             const contactInput = document.getElementById('<%= txtContact.ClientID %>');
 
-            // Block numbers in name field
-            nameInput.addEventListener('keypress', function (e) {
-                const charCode = e.which || e.keyCode;
-                if (charCode >= 48 && charCode <= 57) {
-                    e.preventDefault();
-                }
+            // Block numbers in LastName and FirstName
+            [lastNameInput, firstNameInput].forEach(function (input) {
+                input.addEventListener('keypress', function (e) {
+                    const charCode = e.which || e.keyCode;
+                    if (charCode >= 48 && charCode <= 57) {
+                        e.preventDefault();
+                    }
+                });
             });
 
             // Allow only digits in contact number
@@ -110,5 +137,5 @@
                 }
             });
         };
-</script>
+    </script>
 </asp:Content>

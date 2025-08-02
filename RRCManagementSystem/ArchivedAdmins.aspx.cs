@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
@@ -140,5 +141,20 @@ namespace RRCManagementSystem
                 }
             }
         }
+
+        protected override void Render(System.Web.UI.HtmlTextWriter writer)
+        {
+            foreach (GridViewRow row in gvArchivedAdmins.Rows)
+            {
+                string userId = gvArchivedAdmins.DataKeys[row.RowIndex].Value.ToString();
+
+                ClientScript.RegisterForEventValidation(gvArchivedAdmins.UniqueID, "RestoreAdmin$" + userId);
+                ClientScript.RegisterForEventValidation(gvArchivedAdmins.UniqueID, "DeletePermanently$" + userId);
+            }
+
+            base.Render(writer);
+        }
+
+
     }
 }

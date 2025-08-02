@@ -76,9 +76,9 @@ namespace RRCManagementSystem
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     string query = @"
-                       SELECT 
+SELECT 
     b.BookingID,
-    c.Name AS ClientName,
+    (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName, '')) AS ClientName,
     b.ServiceNames AS ServiceName,
     b.ScheduledDate,
     b.StartTime,
@@ -88,8 +88,8 @@ namespace RRCManagementSystem
 FROM Bookings b
 INNER JOIN Clients c ON b.ClientID = c.ClientID
 WHERE b.Status = 'Pending'
-ORDER BY b.ScheduledDate ASC
-";
+ORDER BY b.ScheduledDate ASC";
+
 
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     DataTable dt = new DataTable();

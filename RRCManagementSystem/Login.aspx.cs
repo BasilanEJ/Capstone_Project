@@ -167,7 +167,15 @@ namespace RRCManagementSystem
                         reader.Close();
 
                         // Check in Clients table
-                        string clientQuery = @"SELECT ClientID, Name, PasswordHash, Status FROM Clients WHERE Email = @Email";
+                        string clientQuery = @"
+SELECT 
+    ClientID, 
+    (Lastname + ', ' + Firstname + ' ' + Middlename) AS Name, 
+    PasswordHash, 
+    Status 
+FROM Clients 
+WHERE Email = @Email";
+
                         SqlCommand clientCmd = new SqlCommand(clientQuery, conn);
                         clientCmd.Parameters.AddWithValue("@Email", email);
 

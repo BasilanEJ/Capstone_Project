@@ -421,8 +421,7 @@ body {
             <div class="container text-center">
                 <p>&copy; <%= DateTime.Now.Year %> RRC Termite & Pest Control. All rights reserved.</p>
                 <p>Follow us: 
-                    <a href="#" class="text-white mx-2"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="text-white mx-2"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.facebook.com/rrcpestcontrolservice" class="text-white mx-2"><i class="fab fa-facebook-f"></i></a>
                 </p>
             </div>
         </footer>

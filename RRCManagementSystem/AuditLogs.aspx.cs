@@ -2,6 +2,8 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
@@ -13,107 +15,124 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                DeleteOldLogs(); // ✅ Auto-delete logs older than 30 days
-                LoadAuditLogs(); // Load current logs
+                LoadAuditLogs();
             }
         }
 
-        private void DeleteOldLogs()
+        protected void btnFilter_Click(object sender, EventArgs e)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string deleteQuery = @"
-                    DELETE FROM AuditLogs
-                    WHERE Timestamp < DATEADD(DAY, -30, GETDATE());";
-
-                using (SqlCommand cmd = new SqlCommand(deleteQuery, conn))
-                {
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                        // Optionally log how many rows were deleted if needed
-                    }
-                    catch (Exception ex)
-                    {
-                        LogError("DeleteOldLogs Error", ex);
-                    }
-                }
-            }
+            LoadAuditLogs();
         }
-
         private void LoadAuditLogs()
         {
+            DateTime? fromDate = null, toDate = null;
+
+            if (DateTime.TryParse(txtFrom.Text.Trim(), out DateTime fDate))
+                fromDate = fDate;
+
+            if (DateTime.TryParse(txtTo.Text.Trim(), out DateTime tDate))
+                toDate = tDate;
+
+            DataTable allLogs = new DataTable();
+
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-    SELECT 
-        al.LogID,
-        u.Name AS AdminName,
-        al.Action,
-        al.Timestamp
-    FROM AuditLogs al
-    INNER JOIN Users u ON al.AdminID = u.UserID
-    ORDER BY al.Timestamp DESC;";
+        SELECT 
+            a.LogID, 
+            u.Name AS AdminName, 
+            a.Action, 
+            a.Timestamp
+        FROM AuditLogs a
+        LEFT JOIN Users u ON a.AdminID = u.UserID
+        ORDER BY a.Timestamp DESC";
 
-
-                SqlDataAdapter da = new SqlDataAdapter(query, conn);
-                DataTable dt = new DataTable();
-
-                try
+                using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    da.Fill(dt);
-                    gvAuditLogs.DataSource = dt;
-                    gvAuditLogs.DataBind();
-                    lblMessage.Text = dt.Rows.Count == 0 ? "⚠ No audit logs found." : "";
+                    SqlDataAdapter da = new SqlDataAdapter(cmd);
+                    da.Fill(allLogs);
                 }
-                catch (Exception ex)
+            }
+
+            // Filter by date
+            if (fromDate.HasValue && toDate.HasValue)
+            {
+                var filteredRows = allLogs.AsEnumerable()
+                    .Where(row =>
+                    {
+                        DateTime ts = row.Field<DateTime>("Timestamp");
+                        return ts >= fromDate.Value && ts <= toDate.Value;
+                    });
+
+                allLogs = filteredRows.Any() ? filteredRows.CopyToDataTable() : allLogs.Clone();
+            }
+
+            // Group logs
+            var groupedLogs = allLogs.AsEnumerable()
+                .GroupBy(r => new { Year = r.Field<DateTime>("Timestamp").Year, Month = r.Field<DateTime>("Timestamp").Month })
+                .Select(g =>
                 {
-                    lblMessage.Text = "⚠ Error loading audit logs: " + ex.Message;
-                    LogError("LoadAuditLogs Error", ex);
-                }
+                    DataTable subTable = g.Any() ? g.CopyToDataTable() : allLogs.Clone();
+                    return new
+                    {
+                        Year = g.Key.Year,
+                        Month = g.Key.Month,
+                        MonthName = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMMM"),
+                        Logs = subTable
+                    };
+                })
+                .ToList();
+
+            // Group by year
+            var finalGroup = groupedLogs
+                .GroupBy(x => x.Year)
+                .Select(y => new
+                {
+                    Year = y.Key,
+                    Months = y.ToList()
+                })
+                // Only keep years with at least one month with logs
+                .Where(y => y.Months.Any(m => m.Logs != null && m.Logs.Rows.Count > 0))
+                .ToList();
+
+            // 🔴 SHOW OR HIDE lblNoData
+            if (finalGroup.Count == 0)
+            {
+                rptYears.Visible = false;
+                lblNoData.Visible = true;
+                lblNoData.Text = "⚠ No audit logs found for the selected date range.";
+            }
+            else
+            {
+                rptYears.Visible = true;
+                lblNoData.Visible = false;
+                rptYears.DataSource = finalGroup;
+                rptYears.DataBind();
             }
         }
 
-        public void LogAction(int userId, string actionDescription)
+
+
+
+        protected void rptYears_ItemDataBound(object sender, RepeaterItemEventArgs e)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
             {
-                string insertQuery = @"
-                    INSERT INTO AuditLogs (AdminID, Action, Timestamp)
-                    VALUES (@UserID, @Action, @Timestamp);";
-
-                using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", userId);
-                    cmd.Parameters.AddWithValue("@Action", actionDescription);
-                    cmd.Parameters.AddWithValue("@Timestamp", DateTime.Now);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch (Exception ex)
-                    {
-                        LogError("LogAction Error", ex);
-                    }
-                }
+                dynamic yearGroup = e.Item.DataItem;
+                Repeater rptMonths = (Repeater)e.Item.FindControl("rptMonths");
+                rptMonths.DataSource = yearGroup.Months;
+                rptMonths.DataBind();
             }
         }
 
-        private void LogError(string context, Exception ex)
+        protected void rptMonths_ItemDataBound(object sender, RepeaterItemEventArgs e)
         {
-            try
+            if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
             {
-                string message = $"{DateTime.Now}: {context} - {ex.Message}{Environment.NewLine}";
-                string logFilePath = Server.MapPath("~/Logs/ErrorLog.txt");
-
-                System.IO.File.AppendAllText(logFilePath, message);
-            }
-            catch
-            {
-                // Prevent recursive logging error
+                dynamic monthGroup = e.Item.DataItem;
+                GridView gvLogs = (GridView)e.Item.FindControl("gvLogs");
+                gvLogs.DataSource = monthGroup.Logs;
+                gvLogs.DataBind();
             }
         }
     }

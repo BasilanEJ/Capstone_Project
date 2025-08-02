@@ -53,7 +53,13 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "SELECT ClientID, Name FROM Clients WHERE Status = 'Approved'";
+                string query = @"
+SELECT 
+    ClientID,
+    (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) AS Name 
+FROM Clients 
+WHERE Status = 'Approved'";
+
                 SqlCommand cmd = new SqlCommand(query, conn);
                 conn.Open();
                 SqlDataReader reader = cmd.ExecuteReader();

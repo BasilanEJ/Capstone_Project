@@ -1,17 +1,17 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ViewServices.aspx.cs" Inherits="RRCManagementSystem.ViewServices" %>
 
-
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
-        <style>
-        /* Main Content Wrapper */
+    <!-- Include SweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
         .main-content {
             padding: 20px;
             background-color: #f4f4f4;
             min-height: calc(100vh - 100px);
         }
 
-        /* Card Container */
         .card {
             background-color: #fff;
             border-radius: 8px;
@@ -20,7 +20,6 @@
             margin-bottom: 30px;
         }
 
-        /* Card Header */
         .card-header {
             background-color: #004085;
             color: #fff;
@@ -29,12 +28,10 @@
             font-weight: bold;
         }
 
-        /* Card Body */
         .card-body {
             padding: 20px;
         }
 
-        /* Alert/Message Styling */
         .alert-message {
             display: block;
             margin-bottom: 15px;
@@ -46,7 +43,6 @@
             font-size: 14px;
         }
 
-        /* GridView Table */
         .table {
             width: 100%;
             border-collapse: collapse;
@@ -71,7 +67,6 @@
             font-size: 14px;
         }
 
-        /* Action Buttons */
         .action-btn {
             color: #004085;
             text-decoration: none;
@@ -86,7 +81,6 @@
             color: #fff;
         }
 
-        /* Responsive Table */
         @media (max-width: 768px) {
             .table th,
             .table td {
@@ -104,53 +98,77 @@
             }
         }
     </style>
- 
+
     <div class="main-content">
         <div class="card">
             <div class="card-header">
                 Services List
             </div>
-
             <div class="card-body">
-                <asp:Label ID="lblMessage" runat="server" CssClass="alert-message"></asp:Label>
-<asp:GridView ID="gvServices" runat="server" AutoGenerateColumns="False" CssClass="table"
-    OnRowCommand="gvServices_RowCommand" EmptyDataText="No services found.">
-    <Columns>
 
-        <asp:TemplateField HeaderText="Service ID">
-            <ItemTemplate>
-                <%# "Service" + Convert.ToInt32(Eval("ServiceID")).ToString("D3") %>
-            </ItemTemplate>
-        </asp:TemplateField>
 
-        <asp:BoundField DataField="Name" HeaderText="Service Name" />
-        <asp:BoundField DataField="Description" HeaderText="Description" />
+                <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" Visible="false"></asp:Label>
 
-        <asp:BoundField DataField="Price100SQM" HeaderText="100 SQM Price (₱)" DataFormatString="{0:C}" />
-        <asp:BoundField DataField="Price200SQM" HeaderText="200 SQM Price (₱)" DataFormatString="{0:C}" />
-        <asp:BoundField DataField="PriceAbove200SQM" HeaderText="200+ SQM Price (₱)" DataFormatString="{0:C}" />
+                <asp:GridView ID="gvServices" runat="server" AutoGenerateColumns="False"
+    CssClass="table"
+    OnRowCommand="gvServices_RowCommand"
+    DataKeyNames="ServiceID"
+    EmptyDataText="No services found.">
 
-        <asp:TemplateField HeaderText="Actions">
-            <ItemTemplate>
-                <asp:LinkButton ID="btnEdit" runat="server"
-                    CommandName="EditService"
-                    CommandArgument='<%# Eval("ServiceID") %>'
-                    CssClass="action-btn" Text="Edit" />
-                &nbsp;|&nbsp;
-                <asp:LinkButton ID="btnDelete" runat="server"
-                    CommandName="DeleteService"
-                    CommandArgument='<%# Eval("ServiceID") %>'
-                    CssClass="action-btn"
-                    Text="Delete"
-                    OnClientClick="return confirm('Are you sure you want to delete this service?');" />
-            </ItemTemplate>
-        </asp:TemplateField>
-    </Columns>
-</asp:GridView>
+                    <Columns>
+                        <asp:TemplateField HeaderText="Service ID">
+                            <ItemTemplate>
+                                <%# "Service" + Convert.ToInt32(Eval("ServiceID")).ToString("D3") %>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+
+                        <asp:BoundField DataField="Name" HeaderText="Service Name" />
+                        <asp:BoundField DataField="Description" HeaderText="Description" />
+                        <asp:BoundField DataField="Price100SQM" HeaderText="100 SQM Price (₱)" DataFormatString="{0:C}" />
+                        <asp:BoundField DataField="Price200SQM" HeaderText="200 SQM Price (₱)" DataFormatString="{0:C}" />
+                        <asp:BoundField DataField="PriceAbove200SQM" HeaderText="200+ SQM Price (₱)" DataFormatString="{0:C}" />
+
+                        <asp:TemplateField HeaderText="Actions">
+                            <ItemTemplate>
+                                <asp:LinkButton ID="btnEdit" runat="server"
+                                    CommandName="EditService"
+                                    CommandArgument='<%# Eval("ServiceID") %>'
+                                    CssClass="action-btn" Text="Edit" />
+                                &nbsp;|&nbsp;
+                                <asp:LinkButton ID="btnDelete" runat="server"
+                                    CommandName="DeleteService"
+                                    CommandArgument='<%# Eval("ServiceID") %>'
+                                    CssClass="action-btn"
+                                    OnClientClick='<%# $"return confirmDeleteService({Eval("ServiceID")});" %>'
+                                    Text="Delete" />
+
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                    </Columns>
+                </asp:GridView>
+
+              <script type="text/javascript">
+                  function confirmDeleteService(serviceId) {
+                      Swal.fire({
+                          title: 'Are you sure?',
+                          text: 'This will permanently delete the service.',
+                          icon: 'warning',
+                          showCancelButton: true,
+                          confirmButtonColor: '#d33',
+                          cancelButtonColor: '#6c757d',
+                          confirmButtonText: 'Yes, delete it!',
+                          cancelButtonText: 'Cancel'
+                      }).then((result) => {
+                          if (result.isConfirmed) {
+                              __doPostBack('<%= gvServices.UniqueID %>', 'DeleteService$' + serviceId);
+            }
+        });
+                      return false;
+                  }
+              </script>
 
 
             </div>
         </div>
     </div>
-
 </asp:Content>

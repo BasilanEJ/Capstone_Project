@@ -2,10 +2,12 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.UI;
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
-    public partial class ViewServices : System.Web.UI.Page
+    public partial class ViewServices : Page
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
@@ -20,7 +22,7 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Deny access to SuperAdmin and Inspector
+            // 🔐 Restrict access
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -29,7 +31,6 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // ✅ Check CanView permission for ManageServices
             if (!HasPermission(userId, "ManageServices", "CanView"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
@@ -93,7 +94,7 @@ namespace RRCManagementSystem
                         DataTable dt = new DataTable();
                         da.Fill(dt);
 
-                        // ✅ Add FormattedServiceID column (e.g., Service001)
+                        // Optional: for display only
                         dt.Columns.Add("FormattedServiceID", typeof(string));
                         foreach (DataRow row in dt.Rows)
                         {
@@ -107,53 +108,79 @@ namespace RRCManagementSystem
                     catch (Exception ex)
                     {
                         lblMessage.Text = "⚠ Error loading services: " + ex.Message;
+                        lblMessage.Visible = true;
                     }
                 }
             }
         }
 
-        protected void gvServices_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
+        protected void gvServices_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            int serviceID = Convert.ToInt32(e.CommandArgument);
-
-            if (e.CommandName == "EditService" && Convert.ToBoolean(ViewState["CanEdit"]))
+            if (e.CommandName == "EditService" || e.CommandName == "DeleteService")
             {
-                Response.Redirect($"EditServices.aspx?ServiceID={serviceID}");
-            }
+                int serviceId;
+                if (!int.TryParse(e.CommandArgument.ToString(), out serviceId))
+                    return;
 
-            if (e.CommandName == "DeleteService" && Convert.ToBoolean(ViewState["CanDelete"]))
-            {
-                DeleteService(serviceID);
-            }
-        }
-
-        private void DeleteService(int serviceID)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = "DELETE FROM Services WHERE ServiceID = @ServiceID";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                if (e.CommandName == "EditService")
                 {
-                    cmd.Parameters.AddWithValue("@ServiceID", serviceID);
-
+                    Response.Redirect($"EditServices.aspx?ServiceID={serviceId}");
+                }
+                else if (e.CommandName == "DeleteService")
+                {
                     try
                     {
-                        conn.Open();
-                        int rows = cmd.ExecuteNonQuery();
+                        using (SqlConnection conn = new SqlConnection(connectionString))
+                        {
+                            conn.Open();
+                            SqlCommand cmd = new SqlCommand("DELETE FROM Services WHERE ServiceID = @ServiceID", conn);
+                            cmd.Parameters.AddWithValue("@ServiceID", serviceId);
+                            int rowsAffected = cmd.ExecuteNonQuery();
 
-                        lblMessage.Text = rows > 0
-                            ? "✅ Service deleted successfully."
-                            : "⚠ Service not found.";
+                            if (rowsAffected > 0)
+                            {
+                                LoadServices();
 
-                        LoadServices();
+                                // ✅ SweetAlert success feedback
+                                string script = @"Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted!',
+                                    text: 'Service has been deleted.',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });";
+
+                                ClientScript.RegisterStartupScript(this.GetType(), "deleteSuccess", script, true);
+                            }
+                            else
+                            {
+                                lblMessage.Text = "⚠ Service not found.";
+                                lblMessage.Visible = true;
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
                         lblMessage.Text = "⚠ Error deleting service: " + ex.Message;
+                        lblMessage.Visible = true;
                     }
                 }
             }
+        }
+
+        // ✅ Register each dynamic postback key for SweetAlert
+        protected override void Render(HtmlTextWriter writer)
+        {
+            foreach (GridViewRow row in gvServices.Rows)
+            {
+                if (row.RowType == DataControlRowType.DataRow)
+                {
+                    string serviceId = gvServices.DataKeys[row.RowIndex].Value.ToString();
+                    ClientScript.RegisterForEventValidation(gvServices.UniqueID, "DeleteService$" + serviceId);
+                }
+            }
+
+            base.Render(writer);
         }
     }
 }

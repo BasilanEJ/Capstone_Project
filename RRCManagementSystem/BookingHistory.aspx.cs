@@ -50,7 +50,7 @@ namespace RRCManagementSystem
                     string query = @"
                 SELECT 
                     b.BookingID,
-                    c.Name AS ClientName,
+                    (c.Lastname + ', ' + c.Firstname + ' ' + ISNULL(c.Middlename, '')) AS ClientName,
                     b.ServiceNames,
                     b.ScheduledDate,
                     b.StartTime,
@@ -102,6 +102,7 @@ namespace RRCManagementSystem
                 lblMessage.ForeColor = System.Drawing.Color.Red;
             }
         }
+
 
 
         protected void btnFilter_Click(object sender, EventArgs e)

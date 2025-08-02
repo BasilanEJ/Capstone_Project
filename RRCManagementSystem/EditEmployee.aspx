@@ -18,10 +18,21 @@
 
                 <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-semibold d-block mb-3" />
 
-                <div class="mb-3">
-                    <label for="txtFullName" class="form-label fw-semibold">Full Name:</label>
-                    <asp:TextBox ID="txtFullName" runat="server" CssClass="form-control" placeholder="Enter full name" required></asp:TextBox>
-                </div>
+               <div class="mb-3">
+    <label for="txtLastName" class="form-label fw-semibold">Last Name:</label>
+    <asp:TextBox ID="txtLastName" runat="server" CssClass="form-control" placeholder="Enter last name" required></asp:TextBox>
+</div>
+
+<div class="mb-3">
+    <label for="txtFirstName" class="form-label fw-semibold">First Name:</label>
+    <asp:TextBox ID="txtFirstName" runat="server" CssClass="form-control" placeholder="Enter first name" required></asp:TextBox>
+</div>
+
+<div class="mb-3">
+    <label for="txtMiddleName" class="form-label fw-semibold">Middle Name <span class="text-muted">(optional)</span>:</label>
+    <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-control" placeholder="Enter middle name (optional)"></asp:TextBox>
+</div>
+
 
                 <div class="mb-3">
                     <label for="txtEmail" class="form-label fw-semibold">Email:</label>

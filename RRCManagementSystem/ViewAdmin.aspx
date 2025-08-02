@@ -1,5 +1,9 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="ViewAdmin.aspx.cs" Inherits="RRCManagementSystem.ViewAdmin" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</asp:Content>
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
     <div class="container my-5">
         <div class="card shadow">
@@ -7,7 +11,7 @@
                 <h2 class="text-center mb-4 text-primary">User Accounts</h2>
 
                 <div class="d-flex justify-content-end mb-3 gap-2 flex-wrap">
-                    <asp:TextBox ID="txtSearch" runat="server" CssClass="form-control w-auto" placeholder="Search by name or email..." />
+                    <asp:TextBox ID="txtSearch" runat="server" CssClass="form-control w-auto" placeholder="Search by name, email, or role..." />
                     <asp:Button ID="btnSearch" runat="server" Text="Search" CssClass="btn btn-primary" OnClick="btnSearch_Click" />
                 </div>
 
@@ -16,7 +20,7 @@
                 <div class="table-responsive">
                     <asp:GridView ID="gvAdmins" runat="server" CssClass="table table-bordered table-hover text-center"
                         AutoGenerateColumns="False"
-                        EmptyDataText="No Admins found."
+                        EmptyDataText="No users found."
                         OnRowCommand="gvAdmins_RowCommand"
                         DataKeyNames="UserID">
                         <Columns>
@@ -34,10 +38,9 @@
 
                                     <asp:LinkButton ID="btnDelete" runat="server"
                                         Text="Archive"
-                                        CommandName="ArchiveAdmin"
-                                        CommandArgument='<%# Eval("UserID") %>'
                                         CssClass="btn btn-sm btn-danger"
-                                        OnClientClick="return confirm('Are you sure you want to archive this admin?');" />
+                                        OnClientClick='<%# "return showArchiveConfirmation(" + Eval("UserID") + ");" %>' />
+
                                 </ItemTemplate>
                             </asp:TemplateField>
                         </Columns>
@@ -46,4 +49,35 @@
             </div>
         </div>
     </div>
+    <asp:HiddenField ID="hfUserToArchive" runat="server" />
+<asp:Button ID="btnConfirmArchive" runat="server" Style="display:none;" OnClick="btnConfirmArchive_Click" />
+
+
+<script type="text/javascript">
+    function showArchiveConfirmation(userId) {
+        if (window.event) window.event.preventDefault(); // prevent postback
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'This will archive the user account.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, archive it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Use timeout to avoid blocking issues
+                setTimeout(function () {
+                    document.getElementById('<%= hfUserToArchive.ClientID %>').value = userId;
+                    document.getElementById('<%= btnConfirmArchive.ClientID %>').click();
+                }, 50);
+            }
+        });
+
+        return false;
+    }
+</script>
+
+
 </asp:Content>

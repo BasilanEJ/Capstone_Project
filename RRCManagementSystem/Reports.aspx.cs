@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Configuration;
+using System.Globalization;
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
@@ -13,131 +15,103 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                lblMessage.Text = "";
-
-                // Set calendar limits
-                string minDate = "2018-01-01";
-                string todayDate = DateTime.Now.ToString("yyyy-MM-dd");
-
-                txtDateFrom.Attributes["min"] = minDate;
-                txtDateFrom.Attributes["max"] = todayDate;
-
-                txtDateTo.Attributes["min"] = minDate;
-                txtDateTo.Attributes["max"] = todayDate;
-
-                // Optional default values
-                txtDateFrom.Text = minDate;
-                txtDateTo.Text = todayDate;
+                // Dropdown is already populated in .aspx
             }
-        }
-
-
-        protected void ddlReportType_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            lblMessage.Text = "";
-            gvReports.DataSource = null;
-            gvReports.DataBind();
         }
 
         protected void btnGenerate_Click(object sender, EventArgs e)
         {
-            string reportType = ddlReportType.SelectedValue;
-            DateTime dateFrom, dateTo;
+            string selected = ddlModule.SelectedValue;
 
-            // Validate report type selection
-            if (string.IsNullOrEmpty(reportType))
+            if (string.IsNullOrEmpty(selected))
             {
-                lblMessage.Text = "⚠ Please select a report type.";
+                lblMessage.Text = "Please select a module.";
+                gvReports.DataSource = null;
+                gvReports.DataBind();
                 return;
             }
 
-            // Parse the provided dates
-            DateTime minDateAllowed = new DateTime(2018, 1, 1); // Set the minimum allowed date (2018)
+            // Parse dates exactly from yyyy-MM-dd (HTML5 date format)
+            DateTime fromDate;
+            DateTime toDate;
+            bool hasFrom = DateTime.TryParseExact(txtDateFrom.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out fromDate);
+            bool hasTo = DateTime.TryParseExact(txtDateTo.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out toDate);
 
-            if (!DateTime.TryParse(txtDateFrom.Text, out dateFrom) || dateFrom < minDateAllowed)
+            // 🐛 Debug: show what was parsed
+            lblDebug.Text = $"Raw From: {txtDateFrom.Text} | Parsed From: {(hasFrom ? fromDate.ToString("yyyy-MM-dd") : "INVALID")}<br/>" +
+                            $"Raw To: {txtDateTo.Text} | Parsed To: {(hasTo ? toDate.ToString("yyyy-MM-dd") : "INVALID")}";
+
+            string query = "";
+
+            switch (selected)
             {
-                dateFrom = minDateAllowed;
+                case "Admins":
+                    query = @"
+                SELECT UserID, Name, Email, Role, CreatedAt 
+                FROM Users 
+                WHERE Status = 'Active' AND Role <> 'SuperAdmin'
+                AND (@From IS NULL OR CreatedAt >= @From)
+                AND (@To IS NULL OR CreatedAt < DATEADD(DAY, 1, @To))";
+                    break;
+
+                case "ArchivedAdmins":
+                    query = @"
+                SELECT UserID, Name, Email, Role, CreatedAt 
+                FROM Users 
+                WHERE Status = 'Archived' AND Role <> 'SuperAdmin'
+                AND (@From IS NULL OR CAST(CreatedAt AS DATE) >= @From)
+                AND (@To IS NULL OR CAST(CreatedAt AS DATE) <= @To)";
+                    break;
+
+                case "Roles":
+                    query = "SELECT RoleID, RoleName FROM Roles";
+                    break;
+
+                case "AuditLogs":
+                    query = @"
+                SELECT a.LogID, u.Name AS AdminName, a.Action, a.Timestamp
+                FROM AuditLogs a
+                LEFT JOIN Users u ON a.AdminID = u.UserID
+                WHERE (@From IS NULL OR a.Timestamp >= @From)
+                AND (@To IS NULL OR a.Timestamp <= @To)
+                ORDER BY a.Timestamp DESC";
+                    break;
+
+                case "SystemChanges":
+                    query = @"
+                SELECT SettingID, SettingName, SettingValue, UpdatedAt
+                FROM SystemSettings
+                WHERE (@From IS NULL OR UpdatedAt >= @From)
+                AND (@To IS NULL OR UpdatedAt <= @To)
+                ORDER BY UpdatedAt DESC";
+                    break;
+
+                default:
+                    lblMessage.Text = "Invalid module selected.";
+                    return;
             }
-
-            if (!DateTime.TryParse(txtDateTo.Text, out dateTo))
-            {
-                dateTo = DateTime.Now; // Default to now if no input
-            }
-
-            // Ensure dateTo is not earlier than dateFrom
-            if (dateTo < dateFrom)
-            {
-                lblMessage.Text = "⚠ Date To cannot be earlier than Date From.";
-                return;
-            }
-
-            LoadReport(reportType, dateFrom, dateTo);
-        }
-
-
-        private void LoadReport(string reportType, DateTime dateFrom, DateTime dateTo)
-        {
-            DataTable dt = new DataTable();
 
             using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlCommand cmd = new SqlCommand(query, conn))
             {
-                string query = "";
+                if (query.Contains("@From"))
+                    cmd.Parameters.AddWithValue("@From", hasFrom ? (object)fromDate : DBNull.Value);
 
-                switch (reportType)
-                {
-                    case "AdminActivity":
-                        query = @"SELECT UserID, Name, Email, Role, CreatedAt
-                                  FROM Users
-                                  WHERE Role = 'Admin' AND CreatedAt BETWEEN @DateFrom AND @DateTo";
-                        break;
+                if (query.Contains("@To"))
+                    cmd.Parameters.AddWithValue("@To", hasTo ? (object)toDate : DBNull.Value);
 
-                    case "Sales":
-                        query = @"SELECT SaleID, ClientID, Amount, PaymentStatus, TransactionDate
-                                  FROM Sales
-                                  WHERE TransactionDate BETWEEN @DateFrom AND @DateTo";
-                        break;
+                SqlDataAdapter adapter = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                adapter.Fill(dt);
 
-                    case "AuditLogs":
-                        query = @"SELECT a.LogID, u.Name AS AdminName, a.Action, a.Timestamp
-                                  FROM AuditLogs a
-                                  INNER JOIN Users u ON a.AdminID = u.UserID
-                                  WHERE a.Timestamp BETWEEN @DateFrom AND @DateTo";
-                        break;
+                gvReports.DataSource = dt;
+                gvReports.DataBind();
 
-                    case "WorkOrders":
-                        query = @"SELECT WorkOrderID, ClientID, Status, ScheduledDate, CompletionDate
-                                  FROM WorkOrders
-                                  WHERE ScheduledDate BETWEEN @DateFrom AND @DateTo";
-                        break;
-
-                    default:
-                        lblMessage.Text = "⚠ Report type not recognized.";
-                        return;
-                }
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@DateFrom", dateFrom);
-                    cmd.Parameters.AddWithValue("@DateTo", dateTo);
-
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-
-                    try
-                    {
-                        conn.Open();
-                        da.Fill(dt);
-
-                        gvReports.DataSource = dt;
-                        gvReports.DataBind();
-
-                        lblMessage.Text = dt.Rows.Count > 0 ? $"✅ {dt.Rows.Count} records found." : "⚠ No records found for the selected criteria.";
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = "⚠ Error loading report: " + ex.Message;
-                    }
-                }
+                lblMessage.Text = (dt.Rows.Count == 0)
+                    ? "No data found for the selected module and date range."
+                    : "";
             }
         }
+
     }
 }

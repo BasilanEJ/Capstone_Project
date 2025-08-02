@@ -2,7 +2,7 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
     <div class="container-fluid">
-        <h1 class="mb-4 fw-bold">Welcome to the SuperAdmin Dashboard</h1>
+        <h1 class="mb-4 fw-bold">Welcome to the SystemAdmin Dashboard</h1>
 
         <!-- Dashboard Summary Cards -->
         <div class="row g-4">

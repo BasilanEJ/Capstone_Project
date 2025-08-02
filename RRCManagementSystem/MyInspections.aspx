@@ -23,7 +23,7 @@
                         <div class="card h-100 border-start border-primary shadow-sm">
                             <div class="card-body">
                                 <h5 class="card-title text-primary">Inspection #<%# Eval("InspectionID") %></h5>
-                                <p class="mb-1"><strong>Name:</strong> <%# Eval("Name") %></p>
+                                <p class="mb-1"><strong>Name:</strong> <%# Eval("FullName") %></p>
                                 <p class="mb-1"><strong>Address:</strong> <%# Eval("StreetAndUnit") %>, <%# Eval("Barangay") %>, <%# Eval("City") %>, <%# Eval("Region") %>, <%# Eval("Country") %></p>
                                 <p class="mb-1"><strong>Scheduled:</strong> <%# Eval("ScheduledDate", "{0:yyyy-MM-dd hh:mm tt}") %></p>
                                 <p class="mb-1"><strong>Status:</strong> <%# Eval("InspectionStatus") %></p>

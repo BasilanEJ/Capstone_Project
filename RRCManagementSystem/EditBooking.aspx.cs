@@ -87,22 +87,22 @@ namespace RRCManagementSystem
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     string query = @"
-                SELECT 
-                    b.BookingID,
-                    c.Name AS ClientName,
-                    b.ScheduledDate,
-                    b.StartTime,
-                    b.Status,
-                    b.Notes,
-                    (
-                        SELECT STRING_AGG(s.Name, ', ')
-                        FROM BookingServices bs
-                        INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-                        WHERE bs.BookingID = b.BookingID
-                    ) AS ServiceNames
-                FROM Bookings b
-                LEFT JOIN Clients c ON b.ClientID = c.ClientID
-                WHERE b.BookingID = @BookingID";
+            SELECT 
+                b.BookingID,
+                (c.Lastname + ', ' + c.Firstname + ' ' + ISNULL(c.Middlename, '')) AS ClientName,
+                b.ScheduledDate,
+                b.StartTime,
+                b.Status,
+                b.Notes,
+                (
+                    SELECT STRING_AGG(s.Name, ', ')
+                    FROM BookingServices bs
+                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+                    WHERE bs.BookingID = b.BookingID
+                ) AS ServiceNames
+            FROM Bookings b
+            LEFT JOIN Clients c ON b.ClientID = c.ClientID
+            WHERE b.BookingID = @BookingID";
 
                     using (SqlCommand cmd = new SqlCommand(query, con))
                     {
@@ -134,6 +134,7 @@ namespace RRCManagementSystem
                 lblMessage.ForeColor = System.Drawing.Color.Red;
             }
         }
+
 
 
         protected void btnSave_Click(object sender, EventArgs e)

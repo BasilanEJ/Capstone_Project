@@ -25,12 +25,21 @@ namespace RRCManagementSystem
 
         private void LoadProfileData()
         {
+            if (Session["Email"] == null)
+            {
+                lblMessage.Text = "⚠ Session expired. Please log in again.";
+                return;
+            }
+
             string email = Session["Email"].ToString();
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = @"SELECT Name, Email, ContactNumber, StreetAndUnit, Barangay, City, Region, Country, ProfilePic 
-                                 FROM Clients WHERE Email = @Email";
+                string query = @"
+                    SELECT FirstName, MiddleName, LastName, Email, ContactNumber, 
+                           StreetAndUnit, Barangay, City, Region, Country, ProfilePic 
+                    FROM Clients 
+                    WHERE Email = @Email";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Email", email);
@@ -42,8 +51,21 @@ namespace RRCManagementSystem
 
                     if (reader.Read())
                     {
+                        // Combine full name
+                        string firstName = reader["FirstName"].ToString();
+                        string middleName = reader["MiddleName"].ToString();
+                        string lastName = reader["LastName"].ToString();
+
+                        string fullName = $"{lastName}, {firstName}";
+                        if (!string.IsNullOrWhiteSpace(middleName))
+                        {
+                            fullName += $" {middleName[0]}.";
+                        }
+
                         // View Mode
-                        lblName.Text = reader["Name"].ToString();
+                        txtFirstName.Text = firstName;
+                        txtMiddleName.Text = middleName;
+                        txtLastName.Text = lastName;
                         lblEmail.Text = reader["Email"].ToString();
                         lblContactNumber.Text = reader["ContactNumber"].ToString();
                         lblStreetAndUnit.Text = reader["StreetAndUnit"].ToString();
@@ -53,7 +75,10 @@ namespace RRCManagementSystem
                         lblCountry.Text = reader["Country"].ToString();
 
                         // Edit Mode
-                        txtName.Text = reader["Name"].ToString();
+                        txtFirstName.Text = firstName;
+                        txtMiddleName.Text = middleName;
+                        txtLastName.Text = lastName;
+                        txtName.Text = fullName;
                         txtEmail.Text = reader["Email"].ToString();
                         txtContactNumber.Text = reader["ContactNumber"].ToString();
                         txtStreetAndUnit.Text = reader["StreetAndUnit"].ToString();
@@ -63,7 +88,9 @@ namespace RRCManagementSystem
                         txtCountry.Text = reader["Country"].ToString();
 
                         // Profile Picture
-                        string profilePic = reader["ProfilePic"] != DBNull.Value ? reader["ProfilePic"].ToString() : "default-profile.png";
+                        string profilePic = reader["ProfilePic"] != DBNull.Value && !string.IsNullOrWhiteSpace(reader["ProfilePic"].ToString())
+                            ? reader["ProfilePic"].ToString()
+                            : "default-profile.png";
                         imgProfilePic.ImageUrl = "~/Uploads/" + profilePic;
                     }
 
@@ -98,17 +125,19 @@ namespace RRCManagementSystem
             }
 
             string email = Session["Email"].ToString();
-            string newName = txtName.Text.Trim();
-            string newContact = txtContactNumber.Text.Trim();
+            string firstName = txtFirstName.Text.Trim();
+            string middleName = txtMiddleName.Text.Trim();
+            string lastName = txtLastName.Text.Trim();
+            string contactNumber = txtContactNumber.Text.Trim();
             string streetAndUnit = txtStreetAndUnit.Text.Trim();
             string barangay = txtBarangay.Text.Trim();
             string city = txtCity.Text.Trim();
             string region = txtRegion.Text.Trim();
             string country = txtCountry.Text.Trim();
 
-            string profilePicFileName = ""; // Will be filled if new file is uploaded
+            string profilePicFileName = "";
 
-            // ✅ Handle image upload (strict validation)
+            // Image upload logic
             if (fuProfilePic.HasFile)
             {
                 string fileExtension = Path.GetExtension(fuProfilePic.FileName).ToLower();
@@ -121,33 +150,32 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                // Generate a unique file name
                 profilePicFileName = Guid.NewGuid().ToString() + fileExtension;
                 string folderPath = Server.MapPath("~/Uploads/");
                 string fullPath = Path.Combine(folderPath, profilePicFileName);
 
-                // Ensure directory exists
                 if (!Directory.Exists(folderPath))
                 {
                     Directory.CreateDirectory(folderPath);
                 }
 
-                // Save the file
                 fuProfilePic.SaveAs(fullPath);
             }
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = @"UPDATE Clients
-                                 SET Name = @Name,
-                                     ContactNumber = @ContactNumber,
-                                     StreetAndUnit = @StreetAndUnit,
-                                     Barangay = @Barangay,
-                                     City = @City,
-                                     Region = @Region,
-                                     Country = @Country";
+                string query = @"
+                    UPDATE Clients
+                    SET FirstName = @FirstName,
+                        MiddleName = @MiddleName,
+                        LastName = @LastName,
+                        ContactNumber = @ContactNumber,
+                        StreetAndUnit = @StreetAndUnit,
+                        Barangay = @Barangay,
+                        City = @City,
+                        Region = @Region,
+                        Country = @Country";
 
-                // If a new profile pic is uploaded, update it too
                 if (!string.IsNullOrEmpty(profilePicFileName))
                 {
                     query += ", ProfilePic = @ProfilePic";
@@ -156,8 +184,10 @@ namespace RRCManagementSystem
                 query += " WHERE Email = @Email";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Name", newName);
-                cmd.Parameters.AddWithValue("@ContactNumber", newContact);
+                cmd.Parameters.AddWithValue("@FirstName", firstName);
+                cmd.Parameters.AddWithValue("@MiddleName", middleName);
+                cmd.Parameters.AddWithValue("@LastName", lastName);
+                cmd.Parameters.AddWithValue("@ContactNumber", contactNumber);
                 cmd.Parameters.AddWithValue("@StreetAndUnit", streetAndUnit);
                 cmd.Parameters.AddWithValue("@Barangay", barangay);
                 cmd.Parameters.AddWithValue("@City", city);
@@ -195,4 +225,3 @@ namespace RRCManagementSystem
         }
     }
 }
-

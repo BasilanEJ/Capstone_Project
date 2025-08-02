@@ -47,8 +47,10 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = @"SELECT Name, Email, ContactNumber, City, Region, Country, Status 
-                                 FROM Clients WHERE ClientID = @ClientID";
+                string query = @"
+            SELECT LastName, FirstName, MiddleName, Email, ContactNumber, City, Region, Country, Status 
+            FROM Clients 
+            WHERE ClientID = @ClientID";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -57,7 +59,18 @@ namespace RRCManagementSystem
                 SqlDataReader reader = cmd.ExecuteReader();
                 if (reader.Read())
                 {
-                    lblName.Text = $"<span class='profile-label'>Name:</span> {reader["Name"]}";
+                    // Combine full name
+                    string lastName = reader["LastName"].ToString();
+                    string firstName = reader["FirstName"].ToString();
+                    string middleName = reader["MiddleName"]?.ToString();
+                    string fullName = $"{lastName}, {firstName}";
+                    if (!string.IsNullOrWhiteSpace(middleName))
+                    {
+                        fullName += " " + middleName;
+                    }
+
+                    // Populate labels
+                    lblName.Text = $"<span class='profile-label'>Name:</span> {fullName}";
                     lblEmail.Text = $"<span class='profile-label'>Email:</span> {reader["Email"]}";
                     lblContact.Text = $"<span class='profile-label'>Contact:</span> {reader["ContactNumber"]}";
                     lblCity.Text = $"<span class='profile-label'>City:</span> {reader["City"]}";
@@ -73,6 +86,7 @@ namespace RRCManagementSystem
                 reader.Close();
             }
         }
+
 
         private void LoadClientHistory(int clientId)
         {

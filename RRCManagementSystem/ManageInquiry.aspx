@@ -20,23 +20,30 @@
     <h2 class="inquiry-header">📋 Manage Inquiries</h2>
     <asp:Label ID="lblPermission" runat="server" CssClass="text-danger" />
 
-    <asp:GridView ID="gvInquiries" runat="server" AutoGenerateColumns="False" CssClass="inquiry-table"
-        DataKeyNames="InquiryID">
-        <Columns>
-            <asp:BoundField DataField="InquiryID" HeaderText="Inquiry ID" />
-            <asp:BoundField DataField="Email" HeaderText="Client Email" />
-            <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
-            <asp:BoundField DataField="Message" HeaderText="Message" />
-            <asp:BoundField DataField="SubmittedAt" HeaderText="Submitted At" DataFormatString="{0:g}" />
-            <asp:TemplateField HeaderText="Action">
-                <ItemTemplate>
-                    <asp:Button ID="btnAssign" runat="server" Text="Assign Inspector"
-                        OnClientClick='<%# "showAssignModal(" + Eval("InquiryID") + "); return false;" %>'
-                        CssClass="btn-primary-sm" />
-                </ItemTemplate>
-            </asp:TemplateField>
-        </Columns>
-    </asp:GridView>
+   <asp:GridView ID="gvInquiries" runat="server" AutoGenerateColumns="False" CssClass="inquiry-table"
+    DataKeyNames="InquiryID">
+    <Columns>
+        <asp:BoundField DataField="InquiryID" HeaderText="Inquiry ID" />
+        <asp:BoundField DataField="Email" HeaderText="Client Email" />
+        <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
+        <asp:BoundField DataField="Message" HeaderText="Message" />
+        <asp:TemplateField HeaderText="Photo">
+            <ItemTemplate>
+                <%# !string.IsNullOrEmpty(Eval("PhotoPath").ToString()) ? 
+                    $"<img src='{Eval("PhotoPath")}' alt='Photo' style='max-height:60px;' />" : "No Photo" %>
+            </ItemTemplate>
+        </asp:TemplateField>
+        <asp:BoundField DataField="SubmittedAt" HeaderText="Submitted At" DataFormatString="{0:g}" />
+        <asp:TemplateField HeaderText="Action">
+            <ItemTemplate>
+                <asp:Button ID="btnAssign" runat="server" Text="Assign Inspector"
+                    OnClientClick='<%# "showAssignModal(" + Eval("InquiryID") + "); return false;" %>'
+                    CssClass="btn-primary-sm" />
+            </ItemTemplate>
+        </asp:TemplateField>
+    </Columns>
+</asp:GridView>
+
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
@@ -52,28 +59,30 @@
                 title: 'Assign Inspector',
                 width: 800,
                 html: `
-                    <div style="display: flex; gap: 10px;">
-                        <input id="swalName" class="swal2-input" placeholder="Full Name">
-                        <input id="swalStreet" class="swal2-input" placeholder="Street & Unit">
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <input id="swalBarangay" class="swal2-input" placeholder="Barangay">
-                        <input id="swalCity" class="swal2-input" placeholder="City">
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <input id="swalRegion" class="swal2-input" placeholder="Region">
-                        <input id="swalCountry" class="swal2-input" value="Philippines">
-                    </div>
-                    <label>Schedule:</label>
-                    <input type="datetime-local" id="swalSchedule" class="swal2-input" min="${minDateTime}">
-                    <label>Inspector:</label>
-                    <select id="swalInspector" class="swal2-input"><%= GetInspectorOptions() %></select>
-                    <textarea id="swalRemarks" class="swal2-textarea" placeholder="Remarks (optional)"></textarea>
-                `,
+        <div style="display: flex; gap: 10px;">
+            <input id="swalFirstName" class="swal2-input" placeholder="First Name">
+            <input id="swalLastName" class="swal2-input" placeholder="Last Name">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <input id="swalStreet" class="swal2-input" placeholder="Street & Unit">
+            <input id="swalBarangay" class="swal2-input" placeholder="Barangay">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <input id="swalCity" class="swal2-input" placeholder="City">
+            <input id="swalRegion" class="swal2-input" placeholder="Region">
+            <input id="swalCountry" class="swal2-input" value="Philippines">
+        </div>
+        <label>Schedule:</label>
+        <input type="datetime-local" id="swalSchedule" class="swal2-input" min="${minDateTime}">
+        <label>Inspector:</label>
+        <select id="swalInspector" class="swal2-input"><%= GetInspectorOptions() %></select>
+        <textarea id="swalRemarks" class="swal2-textarea" placeholder="Remarks (optional)"></textarea>
+    `,
                 showCancelButton: true,
                 confirmButtonText: 'Assign',
                 preConfirm: () => {
-                    const name = document.getElementById('swalName').value.trim();
+                    const firstName = document.getElementById('swalFirstName').value.trim();
+                    const lastName = document.getElementById('swalLastName').value.trim();
                     const street = document.getElementById('swalStreet').value.trim();
                     const barangay = document.getElementById('swalBarangay').value.trim();
                     const city = document.getElementById('swalCity').value.trim();
@@ -83,16 +92,16 @@
                     const schedule = document.getElementById('swalSchedule').value;
                     const remarks = document.getElementById('swalRemarks').value;
 
-                    if (!name || !street || !barangay || !city || !region || !country || !inspector || !schedule) {
+                    if (!firstName || !lastName || !street || !barangay || !city || !region || !country || !inspector || !schedule) {
                         Swal.showValidationMessage("All fields are required except remarks");
                         return false;
                     }
 
                     document.getElementById('<%= hfAssignData.ClientID %>').value =
-                        `${inspector}|${schedule}|${remarks}|${name}|${street}|${barangay}|${city}|${region}|${country}`;
+            `${inspector}|${schedule}|${remarks}|${firstName}|${lastName}|${street}|${barangay}|${city}|${region}|${country}`;
                     document.getElementById('<%= btnAssignHidden.ClientID %>').click();
                 }
             });
-        }
+
     </script>
 </asp:Content>

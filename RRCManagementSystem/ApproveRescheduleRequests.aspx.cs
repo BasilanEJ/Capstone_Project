@@ -46,30 +46,31 @@ namespace RRCManagementSystem
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
-            SELECT 
-                rr.RequestID, 
-                rr.ScheduleID, 
-                rr.ClientID, 
-                c.Name AS ClientName, 
-                c.Email,
-                ss.ScheduledDate, 
-                ss.OperationNumber, 
-                rr.RequestedDate, 
-                rr.Status, 
-                b.BookingID,
-                svc.ServiceNames
-            FROM RescheduleRequests rr
-            INNER JOIN Clients c ON rr.ClientID = c.ClientID
-            INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
-            INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-            LEFT JOIN (
-                SELECT bs.BookingID, STRING_AGG(s.Name, ', ') AS ServiceNames
-                FROM BookingServices bs
-                INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-                GROUP BY bs.BookingID
-            ) svc ON b.BookingID = svc.BookingID
-            WHERE rr.Status = 'Pending'
-            ORDER BY rr.RequestedDate DESC";
+    SELECT 
+        rr.RequestID, 
+        rr.ScheduleID, 
+        rr.ClientID, 
+        (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName, '')) AS ClientName, 
+        c.Email,
+        ss.ScheduledDate, 
+        ss.OperationNumber, 
+        rr.RequestedDate, 
+        rr.Status, 
+        b.BookingID,
+        svc.ServiceNames
+    FROM RescheduleRequests rr
+    INNER JOIN Clients c ON rr.ClientID = c.ClientID
+    INNER JOIN ServiceSchedule ss ON rr.ScheduleID = ss.ScheduleID
+    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+    LEFT JOIN (
+        SELECT bs.BookingID, STRING_AGG(s.Name, ', ') AS ServiceNames
+        FROM BookingServices bs
+        INNER JOIN Services s ON bs.ServiceID = s.ServiceID
+        GROUP BY bs.BookingID
+    ) svc ON b.BookingID = svc.BookingID
+    WHERE rr.Status = 'Pending'
+    ORDER BY rr.RequestedDate DESC";
+
 
                 SqlDataAdapter da = new SqlDataAdapter(query, con);
                 DataTable dt = new DataTable();

@@ -7,6 +7,7 @@ using System.Web.UI.WebControls;
 using System.Net.Mail;
 using System.Net;
 using System.IO;
+using System.Linq;
 
 namespace RRCManagementSystem
 {
@@ -16,8 +17,11 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // Optional test for loading
-            // ClientScript.RegisterStartupScript(this.GetType(), "Log", "<script>console.log('Page Loaded');</script>", false);
+            if (!IsPostBack)
+            {
+                // Restrict file picker to image files only
+                fuPestPhoto.Attributes["accept"] = "image/png,image/jpeg,image/jpg";
+            }
         }
 
         protected void btnSubmitInquiry_Click(object sender, EventArgs e)
@@ -39,18 +43,29 @@ namespace RRCManagementSystem
             }
 
             string photoPath = null;
+
+            // ✅ Image validation & upload
             if (fuPestPhoto.HasFile)
             {
                 try
                 {
-                    string filename = Guid.NewGuid().ToString() + Path.GetExtension(fuPestPhoto.FileName);
+                    string extension = Path.GetExtension(fuPestPhoto.FileName).ToLower();
+                    string contentType = fuPestPhoto.PostedFile.ContentType.ToLower();
+
+                    string[] allowedExtensions = { ".png", ".jpg", ".jpeg" };
+                    string[] allowedMimeTypes = { "image/png", "image/jpg", "image/jpeg" };
+
+                    if (!allowedExtensions.Contains(extension) || !allowedMimeTypes.Contains(contentType))
+                    {
+                        ShowSweetAlert("Invalid File", "Only PNG or JPEG image files are allowed.", "warning");
+                        return;
+                    }
+
+                    string filename = Guid.NewGuid().ToString() + extension;
                     string folderPath = Server.MapPath("~/UploadedPestPhotos/");
 
-                    // ✅ Create folder if it doesn't exist
                     if (!Directory.Exists(folderPath))
-                    {
                         Directory.CreateDirectory(folderPath);
-                    }
 
                     string savePath = Path.Combine(folderPath, filename);
                     fuPestPhoto.SaveAs(savePath);
@@ -63,13 +78,14 @@ namespace RRCManagementSystem
                 }
             }
 
+            // ✅ Insert into DB
             try
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
-                INSERT INTO InquirySimple (Email, ContactNumber, Message, PhotoPath, SubmittedAt)
-                VALUES (@Email, @ContactNumber, @Message, @PhotoPath, GETDATE());";
+                        INSERT INTO InquirySimple (Email, ContactNumber, Message, PhotoPath, SubmittedAt)
+                        VALUES (@Email, @ContactNumber, @Message, @PhotoPath, GETDATE());";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
@@ -96,13 +112,15 @@ namespace RRCManagementSystem
         private void SendConfirmationEmail(string toEmail)
         {
             string fromEmail = ConfigurationManager.AppSettings["emailFrom"];
-            string password = ConfigurationManager.AppSettings["emailPassword"]; // Make sure this key exists in your Web.config
+            string password = ConfigurationManager.AppSettings["emailPassword"]; // Set in Web.config
 
-            MailMessage mail = new MailMessage();
-            mail.From = new MailAddress(fromEmail, "RRC Management System");
+            MailMessage mail = new MailMessage
+            {
+                From = new MailAddress(fromEmail, "RRC Management System"),
+                Subject = "RRC Inquiry Received",
+                Body = "Thank you for contacting us! We will get back to you as soon as possible."
+            };
             mail.To.Add(toEmail);
-            mail.Subject = "RRC Inquiry Received";
-            mail.Body = "Thank you for contacting us! We will get back to you as soon as possible.";
 
             SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587)
             {
@@ -119,6 +137,7 @@ namespace RRCManagementSystem
                 ShowSweetAlert("Email Error", "We saved your inquiry but failed to send confirmation: " + ex.Message, "warning");
             }
         }
+
         private void ShowSweetAlert(string title, string message, string icon)
         {
             string script = $@"
@@ -131,10 +150,7 @@ namespace RRCManagementSystem
     }});
 </script>";
             ScriptManager.RegisterStartupScript(this, this.GetType(), "SweetAlert", script, false);
-
         }
-
-
 
         private void ClearForm()
         {

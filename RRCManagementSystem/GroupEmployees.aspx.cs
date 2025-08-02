@@ -13,7 +13,6 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -22,7 +21,6 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Deny SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -31,7 +29,6 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 Check Edit permission for ManageEmployees
             if (!HasEditPermission(userId, "ManageEmployees"))
             {
                 lblMessage.Text = "❌ You do not have permission to manage team assignments.";
@@ -49,28 +46,22 @@ namespace RRCManagementSystem
             }
         }
 
-
         private bool HasEditPermission(int adminId, string moduleName)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = "SELECT CanEdit FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-
                 using (SqlCommand cmd = new SqlCommand(query, con))
                 {
                     cmd.Parameters.AddWithValue("@UserID", adminId);
                     cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-
                     try
                     {
                         con.Open();
                         object result = cmd.ExecuteScalar();
                         return result != null && result != DBNull.Value && Convert.ToBoolean(result);
                     }
-                    catch
-                    {
-                        return false;
-                    }
+                    catch { return false; }
                 }
             }
         }
@@ -80,16 +71,13 @@ namespace RRCManagementSystem
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = "SELECT TeamID, GroupName FROM Teams ORDER BY GroupName";
-
                 SqlDataAdapter da = new SqlDataAdapter(query, con);
                 DataTable dtTeams = new DataTable();
                 da.Fill(dtTeams);
-
                 ddlExistingTeams.DataSource = dtTeams;
                 ddlExistingTeams.DataValueField = "TeamID";
                 ddlExistingTeams.DataTextField = "GroupName";
                 ddlExistingTeams.DataBind();
-
                 ddlExistingTeams.Items.Insert(0, new ListItem("Select an existing team", ""));
             }
         }
@@ -99,18 +87,18 @@ namespace RRCManagementSystem
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT e.EmployeeID, e.FullName, 
+                    SELECT e.EmployeeID, 
+                           (e.LastName + ', ' + e.FirstName + ' ' + ISNULL(e.MiddleName, '')) AS FullName,
                            ISNULL(t.GroupName, 'Not Assigned') AS CurrentTeam
                     FROM Employees e
                     LEFT JOIN TeamMembers tm ON e.EmployeeID = tm.EmployeeID
                     LEFT JOIN Teams t ON tm.TeamID = t.TeamID
                     WHERE e.Position = 'Technician'
-                    ORDER BY e.FullName";
+                    ORDER BY e.LastName, e.FirstName";
 
                 SqlDataAdapter da = new SqlDataAdapter(query, con);
                 DataTable dt = new DataTable();
                 da.Fill(dt);
-
                 gvTechnicians.DataSource = dt;
                 gvTechnicians.DataBind();
             }
@@ -121,19 +109,16 @@ namespace RRCManagementSystem
             if (e.Row.RowType == DataControlRowType.DataRow)
             {
                 DropDownList ddlAction = (DropDownList)e.Row.FindControl("ddlAction");
-
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
                     string query = "SELECT TeamID, GroupName FROM Teams ORDER BY GroupName";
                     SqlDataAdapter da = new SqlDataAdapter(query, con);
                     DataTable dt = new DataTable();
                     da.Fill(dt);
-
                     ddlAction.DataSource = dt;
                     ddlAction.DataValueField = "TeamID";
                     ddlAction.DataTextField = "GroupName";
                     ddlAction.DataBind();
-
                     ddlAction.Items.Insert(0, new ListItem("No Action", ""));
                     ddlAction.Items.Add(new ListItem("Remove from team", "REMOVE"));
                 }
@@ -156,10 +141,8 @@ namespace RRCManagementSystem
                 string employeeName = hfEmployeeName?.Value;
                 string selectedAction = ddlAction?.SelectedValue;
 
-                // 🟢 Proceed only if checkbox is checked
                 if (cbSelect != null && cbSelect.Checked)
                 {
-                    // Case 1: Remove from team
                     if (selectedAction == "REMOVE")
                     {
                         if (RemoveEmployeeFromTeam(employeeId))
@@ -169,7 +152,6 @@ namespace RRCManagementSystem
                             changesCount++;
                         }
                     }
-                    // Case 2: Assign to team via row action dropdown
                     else if (!string.IsNullOrEmpty(selectedAction))
                     {
                         int newTeamId = int.Parse(selectedAction);
@@ -180,7 +162,6 @@ namespace RRCManagementSystem
                             changesCount++;
                         }
                     }
-                    // ✅ Case 3: Use top dropdown team if row action is No Action
                     else if (!string.IsNullOrEmpty(ddlExistingTeams.SelectedValue))
                     {
                         int fallbackTeamId = int.Parse(ddlExistingTeams.SelectedValue);
@@ -194,37 +175,19 @@ namespace RRCManagementSystem
                 }
             }
 
-            lblMessage.Text = changesCount > 0
-                ? $"✅ {changesCount} changes successfully saved!<br/>{feedback}"
-                : "⚠️ No changes made.";
+            lblMessage.Text = changesCount > 0 ? $"✅ {changesCount} changes successfully saved!<br/>{feedback}" : "⚠️ No changes made.";
             lblMessage.ForeColor = changesCount > 0 ? System.Drawing.Color.Green : System.Drawing.Color.OrangeRed;
-
             LoadTechnicians();
         }
-
-        protected void GridView1_RowDataBound(object sender, GridViewRowEventArgs e)
-        {
-            if (e.Row.RowType == DataControlRowType.DataRow)
-            {
-                CheckBox chk = (CheckBox)e.Row.FindControl("chkSelect");
-                if (chk != null)
-                {
-                    chk.InputAttributes.Add("style", "transform: scale(3); cursor: pointer;");
-                }
-            }
-        }
-
 
         private bool AssignOrUpdateEmployeeTeam(int employeeId, int teamId)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 con.Open();
-
                 string checkExist = "SELECT COUNT(*) FROM TeamMembers WHERE EmployeeID = @EmployeeID";
                 SqlCommand cmdCheck = new SqlCommand(checkExist, con);
                 cmdCheck.Parameters.AddWithValue("@EmployeeID", employeeId);
-
                 int count = (int)cmdCheck.ExecuteScalar();
 
                 string query = count > 0
@@ -234,7 +197,6 @@ namespace RRCManagementSystem
                 SqlCommand cmd = new SqlCommand(query, con);
                 cmd.Parameters.AddWithValue("@EmployeeID", employeeId);
                 cmd.Parameters.AddWithValue("@TeamID", teamId);
-
                 return cmd.ExecuteNonQuery() > 0;
             }
         }
@@ -246,7 +208,6 @@ namespace RRCManagementSystem
                 string query = "DELETE FROM TeamMembers WHERE EmployeeID = @EmployeeID";
                 SqlCommand cmd = new SqlCommand(query, con);
                 cmd.Parameters.AddWithValue("@EmployeeID", employeeId);
-
                 con.Open();
                 return cmd.ExecuteNonQuery() > 0;
             }
@@ -278,7 +239,6 @@ namespace RRCManagementSystem
                 {
                     con.Open();
                     int exists = (int)checkCmd.ExecuteScalar();
-
                     if (exists > 0)
                     {
                         lblMessage.Text = $"⚠️ Team '{teamName}' already exists.";
@@ -289,7 +249,6 @@ namespace RRCManagementSystem
                         insertCmd.ExecuteNonQuery();
                         lblMessage.Text = $"✅ Team '{teamName}' created successfully.";
                         lblMessage.ForeColor = System.Drawing.Color.Green;
-
                         txtModalTeamName.Text = "";
                         LoadExistingTeams();
                     }
@@ -307,21 +266,16 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Action", action);
-
                     try
                     {
                         conn.Open();
                         cmd.ExecuteNonQuery();
                     }
-                    catch
-                    {
-                        // Silent fail
-                    }
+                    catch { }
                 }
             }
         }

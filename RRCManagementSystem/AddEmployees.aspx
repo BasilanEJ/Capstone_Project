@@ -128,10 +128,21 @@
             <div class="card-body">
                 <asp:Label ID="lblMessage" runat="server" CssClass="error-message"></asp:Label>
 
-                <div class="form-group">
-                    <label for="txtFullName">Full Name:</label>
-                    <asp:TextBox ID="txtFullName" runat="server" CssClass="form-control" placeholder="Enter full name" required></asp:TextBox>
-                </div>
+             <div class="form-group">
+    <label for="txtLastName">Last Name:</label>
+    <asp:TextBox ID="txtLastName" runat="server" CssClass="form-control" placeholder="Enter last name" required></asp:TextBox>
+</div>
+
+<div class="form-group">
+    <label for="txtFirstName">First Name:</label>
+    <asp:TextBox ID="txtFirstName" runat="server" CssClass="form-control" placeholder="Enter first name" required></asp:TextBox>
+</div>
+
+<div class="form-group">
+    <label for="txtMiddleName">Middle Name <span class="text-muted">(optional)</span>:</label>
+    <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-control" placeholder="Enter middle name (optional)"></asp:TextBox>
+</div>
+
 
                 <div class="form-group">
                     <label for="txtEmail">Email:</label>

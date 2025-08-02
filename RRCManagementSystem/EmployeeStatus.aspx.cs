@@ -38,16 +38,31 @@ namespace RRCManagementSystem
          
             if (!IsPostBack)
             {
-                LoadEmployees(); // ✅ Load all employees on first load
+                    // Populate status filter dropdown
+                    ddlStatus.Items.Clear();
+                    ddlStatus.Items.Add(new ListItem("-- Select Status --", ""));
+                    ddlStatus.Items.Add(new ListItem("Active", "Active"));
+                    ddlStatus.Items.Add(new ListItem("Inactive", "Inactive"));
+
+                    // Optionally call data load
+                    LoadEmployees();
+                }
             }
-        }
 
         // Load Employees based on Status
         private void LoadEmployees(string status = "")
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "SELECT EmployeeID, FullName, Email, Phone, Position, Status FROM Employees";
+                string query = @"
+            SELECT 
+                EmployeeID,
+                (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) AS FullName,
+                Email,
+                Phone,
+                Position,
+                Status
+            FROM Employees";
 
                 if (!string.IsNullOrEmpty(status))
                 {
@@ -72,6 +87,7 @@ namespace RRCManagementSystem
                 }
             }
         }
+
 
         // Filter Employees when Status is changed
         protected void ddlStatus_SelectedIndexChanged(object sender, EventArgs e)

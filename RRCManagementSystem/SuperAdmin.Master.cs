@@ -19,6 +19,12 @@ namespace RRCManagementSystem
             }
         }
 
+        protected string GetActiveClass(string pageName)
+        {
+            string currentPage = System.IO.Path.GetFileName(Request.Path);
+            return string.Equals(currentPage, pageName, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+        }
+
         protected void btnLogout_Click(object sender, EventArgs e)
         {
             // ✅ Clear session and logout

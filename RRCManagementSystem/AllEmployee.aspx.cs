@@ -12,7 +12,6 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -20,8 +19,6 @@ namespace RRCManagementSystem
             }
 
             string role = Session["Role"].ToString();
-
-            // 🔐 Deny access for SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -29,8 +26,6 @@ namespace RRCManagementSystem
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
-
-            // 🔐 Check CanView permission for ManageEmployees
             if (!HasViewPermission(userId, "ManageEmployees"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
@@ -48,7 +43,6 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = "SELECT CanView FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserID", adminId);
@@ -62,7 +56,7 @@ namespace RRCManagementSystem
                     }
                     catch
                     {
-                        return false; // Default to deny access on error
+                        return false;
                     }
                 }
             }
@@ -72,7 +66,19 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "SELECT EmployeeID, FullName, Email, Position, Phone, ProfileImage FROM Employees";
+                string query = @"
+                    SELECT 
+                        EmployeeID, 
+                        LastName, 
+                        FirstName, 
+                        MiddleName, 
+                        Email, 
+                        Position, 
+                        Phone, 
+                        ProfileImage 
+                    FROM Employees
+                    WHERE Status = 'Active'";
+
                 SqlDataAdapter da = new SqlDataAdapter(query, conn);
                 DataTable dt = new DataTable();
                 da.Fill(dt);
@@ -82,49 +88,44 @@ namespace RRCManagementSystem
             }
         }
 
+        protected void gvEmployees_PageIndexChanging(object sender, GridViewPageEventArgs e)
+        {
+            gvEmployees.PageIndex = e.NewPageIndex;
+            LoadEmployees();
+        }
+
         protected void gvEmployees_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName == "EditEmployee")
             {
-                int employeeID = Convert.ToInt32(e.CommandArgument);
-                Response.Redirect($"EditEmployee.aspx?EmployeeID={employeeID}");
-            }
-            else if (e.CommandName == "DeleteEmployee")
-            {
-                int employeeID = Convert.ToInt32(e.CommandArgument);
-                ArchiveEmployee(employeeID);
+                int id = Convert.ToInt32(e.CommandArgument);
+                Response.Redirect("EditEmployee.aspx?id=" + id);
             }
         }
 
-        private void ArchiveEmployee(int employeeID)
+        protected void btnHiddenArchive_Click(object sender, EventArgs e)
         {
+            int id = Convert.ToInt32(hfEmployeeToArchive.Value);
+
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string archiveQuery = @"
-                    INSERT INTO EmployeesArchive (EmployeeID, FullName, Email, Phone, Position, Status, ProfileImage, ArchivedAt)
-                    SELECT EmployeeID, FullName, Email, Phone, Position, 'Archived', ProfileImage, GETDATE()
-                    FROM Employees
-                    WHERE EmployeeID = @EmployeeID;
-
-                    DELETE FROM Employees WHERE EmployeeID = @EmployeeID;
-                ";
-
-                using (SqlCommand cmd = new SqlCommand(archiveQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@EmployeeID", employeeID);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                        LoadEmployees(); // Refresh the grid after archiving
-                    }
-                    catch (Exception ex)
-                    {
-                        // Optional: handle/log the error
-                    }
-                }
+                string query = "UPDATE Employees SET Status = 'Inactive' WHERE EmployeeID = @EmployeeID";
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@EmployeeID", id);
+                conn.Open();
+                cmd.ExecuteNonQuery();
             }
+
+            LoadEmployees();
+
+            string script = @"Swal.fire({
+                icon: 'success',
+                title: 'Archived!',
+                text: 'Employee has been archived successfully.',
+                showConfirmButton: false,
+                timer: 1500
+            });";
+            ClientScript.RegisterStartupScript(this.GetType(), "archiveSuccess", script, true);
         }
     }
 }

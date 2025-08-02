@@ -169,15 +169,18 @@ namespace RRCManagementSystem
 
             using (SqlConnection conn = new SqlConnection(connStr))
             {
-                string query = @"
-            SELECT TOP (@count) Name, ClientID 
+                string query = $@"
+            SELECT TOP {count} 
+                (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) AS FullName, 
+                ClientID 
             FROM Clients 
-            WHERE Name LIKE @prefix + '%' AND Status = 'Approved'
-            ORDER BY Name ASC";
+            WHERE 
+                (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) LIKE @prefix + '%' 
+                AND Status = 'Approved'
+            ORDER BY LastName ASC, FirstName ASC";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@prefix", prefixText);
-                cmd.Parameters.AddWithValue("@count", count);
                 conn.Open();
 
                 SqlDataReader reader = cmd.ExecuteReader();
@@ -185,7 +188,7 @@ namespace RRCManagementSystem
                 {
                     clients.Add(
                         AjaxControlToolkit.AutoCompleteExtender.CreateAutoCompleteItem(
-                            reader["Name"].ToString(),
+                            reader["FullName"].ToString(),
                             reader["ClientID"].ToString()
                         )
                     );
@@ -194,6 +197,7 @@ namespace RRCManagementSystem
 
             return clients;
         }
+
 
 
         /*    protected void txtClientSearch_TextChanged(object sender, EventArgs e)

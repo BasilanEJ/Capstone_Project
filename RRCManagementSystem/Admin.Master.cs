@@ -66,6 +66,13 @@ namespace RRCManagementSystem
             Session["AllowedModules"] = allowedModules;
         }
 
+
+        protected string GetActiveClass(string page)
+        {
+            string currentPath = System.IO.Path.GetFileName(Request.Path).ToLower();
+            return currentPath == page.ToLower() ? "active" : "";
+        }
+
         protected void btnLogout_Click(object sender, EventArgs e)
         {
             Session.Clear();
