@@ -169,7 +169,7 @@
 
                 <!-- CAPTCHA Panel -->
                 <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
-                    <div class="g-recaptcha" data-sitekey="6LdFpz4rAAAAAFHN9JRMbSs2zRVZastQVd6GHIpz"></div>
+                    <div class="g-recaptcha" data-sitekey="6Lfu6JMrAAAAAPSN_aGxR78zUwJfuNm39ZK3oLaB"></div>
                 </asp:Panel>
 
                 <!-- Login Button -->

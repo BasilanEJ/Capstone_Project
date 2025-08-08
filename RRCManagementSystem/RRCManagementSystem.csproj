@@ -123,6 +123,7 @@
     <Content Include="AddItem.aspx" />
     <Content Include="AddRole.aspx" />
     <Content Include="AddServices.aspx" />
+    <Content Include="AddStocks.aspx" />
     <Content Include="AddSupplier.aspx" />
     <Content Include="AdminReports.aspx" />
     <Content Include="AllBooking.aspx" />
@@ -300,6 +301,13 @@
     </Compile>
     <Compile Include="AddServices.aspx.designer.cs">
       <DependentUpon>AddServices.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="AddStocks.aspx.cs">
+      <DependentUpon>AddStocks.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AddStocks.aspx.designer.cs">
+      <DependentUpon>AddStocks.aspx</DependentUpon>
     </Compile>
     <Compile Include="AddSupplier.aspx.cs">
       <DependentUpon>AddSupplier.aspx</DependentUpon>

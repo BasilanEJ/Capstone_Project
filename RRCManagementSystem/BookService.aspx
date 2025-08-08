@@ -21,8 +21,23 @@
                 const modalDateInput = document.getElementById('<%= TextBox1.ClientID %>');
                 const modalTimeInput = document.getElementById('<%= TextBox2.ClientID %>');
 
+                // ✅ Set minimum date (today)
                 modalDateInput.setAttribute("min", todayStr);
 
+                // ✅ Calculate maximum date (same day 6 months ahead)
+                const maxDate = new Date(now);
+                maxDate.setMonth(maxDate.getMonth() + 6);
+
+                // Handle cases where day doesn't exist in new month (e.g. Aug 31 + 6 months)
+                if (maxDate.getDate() !== now.getDate()) {
+                    // Set to last valid day of the new month
+                    maxDate.setDate(0);
+                }
+
+                const maxDateStr = maxDate.toISOString().split("T")[0];
+                modalDateInput.setAttribute("max", maxDateStr);
+
+                // ⚠ Handle min time only if selected date is today
                 function updateMinTime() {
                     const selectedStr = modalDateInput.value;
                     if (selectedStr === todayStr) {
@@ -38,6 +53,8 @@
                 modalTimeInput.addEventListener("focus", updateMinTime);
                 modalDateInput.dispatchEvent(new Event('change'));
             }
+
+
 
             function applyDateTime() {
                 const modalDateInput = document.getElementById('<%= TextBox1.ClientID %>');
@@ -128,6 +145,12 @@
                         <label class="form-label">Additional Notes</label>
                         <asp:TextBox ID="txtNotes" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" />
                     </div>
+
+                    <div class="mb-3">
+    <label class="form-label">Inspector Who Quoted</label>
+    <asp:Label ID="lblInspector" runat="server" CssClass="form-control rounded bg-light px-3 py-2" />
+</div>
+
 
                     <asp:Button ID="btnBook" runat="server" Text="Book Now" CssClass="btn btn-success w-100" OnClick="btnBook_Click" />
                 </div>

@@ -35,8 +35,7 @@
 
                 <div class="mb-3">
                     <label for="txtQuantity" class="form-label fw-semibold">Quantity</label>
-                    <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" placeholder="Enter quantity"
-                        oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+                    <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" ReadOnly="true" />
                     <small id="bottleNote" class="form-text text-muted" style="display:none;">
                         💡 Bottled Chemical: 1 box = 10 bottles | 1 bottle = 1L
                     </small>
@@ -47,6 +46,7 @@
                         💡 Safety Gear: Input quantity per item (e.g., gloves, masks)
                     </small>
                 </div>
+
 
                 <div class="mb-3">
                     <label for="txtExpirationDate" class="form-label fw-semibold">Expiration Date</label>

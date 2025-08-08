@@ -74,10 +74,11 @@ namespace RRCManagementSystem
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
-                        UPDATE Users
-                        SET TOTPSecret = @Secret,
-                            TwoFactorEnabled = 1
-                        WHERE Email = @Email AND Status = 'Active'";
+    UPDATE Users
+    SET TOTPSecret = @Secret,
+        TwoFactorEnabled = 1
+    WHERE Email = @Email AND Status IN ('Active', 'Available')";
+
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {

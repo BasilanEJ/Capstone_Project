@@ -78,22 +78,13 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.TextBox txtSQM;
 
         /// <summary>
-        /// lblTotal control.
+        /// txtTotalPrice control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblTotal;
-
-        /// <summary>
-        /// btnCalculate control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnCalculate;
+        protected global::System.Web.UI.WebControls.TextBox txtTotalPrice;
 
         /// <summary>
         /// btnSubmit control.

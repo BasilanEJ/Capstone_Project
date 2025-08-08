@@ -61,15 +61,22 @@ namespace RRCManagementSystem
                         return;
                     }
 
+                    // ✅ Auto-create folder path
+                    string folderRelativePath = "/UploadedPestPhotos/";
+                    string folderPhysicalPath = Server.MapPath(folderRelativePath);
+
+                    if (!Directory.Exists(folderPhysicalPath))
+                    {
+                        Directory.CreateDirectory(folderPhysicalPath); // ✅ Auto-create the folder
+                    }
+
                     string filename = Guid.NewGuid().ToString() + extension;
-                    string folderPath = Server.MapPath("~/UploadedPestPhotos/");
+                    string savePath = Path.Combine(folderPhysicalPath, filename);
 
-                    if (!Directory.Exists(folderPath))
-                        Directory.CreateDirectory(folderPath);
-
-                    string savePath = Path.Combine(folderPath, filename);
                     fuPestPhoto.SaveAs(savePath);
-                    photoPath = "~/UploadedPestPhotos/" + filename;
+
+                    // ✅ Save relative path for browser access
+                    photoPath = folderRelativePath + filename;
                 }
                 catch (Exception ex)
                 {
@@ -77,6 +84,7 @@ namespace RRCManagementSystem
                     return;
                 }
             }
+
 
             // ✅ Insert into DB
             try

@@ -178,20 +178,6 @@
                     <asp:TextBox ID="txtDescription" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" MaxLength="500" />
                 </div>
 
-                <div class="form-group">
-                    <label for="txtPrice100">Price for 100 SQM (₱)</label>
-                    <asp:TextBox ID="txtPrice100" runat="server" CssClass="form-control" TextMode="Number" />
-                </div>
-
-                <div class="form-group">
-                    <label for="txtPrice200">Price for 200 SQM (₱)</label>
-                    <asp:TextBox ID="txtPrice200" runat="server" CssClass="form-control" TextMode="Number" />
-                </div>
-
-                <div class="form-group">
-                    <label for="txtPriceAbove200">Price for 200 SQM and Above (₱)</label>
-                    <asp:TextBox ID="txtPriceAbove200" runat="server" CssClass="form-control" TextMode="Number" />
-                </div>
 
                 <div class="form-group text-end mt-4">
                     <asp:Button ID="Button1" runat="server" Text="➕ Add Service"

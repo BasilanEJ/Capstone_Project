@@ -27,21 +27,7 @@
                     <asp:TextBox ID="txtDescription" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" />
                 </div>
 
-                <div class="mb-3">
-                    <label for="txtPrice100" class="form-label fw-semibold">Price for 100 SQM (₱)</label>
-                    <asp:TextBox ID="txtPrice100" runat="server" CssClass="form-control" TextMode="Number" />
-                </div>
-
-                <div class="mb-3">
-                    <label for="txtPrice200" class="form-label fw-semibold">Price for 200 SQM (₱)</label>
-                    <asp:TextBox ID="txtPrice200" runat="server" CssClass="form-control" TextMode="Number" />
-                </div>
-
-                <div class="mb-4">
-                    <label for="txtPriceAbove200" class="form-label fw-semibold">Price for 200 SQM and above (₱)</label>
-                    <asp:TextBox ID="txtPriceAbove200" runat="server" CssClass="form-control" TextMode="Number" />
-                </div>
-
+               
                 <div class="d-flex flex-wrap gap-2 justify-content-center">
                     <asp:Button ID="btnUpdate" runat="server" Text="Update Service" CssClass="btn btn-primary px-4"
                         OnClientClick="return confirmUpdate();" OnClick="btnUpdate_Click" />

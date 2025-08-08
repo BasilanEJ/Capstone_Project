@@ -30,21 +30,28 @@
         }
 
         private void LoadClients()
+        {
+            using (SqlConnection con = new SqlConnection(connectionString))
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    string query = "SELECT ClientID, Name FROM Clients WHERE Status = 'Approved'";
-                    SqlCommand cmd = new SqlCommand(query, con);
-                    con.Open();
-                    ddlClients.DataSource = cmd.ExecuteReader();
-                    ddlClients.DataTextField = "Name";
-                    ddlClients.DataValueField = "ClientID";
-                    ddlClients.DataBind();
-                    ddlClients.Items.Insert(0, new ListItem("-- Select Client --", ""));
-                }
-            }
+                string query = @"
+            SELECT 
+                ClientID, 
+                (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) AS Name 
+            FROM Clients 
+            WHERE Status = 'Approved'";
 
-            protected void ddlClients_SelectedIndexChanged(object sender, EventArgs e)
+                SqlCommand cmd = new SqlCommand(query, con);
+                con.Open();
+                ddlClients.DataSource = cmd.ExecuteReader();
+                ddlClients.DataTextField = "Name";
+                ddlClients.DataValueField = "ClientID";
+                ddlClients.DataBind();
+                ddlClients.Items.Insert(0, new ListItem("-- Select Client --", ""));
+            }
+        }
+
+
+        protected void ddlClients_SelectedIndexChanged(object sender, EventArgs e)
             {
                 LoadMessages();
             }

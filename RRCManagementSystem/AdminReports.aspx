@@ -157,7 +157,7 @@
         </asp:TemplateField>
         <asp:BoundField DataField="Email" HeaderText="Email" />
         <asp:BoundField DataField="ContactNumber" HeaderText="Contact" />
-        <asp:BoundField DataField="Name" HeaderText="Name" />
+        <asp:BoundField DataField="FullName" HeaderText="Client Name" />
         <asp:BoundField DataField="Address" HeaderText="Address" />
         <asp:BoundField DataField="SubmittedAt" HeaderText="Date Sent" />
     </Columns>
@@ -250,8 +250,8 @@
                 <%# "Inspect" + String.Format("{0:D4}", Eval("InspectionID")) %>
             </ItemTemplate>
         </asp:TemplateField>
-        <asp:BoundField DataField="InspectorName" HeaderText="Inspector Name" />
-        <asp:BoundField DataField="ClientName" HeaderText="Client Name" />
+       <asp:BoundField DataField="InspectorName" HeaderText="Inspector Name" />
+<asp:BoundField DataField="ClientName" HeaderText="Client Name" />
         <asp:BoundField DataField="ClientAddress" HeaderText="Client Address" />
         <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled Date" />
         <asp:BoundField DataField="InspectionStatus" HeaderText="Status" />

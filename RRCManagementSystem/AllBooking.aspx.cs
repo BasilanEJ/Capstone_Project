@@ -32,10 +32,21 @@ namespace RRCManagementSystem
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
             }
-
             if (!IsPostBack)
             {
                 LoadAllBookings();
+
+                if (Request.QueryString["op1"] == "completed")
+                {
+                    string script = @"Swal.fire({
+                icon: 'success',
+                title: 'Completed!',
+                text: 'Operation 1 was successfully marked as completed.',
+                showConfirmButton: false,
+                timer: 2000
+            });";
+                    ClientScript.RegisterStartupScript(this.GetType(), "ShowSuccess", script, true);
+                }
             }
         }
 
@@ -82,7 +93,7 @@ SELECT
     b.CreatedAt,
     b.Price,
     ISNULL(b.Price, 0) - ISNULL((SELECT SUM(t.Amount) FROM Transactions t WHERE t.SaleID = b.BookingID), 0) AS RemainingBalance,
-    (SELECT TOP 1 Status FROM ServiceSchedule WHERE BookingID = b.BookingID AND OperationNumber = 1) AS Op1Status
+    ISNULL((SELECT TOP 1 Status FROM ServiceSchedule WHERE BookingID = b.BookingID AND OperationNumber = 1), 'Pending') AS Op1Status
 FROM Bookings b
 INNER JOIN Clients c ON b.ClientID = c.ClientID
 WHERE 
@@ -134,18 +145,21 @@ ORDER BY b.CreatedAt DESC";
 
         protected void gvBookings_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            string bookingId = e.CommandArgument.ToString();
+            lblMessage.Text = $"Command triggered: {e.CommandName} for Argument: {e.CommandArgument}";
+            lblMessage.ForeColor = System.Drawing.Color.Black;
 
             if (e.CommandName == "EditBooking")
             {
-                Response.Redirect($"EditBooking.aspx?BookingID={bookingId}");
-            }
-            else if (e.CommandName == "CompleteOp1")
-            {
-                MarkOp1AsCompleted(Convert.ToInt32(bookingId));
-                LoadAllBookings();
+                int bookingId;
+                if (int.TryParse(e.CommandArgument.ToString(), out bookingId))
+                {
+                    Response.Redirect($"EditBooking.aspx?BookingID={bookingId}");
+                }
             }
         }
+
+
+
 
         private void MarkOp1AsCompleted(int bookingId)
         {
@@ -166,8 +180,17 @@ WHERE BookingID = @BookingID AND OperationNumber = 1";
 
                         if (rowsAffected > 0)
                         {
-                            lblMessage.Text = "✅ Operation 1 marked as completed.";
-                            lblMessage.ForeColor = System.Drawing.Color.Green;
+                            // ✅ Explicit audit log line as requested
+                            AddAuditLog(Convert.ToInt32(Session["UserID"]), $"Marked Op1 completed for BookingID {bookingId}");
+
+                            string script = @"Swal.fire({
+                        icon: 'success',
+                        title: 'Marked Completed!',
+                        text: 'Operation 1 was successfully marked as completed.',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });";
+                            ClientScript.RegisterStartupScript(this.GetType(), "CompleteSuccess", script, true);
                         }
                         else
                         {
@@ -184,6 +207,22 @@ WHERE BookingID = @BookingID AND OperationNumber = 1";
             }
         }
 
+
+        protected void btnHiddenCompleteOp1_Click(object sender, EventArgs e)
+        {
+            if (int.TryParse(hfBookingIDToComplete.Value, out int bookingId))
+            {
+                // Update operation status
+                MarkOp1AsCompleted(bookingId);
+
+                // Redirect to trigger full page reload with SweetAlert
+                Response.Redirect("AllBooking.aspx?op1=completed");
+            }
+        }
+
+
+
+
         protected void gvBookings_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType == DataControlRowType.DataRow)
@@ -198,5 +237,21 @@ WHERE BookingID = @BookingID AND OperationNumber = 1";
                     e.Row.Cells[5].CssClass = "status-cancelled";
             }
         }
+
+        private void AddAuditLog(int adminId, string action)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@AdminID", adminId);
+                    cmd.Parameters.AddWithValue("@Action", action);
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
     }
 }

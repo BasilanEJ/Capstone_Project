@@ -44,7 +44,7 @@ namespace RRCManagementSystem
             }
         }
 
-        protected void gvArchivedAdmins_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
+        protected void gvArchivedAdmins_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             int userID = Convert.ToInt32(e.CommandArgument);
 
@@ -62,18 +62,31 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "UPDATE Users SET Status = 'Available' WHERE UserID = @UserID";
+                string restoreQuery = @"
+            UPDATE Users
+            SET Status = 'Available'
+            WHERE UserID = @UserID AND Role = 'Admin'";
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                string reset2FAQuery = @"
+            UPDATE Users
+            SET TwoFactorEnabled = 0,
+                TOTPSecret = NULL
+            WHERE UserID = @UserID";
+
+                using (SqlCommand cmdRestore = new SqlCommand(restoreQuery, conn))
+                using (SqlCommand cmdReset2FA = new SqlCommand(reset2FAQuery, conn))
                 {
-                    cmd.Parameters.AddWithValue("@UserID", userID);
+                    cmdRestore.Parameters.AddWithValue("@UserID", userID);
+                    cmdReset2FA.Parameters.AddWithValue("@UserID", userID);
 
                     try
                     {
                         conn.Open();
-                        cmd.ExecuteNonQuery();
-                        lblMessage.Text = "✅ Admin restored successfully.";
-                        LoadArchivedAdmins();
+                        cmdRestore.ExecuteNonQuery();
+                        cmdReset2FA.ExecuteNonQuery(); // 🔐 Force 2FA rescan
+
+                        lblMessage.Text = "✅ Admin restored successfully. 2FA setup will be required again.";
+                        LoadArchivedAdmins(); // Refresh the GridView
                     }
                     catch (Exception ex)
                     {
@@ -83,30 +96,45 @@ namespace RRCManagementSystem
             }
         }
 
+
         private void DeleteAdmin(int userID)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "DELETE FROM Users WHERE UserID = @UserID AND Role = 'Admin' AND Status = 'Archived'";
+                string deletePermissionsQuery = "DELETE FROM AdminPermissions WHERE UserID = @UserID";
+                string markUserDeletedQuery = "UPDATE Users SET Status = 'Deleted' WHERE UserID = @UserID AND Role = 'Admin' AND Status = 'Archived'";
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                try
                 {
-                    cmd.Parameters.AddWithValue("@UserID", userID);
+                    conn.Open();
 
-                    try
+                    // Step 1: Remove permissions
+                    using (SqlCommand cmd = new SqlCommand(deletePermissionsQuery, conn))
                     {
-                        conn.Open();
+                        cmd.Parameters.AddWithValue("@UserID", userID);
                         cmd.ExecuteNonQuery();
-                        lblMessage.Text = "✅ Admin deleted permanently.";
-                        LoadArchivedAdmins();
                     }
-                    catch (Exception ex)
+
+                    // Step 2: Mark admin as Deleted (instead of physical deletion)
+                    using (SqlCommand cmd = new SqlCommand(markUserDeletedQuery, conn))
                     {
-                        lblMessage.Text = "⚠ Error deleting admin: " + ex.Message;
+                        cmd.Parameters.AddWithValue("@UserID", userID);
+                        int rows = cmd.ExecuteNonQuery();
+
+                        lblMessage.Text = rows > 0
+                            ? "✅ Admin permanently deleted (status set to Deleted)."
+                            : "⚠ Admin could not be deleted.";
                     }
+
+                    LoadArchivedAdmins(); // Refresh list
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "⚠ Error deleting admin: " + ex.Message;
                 }
             }
         }
+
 
         protected void btnSearch_Click(object sender, EventArgs e)
         {
@@ -154,7 +182,5 @@ namespace RRCManagementSystem
 
             base.Render(writer);
         }
-
-
     }
 }

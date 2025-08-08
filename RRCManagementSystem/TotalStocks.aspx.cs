@@ -30,22 +30,25 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                CreateDailySnapshot(); // 🔵 Auto create snapshot if needed
+                CreateYesterdaySnapshot(); // ✅ Snapshot for yesterday only if not yet created
+
                 txtFromDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
                 txtToDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
                 LoadSnapshot(DateTime.Today, DateTime.Today);
             }
         }
 
-
-        private void CreateDailySnapshot()
+        private void CreateYesterdaySnapshot()
         {
+            DateTime snapshotDate = DateTime.Today.AddDays(-1);
+
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
 
-                string checkQuery = "SELECT COUNT(*) FROM InventorySnapshots WHERE SnapshotDate = CAST(GETDATE() AS DATE)";
+                string checkQuery = "SELECT COUNT(*) FROM InventorySnapshots WHERE SnapshotDate = @SnapshotDate";
                 SqlCommand checkCmd = new SqlCommand(checkQuery, conn);
+                checkCmd.Parameters.AddWithValue("@SnapshotDate", snapshotDate);
 
                 int count = (int)checkCmd.ExecuteScalar();
 
@@ -53,10 +56,11 @@ namespace RRCManagementSystem
                 {
                     string insertQuery = @"
                         INSERT INTO InventorySnapshots (ItemID, Name, Type, Quantity, ExcessML, SnapshotDate)
-                        SELECT ItemID, Name, Type, Quantity, ExcessML, CAST(GETDATE() AS DATE)
+                        SELECT ItemID, Name, Type, Quantity, ExcessML, @SnapshotDate
                         FROM Inventory";
 
                     SqlCommand insertCmd = new SqlCommand(insertQuery, conn);
+                    insertCmd.Parameters.AddWithValue("@SnapshotDate", snapshotDate);
                     insertCmd.ExecuteNonQuery();
                 }
             }
@@ -90,7 +94,8 @@ namespace RRCManagementSystem
 
         protected void btnFilter_Click(object sender, EventArgs e)
         {
-            if (DateTime.TryParse(txtFromDate.Text, out DateTime fromDate) && DateTime.TryParse(txtToDate.Text, out DateTime toDate))
+            if (DateTime.TryParse(txtFromDate.Text, out DateTime fromDate) &&
+                DateTime.TryParse(txtToDate.Text, out DateTime toDate))
             {
                 LoadSnapshot(fromDate, toDate);
             }
@@ -103,7 +108,8 @@ namespace RRCManagementSystem
         protected void gvTotalStocks_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
             gvTotalStocks.PageIndex = e.NewPageIndex;
-            if (DateTime.TryParse(txtFromDate.Text, out DateTime fromDate) && DateTime.TryParse(txtToDate.Text, out DateTime toDate))
+            if (DateTime.TryParse(txtFromDate.Text, out DateTime fromDate) &&
+                DateTime.TryParse(txtToDate.Text, out DateTime toDate))
             {
                 LoadSnapshot(fromDate, toDate);
             }

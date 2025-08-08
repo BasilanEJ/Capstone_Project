@@ -89,6 +89,17 @@ namespace RRCManagementSystem
                         int userID = Convert.ToInt32(reader["UserID"]);
                         string userName = reader["Name"].ToString();
 
+                        // ✅ Status check for Users (not Clients)
+                        if (!status.Equals("Active", StringComparison.OrdinalIgnoreCase) &&
+                            !status.Equals("Available", StringComparison.OrdinalIgnoreCase))
+                        {
+                            lblMessage.Text = "⚠ Your account is not active.";
+                            reader.Close();
+                            return;
+                        }
+
+
+
                         // Lockout check
                         if (lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
                         {
@@ -237,7 +248,7 @@ WHERE Email = @Email";
 
             using (var client = new WebClient())
             {
-                string secret = "6LdFpz4rAAAAAF33FYq5f39pW0uUe6QNI4XgcWAv"; // Replace with your actual secret key
+                string secret = "6Lfu6JMrAAAAAEy4fBkw0jNrp7mXfvqy03Tlz1i7"; // Replace with your actual secret key
                 string result = client.DownloadString($"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}");
                 return result.Contains("\"success\": true");
             }

@@ -50,8 +50,92 @@ namespace RRCManagementSystem
                 LoadTotalCounts();
                 LoadBlockchainLog();
                 LoadSalesChart("monthly"); // Optional: preload chart for server-side rendering
+                LoadWeeklyBookingCalendar();
             }
         }
+
+        private void LoadWeeklyBookingCalendar()
+        {
+            DataTable calendarTable = new DataTable();
+            for (int i = 0; i < 7; i++)
+                calendarTable.Columns.Add(((DayOfWeek)i).ToString());
+
+            DateTime today = DateTime.Today;
+            DateTime sunday = today.AddDays(-(int)today.DayOfWeek);
+
+            Dictionary<DayOfWeek, List<string>> calendarData = new Dictionary<DayOfWeek, List<string>>();
+            for (int i = 0; i < 7; i++)
+                calendarData[(DayOfWeek)i] = new List<string>();
+
+            using (SqlConnection con = new SqlConnection(connectionString))
+            {
+                string query = @"
+SELECT 
+    b.ScheduledDate,
+    c.FirstName,
+    c.LastName,
+    c.StreetAndUnit,
+    c.Barangay,
+    c.City,
+    t.GroupName
+FROM Bookings b
+INNER JOIN Clients c ON b.ClientID = c.ClientID
+LEFT JOIN Teams t ON b.TeamID = t.TeamID
+WHERE 
+    CAST(b.ScheduledDate AS DATE) BETWEEN @Sunday AND @Saturday
+    AND b.Status NOT IN ('Cancelled')";
+
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@Sunday", sunday.Date);
+                cmd.Parameters.AddWithValue("@Saturday", sunday.AddDays(6).Date);
+
+                con.Open();
+                SqlDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    DateTime sched = Convert.ToDateTime(reader["ScheduledDate"]);
+                    DayOfWeek day = sched.DayOfWeek;
+
+                    string client = $"{reader["LastName"]}, {reader["FirstName"]}";
+                    string address = $"{reader["StreetAndUnit"]}, {reader["Barangay"]}, {reader["City"]}";
+                    string time = sched.ToString("hh:mm tt");
+                    string groupName = reader["GroupName"] != DBNull.Value ? reader["GroupName"].ToString() : "Unassigned";
+
+                    // Inject full content into modal
+                    string modalContent = $"{client}<br/>{time}<br/>{address}<br/><strong>Team:</strong> {groupName}".Replace("'", "\\'");
+                    string clickableDiv = $@"
+                <div onclick=""showBookingDetails('{modalContent}')""
+                     style='cursor:pointer; padding: 5px; border-radius:5px; transition:0.2s;'
+                     onmouseover=""this.style.backgroundColor='#e2e6ea'""
+                     onmouseout=""this.style.backgroundColor='transparent'"">
+                     <strong>{client}</strong><br/>
+                     <small>{time}</small><br/>
+                     <small>{address}</small><br/>
+                     <span class='badge bg-info'>{groupName}</span>
+                </div>";
+
+                    calendarData[day].Add(clickableDiv);
+                }
+            }
+
+            TableRow row = new TableRow();
+            foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
+            {
+                TableCell cell = new TableCell();
+                cell.Text = $"<strong>{day}</strong><hr style='margin:5px;' />";
+                cell.CssClass = "align-top";
+
+                foreach (var entry in calendarData[day])
+                {
+                    cell.Text += entry + "<hr style='margin:5px 0;' />";
+                }
+
+                row.Cells.Add(cell);
+            }
+
+            tblCalendar.Rows.Add(row);
+        }
+
 
 
         private void LoadTotalCounts()

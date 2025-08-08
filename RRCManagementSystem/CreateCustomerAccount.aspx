@@ -6,7 +6,6 @@
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-    <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="true" />
 
    <div class="container my-5">
     <div class="card shadow-sm mx-auto" style="max-width: 800px;">

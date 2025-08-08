@@ -5,8 +5,8 @@ using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.Collections.Generic;
-using System.Web.Services; 
-using System.Web.Script.Services; 
+using System.Web.Services;
+using System.Web.Script.Services;
 
 namespace RRCManagementSystem
 {
@@ -36,54 +36,15 @@ namespace RRCManagementSystem
             }
         }
 
-        protected void btnCalculate_Click(object sender, EventArgs e)
+        protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            if (!int.TryParse(txtSQM.Text.Trim(), out int sqm))
+            // ✅ Check if user is logged in and is an Inspector
+            if (Session["UserID"] == null || Session["Role"] == null || Session["Role"].ToString() != "Inspector")
             {
-                lblTotal.Text = "❌ Please enter a valid SQM.";
+                ScriptManager.RegisterStartupScript(this, GetType(), "noInspector", "Swal.fire('Unauthorized', 'You must be logged in as an Inspector.', 'error');", true);
                 return;
             }
 
-            decimal total = 0;
-            foreach (ListItem item in cblServices.Items)
-            {
-                if (item.Selected)
-                {
-                    int serviceId = int.Parse(item.Value);
-                    total += GetServicePrice(serviceId, sqm);
-                }
-            }
-
-            lblTotal.Text = $"💰 Total Price: ₱{total:N2}";
-            lblTotal.ForeColor = System.Drawing.Color.Green;
-        }
-
-        private decimal GetServicePrice(int serviceId, int sqm)
-        {
-            decimal price = 0;
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = "SELECT Price100SQM, Price200SQM, PriceAbove200SQM FROM Services WHERE ServiceID = @ServiceID";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@ServiceID", serviceId);
-                conn.Open();
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                if (reader.Read())
-                {
-                    if (sqm <= 100)
-                        price = Convert.ToDecimal(reader["Price100SQM"]);
-                    else if (sqm <= 200)
-                        price = Convert.ToDecimal(reader["Price200SQM"]);
-                    else
-                        price = Convert.ToDecimal(reader["PriceAbove200SQM"]);
-                }
-            }
-            return price;
-        }
-
-        protected void btnSubmit_Click(object sender, EventArgs e)
-        {
             if (string.IsNullOrEmpty(hfClientID.Value))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "selectClient", "Swal.fire('Missing', 'Please select a client.', 'warning');", true);
@@ -96,6 +57,12 @@ namespace RRCManagementSystem
                 return;
             }
 
+            if (!decimal.TryParse(txtTotalPrice.Text.Trim(), out decimal total) || total <= 0)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "invalidPrice", "Swal.fire('Invalid', 'Please enter a valid total price.', 'error');", true);
+                return;
+            }
+
             var selectedItems = cblServices.Items.Cast<ListItem>().Where(i => i.Selected).ToList();
             if (!selectedItems.Any())
             {
@@ -105,16 +72,15 @@ namespace RRCManagementSystem
 
             string selectedServiceIDs = string.Join(",", selectedItems.Select(i => i.Value));
             string selectedServiceNames = string.Join(", ", selectedItems.Select(i => i.Text));
-            decimal total = 0;
             bool isContract = false;
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
+
                 foreach (ListItem item in selectedItems)
                 {
                     int serviceId = int.Parse(item.Value);
-                    total += GetServicePrice(serviceId, sqm);
 
                     if (!isContract)
                     {
@@ -128,10 +94,8 @@ namespace RRCManagementSystem
                         }
                     }
                 }
-            }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
+                // ✅ Save quotation for client
                 string insertQuery = @"
                     INSERT INTO PendingQuotations 
                         (ClientID, InspectorID, ServiceNames, ServiceID, SQM, Price, IsContract, CreatedAt) 
@@ -140,28 +104,28 @@ namespace RRCManagementSystem
 
                 SqlCommand cmd = new SqlCommand(insertQuery, conn);
                 cmd.Parameters.AddWithValue("@ClientID", hfClientID.Value);
-                cmd.Parameters.AddWithValue("@InspectorID", Convert.ToInt32(Session["AdminID"]));
+                cmd.Parameters.AddWithValue("@InspectorID", Convert.ToInt32(Session["UserID"]));
                 cmd.Parameters.AddWithValue("@ServiceNames", selectedServiceNames);
                 cmd.Parameters.AddWithValue("@ServiceID", selectedServiceIDs);
                 cmd.Parameters.AddWithValue("@SQM", sqm);
                 cmd.Parameters.AddWithValue("@Price", total);
                 cmd.Parameters.AddWithValue("@IsContract", isContract);
-
-                conn.Open();
                 cmd.ExecuteNonQuery();
             }
 
+            // ✅ Show success
             ScriptManager.RegisterStartupScript(this, GetType(), "success", "Swal.fire('Success', 'Quotation submitted for client!', 'success');", true);
+
+            // ✅ Reset fields
             txtClientSearch.Text = "";
             hfClientID.Value = "";
             cblServices.ClearSelection();
             txtSQM.Text = "";
-            lblTotal.Text = "";
+            txtTotalPrice.Text = "";
         }
 
-
-        [System.Web.Services.WebMethod]
-        [System.Web.Script.Services.ScriptMethod]
+        [WebMethod]
+        [ScriptMethod]
         public static List<string> SearchClients(string prefixText, int count)
         {
             List<string> clients = new List<string>();
@@ -175,7 +139,12 @@ namespace RRCManagementSystem
                 ClientID 
             FROM Clients 
             WHERE 
-                (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) LIKE @prefix + '%' 
+                (
+                    FirstName LIKE @prefix + '%' OR
+                    LastName LIKE @prefix + '%' OR
+                    MiddleName LIKE @prefix + '%' OR
+                    (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) LIKE @prefix + '%'
+                )
                 AND Status = 'Approved'
             ORDER BY LastName ASC, FirstName ASC";
 
@@ -197,21 +166,6 @@ namespace RRCManagementSystem
 
             return clients;
         }
-
-
-
-        /*    protected void txtClientSearch_TextChanged(object sender, EventArgs e)
-            {
-
-                string input = txtClientSearch.Text;
-                if (input.Contains("|"))
-                {
-                    var parts = input.Split('|');
-                    txtClientSearch.Text = parts[0];
-                    hfClientID.Value = parts[1];
-                }
-            } */
-
 
     }
 }

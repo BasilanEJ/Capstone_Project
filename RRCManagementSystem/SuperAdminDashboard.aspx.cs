@@ -34,12 +34,13 @@ namespace RRCManagementSystem
                     conn.Open();
 
                     // ✅ Total Admin Accounts
-                    string totalAdminsQuery = "SELECT COUNT(*) FROM Users WHERE LOWER(Role) = 'admin' AND Status = 'Active'";
-                    using (SqlCommand cmdAdmins = new SqlCommand(totalAdminsQuery, conn))
+                    string totalUsersQuery = "SELECT COUNT(*) FROM Users WHERE Status = 'Active' AND LOWER(Role) <> 'SuperAdmin'";
+                    using (SqlCommand cmdUsers = new SqlCommand(totalUsersQuery, conn))
                     {
-                        object result = cmdAdmins.ExecuteScalar();
+                        object result = cmdUsers.ExecuteScalar();
                         lblTotalAdmins.Text = result != null ? result.ToString() : "0";
                     }
+
 
                     // ✅ Total Audit Logs
                     string totalLogsQuery = "SELECT COUNT(*) FROM AuditLogs";

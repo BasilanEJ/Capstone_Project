@@ -12,7 +12,7 @@
                         <h3 class="card-title display-6 text-dark">
                             <asp:Label ID="lblTotalAdmins" runat="server" Text="0" />
                         </h3>
-                        <p class="text-muted mb-0">Total Admin Accounts</p>
+                        <p class="text-muted mb-0">Total User Accounts</p>
                     </div>
                 </div>
             </div>

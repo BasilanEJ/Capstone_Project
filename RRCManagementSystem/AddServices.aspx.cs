@@ -52,12 +52,10 @@ namespace RRCManagementSystem
         window.location.href = 'ViewServices.aspx';
     });
 </script>";
-
                     Session["ServiceAdded"] = null;
                 }
             }
         }
-
 
         private bool HasPermissionToAddService(int adminId, string moduleName)
         {
@@ -107,26 +105,20 @@ namespace RRCManagementSystem
                 return;
             }
 
-            decimal price100 = ParseDecimal(txtPrice100.Text);
-            decimal price200 = ParseDecimal(txtPrice200.Text);
-            decimal priceAbove200 = ParseDecimal(txtPriceAbove200.Text);
             bool isContract = serviceType == "Termite Control";
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
                     INSERT INTO Services 
-                        (Name, ServiceType, Description, Price100SQM, Price200SQM, PriceAbove200SQM, IsContract, CreatedAt)
+                        (Name, ServiceType, Description, IsContract, CreatedAt)
                     VALUES 
-                        (@Name, @ServiceType, @Description, @Price100, @Price200, @PriceAbove200, @IsContract, GETDATE())";
+                        (@Name, @ServiceType, @Description, @IsContract, GETDATE())";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Name", serviceName);
                 cmd.Parameters.AddWithValue("@ServiceType", serviceType);
                 cmd.Parameters.AddWithValue("@Description", string.IsNullOrEmpty(description) ? (object)DBNull.Value : description);
-                cmd.Parameters.AddWithValue("@Price100", price100 > 0 ? price100 : (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Price200", price200 > 0 ? price200 : (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@PriceAbove200", priceAbove200 > 0 ? priceAbove200 : (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@IsContract", isContract);
 
                 conn.Open();
@@ -135,18 +127,11 @@ namespace RRCManagementSystem
                 AddAuditLog(adminId, $"Added new service: {serviceName} ({serviceType}) | Contractual: {isContract}");
             }
 
-            // ✅ Trigger SweetAlert script on next page load
             Session["ServiceAdded"] = true;
 
-            lblMessage.Visible = true; // ✅ Add this
+            lblMessage.Visible = true;
             lblMessage.Text = "✅ Service added successfully!";
             lblMessage.ForeColor = System.Drawing.Color.Green;
-
-        }
-
-        private decimal ParseDecimal(string input)
-        {
-            return decimal.TryParse(input.Trim(), out decimal value) ? value : 0;
         }
 
         private void ClearForm()
@@ -154,9 +139,6 @@ namespace RRCManagementSystem
             txtName.Text = "";
             ddlServiceType.SelectedIndex = 0;
             txtDescription.Text = "";
-            txtPrice100.Text = "";
-            txtPrice200.Text = "";
-            txtPriceAbove200.Text = "";
         }
 
         private void AddAuditLog(int? userID, string action)
@@ -177,7 +159,7 @@ namespace RRCManagementSystem
                     }
                     catch
                     {
-                        // Fail silently
+                        // Silent fail
                     }
                 }
             }

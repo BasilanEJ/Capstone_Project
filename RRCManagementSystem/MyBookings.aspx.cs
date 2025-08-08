@@ -105,7 +105,7 @@ namespace RRCManagementSystem
                 gvUpcoming.DataBind();
                 pnlUpcomingOps.Visible = dt.Rows.Count > 0;
 
-                if (dt.Rows.Count > 0)
+                if (dt.Rows.Count > 0 && dt.Rows[0]["ScheduledDate"] != DBNull.Value)
                 {
                     DateTime nextDate = Convert.ToDateTime(dt.Rows[0]["ScheduledDate"]);
                     lblNextOperationNotice.Text = $"⏰ Reminder: Your next operation is scheduled on {nextDate:MMMM dd, yyyy}.";
@@ -115,6 +115,7 @@ namespace RRCManagementSystem
                 {
                     lblNextOperationNotice.Visible = false;
                 }
+
             }
         }
 

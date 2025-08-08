@@ -13,14 +13,12 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // ✅ Basic authentication check
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            // ✅ Restrict page to Admins only (exclude Inspectors and SuperAdmins)
             string role = Session["Role"].ToString();
             if (role == "Inspector" || role == "SuperAdmin")
             {
@@ -28,29 +26,29 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Load inquiries only on first load
             if (!IsPostBack)
             {
                 LoadInquiries();
             }
         }
 
-
         protected void btnAssignHidden_Click(object sender, EventArgs e)
         {
             string[] parts = hfAssignData.Value.Split('|');
-            if (parts.Length >= 10)
+            if (parts.Length >= 12)
             {
                 int inspectorId = int.Parse(parts[0]);
                 DateTime schedule = DateTime.Parse(parts[1]);
                 string remarks = parts[2];
                 string firstName = parts[3];
-                string lastName = parts[4];
-                string street = parts[5];
-                string barangay = parts[6];
-                string city = parts[7];
-                string region = parts[8];
-                string country = parts[9];
+                string middleName = parts[4];
+                string lastName = parts[5];
+                string street = parts[6];
+                string barangay = parts[7];
+                string city = parts[8];
+                string region = parts[9];
+                string country = parts[10];
+                string landmark = parts[11];
                 int inquiryId = int.Parse(hfSelectedInquiryID.Value);
 
                 int maxPerDay = GetSystemSettingInt("MaxInspectionsPerDay");
@@ -61,7 +59,7 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                UpdateInquiryInfo(inquiryId, firstName, lastName, street, barangay, city, region, country);
+                UpdateInquiryInfo(inquiryId, firstName, middleName, lastName, street, barangay, city, region, country, landmark);
                 AssignInspector(inquiryId, inspectorId, schedule, remarks);
 
                 ScriptManager.RegisterStartupScript(this, GetType(), "Success",
@@ -69,18 +67,17 @@ namespace RRCManagementSystem
             }
         }
 
-
         private void LoadInquiries()
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-    SELECT InquiryID, Email, ContactNumber, Message, SubmittedAt, PhotoPath
-    FROM InquirySimple
-    WHERE NOT EXISTS (
-        SELECT 1 FROM Inspections WHERE Inspections.InquiryID = InquirySimple.InquiryID
-    )
-    ORDER BY SubmittedAt DESC";
+        SELECT InquiryID, Email, ContactNumber, Message, SubmittedAt, PhotoPath
+        FROM InquirySimple
+        WHERE NOT EXISTS (
+            SELECT 1 FROM Inspections WHERE Inspections.InquiryID = InquirySimple.InquiryID
+        )
+        ORDER BY SubmittedAt DESC";
 
                 SqlDataAdapter da = new SqlDataAdapter(query, conn);
                 DataTable dt = new DataTable();
@@ -116,24 +113,26 @@ namespace RRCManagementSystem
             }
         }
 
-        private void UpdateInquiryInfo(int inquiryId, string firstName, string lastName, string street, string barangay, string city, string region, string country)
+        private void UpdateInquiryInfo(int inquiryId, string firstName, string middleName, string lastName, string street, string barangay, string city, string region, string country, string landmark)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"UPDATE InquirySimple
-                         SET FirstName = @FirstName, LastName = @LastName,
+                         SET FirstName = @FirstName, MiddleName = @MiddleName, LastName = @LastName,
                              StreetAndUnit = @Street, Barangay = @Barangay,
-                             City = @City, Region = @Region, Country = @Country
+                             City = @City, Region = @Region, Country = @Country, Landmark = @Landmark
                          WHERE InquiryID = @InquiryID";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@FirstName", firstName);
+                cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrEmpty(middleName) ? DBNull.Value : (object)middleName);
                 cmd.Parameters.AddWithValue("@LastName", lastName);
                 cmd.Parameters.AddWithValue("@Street", street);
                 cmd.Parameters.AddWithValue("@Barangay", barangay);
                 cmd.Parameters.AddWithValue("@City", city);
                 cmd.Parameters.AddWithValue("@Region", region);
                 cmd.Parameters.AddWithValue("@Country", country);
+                cmd.Parameters.AddWithValue("@Landmark", string.IsNullOrEmpty(landmark) ? DBNull.Value : (object)landmark);
                 cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
                 conn.Open();
                 cmd.ExecuteNonQuery();
@@ -142,11 +141,7 @@ namespace RRCManagementSystem
 
         private void AssignInspector(int inquiryId, int inspectorUserId, DateTime scheduleDate, string remarks)
         {
-            if (!InquiryExists(inquiryId))
-            {
-            //    lblMessage.Text = "⚠ Inquiry does not exist. Cannot assign inspection.";
-                return;
-            }
+            if (!InquiryExists(inquiryId)) return;
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -177,8 +172,6 @@ namespace RRCManagementSystem
             }
         }
 
-
-
         public string GetInspectorOptions()
         {
             string options = "";
@@ -196,9 +189,14 @@ namespace RRCManagementSystem
             return options;
         }
 
-        protected void gvInquiries_RowCommand(object sender, GridViewCommandEventArgs e)
+        protected void gvInquiries_RowDataBound(object sender, GridViewRowEventArgs e)
         {
-            // No commands implemented yet (this is required to prevent compilation errors)
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                Button btnAssign = (Button)e.Row.FindControl("btnAssign");
+                string inquiryId = DataBinder.Eval(e.Row.DataItem, "InquiryID").ToString();
+                btnAssign.OnClientClick = $"showAssignModal({inquiryId}); return false;";
+            }
         }
     }
 }

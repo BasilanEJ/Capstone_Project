@@ -138,6 +138,47 @@
     font-weight: bold;
 }
 
+.btn-action {
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    width: 100px; /* consistent width */
+}
+
+.btn-edit {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-edit:hover {
+    background-color: #218838;
+}
+
+.btn-add {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-add:hover {
+    background-color: #138496;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-delete:hover {
+    background-color: #c82333;
+}
+
+
     </style>
 
 <div class="container">
@@ -181,16 +222,18 @@
         <asp:BoundField DataField="Name" HeaderText="Item Name" />
         <asp:BoundField DataField="Type" HeaderText="Type" />
 
-        <asp:TemplateField HeaderText="Quantity">
-            <ItemTemplate>
-                <%# 
-                    Eval("Type").ToString() == "Bottled Chemical" ? Eval("Quantity") + " bottles" :
-                    Eval("Type").ToString() == "Sachet Pack Chemical" ? Eval("Quantity") + " packs" :
-                    Eval("Type").ToString() == "Safety Gear" ? Eval("Quantity") + " pcs" :
-                    Eval("Quantity") + " unit(s)"
-                %>
-            </ItemTemplate>
-        </asp:TemplateField>
+      <asp:TemplateField HeaderText="Quantity">
+    <ItemTemplate>
+        <asp:Label ID="lblQuantity" runat="server"
+            Text='<%# 
+                Eval("Type").ToString() == "Bottled Chemical" ? Eval("Quantity") + " bottles" :
+                Eval("Type").ToString() == "Sachet Pack Chemical" ? Eval("Quantity") + " packs" :
+                Eval("Type").ToString() == "Safety Gear" ? Eval("Quantity") + " pcs" :
+                Eval("Quantity") + " unit(s)"
+            %>'></asp:Label>
+    </ItemTemplate>
+</asp:TemplateField>
+
 
         <asp:TemplateField HeaderText="Excess (mL)">
             <ItemTemplate>
@@ -205,11 +248,35 @@
             <ControlStyle Width="70px" Height="70px" />
         </asp:ImageField>
 
-        <asp:TemplateField HeaderText="Actions">
-            <ItemTemplate>
-                <a href='<%# "EditItem.aspx?ItemID=" + EncodeID(Eval("ItemID").ToString()) %>' class="btn-action btn-edit" onclick="return confirm('Are you sure you want to edit this item?');">Edit</a>
-            </ItemTemplate>
-        </asp:TemplateField>
+<asp:TemplateField HeaderText="Actions">
+    <ItemTemplate>
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+            <!-- Edit -->
+            <button type="button"
+                    class="btn-action btn-edit"
+                    onclick='confirmEdit("<%# EncodeID(Eval("ItemID").ToString()) %>")'>
+                EDIT
+            </button>
+
+            <!-- Add Stocks -->
+            <button type="button"
+                    class="btn-action btn-add"
+                    onclick='confirmAddStocks("<%# EncodeID(Eval("ItemID").ToString()) %>")'>
+                ADD STOCKS
+            </button>
+
+            <!-- Delete Stocks -->
+            <button type="button"
+                    class="btn-action btn-delete"
+                    onclick='confirmDeleteStock("<%# Eval("ItemID") %>")'>
+                DELETE ITEM
+            </button>
+        </div>
+    </ItemTemplate>
+</asp:TemplateField>
+
+
+
 
     </Columns>
 </asp:GridView>
@@ -218,6 +285,67 @@
             </div>
         </div>
     </div>
+
+    <!-- Hidden field for deletion -->
+<asp:HiddenField ID="hiddenItemId" runat="server" />
+
+<!-- Hidden ASP.NET button -->
+<asp:Button ID="btnDeleteHidden" runat="server" Style="display:none;" OnClick="btnDeleteHidden_Click" />
+
+
+   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script type="text/javascript">
+    function confirmEdit(encodedId) {
+        Swal.fire({
+            title: 'Edit Item?',
+            text: "Would you like to edit this item?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, edit it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = 'EditItem.aspx?ItemID=' + encodedId;
+            }
+        });
+    }
+
+    function confirmAddStocks(encodedId) {
+        Swal.fire({
+            title: 'Add Stocks?',
+            text: "Would you like to add stocks to this item?",
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#17a2b8',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, add stocks!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = 'AddStocks.aspx?ItemID=' + encodedId;
+            }
+        });
+    }
+
+    function confirmDeleteStock(itemId) {
+        Swal.fire({
+            title: '⚠️ Are you sure?',
+            text: "You are about to delete stocks from this item.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('<%= hiddenItemId.ClientID %>').value = itemId;
+                document.getElementById('<%= btnDeleteHidden.ClientID %>').click();
+            }
+        });
+    }
+</script>
+
+
 
 </asp:Content>
 

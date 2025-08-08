@@ -8,7 +8,7 @@ namespace RRCManagementSystem
 {
     public partial class EditEquipment : System.Web.UI.Page
     {
-        string connectionString = ConfigurationManager.ConnectionStrings["RRCConnectionString"].ConnectionString;
+        string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {

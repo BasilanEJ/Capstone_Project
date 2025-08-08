@@ -11,7 +11,7 @@ namespace RRCManagementSystem
 {
 
 
-    public partial class ViewItem
+    public partial class AddStocks
     {
 
         /// <summary>
@@ -24,48 +24,57 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblMessage;
 
         /// <summary>
-        /// lblRestockNotice control.
+        /// lblItemName control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblRestockNotice;
+        protected global::System.Web.UI.WebControls.Label lblItemName;
 
         /// <summary>
-        /// ddlType control.
+        /// lblItemType control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.DropDownList ddlType;
+        protected global::System.Web.UI.WebControls.Label lblItemType;
 
         /// <summary>
-        /// gvItems control.
+        /// imgItem control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvItems;
+        protected global::System.Web.UI.WebControls.Image imgItem;
 
         /// <summary>
-        /// hiddenItemId control.
+        /// txtAddQty control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hiddenItemId;
+        protected global::System.Web.UI.WebControls.TextBox txtAddQty;
 
         /// <summary>
-        /// btnDeleteHidden control.
+        /// btnSubmit control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnDeleteHidden;
+        protected global::System.Web.UI.WebControls.Button btnSubmit;
+
+        /// <summary>
+        /// btnCancel control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnCancel;
     }
 }

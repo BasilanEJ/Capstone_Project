@@ -39,6 +39,7 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
+                gvItems.RowDataBound += gvItems_RowDataBound;
                 LoadItems();
             }
         }
@@ -147,11 +148,74 @@ namespace RRCManagementSystem
             }
         }
 
+
+        protected void gvItems_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                // Get the quantity as int
+                int quantity = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "Quantity"));
+
+                // Find the Label control inside the Quantity column
+                Label lblQuantity = (Label)e.Row.FindControl("lblQuantity");
+
+                if (lblQuantity != null)
+                {
+                    if (quantity > 10)
+                    {
+                        lblQuantity.ForeColor = System.Drawing.Color.Black;
+                    }
+                    else if (quantity > 5 && quantity <= 10)
+                    {
+                        lblQuantity.ForeColor = System.Drawing.Color.Goldenrod; // Yellow
+                    }
+                    else // 5 or below
+                    {
+                        lblQuantity.ForeColor = System.Drawing.Color.Red;
+                    }
+                }
+            }
+        }
+
+
+        protected void btnDeleteHidden_Click(object sender, EventArgs e)
+        {
+            int itemId;
+            if (int.TryParse(hiddenItemId.Value, out itemId))
+            {
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    SqlCommand cmd = new SqlCommand("DELETE FROM Inventory WHERE ItemID = @ItemID", con);
+                    cmd.Parameters.AddWithValue("@ItemID", itemId);
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                string script = @"
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Deleted!',
+            text: 'Stocks have been successfully deleted.',
+            confirmButtonColor: '#28a745'
+        });
+    </script>";
+                ClientScript.RegisterStartupScript(this.GetType(), "deleteSuccess", script);
+
+                LoadItems();
+            }
+            else
+            {
+                lblMessage.Text = "❌ Invalid Item ID.";
+            }
+        }
+
         // ✅ Encoding the ItemID to hide the real database ID
-        public string EncodeID(string id)
+        public static string EncodeID(string id)
         {
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(id);
             return Convert.ToBase64String(bytes).Replace("=", "").Replace("+", "-").Replace("/", "_");
         }
+
     }
 }

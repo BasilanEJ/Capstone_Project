@@ -44,11 +44,10 @@ namespace RRCManagementSystem
                 string query = @"
 SELECT i.InspectionID, i.ScheduledDate, i.InspectionStatus, i.Remarks, i.CreatedAt,
        (q.LastName + ', ' + q.FirstName + ' ' + ISNULL(q.MiddleName, '')) AS FullName,
-       q.StreetAndUnit, q.Barangay, q.City, q.Region, q.Country
+       q.StreetAndUnit, q.Barangay, q.City, q.Region, q.Country, q.Landmark
 FROM Inspections i
 INNER JOIN InquirySimple q ON i.InquiryID = q.InquiryID
 WHERE i.InspectorID = @InspectorID";
-
 
                 if (statusFilter != "All")
                 {

@@ -83,7 +83,7 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT Name, Description, Price100SQM, Price200SQM, PriceAbove200SQM
+                    SELECT Name, Description
                     FROM Services
                     WHERE ServiceID = @ServiceID";
 
@@ -97,9 +97,7 @@ namespace RRCManagementSystem
                 {
                     txtName.Text = reader["Name"].ToString();
                     txtDescription.Text = reader["Description"]?.ToString();
-                    txtPrice100.Text = reader["Price100SQM"] != DBNull.Value ? Convert.ToDecimal(reader["Price100SQM"]).ToString("F2") : "";
-                    txtPrice200.Text = reader["Price200SQM"] != DBNull.Value ? Convert.ToDecimal(reader["Price200SQM"]).ToString("F2") : "";
-                    txtPriceAbove200.Text = reader["PriceAbove200SQM"] != DBNull.Value ? Convert.ToDecimal(reader["PriceAbove200SQM"]).ToString("F2") : "";
+                   
                 }
                 else
                 {
@@ -128,9 +126,7 @@ namespace RRCManagementSystem
 
             string name = txtName.Text.Trim();
             string description = txtDescription.Text.Trim();
-            decimal price100 = ParseDecimal(txtPrice100.Text);
-            decimal price200 = ParseDecimal(txtPrice200.Text);
-            decimal priceAbove200 = ParseDecimal(txtPriceAbove200.Text);
+           
 
             if (string.IsNullOrEmpty(name))
             {
@@ -144,18 +140,13 @@ namespace RRCManagementSystem
                     UPDATE Services
                     SET Name = @Name,
                         Description = @Description,
-                        Price100SQM = @Price100,
-                        Price200SQM = @Price200,
-                        PriceAbove200SQM = @PriceAbove200
                     WHERE ServiceID = @ServiceID";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@ServiceID", serviceID);
                 cmd.Parameters.AddWithValue("@Name", name);
                 cmd.Parameters.AddWithValue("@Description", string.IsNullOrEmpty(description) ? (object)DBNull.Value : description);
-                cmd.Parameters.AddWithValue("@Price100", price100 > 0 ? price100 : (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Price200", price200 > 0 ? price200 : (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@PriceAbove200", priceAbove200 > 0 ? priceAbove200 : (object)DBNull.Value);
+              
 
                 conn.Open();
                 int rowsAffected = cmd.ExecuteNonQuery();

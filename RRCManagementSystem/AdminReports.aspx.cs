@@ -161,11 +161,22 @@ namespace RRCManagementSystem
 
         private void LoadInquiries(DateTime from, DateTime to)
         {
-            string query = @"SELECT InquiryID, Email, ContactNumber, Name,
-                             StreetAndUnit + ', ' + Barangay + ', ' + City + ', ' + Region + ', ' + Country AS Address,
-                             SubmittedAt FROM InquirySimple WHERE SubmittedAt BETWEEN @from AND @to ORDER BY SubmittedAt DESC";
+            string query = @"
+        SELECT 
+            InquiryID, 
+            Email, 
+            ContactNumber, 
+            CONCAT(Lastname, ', ', Firstname, ' ', Middlename) AS FullName,
+            StreetAndUnit + ', ' + Barangay + ', ' + City + ', ' + Region + ', ' + Country AS Address,
+            SubmittedAt 
+        FROM InquirySimple 
+        WHERE SubmittedAt BETWEEN @from AND @to 
+        ORDER BY SubmittedAt DESC";
+
             BindGrid(query, gvInquiries, from, to);
         }
+
+
 
         private void LoadApprovedClients(DateTime from, DateTime to)
         {
@@ -231,8 +242,8 @@ namespace RRCManagementSystem
             string query = @"
         SELECT 
             ins.InspectionID,
-            usr.Name AS InspectorName,
-            iq.Name AS ClientName,
+            usr.Name AS InspectorName, -- ✅ if Users has a 'Name' column
+            CONCAT(iq.Lastname, ', ', iq.Firstname, ' ', iq.Middlename) AS ClientName,
             (iq.StreetAndUnit + ', ' + iq.Barangay + ', ' + iq.City + ', ' + iq.Region + ', ' + iq.Country) AS ClientAddress,
             ins.ScheduledDate,
             ins.InspectionStatus,
@@ -245,6 +256,8 @@ namespace RRCManagementSystem
 
             BindGrid(query, gvInspections, from, to);
         }
+
+
 
         private void BindGrid(string query, GridView grid, DateTime? from = null, DateTime? to = null)
         {

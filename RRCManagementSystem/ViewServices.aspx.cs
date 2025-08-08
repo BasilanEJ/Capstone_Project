@@ -76,14 +76,12 @@ namespace RRCManagementSystem
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 string query = @"
-                    SELECT 
-                        ServiceID, 
-                        Name, 
-                        Description, 
-                        Price100SQM, 
-                        Price200SQM, 
-                        PriceAbove200SQM 
-                    FROM Services";
+    SELECT 
+        ServiceID, 
+        Name, 
+        Description
+    FROM Services";
+
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {

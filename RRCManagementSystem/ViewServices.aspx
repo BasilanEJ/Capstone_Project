@@ -124,9 +124,7 @@
 
                         <asp:BoundField DataField="Name" HeaderText="Service Name" />
                         <asp:BoundField DataField="Description" HeaderText="Description" />
-                        <asp:BoundField DataField="Price100SQM" HeaderText="100 SQM Price (₱)" DataFormatString="{0:C}" />
-                        <asp:BoundField DataField="Price200SQM" HeaderText="200 SQM Price (₱)" DataFormatString="{0:C}" />
-                        <asp:BoundField DataField="PriceAbove200SQM" HeaderText="200+ SQM Price (₱)" DataFormatString="{0:C}" />
+                    
 
                         <asp:TemplateField HeaderText="Actions">
                             <ItemTemplate>

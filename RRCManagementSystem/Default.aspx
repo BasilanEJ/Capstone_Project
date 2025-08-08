@@ -302,10 +302,15 @@ h1 {
 
 
                 <!-- Contact -->
-                <asp:TextBox ID="txtContactNumber" runat="server" CssClass="form-control" 
-                    placeholder="09xxxxxxxxx" required MaxLength="11"
-                    oninput="validateContactNumber(this)"
-                    style="width: 100%; border: none; border-bottom: 2px solid #1a202c; padding: 10px; background: transparent; color: #1a202c; font-size: 14px;" />
+                <asp:TextBox ID="txtContactNumber" runat="server" CssClass="form-control"
+    placeholder="09xxxxxxxxx" required MaxLength="11"
+    onkeypress="return isDigit(event)"
+    onkeydown="return blockNonDigits(event)"
+    oninput="validateContactNumber(this)"
+    onpaste="handlePaste(event)"
+    style="width: 100%; border: none; border-bottom: 2px solid #1a202c; padding: 10px; background: transparent; color: #1a202c; font-size: 14px;" />
+
+
 
                 <!-- Photo Upload -->
                 <div style="margin-bottom: 15px;">
@@ -386,24 +391,47 @@ h1 {
         }
     }
 
+    function isDigit(e) {
+        const charCode = e.which || e.keyCode;
+        // Allow digits, backspace, arrow keys
+        return (charCode >= 48 && charCode <= 57);
+    }
+
+    function blockNonDigits(e) {
+        const key = e.key;
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+        // Allow backspace, delete, arrows, tab, home, end
+        const allowedKeys = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"];
+        if (allowedKeys.includes(key) || isCtrlOrCmd) return true;
+
+        // Block non-numeric keys
+        return /^\d$/.test(key);
+    }
+
     function validateContactNumber(input) {
-        // Remove any non-digit character as you type
+        // Remove non-digit characters
         input.value = input.value.replace(/\D/g, '');
 
-        // Limit to 11 digits
+        // Enforce max 11 digits
         if (input.value.length > 11) {
             input.value = input.value.slice(0, 11);
         }
+
+        // Enforce starting with 09
+        if (input.value.length > 0 && !input.value.startsWith("09")) {
+            input.setCustomValidity("Contact number must start with 09.");
+        } else {
+            input.setCustomValidity("");
+        }
     }
 
-    window.onload = function () {
-        // Commenting this out for now so you always see the popup
-        if (!localStorage.getItem('cookieConsentAccepted')) {
-        setTimeout(function () {
-            document.getElementById('cookieConsentBanner').classList.add('show');
-        }, 500); // Delay 0.5s before showing
-        // }
-    };
+    function handlePaste(e) {
+        const paste = (e.clipboardData || window.clipboardData).getData('text');
+        if (!/^09\d{0,9}$/.test(paste)) {
+            e.preventDefault();
+        }
+    }
 
     function acceptCookies() {
         const checkbox = document.getElementById('chkCookiePolicy');

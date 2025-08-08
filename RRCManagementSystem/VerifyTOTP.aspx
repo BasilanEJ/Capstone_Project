@@ -133,7 +133,7 @@
 
             <!-- Google reCAPTCHA -->
             <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
-                <div class="g-recaptcha" data-sitekey="6LdFpz4rAAAAAFHN9JRMbSs2zRVZastQVd6GHIpz"></div>
+                <div class="g-recaptcha" data-sitekey="6Lfu6JMrAAAAAPSN_aGxR78zUwJfuNm39ZK3oLaB"></div>
             </asp:Panel>
 
             <asp:Button ID="btnVerifyTOTP" runat="server" Text="Verify" CssClass="btn-login" OnClick="btnVerifyTOTP_Click" />

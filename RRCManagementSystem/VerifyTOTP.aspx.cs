@@ -102,7 +102,7 @@ namespace RRCManagementSystem
 
             using (var client = new WebClient())
             {
-                string secret = "6LdFpz4rAAAAAF33FYq5f39pW0uUe6QNI4XgcWAv"; // Replace with your actual secret
+                string secret = "6Lfu6JMrAAAAAEy4fBkw0jNrp7mXfvqy03Tlz1i7"; // Replace with your actual secret
                 string result = client.DownloadString($"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}");
                 return result.Contains("\"success\": true");
             }
@@ -112,7 +112,7 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "SELECT TOTPSecret FROM Users WHERE Email = @Email AND TwoFactorEnabled = 1 AND Status = 'Active'";
+                string query = "SELECT TOTPSecret FROM Users WHERE Email = @Email AND TwoFactorEnabled = 1 AND Status IN ('Active', 'Available')";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@Email", email);

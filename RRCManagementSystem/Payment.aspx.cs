@@ -46,7 +46,7 @@ SELECT TOP 1
 FROM Bookings b
 LEFT JOIN BookingServices bs ON b.BookingID = bs.BookingID
 LEFT JOIN Services s ON bs.ServiceID = s.ServiceID
-WHERE b.ClientID = @ClientID AND b.Status = 'Approved'
+WHERE b.ClientID = @ClientID AND b.Status = 'Assigned'
 ORDER BY b.CreatedAt DESC";
 
                 SqlCommand cmd = new SqlCommand(query, con);
@@ -197,7 +197,7 @@ SELECT TOP 1
 FROM Bookings b
 LEFT JOIN BookingServices bs ON b.BookingID = bs.BookingID
 LEFT JOIN Services s ON bs.ServiceID = s.ServiceID
-WHERE b.ClientID = @ClientID AND b.Status = 'Approved'
+WHERE b.ClientID = @ClientID AND b.Status = 'Assigned'
 ORDER BY b.CreatedAt DESC";
 
 

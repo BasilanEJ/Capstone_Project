@@ -72,6 +72,12 @@ namespace RRCManagementSystem
                 return;
             }
 
+            if (IsEmailAlreadyRegistered(email))
+            {
+                ShowSweetAlert("Error", "This email is already registered.", "warning");
+                return;
+            }
+
             string token = Guid.NewGuid().ToString();
             DateTime expiry = DateTime.Now.AddHours(1);
 
@@ -110,11 +116,26 @@ VALUES
                 ShowSweetAlert("Error", "Client added but failed to send email.", "error");
         }
 
+
+        private bool IsEmailAlreadyRegistered(string email)
+        {
+            using (SqlConnection con = new SqlConnection(connectionString))
+            {
+                string query = "SELECT COUNT(*) FROM Clients WHERE Email = @Email";
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@Email", email);
+                con.Open();
+                int count = (int)cmd.ExecuteScalar();
+                return count > 0;
+            }
+        }
+
+
         private bool SendResetEmail(string toEmail, string token)
         {
             try
             {
-                string resetLink = $"https://localhost:44341/ResetPassword.aspx?token={token}";
+                string resetLink = $"https://localhost:44341/ResetPassword.aspx?type=admin&token={token}";
                 string subject = "Set Your Password - RRC Management System";
                 string body = $@"
 <h3>Welcome to RRC Management System</h3>

@@ -15,6 +15,10 @@ namespace RRCManagementSystem
             {
                 LoadQuotation();
             }
+            else if (Session["ClientID"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+            }
         }
 
         private void LoadQuotation()
@@ -23,10 +27,20 @@ namespace RRCManagementSystem
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = @"SELECT TOP 1 QuotationID, ServiceNames, ServiceID, SQM, Price, IsContract 
-                                 FROM PendingQuotations 
-                                 WHERE ClientID = @ClientID 
-                                 ORDER BY CreatedAt DESC";
+                string query = @"
+    SELECT TOP 1 
+        pq.QuotationID, 
+        pq.ServiceNames, 
+        pq.ServiceID, 
+        pq.SQM, 
+        pq.Price, 
+        pq.IsContract,
+        ISNULL(u.Name, 'N/A') AS InspectorName
+    FROM PendingQuotations pq
+    LEFT JOIN Users u ON pq.InspectorID = u.UserID
+    WHERE pq.ClientID = @ClientID 
+    ORDER BY pq.CreatedAt DESC";
+    
 
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -40,7 +54,8 @@ namespace RRCManagementSystem
                     lblPrice.Text = $"\u20B1{Convert.ToDecimal(reader["Price"]):N2}";
                     hfIsContract.Value = reader["IsContract"] != DBNull.Value ? reader["IsContract"].ToString() : "False";
                     hfQuotationID.Value = reader["QuotationID"].ToString();
-                    ViewState["ServiceIDs"] = reader["ServiceID"].ToString(); // comma-separated IDs
+                    ViewState["ServiceIDs"] = reader["ServiceID"].ToString();
+                    lblInspector.Text = reader["InspectorName"].ToString();
                 }
                 else
                 {
@@ -94,7 +109,7 @@ namespace RRCManagementSystem
             {
                 conn.Open();
 
-                // Insert into Bookings table and get BookingID
+                // Insert booking
                 string insertBooking = @"
                     INSERT INTO Bookings 
                         (ClientID, ServiceNames, SQM, Price, ScheduledDate, StartTime, Notes, Status, CreatedAt, IsContract)
@@ -118,7 +133,7 @@ namespace RRCManagementSystem
                     bookingId = Convert.ToInt32(result);
                 }
 
-                // Insert into BookingServices
+                // Insert selected services into BookingServices
                 foreach (string sid in serviceIDsRaw.Split(','))
                 {
                     if (int.TryParse(sid.Trim(), out int serviceId))
@@ -131,13 +146,17 @@ namespace RRCManagementSystem
                     }
                 }
 
-                // Delete from PendingQuotations
-                string deleteQuote = "DELETE FROM PendingQuotations WHERE QuotationID = @QuotationID";
-                SqlCommand deleteCmd = new SqlCommand(deleteQuote, conn);
-                deleteCmd.Parameters.AddWithValue("@QuotationID", quotationId);
-                deleteCmd.ExecuteNonQuery();
+                // Delete the quotation to avoid reuse
+                if (quotationId > 0)
+                {
+                    string deleteQuote = "DELETE FROM PendingQuotations WHERE QuotationID = @QuotationID";
+                    SqlCommand deleteCmd = new SqlCommand(deleteQuote, conn);
+                    deleteCmd.Parameters.AddWithValue("@QuotationID", quotationId);
+                    deleteCmd.ExecuteNonQuery();
+                }
             }
 
+            // Success alert
             ScriptManager.RegisterStartupScript(this, GetType(), "booked", "Swal.fire('Success', 'Your service has been booked!', 'success');", true);
             txtDate.Text = "";
             txtTime.Text = "";

@@ -1,4 +1,9 @@
 ﻿<%@ Page Title="Dashboard" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="Dashboard.aspx.cs" Inherits="RRCManagementSystem.Dashboard" %>
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
@@ -100,6 +105,50 @@
         .custom-table tbody tr:hover {
             background-color: #f1f1f1;
         }
+
+   .weekly-calendar .card {
+    min-height: 100px;
+    font-size: 15px;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    background-color: #ffffff;
+}
+
+.weekly-calendar .card-header {
+    font-size: 18px;
+    font-weight: 600;
+    background-color: #0d6efd;
+    color: #ffffff;
+    padding: 12px 20px;
+    text-align: center;
+    border-bottom: 1px solid #ccc;
+}
+
+.weekly-calendar .table {
+    margin-bottom: 0;
+}
+
+.weekly-calendar .table td,
+.weekly-calendar .table th {
+    width: 14.28%; /* 100% / 7 days = ~14.28% */
+    min-width: 160px;
+    height: 140px;
+    vertical-align: top;
+    padding: 10px;
+    background-color: #f9f9f9;
+    font-size: 14px;
+    border: 1px solid #dee2e6;
+    cursor: pointer;
+}
+
+
+.weekly-calendar .table td:hover {
+    background-color: #e8f0fe;
+    transition: background-color 0.2s ease-in-out;
+}
+
     </style>
 
  <!-- Admin Dashboard Title -->
@@ -133,6 +182,46 @@
         </div> 
     </div> 
 </section>
+
+<!-- Weekly Booking Calendar -->
+<section class="weekly-calendar mb-4">
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                📅 Weekly Booking Calendar
+            </div>
+            <div class="table-responsive">
+                <asp:Table ID="tblCalendar" runat="server" CssClass="table table-bordered text-center">
+                </asp:Table>
+            </div>
+        </div>
+    </div>
+</section>
+
+   <!-- Modal -->
+<div class="modal fade" id="bookingDetailsModal" tabindex="-1" aria-labelledby="bookingDetailsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bookingDetailsLabel">Booking Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="bookingDetailsContent">
+        <!-- Injected content here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    function showBookingDetails(details) {
+        document.getElementById('bookingDetailsContent').innerHTML = details;
+        var modal = new bootstrap.Modal(document.getElementById('bookingDetailsModal'));
+        modal.show();
+    }
+</script>
+
+
 
 
     <!-- Sales Overview Section -->
@@ -209,6 +298,8 @@
         <br />
         <button onclick="closeModal()" class="btn-sales">Close</button>
     </div>
+
+
 
     <script>
         function openModal(content) {
