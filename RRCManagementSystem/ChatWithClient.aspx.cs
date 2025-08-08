@@ -14,20 +14,21 @@
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Check session validity
             if (Session["UserID"] == null || Session["Role"] == null || Session["Role"].ToString() != "Admin")
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["UserID"]);
+            // ✅ Set AdminID session variable for consistency
+            Session["AdminID"] = Convert.ToInt32(Session["UserID"]);
 
             if (!IsPostBack)
             {
-                LoadClients(); 
+                LoadClients();
             }
         }
+
 
         private void LoadClients()
         {
@@ -137,16 +138,23 @@
                         VALUES 
                             (@SenderID, @ReceiverID, 'Admin', 'Client', @MessageText, @Attachment, @AttachmentName, @AttachmentType, @SentAt, 'Sent')";
 
-                    SqlCommand cmd = new SqlCommand(query, con);
-                    cmd.Parameters.AddWithValue("@SenderID", adminId);
-                    cmd.Parameters.AddWithValue("@ReceiverID", clientId);
-                    cmd.Parameters.AddWithValue("@MessageText", messageText);
-                    cmd.Parameters.AddWithValue("@Attachment", (object)encryptedAttachment ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@AttachmentName", (object)attachmentName ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@AttachmentType", (object)attachmentType ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@SentAt", DateTime.Now);
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@SenderID", adminId);
+                cmd.Parameters.AddWithValue("@ReceiverID", clientId);
+                cmd.Parameters.AddWithValue("@MessageText", messageText);
 
-                    con.Open();
+                // ✅ Correct varbinary handling
+                SqlParameter attachmentParam = new SqlParameter("@Attachment", SqlDbType.VarBinary);
+                attachmentParam.Value = (object)encryptedAttachment ?? DBNull.Value;
+                cmd.Parameters.Add(attachmentParam);
+
+                // The following are fine with AddWithValue (nvarchar and datetime)
+                cmd.Parameters.AddWithValue("@AttachmentName", (object)attachmentName ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@AttachmentType", (object)attachmentType ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@SentAt", DateTime.Now);
+
+
+                con.Open();
                     cmd.ExecuteNonQuery();
 
                     AddAuditLog(adminId, $"Sent a message to Client ID {clientId}: \"{messageText}\"");

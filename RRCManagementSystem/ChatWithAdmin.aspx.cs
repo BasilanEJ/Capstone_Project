@@ -77,6 +77,7 @@ namespace RRCManagementSystem
             string attachmentName = null;
             string attachmentType = null;
 
+            // 🔒 Handle file attachment
             if (fileAttachment.HasFile)
             {
                 using (var ms = new MemoryStream())
@@ -90,6 +91,7 @@ namespace RRCManagementSystem
                 }
             }
 
+            // 🛑 Require at least a message or file
             if (string.IsNullOrWhiteSpace(messageText) && encryptedAttachment == null)
             {
                 lblInfo.Text = "⚠️ Please type a message or attach a file.";
@@ -99,16 +101,22 @@ namespace RRCManagementSystem
             using (SqlConnection con = new SqlConnection(connectionString))
             {
                 string query = @"
-                    INSERT INTO Messages 
-                        (SenderID, ReceiverID, SenderType, ReceiverType, MessageText, Attachment, AttachmentName, AttachmentType, SentAt, Status)
-                    VALUES 
-                        (@SenderID, @ReceiverID, 'Client', 'Admin', @MessageText, @Attachment, @AttachmentName, @AttachmentType, @SentAt, 'Sent')";
+            INSERT INTO Messages 
+                (SenderID, ReceiverID, SenderType, ReceiverType, MessageText, Attachment, AttachmentName, AttachmentType, SentAt, Status)
+            VALUES 
+                (@SenderID, @ReceiverID, 'Client', 'Admin', @MessageText, @Attachment, @AttachmentName, @AttachmentType, @SentAt, 'Sent')";
 
                 SqlCommand cmd = new SqlCommand(query, con);
                 cmd.Parameters.AddWithValue("@SenderID", clientId);
                 cmd.Parameters.AddWithValue("@ReceiverID", adminId);
                 cmd.Parameters.AddWithValue("@MessageText", messageText);
-                cmd.Parameters.AddWithValue("@Attachment", (object)encryptedAttachment ?? DBNull.Value);
+
+                // ✅ FIX: Explicitly declare varbinary parameter
+                SqlParameter attachmentParam = new SqlParameter("@Attachment", SqlDbType.VarBinary);
+                attachmentParam.Value = (object)encryptedAttachment ?? DBNull.Value;
+                cmd.Parameters.Add(attachmentParam);
+
+                // These are fine with AddWithValue because they're nvarchar
                 cmd.Parameters.AddWithValue("@AttachmentName", (object)attachmentName ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@AttachmentType", (object)attachmentType ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@SentAt", DateTime.Now);
@@ -123,17 +131,25 @@ namespace RRCManagementSystem
             LoadMessages();
         }
 
+
         private int GetDefaultAdminID()
         {
             using (SqlConnection con = new SqlConnection(connectionString))
             {
-                string query = "SELECT TOP 1 UserID FROM Users WHERE Role = 'Admin' AND Status = 'Active' ORDER BY UserID ASC";
+                string query = @"
+            SELECT TOP 1 UserID 
+            FROM Users 
+            WHERE Role = 'Admin' 
+              AND (Status = 'Active' OR Status = 'Available')
+            ORDER BY UserID ASC";
+
                 SqlCommand cmd = new SqlCommand(query, con);
                 con.Open();
                 var result = cmd.ExecuteScalar();
                 return result != null ? Convert.ToInt32(result) : 0;
             }
         }
+
 
         public string GetAttachmentHtml(object nameObj, object typeObj, object idObj)
         {
