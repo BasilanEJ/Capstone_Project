@@ -169,35 +169,47 @@ namespace RRCManagementSystem
             FilterAndLoadEquipment();
         }
 
+        private void ShowSwal(string icon, string title, string text)
+        {
+            string script = $@"Swal.fire({{
+        icon: '{icon}', title: '{title}', text: '{text}',
+        showConfirmButton: false, timer: 1800
+    }});";
+            var key = Guid.NewGuid().ToString();
+            if (ScriptManager.GetCurrent(this) != null)
+                ScriptManager.RegisterStartupScript(this, GetType(), key, script, true);
+            else
+                ClientScript.RegisterStartupScript(GetType(), key, script, true);
+        }
+
+
+
         protected void gvEquipment_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName == "DeleteEquipment")
             {
                 int equipmentId = Convert.ToInt32(e.CommandArgument);
-
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("DELETE FROM EquipmentStatus WHERE EquipmentID=@id", con))
                 {
-                    string query = "DELETE FROM EquipmentStatus WHERE EquipmentID = @EquipmentID";
-                    SqlCommand cmd = new SqlCommand(query, con);
-                    cmd.Parameters.AddWithValue("@EquipmentID", equipmentId);
-
+                    cmd.Parameters.AddWithValue("@id", equipmentId);
                     try
                     {
                         con.Open();
                         int rows = cmd.ExecuteNonQuery();
-                        lblMessage.Text = rows > 0 ? "✅ Equipment deleted successfully." : "⚠️ Equipment not found.";
-                        lblMessage.ForeColor = rows > 0 ? System.Drawing.Color.Green : System.Drawing.Color.OrangeRed;
+                        if (rows > 0) ShowSwal("success", "Deleted!", "Equipment deleted successfully.");
+                        else ShowSwal("info", "Not found", "Equipment record was not found.");
                     }
                     catch (Exception ex)
                     {
-                        lblMessage.Text = $"❌ Error deleting equipment: {ex.Message}";
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
+                        ShowSwal("error", "Error", $"Failed to delete: {ex.Message.Replace("'", "\\'")}");
                     }
                 }
-
-                FilterAndLoadEquipment(); // Refresh
+                FilterAndLoadEquipment(); // refresh grid
             }
         }
+
+
 
         public string EncodeID(string id)
         {

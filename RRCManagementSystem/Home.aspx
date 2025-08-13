@@ -1,95 +1,120 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="Home.aspx.cs" Inherits="RRCManagementSystem.Home" %>
+﻿<%@ Page Title="Home" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="Home.aspx.cs" Inherits="RRCManagementSystem.Home" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <!-- Font Awesome & Bootstrap already assumed to be included in Master -->
     <style>
-        .chat-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background-color: #0078FF;
-            color: #ffffff;
-            font-size: 24px;
-            width: 60px;
-            height: 60px;
-            text-align: center;
-            line-height: 60px;
-            border-radius: 50%;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            z-index: 9999;
+        /* Fluid, readable heading sizes across devices */
+        .home-title {
+            font-weight: 700;
+            color: #0d6efd; /* Bootstrap primary */
+            font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+            line-height: 1.2;
+        }
+        .home-subtitle {
+            color: #6c757d; /* text-muted */
+            font-size: clamp(0.95rem, 2.5vw, 1.125rem);
         }
 
-        .chat-btn:hover {
-            background-color: #0056b3;
-            transform: scale(1.1);
+        /* Card polish */
+        .feature-card {
+            transition: transform .15s ease, box-shadow .15s ease;
+            border: none;
+            border-radius: 1rem;
+        }
+        .feature-card:hover,
+        .feature-card:focus-within {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(0,0,0,.08);
+        }
+        .feature-icon {
+            font-size: clamp(1.75rem, 6vw, 2.5rem);
+        }
+
+        /* Buttons fill width on mobile, auto on larger screens */
+        .feature-btn {
+            width: 100%;
+        }
+        @media (min-width: 576px) {
+            .feature-btn { width: auto; }
+        }
+
+        /* Ensure comfy tap targets everywhere */
+        .btn, .card, a, button {
+            min-height: 44px;
+        }
+
+        /* Spacing that adapts */
+        .home-wrap {
+            padding-top: clamp(1rem, 2.5vw, 1.5rem);
+            padding-bottom: clamp(1rem, 3vw, 2rem);
+        }
+
+        /* Respect reduced motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            .feature-card { transition: none !important; }
         }
     </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-    <div class="container mt-5">
-
+    <div class="container home-wrap">
         <!-- Welcome Section -->
-        <div class="text-center mb-5">
-            <h1 class="text-primary fw-bold">Welcome, <%= Session["Name"] ?? "Valued Client" %>!</h1>
-            <p class="text-muted fs-5">Manage your bookings, check payments, and stay connected with us.</p>
+        <div class="text-center mb-4 mb-md-5">
+            <h1 class="home-title">Welcome, <%= Session["Name"] ?? "Valued Client" %>!</h1>
+            <p class="home-subtitle">Manage your bookings, check payments, and stay connected with us.</p>
         </div>
 
-      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4 justify-content-center">
-    <!-- Book a Service -->
-    <div class="col">
-        <div class="card h-100 shadow-sm text-center">
-            <div class="card-body">
-                <i class="fas fa-calendar-plus fa-3x text-primary mb-3"></i>
-                <h5 class="card-title fw-semibold">Book a Service</h5>
-                <p class="card-text text-muted">Schedule a new pest control service easily in a few clicks.</p>
-                <a href="BookService.aspx" class="btn btn-primary">Book Now</a>
+        <!-- Feature Grid -->
+        <div class="row g-3 g-sm-4 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 justify-content-center">
+            <!-- Book a Service -->
+            <div class="col">
+                <div class="card feature-card h-100 shadow-sm text-center">
+                    <div class="card-body d-flex flex-column align-items-center text-center p-4">
+                        <i class="fas fa-calendar-plus feature-icon text-primary mb-3" aria-hidden="true"></i>
+                        <h5 class="card-title fw-semibold mb-2">Book a Service</h5>
+                        <p class="card-text text-muted mb-4">Schedule a new pest control service in a few taps.</p>
+                        <a href="BookService.aspx" class="btn btn-primary feature-btn stretched-link">Book Now</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Bookings -->
+            <div class="col">
+                <div class="card feature-card h-100 shadow-sm text-center">
+                    <div class="card-body d-flex flex-column align-items-center text-center p-4">
+                        <i class="fas fa-clipboard-list feature-icon text-primary mb-3" aria-hidden="true"></i>
+                        <h5 class="card-title fw-semibold mb-2">My Bookings</h5>
+                        <p class="card-text text-muted mb-4">Track upcoming and completed service bookings.</p>
+                        <a href="MyBookings.aspx" class="btn btn-primary feature-btn stretched-link">View Bookings</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Our Contract -->
+            <div class="col">
+                <div class="card feature-card h-100 shadow-sm text-center">
+                    <div class="card-body d-flex flex-column align-items-center text-center p-4">
+                        <i class="fas fa-file-contract feature-icon text-primary mb-3" aria-hidden="true"></i>
+                        <h5 class="card-title fw-semibold mb-2">Our Contract</h5>
+                        <p class="card-text text-muted mb-4">Review your contract and service terms anytime.</p>
+                        <a href="OurContract.aspx" class="btn btn-primary feature-btn stretched-link">View Contract</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Payments -->
+            <div class="col">
+                <div class="card feature-card h-100 shadow-sm text-center">
+                    <div class="card-body d-flex flex-column align-items-center text-center p-4">
+                        <i class="fas fa-wallet feature-icon text-primary mb-3" aria-hidden="true"></i>
+                        <h5 class="card-title fw-semibold mb-2">Pending Payments</h5>
+                        <p class="card-text text-muted mb-4">Check and settle your pending balances easily.</p>
+                        <a href="Payment.aspx" class="btn btn-primary feature-btn stretched-link">Check Payments</a>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- My Bookings -->
-    <div class="col">
-        <div class="card h-100 shadow-sm text-center">
-            <div class="card-body">
-                <i class="fas fa-clipboard-list fa-3x text-primary mb-3"></i>
-                <h5 class="card-title fw-semibold">My Bookings</h5>
-                <p class="card-text text-muted">Track your upcoming and completed service bookings.</p>
-                <a href="MyBookings.aspx" class="btn btn-primary">View Bookings</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Our Contract -->
-    <div class="col">
-        <div class="card h-100 shadow-sm text-center">
-            <div class="card-body">
-                <i class="fas fa-file-contract fa-3x text-primary mb-3"></i>
-                <h5 class="card-title fw-semibold">Our Contract</h5>
-                <p class="card-text text-muted">Review your current pest control contract and service terms.</p>
-                <a href="OurContract.aspx" class="btn btn-primary">View Contract</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pending Payments -->
-    <div class="col">
-        <div class="card h-100 shadow-sm text-center">
-            <div class="card-body">
-                <i class="fas fa-wallet fa-3x text-primary mb-3"></i>
-                <h5 class="card-title fw-semibold">Pending Payments</h5>
-                <p class="card-text text-muted">Check and settle your pending balances easily.</p>
-                <a href="Payment.aspx" class="btn btn-primary">Check Payments</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-        <!-- Floating Messenger Chat Button -->
-        <a href="ChatWithAdmin.aspx" class="chat-btn" title="Chat with Admin">
-            <i class="fab fa-facebook-messenger"></i>
-        </a>
-
+        <!-- Accessibility helpers for screen readers -->
+        <span class="visually-hidden">Use the buttons above to navigate to booking, tracking, contracts, and payments.</span>
     </div>
 </asp:Content>

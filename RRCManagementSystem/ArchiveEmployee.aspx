@@ -35,13 +35,14 @@
                                             <i class="fas fa-undo me-1"></i>Restore
                                         </asp:LinkButton>
 
-                                        <asp:LinkButton ID="btnDelete" runat="server"
-                                            CommandName="Delete"
-                                            CommandArgument='<%# Eval("EmployeeID") %>'
-                                            CssClass="btn btn-sm btn-danger"
-                                            OnClientClick='<%# "return confirmDelete(" + Eval("EmployeeID") + ");" %>'>
-                                            <i class="fas fa-trash-alt me-1"></i>Delete
-                                        </asp:LinkButton>
+                                       <asp:LinkButton ID="btnDelete" runat="server"
+    CommandName="DeleteEmp"
+    CommandArgument='<%# Eval("EmployeeID") %>'
+    CssClass="btn btn-sm btn-danger"
+    CausesValidation="false"
+    OnClientClick='<%# "return confirmDelete(" + Eval("EmployeeID") + ");" %>'>
+    <i class="fas fa-trash-alt me-1"></i>Delete
+</asp:LinkButton>
                                     </div>
                                 </ItemTemplate>
                             </asp:TemplateField>
@@ -66,7 +67,7 @@
                 confirmButtonText: 'Yes, delete'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    __doPostBack('<%= gvArchivedEmployees.UniqueID %>', 'Delete$' + employeeId);
+                    __doPostBack('<%= gvArchivedEmployees.UniqueID %>', 'DeleteEmp$' + employeeId);
                 }
             });
 

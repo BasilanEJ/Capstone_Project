@@ -1,14 +1,99 @@
-﻿        <%@ Page Title="" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="MyBookings.aspx.cs" Inherits="RRCManagementSystem.MyBookings" %>
+﻿<%@ Page Title="My Bookings" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="MyBookings.aspx.cs" Inherits="RRCManagementSystem.MyBookings" %>
 
-        <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .page-title{
+            color:#0d6efd;
+            font-weight:700;
+            font-size:clamp(1.25rem,3.2vw,1.75rem);
+            line-height:1.2;
+        }
+        .page-wrap{
+            padding-top:clamp(.75rem,2vw,1.25rem);
+            padding-bottom:calc(110px + env(safe-area-inset-bottom)); /* room for chat FAB */
+        }
+        .card-shell{
+            border:none;border-radius:1rem;box-shadow:0 8px 20px rgba(0,0,0,.06);
+        }
+        .btn{min-height:44px}
 
-            <div class="container my-5 p-4 bg-white rounded shadow">
-                <h3 class="text-primary mb-4">My Bookings</h3>
-                <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-bold mb-3 d-block" />
+        /* Smooth horizontal scroll on phones */
+        .table-responsive{
+            overflow-x:auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
 
-                <!-- Bookings Grid -->
-                <asp:GridView ID="gvMyBookings" runat="server" AutoGenerateColumns="False" CssClass="table table-bordered table-striped text-center"
+        /* Keep the table the same “desktop” width so it slides on mobile */
+        .fixed-grid > table{
+            min-width: 980px;            /* ← adjust if you add/remove columns */
+            table-layout: fixed;         /* stable column widths */
+            border-collapse: separate;   /* cleaner cell borders while fixed */
+            border-spacing: 0;
+        }
+
+        /* Prevent per-character wrapping so cells don’t become vertical */
+        .fixed-grid > table th,
+        .fixed-grid > table td{
+            vertical-align: middle;
+            white-space: nowrap;  /* keep each cell on one line */
+            word-break: normal;
+        }
+
+        /* Column-specific widths (tweak as needed) */
+        /* MyBookings + AllOps share many columns; min-width keeps them readable */
+        .fixed-grid > table thead th:nth-child(1),
+        .fixed-grid > table tbody td:nth-child(1){ min-width:110px; } /* Booking ID / (Upcoming: hidden ID ok) */
+        .fixed-grid > table thead th:nth-child(2),
+        .fixed-grid > table tbody td:nth-child(2){ min-width:140px; } /* Service / Operation # */
+        .fixed-grid > table thead th:nth-child(3),
+        .fixed-grid > table tbody td:nth-child(3){ min-width:140px; } /* Initial/Scheduled Date */
+        .fixed-grid > table thead th:nth-child(4),
+        .fixed-grid > table tbody td:nth-child(4){ min-width:120px; } /* Start Time / Status */
+        .fixed-grid > table thead th:nth-child(5),
+        .fixed-grid > table tbody td:nth-child(5){ min-width:120px; } /* Status / Action */
+        .fixed-grid > table thead th:nth-child(6),
+        .fixed-grid > table tbody td:nth-child(6){ min-width:120px; } /* Notes / Progress */
+        .fixed-grid > table thead th:last-child,
+        .fixed-grid > table tbody td:last-child{ min-width:140px; } /* Actions */
+
+        /* Let ONLY the Notes column wrap & grow vertically (usually col 6 in MyBookings) */
+        .fixed-grid#wrap-gvMyBookings > table tbody td:nth-child(6),
+        .fixed-grid#wrap-gvMyBookings > table thead th:nth-child(6){
+            white-space: normal;         /* allow wrapping */
+            overflow-wrap: anywhere;     /* break long refs */
+        }
+
+        /* For “Upcoming” table, allow Action button column to stay single-line */
+        .fixed-grid#wrap-gvUpcoming > table tbody td:last-child{
+            white-space: nowrap;
+        }
+
+        /* A little breathing room so the slider’s last column isn’t hidden under the FAB */
+        @media (max-width: 576px) {
+            .chat-fab { bottom: calc(88px + env(safe-area-inset-bottom)); }
+            .fixed-grid{ padding-bottom: .5rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce){
+            .modal,.swal2-popup{transition:none!important}
+        }
+    </style>
+</asp:Content>
+
+<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="container page-wrap">
+        <div class="card card-shell p-3 p-sm-4">
+            <h3 class="page-title mb-3">My Bookings</h3>
+
+            <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-semibold mb-3 d-block" />
+
+            <!-- Bookings Grid -->
+            <div class="table-responsive fixed-grid" id="wrap-gvMyBookings">
+                <asp:GridView ID="gvMyBookings" runat="server"
+                    AutoGenerateColumns="False"
+                    CssClass="table table-bordered table-striped text-center align-middle"
                     AllowPaging="True" PageSize="10"
                     OnPageIndexChanging="gvMyBookings_PageIndexChanging"
                     OnRowDataBound="gvMyBookings_RowDataBound">
@@ -22,27 +107,30 @@
                         <asp:BoundField DataField="CreatedAt" HeaderText="Date Booked" DataFormatString="{0:yyyy-MM-dd}" />
                         <asp:TemplateField HeaderText="Actions">
                             <ItemTemplate>
-                                <asp:Button 
-                                    ID="btnCancel" 
-                                    runat="server" 
-                                    Text="Cancel" 
-                                    CommandName="CancelBooking" 
-                                    CommandArgument='<%# Eval("BookingID") %>' 
+                                <asp:Button
+                                    ID="btnCancel"
+                                    runat="server"
+                                    Text="Cancel"
+                                    CommandName="CancelBooking"
+                                    CommandArgument='<%# Eval("BookingID") %>'
                                     CssClass="btn btn-danger btn-sm"
                                     Visible='<%# Eval("Status").ToString() == "Pending" %>'
-                                    OnClientClick="return confirm('Are you sure you want to cancel this booking?');" />
+                                    OnClientClick="return confirm(&#39;Are you sure you want to cancel this booking?&#39;);" />
                             </ItemTemplate>
                         </asp:TemplateField>
                     </Columns>
                 </asp:GridView>
+            </div>
 
-                <!-- Next Operation Reminder -->
-                <asp:Label ID="lblNextOperationNotice" runat="server" CssClass="alert alert-success fw-bold mt-3 d-block" Visible="false" />
+            <!-- Next Operation Reminder -->
+            <asp:Label ID="lblNextOperationNotice" runat="server" CssClass="alert alert-success fw-semibold mt-3 d-block" Visible="false" />
 
-                <!-- Upcoming Operations -->
-                <asp:Panel ID="pnlUpcomingOps" runat="server" Visible="false">
-                    <h3 class="text-primary mt-5">Upcoming Operations (Next 30 Days)</h3>
-                    <asp:GridView ID="gvUpcoming" runat="server" AutoGenerateColumns="False" CssClass="table table-bordered table-striped text-center"
+            <!-- Upcoming Operations -->
+            <asp:Panel ID="pnlUpcomingOps" runat="server" Visible="false">
+                <h4 class="text-primary mt-4 mb-2">Upcoming Operations (Next 30 Days)</h4>
+                <div class="table-responsive fixed-grid" id="wrap-gvUpcoming">
+                    <asp:GridView ID="gvUpcoming" runat="server" AutoGenerateColumns="False"
+                        CssClass="table table-bordered table-striped text-center align-middle"
                         OnRowCommand="gvUpcoming_RowCommand">
                         <Columns>
                             <asp:BoundField DataField="ScheduleID" HeaderText="ID" Visible="false" />
@@ -60,98 +148,142 @@
                             </asp:TemplateField>
                         </Columns>
                     </asp:GridView>
-                </asp:Panel>
+                </div>
+            </asp:Panel>
 
-                <!-- All Scheduled Operations -->
-        <asp:Panel ID="pnlAllOps" runat="server" Visible="false">
-            <h3 class="text-primary mt-5">All Scheduled Operations</h3>
-            <asp:GridView ID="gvAllOps" runat="server" AutoGenerateColumns="False"
-                CssClass="table table-bordered table-striped text-center"
-                OnRowCommand="gvAllOps_RowCommand"
-                OnRowDataBound="gvAllOps_RowDataBound"
-                DataKeyNames="ScheduleID">
-        
-                <Columns>
-                    <asp:BoundField DataField="BookingID" HeaderText="Booking ID" />
-                    <asp:BoundField DataField="OperationNumber" HeaderText="Operation #" />
-                    <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled Date" DataFormatString="{0:yyyy-MM-dd}" />
-                    <asp:BoundField DataField="Status" HeaderText="Status" />
-
-                    <asp:TemplateField HeaderText="Action">
-                        <ItemTemplate>
-                            <asp:Button ID="btnReschedule" runat="server" CommandName="Reschedule" Text="Set New Schedule"
-                                CommandArgument='<%# Eval("ScheduleID") + "|" + Eval("ScheduledDate", "{0:yyyy-MM-ddTHH:mm}") %>'
-                                CssClass="btn btn-warning btn-sm"
-                                Visible='<%# 
+            <!-- All Scheduled Operations -->
+            <asp:Panel ID="pnlAllOps" runat="server" Visible="false">
+                <h4 class="text-primary mt-4 mb-2">All Scheduled Operations</h4>
+                <div class="table-responsive fixed-grid" id="wrap-gvAllOps">
+                    <asp:GridView ID="gvAllOps" runat="server" AutoGenerateColumns="False"
+                        CssClass="table table-bordered table-striped text-center align-middle"
+                        OnRowCommand="gvAllOps_RowCommand"
+                        OnRowDataBound="gvAllOps_RowDataBound"
+                        DataKeyNames="ScheduleID">
+                        <Columns>
+                            <asp:BoundField DataField="BookingID" HeaderText="Booking ID" />
+                            <asp:BoundField DataField="OperationNumber" HeaderText="Operation #" />
+                            <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled Date" DataFormatString="{0:yyyy-MM-dd}" />
+                            <asp:BoundField DataField="Status" HeaderText="Status" />
+                            <asp:TemplateField HeaderText="Action">
+                                <ItemTemplate>
+                                    <asp:Button ID="btnReschedule" runat="server" CommandName="Reschedule" Text="Set New Schedule"
+                                        CommandArgument='<%# Eval("ScheduleID") + "|" + Eval("ScheduledDate", "{0:yyyy-MM-ddTHH:mm}") %>'
+                                        CssClass="btn btn-warning btn-sm"
+                                        Visible='<%# 
                                             Eval("ScheduledDate") != DBNull.Value &&
                                             Convert.ToDateTime(Eval("ScheduledDate")) < DateTime.Now &&
                                             Eval("Status").ToString() != "Completed" &&
                                             Convert.ToDateTime(Eval("ScheduledDate")) <= Convert.ToDateTime(Eval("CreatedAt")).AddYears(2)
                                         %>' />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-
-                    <asp:TemplateField HeaderText="Progress">
-                        <ItemTemplate>
-                            <asp:Literal ID="ltProgress" runat="server" />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-            </asp:GridView>
-        </asp:Panel>
-
-
-                <!-- Contract Status -->
-                <asp:Label ID="lblContractStatus" runat="server" CssClass="alert alert-success fw-bold mt-4 d-block" Visible="false" />
-
-                <!-- Modal for Set Schedule -->
-                <div id="modalOverlay" class="modal position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 justify-content-center align-items-center" style="display: none; z-index: 1050;">
-                    <div class="bg-white p-4 rounded shadow" style="width: 100%; max-width: 400px;">
-                        <h5 class="mb-3">Set New Schedule</h5>
-                        <asp:HiddenField ID="hfSelectedScheduleID" runat="server" />
-                        <div class="mb-3">
-                            <asp:TextBox ID="txtNewScheduleDate" runat="server" TextMode="Date" CssClass="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <asp:TextBox ID="txtNewScheduleTime" runat="server" TextMode="Time" CssClass="form-control" />
-                        </div>
-                        <div class="d-flex justify-content-end gap-2">
-                            <asp:Button ID="btnConfirmSchedule" runat="server" Text="Save" CssClass="btn btn-success"
-                                OnClientClick="confirmSchedule(); return false;" />
-                            <asp:Button ID="btnCloseModal" runat="server" Text="Cancel" CssClass="btn btn-secondary"
-                                OnClientClick="hideModal(); return false;" />
-                        </div>
-                    </div>
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                            <asp:TemplateField HeaderText="Progress">
+                                <ItemTemplate>
+                                    <asp:Literal ID="ltProgress" runat="server" />
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                        </Columns>
+                    </asp:GridView>
                 </div>
+            </asp:Panel>
 
-                <script type="text/javascript">
-                    function showModal(scheduleId, currentDateTime) {
-                        document.getElementById('<%= hfSelectedScheduleID.ClientID %>').value = scheduleId;
-                        const dateObj = new Date(currentDateTime);
-                        document.getElementById('<%= txtNewScheduleDate.ClientID %>').value = dateObj.toISOString().split('T')[0];
-                        document.getElementById('<%= txtNewScheduleTime.ClientID %>').value = dateObj.toTimeString().substring(0, 5);
-                        document.getElementById('modalOverlay').classList.add('d-flex');
-                    }
+            <!-- Contract Status -->
+            <asp:Label ID="lblContractStatus" runat="server" CssClass="alert alert-success fw-semibold mt-3 d-block" Visible="false" />
+        </div>
+    </div>
 
-                    function hideModal() {
-                        document.getElementById('modalOverlay').classList.remove('d-flex');
-                    }
-
-                    function confirmSchedule() {
-                        Swal.fire({
-                            title: 'Confirm New Schedule?',
-                            text: 'Are you sure you want to update this schedule?',
-                            icon: 'question',
-                            showCancelButton: true,
-                            confirmButtonColor: '#1d4ed8',
-                            cancelButtonColor: '#d33',
-                            confirmButtonText: 'Yes, save it!'
-                        }).then((result) => {   
-                            if (result.isConfirmed) {
-                                __doPostBack('<%= btnConfirmSchedule.UniqueID %>', '');
-                            }
-                        });
-                    }
-                </script>
+    <!-- Bootstrap Modal: Set New Schedule -->
+    <div class="modal fade" id="setScheduleModal" tabindex="-1" aria-labelledby="setScheduleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="setScheduleModalLabel">Set New Schedule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <asp:HiddenField ID="hfSelectedScheduleID" runat="server" />
+                    <div class="mb-3">
+                        <label class="form-label">📅 Date</label>
+                        <asp:TextBox ID="txtNewScheduleDate" runat="server" TextMode="Date" CssClass="form-control" />
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label">⏰ Time</label>
+                        <asp:TextBox ID="txtNewScheduleTime" runat="server" TextMode="Time" CssClass="form-control" />
+                    </div>
+                    <div class="form-text">Choose any date/time within your contract window.</div>
+                </div>
+                <div class="modal-footer">
+                    <asp:Button ID="btnConfirmSchedule" runat="server" Text="Save" CssClass="btn btn-success"
+                        OnClientClick="confirmSchedule(); return false;" />
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
             </div>
-        </asp:Content>
+        </div>
+    </div>
+
+    <script>
+        // Success toast if lblMessage has content (from server)
+        window.addEventListener('load', function () {
+            var msgLabel = document.getElementById('<%= lblMessage.ClientID %>');
+            if (msgLabel && msgLabel.innerText.trim() !== "") {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: msgLabel.innerText.trim(),
+                    confirmButtonColor: '#0d6efd'
+                });
+                msgLabel.style.display = 'none';
+            }
+        });
+
+        let setScheduleBsModal = null;
+        function ensureModal() {
+            const el = document.getElementById('setScheduleModal');
+            if (!setScheduleBsModal) {
+                setScheduleBsModal = new bootstrap.Modal(el, { backdrop: 'static' });
+            }
+            return setScheduleBsModal;
+        }
+
+        // Show modal and prefill date/time
+        function showModal(scheduleId, currentDateTime) {
+            document.getElementById('<%= hfSelectedScheduleID.ClientID %>').value = scheduleId;
+
+            // currentDateTime: "YYYY-MM-DDTHH:mm"
+            const dt = currentDateTime ? new Date(currentDateTime) : new Date();
+            const yyyy = dt.getFullYear();
+            const mm = String(dt.getMonth() + 1).padStart(2, '0');
+            const dd = String(dt.getDate()).padStart(2, '0');
+            const hh = String(dt.getHours()).padStart(2, '0');
+            const min = String(dt.getMinutes()).padStart(2, '0');
+
+            document.getElementById('<%= txtNewScheduleDate.ClientID %>').value = `${yyyy}-${mm}-${dd}`;
+            document.getElementById('<%= txtNewScheduleTime.ClientID %>').value = `${hh}:${min}`;
+
+            ensureModal().show();
+        }
+
+        // Hide modal
+        function hideModal() {
+            if (setScheduleBsModal) setScheduleBsModal.hide();
+        }
+
+        // Confirm via SweetAlert then post back using your server button
+        function confirmSchedule() {
+            Swal.fire({
+                title: 'Confirm New Schedule?',
+                text: 'Are you sure you want to update this schedule?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#1d4ed8',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, save it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack('<%= btnConfirmSchedule.UniqueID %>', '');
+                }
+            });
+        }
+    </script>
+</asp:Content>

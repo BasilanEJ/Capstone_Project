@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Net;
+using System.Web;
 using System.Web.UI;
 
 namespace RRCManagementSystem
@@ -12,28 +13,33 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Stop cached pages enabling back/forward bypass
+            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            Response.Cache.SetNoStore();
+            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
+
             if (!IsPostBack)
             {
                 pnlCaptcha.Visible = false;
                 lblMessage.Text = "";
             }
 
-            // Already logged-in user
-            if (Session["UserID"] != null && Session["Role"] != null)
+            // ✅ Only auto-redirect if fully authenticated (after 2FA)
+            if (Session["IsAuthenticated"] as bool? == true &&
+                Session["UserID"] != null && Session["Role"] != null)
             {
                 string role = Session["Role"].ToString();
-                if (role == "SuperAdmin")
-                    Response.Redirect("~/SuperAdminDashboard.aspx", false);
-                else if (role == "Inspector")
-                    Response.Redirect("~/InspectorDashboard.aspx", false);
-                else
-                    Response.Redirect("~/Dashboard.aspx", false);
-
+                Response.Redirect(
+                    role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx" :
+                    role == "Inspector" ? "~/InspectorDashboard.aspx" :
+                                           "~/Dashboard.aspx",
+                    false
+                );
                 Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
-            // Logged-in client
+            // Client already logged in
             if (Session["ClientID"] != null)
             {
                 Response.Redirect("Home.aspx", false);
@@ -98,8 +104,6 @@ namespace RRCManagementSystem
                             return;
                         }
 
-
-
                         // Lockout check
                         if (lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
                         {
@@ -116,6 +120,7 @@ namespace RRCManagementSystem
                             if (!IsCaptchaValid())
                             {
                                 lblMessage.Text = "⚠ CAPTCHA verification failed.";
+                                reader.Close();
                                 return;
                             }
                         }
@@ -126,40 +131,50 @@ namespace RRCManagementSystem
                             ResetFailedLogin(userID);
                             LogIPAttempt(ip, true);
 
-                            Session["UserID"] = userID;
-                            Session["Role"] = role;
-                            Session["Name"] = userName;
-                            Session["Email"] = email;
-
-                            AddAuditLog(userID, $"{role} {userName} logged in.");
+                            // ❗ Do NOT set real login here. We only mark 2FA as pending.
+                            AddAuditLog(userID, $"{role} {userName} passed password; 2FA pending.");
                             reader.Close();
 
-                            // 2FA Logic (non-Inspector only)
-                            if (!is2FAEnabled && role != "Inspector")
+                            if (role != "Inspector")
                             {
+                                // 2FA required -> store *pending* identity only
                                 Session["Pending2FA_UserID"] = userID;
                                 Session["Pending2FA_Email"] = email;
                                 Session["Pending2FA_Name"] = userName;
                                 Session["Pending2FA_Role"] = role;
-                                Response.Redirect("Enable2FA.aspx", false);
-                            }
-                            else if (is2FAEnabled && role != "Inspector")
-                            {
-                                Session["Pending2FA_UserID"] = userID;
-                                Session["Pending2FA_Email"] = email;
-                                Session["Pending2FA_Name"] = userName;
-                                Session["Pending2FA_Role"] = role;
-                                Response.Redirect("VerifyTOTP.aspx", false);
+
+                                // extra safety: ensure not authenticated yet
+                                Session.Remove("IsAuthenticated");
+                                Session.Remove("UserID");
+                                Session.Remove("Role");
+                                Session.Remove("Name");
+                                Session.Remove("Email");
+
+                                if (!is2FAEnabled)
+                                {
+                                    Response.Redirect("Enable2FA.aspx", false);
+                                }
+                                else
+                                {
+                                    Response.Redirect("VerifyTOTP.aspx", false);
+                                }
+
+                                Context.ApplicationInstance.CompleteRequest();
+                                return;
                             }
                             else
                             {
-                                Response.Redirect(role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx" :
-                                                  role == "Inspector" ? "~/InspectorDashboard.aspx" :
-                                                  "~/Dashboard.aspx", false);
-                            }
+                                // Inspectors skip 2FA in your current policy -> finalize here
+                                Session["UserID"] = userID;
+                                Session["Role"] = role;
+                                Session["Name"] = userName;
+                                Session["Email"] = email;
+                                Session["IsAuthenticated"] = true;
 
-                            Context.ApplicationInstance.CompleteRequest();
-                            return;
+                                Response.Redirect("~/InspectorDashboard.aspx", false);
+                                Context.ApplicationInstance.CompleteRequest();
+                                return;
+                            }
                         }
                         else
                         {
@@ -230,9 +245,6 @@ WHERE Email = @Email";
                             lblMessage.Text = "⚠ Account not found.";
                         }
                     }
-
-
-                    reader.Close();
                 }
             }
             catch (Exception ex)
@@ -248,7 +260,7 @@ WHERE Email = @Email";
 
             using (var client = new WebClient())
             {
-                string secret = "6Lfu6JMrAAAAAEy4fBkw0jNrp7mXfvqy03Tlz1i7"; // Replace with your actual secret key
+                string secret = "6LcIAqErAAAAAD3HQP8r8XkyIp9tJVFGSZSr0ozd"; // Replace with your actual secret key
                 string result = client.DownloadString($"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}");
                 return result.Contains("\"success\": true");
             }
@@ -258,7 +270,9 @@ WHERE Email = @Email";
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = @"SELECT COUNT(*) FROM LoginAttempts WHERE IPAddress = @IP AND IsSuccess = 0 AND AttemptTime > DATEADD(MINUTE, -10, GETDATE())";
+                string query = @"SELECT COUNT(*) FROM LoginAttempts 
+                                 WHERE IPAddress = @IP AND IsSuccess = 0 
+                                   AND AttemptTime > DATEADD(MINUTE, -10, GETDATE())";
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@IP", ip);
                 conn.Open();
@@ -313,11 +327,7 @@ WHERE Email = @Email";
 
         private void AddAuditLog(int? userID, string action)
         {
-            if (userID == null)
-            {
-                // Skip logging if userID is null (e.g., client login or unauthenticated actions)
-                return;
-            }
+            if (userID == null) return;
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -331,6 +341,5 @@ WHERE Email = @Email";
                 }
             }
         }
-
     }
 }

@@ -4,6 +4,7 @@
 <html lang="en">
 <head runat="server">
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Inspector Panel</title>
 
     <!-- Bootstrap 5 & FontAwesome -->
@@ -13,68 +14,149 @@
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
     <style>
-        @media (max-width: 768px) {
-            #sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease-in-out;
-                z-index: 1040;
-            }
-            #sidebar.show {
-                transform: translateX(0);
-            }
+        :root { --sidebar-w: 280px; --header-h: 60px; }
+
+        body { background-color: #f3f4f6; }
+        /* Fixed header */
+        header.app-header {
+            height: var(--header-h);
+            position: fixed; top: 0; left: 0; width: 100%;
+            z-index: 1050;
+        }
+
+        /* Desktop sidebar (lg+) */
+        #sidebarDesktop {
+            position: fixed; top: var(--header-h); left: 0;
+            width: var(--sidebar-w); height: calc(100vh - var(--header-h));
+            overflow-y: auto;
+        }
+
+        /* Main content + footer (desktop) */
+        @media (min-width: 992px) {
             #mainContent {
-                margin-left: 0 !important;
+                margin-left: var(--sidebar-w);
+                margin-top: var(--header-h);
+                padding: 30px;
+                min-height: calc(100vh - var(--header-h) - 56px); /* keep space for footer */
+                background-color: #f3f4f6;
             }
+            footer.app-footer {
+                left: var(--sidebar-w);
+                width: calc(100% - var(--sidebar-w));
+            }
+        }
+
+        /* Mobile/tablet (below lg): no left margin; footer full width */
+        @media (max-width: 991.98px) {
+            #mainContent {
+                margin: 0; margin-top: var(--header-h);
+                padding: 16px;
+                min-height: calc(100vh - var(--header-h) - 56px);
+            }
+            footer.app-footer {
+                left: 0; width: 100%;
+            }
+        }
+
+        /* Notification list popover */
+        #notificationList {
+            right: 0; top: 30px; width: 300px; display: none; z-index: 1090;
         }
     </style>
-
-    <script type="text/javascript">
-        function toggleSidebar() {
-            document.getElementById("sidebar").classList.toggle("show");
-        }
-    </script>
 </head>
-<body class="bg-light">
+<body>
     <form id="form1" runat="server" class="d-flex flex-column min-vh-100">
 
         <!-- Header -->
-        <header class="bg-dark text-white d-flex align-items-center justify-content-between px-4" style="height: 60px; position: fixed; top: 0; left: 0; width: 100%; z-index: 1050;">
-            <h2 class="mb-0">Inspector Panel</h2>
+        <header class="app-header bg-dark text-white d-flex align-items-center justify-content-between px-3 px-md-4">
+            <div class="d-flex align-items-center gap-2">
+                <!-- Burger: visible only on mobile/tablet -->
+                <button class="btn btn-outline-light d-lg-none me-1" type="button"
+                        data-bs-toggle="offcanvas" data-bs-target="#sidebarMobile" aria-controls="sidebarMobile">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h2 class="mb-0 fs-5">Inspector Panel</h2>
+            </div>
+
             <div class="d-flex align-items-center">
-                <asp:Label ID="lblInspectorName" runat="server" CssClass="me-4 fw-bold" />
-                <div id="notificationBell" class="position-relative me-3" onclick="toggleNotificationList()" style="cursor:pointer;">
+                <asp:Label ID="lblInspectorName" runat="server" CssClass="me-3 me-md-4 fw-bold" />
+                <div id="notificationBell" class="position-relative me-2 me-md-3" onclick="toggleNotificationList()" style="cursor:pointer;">
                     <i class="fas fa-bell fs-5"></i>
                     <span id="notificationCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none; font-size: 10px;">0</span>
-                    <div id="notificationList" class="position-absolute bg-white text-dark rounded shadow p-3" style="right: 0; top: 30px; width: 300px; display: none; z-index: 9999;">
+                    <div id="notificationList" class="position-absolute bg-white text-dark rounded shadow p-3">
                         <div id="notificationItems"></div>
                     </div>
                 </div>
-                <button class="btn btn-outline-light d-md-none" type="button" onclick="toggleSidebar()">
-                    <i class="fas fa-bars"></i>
-                </button>
             </div>
         </header>
 
-        <!-- Sidebar -->
-        <aside id="sidebar" class="bg-black text-white position-fixed d-flex flex-column" style="top: 60px; left: 0; width: 280px; height: calc(100vh - 60px); overflow-y: auto;">
-            <ul class="nav flex-column">
-                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="InspectorDashboard.aspx"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a></li>
-                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="MyInspections.aspx"><i class="fas fa-search me-2"></i> Inspections</a></li>
-                <li class="nav-item border-bottom"><a class="nav-link text-white px-4 py-3" href="CreateBooking.aspx"><i class="fas fa-tasks me-2"></i> Assign Booking</a></li>
+        <!-- Desktop Sidebar (lg and up) -->
+        <aside id="sidebarDesktop" class="d-none d-lg-flex flex-column text-white bg-black">
+            <ul class="nav flex-column mt-2">
+                <li class="nav-item border-bottom">
+                    <a class="nav-link text-white px-4 py-3" href="InspectorDashboard.aspx">
+                        <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item border-bottom">
+                    <a class="nav-link text-white px-4 py-3" href="MyInspections.aspx">
+                        <i class="fas fa-search me-2"></i> Inspections
+                    </a>
+                </li>
+                <li class="nav-item border-bottom">
+                    <a class="nav-link text-white px-4 py-3" href="CreateBooking.aspx">
+                        <i class="fas fa-tasks me-2"></i> Assign Booking
+                    </a>
+                </li>
             </ul>
 
-            <asp:LinkButton ID="btnLogout" runat="server" CssClass="btn btn-danger fw-bold w-75 mx-auto my-4 d-block" OnClick="btnLogout_Click">
+            <asp:LinkButton ID="btnLogout" runat="server"
+                CssClass="btn btn-danger fw-bold w-75 mx-auto my-4 d-block"
+                OnClick="btnLogout_Click">
                 <i class="fas fa-sign-out-alt me-2"></i> Logout
             </asp:LinkButton>
         </aside>
 
+        <!-- Mobile/Tablet Offcanvas Sidebar -->
+        <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="sidebarMobile" aria-labelledby="sidebarMobileLabel" style="width: var(--sidebar-w);">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="sidebarMobileLabel">Menu</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body d-flex flex-column justify-content-between">
+                <ul class="nav flex-column">
+                    <li class="nav-item border-bottom">
+                        <a class="nav-link text-white px-2 py-3" href="InspectorDashboard.aspx">
+                            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item border-bottom">
+                        <a class="nav-link text-white px-2 py-3" href="MyInspections.aspx">
+                            <i class="fas fa-search me-2"></i> Inspections
+                        </a>
+                    </li>
+                    <li class="nav-item border-bottom">
+                        <a class="nav-link text-white px-2 py-3" href="CreateBooking.aspx">
+                            <i class="fas fa-tasks me-2"></i> Assign Booking
+                        </a>
+                    </li>
+                </ul>
+
+                <asp:LinkButton ID="btnLogoutMobile" runat="server"
+                    CssClass="btn btn-danger fw-bold w-100 mt-3"
+                    OnClick="btnLogout_Click">
+                    <i class="fas fa-sign-out-alt me-2"></i> Logout
+                </asp:LinkButton>
+            </div>
+        </div>
+
         <!-- Main Content -->
-        <main id="mainContent" class="flex-grow-1" style="margin-left: 280px; margin-top: 60px; padding: 30px; background-color: #f3f4f6; min-height: calc(100vh - 100px);">
+        <main id="mainContent" class="flex-grow-1">
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </main>
 
         <!-- Footer -->
-        <footer class="bg-dark text-white text-center py-3 position-fixed bottom-0" style="left: 280px; width: calc(100% - 280px); z-index: 1030;">
+        <footer class="app-footer bg-dark text-white text-center py-3 position-fixed bottom-0" style="z-index: 1030;">
             &copy; 2025 RRC Management System - Inspector
         </footer>
     </form>
@@ -83,6 +165,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // Notifications
         function loadNotifications() {
             fetch('GetNotifications.ashx')
                 .then(res => res.json())
@@ -95,13 +178,16 @@
                     if (count > 0) {
                         badge.style.display = 'inline-block';
                         list.innerHTML = data.map(item =>
-                            `<div class='border-bottom pb-2 mb-2'><strong>Inspection #${item.id}</strong><br/><small>${item.date}</small></div>`
+                            `<div class='border-bottom pb-2 mb-2'>
+                                <strong>Inspection #${item.id}</strong><br/>
+                                <small>${item.date}</small>
+                             </div>`
                         ).join('');
                     } else {
                         badge.style.display = 'none';
                         list.innerHTML = "<div class='text-center'>No new inspections.</div>";
                     }
-                });
+                }).catch(() => { });
         }
 
         function markNotificationsAsRead() {
@@ -109,12 +195,12 @@
                 .then(() => {
                     document.getElementById('notificationCount').style.display = 'none';
                     loadNotifications();
-                });
+                }).catch(() => { });
         }
 
         function toggleNotificationList() {
             const list = document.getElementById('notificationList');
-            list.style.display = list.style.display === 'block' ? 'none' : 'block';
+            list.style.display = (list.style.display === 'block') ? 'none' : 'block';
             if (list.style.display === 'block') markNotificationsAsRead();
         }
 
@@ -124,6 +210,16 @@
             }
         });
 
+        // Auto-close the mobile offcanvas when a nav link is clicked
+        document.addEventListener('click', function (e) {
+            const link = e.target.closest('#sidebarMobile .nav-link');
+            if (!link) return;
+            const oc = document.getElementById('sidebarMobile');
+            const inst = bootstrap.Offcanvas.getInstance(oc) || new bootstrap.Offcanvas(oc);
+            inst.hide();
+        }, true);
+
+        // Initial notifications + periodic refresh
         loadNotifications();
         setInterval(loadNotifications, 30000);
     </script>

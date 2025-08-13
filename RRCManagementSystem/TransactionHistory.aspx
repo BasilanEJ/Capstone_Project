@@ -113,7 +113,11 @@
             <Columns>
                 <asp:BoundField DataField="TransactionID" HeaderText="Transaction ID" />
                 <asp:BoundField DataField="SaleID" HeaderText="Sale ID" />
-                <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="{0:C}" />
+                <asp:BoundField DataField="Amount"
+    HeaderText="Amount"
+    DataFormatString="₱{0:N2}"
+    HtmlEncode="false" />
+
                 <asp:BoundField DataField="PaymentMethod" HeaderText="Payment Method" />
                 <asp:BoundField DataField="Status" HeaderText="Status" />
                 <asp:BoundField DataField="TransactionDate" HeaderText="Transaction Date" DataFormatString="{0:yyyy-MM-dd HH:mm}" />

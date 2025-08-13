@@ -30,14 +30,23 @@
                         <asp:BoundField DataField="City" HeaderText="City" />
                         <asp:BoundField DataField="Country" HeaderText="Country" />
                         <asp:TemplateField HeaderText="Actions">
-                            <ItemTemplate>
-                                <asp:Button ID="btnView" runat="server" CssClass="btn btn-primary btn-sm me-2" Text="View Profile"
-                                    CommandName="ViewProfile" CommandArgument='<%# Eval("ClientID") %>' />
-                                <asp:Button ID="btnArchive" runat="server" CssClass="btn btn-danger btn-sm" Text="Archive"
-                                    CommandName="ArchiveClient" CommandArgument='<%# Eval("ClientID") %>'
-                                    OnClientClick="return confirmArchive();" />
-                            </ItemTemplate>
-                        </asp:TemplateField>
+  <ItemTemplate>
+    <asp:Button ID="btnView" runat="server"
+        CssClass="btn btn-primary btn-sm me-2"
+        Text="View Profile"
+        CommandName="ViewProfile"
+        CommandArgument='<%# Eval("ClientID") %>' />
+
+    <asp:Button ID="btnArchive" runat="server"
+        CssClass="btn btn-danger btn-sm"
+        Text="Archive"
+        CommandName="ArchiveClient"
+        CommandArgument='<%# Eval("ClientID") %>'
+        UseSubmitBehavior="false"
+        OnClientClick="return confirmArchive(this);" />
+  </ItemTemplate>
+</asp:TemplateField>
+
                     </Columns>
                 </asp:GridView>
             </div>
@@ -45,8 +54,11 @@
     </div>
 
     <script>
-        function confirmArchive() {
-            return Swal.fire({
+        function confirmArchive(btn) {
+            // Stop the normal submit right away
+            if (window.event) window.event.preventDefault();
+
+            Swal.fire({
                 title: 'Archive Client?',
                 text: 'The client will be archived and no longer appear in the active list.',
                 icon: 'warning',
@@ -55,8 +67,13 @@
                 cancelButtonColor: '#d33',
                 confirmButtonText: 'Yes, archive'
             }).then((result) => {
-                return result.isConfirmed;
+                if (result.isConfirmed) {
+                    // Trigger the WebForms postback for this specific button
+                    __doPostBack(btn.name, '');
+                }
             });
+
+            // Always cancel the original click; we'll post back ourselves if confirmed
             return false;
         }
     </script>

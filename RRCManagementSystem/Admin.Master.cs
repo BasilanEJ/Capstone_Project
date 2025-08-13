@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Web;
 using System.Web.UI;
 
 namespace RRCManagementSystem
@@ -75,9 +76,30 @@ namespace RRCManagementSystem
 
         protected void btnLogout_Click(object sender, EventArgs e)
         {
+            // Clear all session data
             Session.Clear();
+            Session.RemoveAll();
             Session.Abandon();
-            Response.Redirect("~/Login.aspx");
+
+            // Remove authentication flag
+            Session["IsAuthenticated"] = null;
+
+            // Invalidate session cookie
+            if (Request.Cookies["ASP.NET_SessionId"] != null)
+            {
+                Response.Cookies["ASP.NET_SessionId"].Value = string.Empty;
+                Response.Cookies["ASP.NET_SessionId"].Expires = DateTime.UtcNow.AddDays(-1);
+            }
+
+            // Prevent browser from caching previous pages
+            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            Response.Cache.SetNoStore();
+            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
+
+            // Redirect to login
+            Response.Redirect("~/Login.aspx", false);
+            Context.ApplicationInstance.CompleteRequest();
         }
+
     }
 }

@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Net;
+using System.Web;
 using OtpNet;
 
 namespace RRCManagementSystem
@@ -12,14 +13,28 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Prevent cached back/forward navigation from reusing this page
+            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            Response.Cache.SetNoStore();
+            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
+
             if (!IsPostBack)
             {
                 lblMessage.Text = "";
                 pnlCaptcha.Visible = false;
 
+                // Extra hardening: ensure no authenticated session is present yet
+                Session.Remove("IsAuthenticated");
+                Session.Remove("UserID");
+                Session.Remove("Role");
+                Session.Remove("Name");
+                Session.Remove("Email");
+
+                // Must come from password step
                 if (Session["Pending2FA_Email"] == null || Session["Pending2FA_UserID"] == null)
                 {
-                    Response.Redirect("Login.aspx");
+                    Response.Redirect("Login.aspx", false);
+                    Context.ApplicationInstance.CompleteRequest();
                     return;
                 }
 
@@ -34,19 +49,27 @@ namespace RRCManagementSystem
 
         protected void btnVerifyTOTP_Click(object sender, EventArgs e)
         {
+            // Still require pending identity
+            if (Session["Pending2FA_Email"] == null || Session["Pending2FA_UserID"] == null)
+            {
+                Response.Redirect("Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
+                return;
+            }
+
             int userID = Convert.ToInt32(Session["Pending2FA_UserID"]);
+            string email = Session["Pending2FA_Email"]?.ToString();
+            string role = Session["Pending2FA_Role"]?.ToString();
+            string name = Session["Pending2FA_Name"]?.ToString();
+
             if (pnlCaptcha.Visible && !IsCaptchaValid())
             {
                 lblMessage.Text = "⚠ CAPTCHA verification failed.";
                 return;
             }
 
-            string userInputCode = txtTOTP.Value.Trim();
-            string email = Session["Pending2FA_Email"]?.ToString();
-            string role = Session["Pending2FA_Role"]?.ToString();
-            string name = Session["Pending2FA_Name"]?.ToString();
-
-            if (string.IsNullOrEmpty(userInputCode) || userInputCode.Length != 6)
+            string userInputCode = txtTOTP.Value?.Trim() ?? "";
+            if (userInputCode.Length != 6)
             {
                 lblMessage.Text = "⚠ Please enter a valid 6-digit code.";
                 return;
@@ -62,15 +85,19 @@ namespace RRCManagementSystem
             try
             {
                 var totp = new Totp(Base32Encoding.ToBytes(totpSecret));
+                // Accept code with standard network delay window
                 bool isValid = totp.VerifyTotp(userInputCode, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
 
                 if (isValid)
                 {
+                    // ✅ Now finalize real authentication
                     Session["UserID"] = userID;
                     Session["Role"] = role;
                     Session["Name"] = name;
                     Session["Email"] = email;
+                    Session["IsAuthenticated"] = true;
 
+                    // Clear pending state
                     Session.Remove("Pending2FA_UserID");
                     Session.Remove("Pending2FA_Email");
                     Session.Remove("Pending2FA_Name");
@@ -80,8 +107,10 @@ namespace RRCManagementSystem
 
                     string redirect = role == "SuperAdmin" ? "SuperAdminDashboard.aspx" :
                                       role == "Inspector" ? "InspectorDashboard.aspx" :
-                                      "Dashboard.aspx";
-                    Response.Redirect(redirect);
+                                                             "Dashboard.aspx";
+                    Response.Redirect(redirect, false);
+                    Context.ApplicationInstance.CompleteRequest();
+                    return;
                 }
                 else
                 {
@@ -102,8 +131,10 @@ namespace RRCManagementSystem
 
             using (var client = new WebClient())
             {
-                string secret = "6Lfu6JMrAAAAAEy4fBkw0jNrp7mXfvqy03Tlz1i7"; // Replace with your actual secret
-                string result = client.DownloadString($"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}");
+                string secret = "6LcIAqErAAAAAD3HQP8r8XkyIp9tJVFGSZSr0ozd"; // TODO: move to config
+                string result = client.DownloadString(
+                    $"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}"
+                );
                 return result.Contains("\"success\": true");
             }
         }
@@ -112,7 +143,12 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "SELECT TOTPSecret FROM Users WHERE Email = @Email AND TwoFactorEnabled = 1 AND Status IN ('Active', 'Available')";
+                const string query = @"
+SELECT TOTPSecret 
+FROM Users 
+WHERE Email = @Email 
+  AND TwoFactorEnabled = 1 
+  AND Status IN ('Active','Available')";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@Email", email);
@@ -127,17 +163,19 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "SELECT LockoutUntil FROM Users WHERE UserID = @UserID";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@UserID", userId);
-                conn.Open();
-                object result = cmd.ExecuteScalar();
-                if (result != DBNull.Value && result != null)
+                const string query = "SELECT LockoutUntil FROM Users WHERE UserID = @UserID";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    DateTime lockoutTime = Convert.ToDateTime(result);
-                    return lockoutTime > DateTime.Now;
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    if (result != DBNull.Value && result != null)
+                    {
+                        DateTime lockoutTime = Convert.ToDateTime(result);
+                        return lockoutTime > DateTime.Now;
+                    }
+                    return false;
                 }
-                return false;
             }
         }
 
@@ -145,7 +183,7 @@ namespace RRCManagementSystem
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
+                const string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserID", userID);

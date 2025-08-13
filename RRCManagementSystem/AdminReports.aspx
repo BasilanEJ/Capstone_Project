@@ -234,7 +234,7 @@
             </ItemTemplate>
         </asp:TemplateField>
         <asp:BoundField DataField="ClientName" HeaderText="Client" />
-        <asp:BoundField DataField="Service" HeaderText="Service" />
+        <asp:BoundField DataField="Services" HeaderText="Service" />
         <asp:BoundField DataField="TeamName" HeaderText="Assigned Team" />
         <asp:BoundField DataField="ScheduledDate" HeaderText="Schedule" />
         <asp:BoundField DataField="Status" HeaderText="Status" />
@@ -259,5 +259,54 @@
     </Columns>
 </asp:GridView>
 <asp:Button ID="btnExportInspections" runat="server" Text="Export Inspections to PDF" CssClass="btn-sales" OnClick="btnExportInspections_Click" />
+
+<!-- 🧑‍🤝‍🧑 Team Reports -->
+<h3>🧑‍🤝‍🧑 Team Reports</h3>
+
+<div style="text-align:center; margin-bottom: 18px;">
+    <label>Availability Date:</label>
+    <asp:TextBox ID="txtTeamDate" runat="server" TextMode="Date" />
+    <asp:Button ID="btnTeamDateApply" runat="server" Text="Apply"
+        CssClass="btn-sales" OnClick="btnTeamDateApply_Click" />
+</div>
+
+<h3>📋 Team Summary (by date & range)</h3>
+<asp:GridView ID="gvTeamsSummary" runat="server" AutoGenerateColumns="False" CssClass="custom-table">
+    <Columns>
+        <asp:TemplateField HeaderText="Team">
+            <ItemTemplate>
+                <%# "Team" + String.Format("{0:D3}", Eval("TeamID")) %> — <%# Eval("GroupName") %>
+            </ItemTemplate>
+        </asp:TemplateField>
+        <asp:BoundField DataField="MembersCount" HeaderText="Members" />
+        <asp:BoundField DataField="AssignmentsOnDate" HeaderText="Jobs on Availability Date" />
+        <asp:BoundField DataField="AssignmentsInRange" HeaderText="Total Assignments in Date Range" />
+        <asp:BoundField DataField="LastScheduled" HeaderText="Last Scheduled" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
+        <asp:BoundField DataField="Status" HeaderText="Status" />
+    </Columns>
+</asp:GridView>
+<asp:Button ID="btnExportTeamsSummary" runat="server" Text="Export Team Summary to PDF"
+    CssClass="btn-sales" OnClick="btnExportTeamsSummary_Click" />
+
+<h3>👥 Team Members (roster)</h3>
+<asp:GridView ID="gvTeamMembers" runat="server" AutoGenerateColumns="False" CssClass="custom-table">
+    <Columns>
+        <asp:TemplateField HeaderText="Team">
+            <ItemTemplate>
+                <%# "Team" + String.Format("{0:D3}", Eval("TeamID")) %> — <%# Eval("GroupName") %>
+            </ItemTemplate>
+        </asp:TemplateField>
+        <asp:BoundField DataField="EmployeeID" HeaderText="Emp ID" />
+        <asp:TemplateField HeaderText="Member">
+            <ItemTemplate>
+                <%# Eval("LastName") %>, <%# Eval("FirstName") %> <%# Eval("MiddleName") %>
+            </ItemTemplate>
+        </asp:TemplateField>
+    </Columns>
+</asp:GridView>
+<asp:Button ID="btnExportTeamMembers" runat="server" Text="Export Team Members to PDF"
+    CssClass="btn-sales" OnClick="btnExportTeamMembers_Click" />
+
+
 
 </asp:Content>

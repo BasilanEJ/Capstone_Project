@@ -115,28 +115,26 @@
                 <asp:BoundField DataField="CreatedAt" HeaderText="Date Booked" DataFormatString="{0:yyyy-MM-dd}" />
 
                 <asp:TemplateField HeaderText="Op1 Status">
-                    <ItemTemplate>
-                        <%# Eval("Status").ToString() == "Assigned" && Eval("Op1Status") != null
-                              ? Eval("Op1Status").ToString()
-                              : "—" %>
-                    </ItemTemplate>
-                </asp:TemplateField>
+  <ItemTemplate>
+    <asp:Label ID="lblOp1Status" runat="server"
+      Text='<%# Eval("Op1Status") == null ? "—" : Eval("Op1Status").ToString() %>' />
+  </ItemTemplate>
+</asp:TemplateField>
 
 
              <asp:TemplateField HeaderText="Actions">
-    <ItemTemplate>
-        <!-- Edit button (no change) -->
-        <asp:Button ID="btnEdit" runat="server" Text="Edit" CommandName="EditBooking" 
-                    CommandArgument='<%# Eval("BookingID") %>' CssClass="btn btn-edit btn-sm" />
+  <ItemTemplate>
+    <asp:Button ID="btnEdit" runat="server" Text="Edit"
+                CommandName="EditBooking"
+                CommandArgument='<%# Eval("BookingID") %>'
+                CssClass="btn btn-edit btn-sm" />
 
-        <!-- Visible button for SweetAlert -->
-        <asp:Button ID="btnTriggerCompleteOp1" runat="server"
-                    Text="Mark Op1 Complete"
-                    CssClass="btn btn-complete btn-sm"
-                    OnClientClick='<%# "return confirmCompleteOp1(" + Eval("BookingID") + ");" %>'
-                    UseSubmitBehavior="false"
-                    Visible='<%# Eval("Status").ToString() == "Assigned" && Eval("Op1Status") != null && Eval("Op1Status").ToString() != "Completed" %>' />
-    </ItemTemplate>
+    <asp:Button ID="btnTriggerCompleteOp1" runat="server"
+                Text="Mark Op1 Complete"
+                CssClass="btn btn-complete btn-sm"
+                OnClientClick='<%# "return confirmCompleteOp1(" + Eval("BookingID") + ");" %>'
+                UseSubmitBehavior="false" />
+  </ItemTemplate>
 </asp:TemplateField>
 
             </Columns>
@@ -145,7 +143,7 @@
         <!-- Hidden field to store BookingID for Op1 completion -->
 <asp:HiddenField ID="hfBookingIDToComplete" runat="server" />
 
-<!-- Hidden button to trigger server-side logic -->
+
 <asp:Button ID="btnHiddenCompleteOp1" runat="server"
             Style="display:none;"
             OnClick="btnHiddenCompleteOp1_Click"

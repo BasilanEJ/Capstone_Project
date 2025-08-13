@@ -97,44 +97,54 @@
 
     <asp:Literal ID="ltScript" runat="server" />
 
-    <script type="text/javascript">
-        window.onload = function () {
-            const lastNameInput = document.getElementById('<%= txtLastName.ClientID %>');
-            const firstNameInput = document.getElementById('<%= txtFirstName.ClientID %>');
-            const contactInput = document.getElementById('<%= txtContact.ClientID %>');
+ <script type="text/javascript">
+     window.onload = function () {
+         const lastNameInput = document.getElementById('<%= txtLastName.ClientID %>');
+        const firstNameInput = document.getElementById('<%= txtFirstName.ClientID %>');
+        const middleNameInput = document.getElementById('<%= txtMiddleName.ClientID %>');
+        const contactInput = document.getElementById('<%= txtContact.ClientID %>');
 
-            // Block numbers in LastName and FirstName
-            [lastNameInput, firstNameInput].forEach(function (input) {
-                input.addEventListener('keypress', function (e) {
-                    const charCode = e.which || e.keyCode;
-                    if (charCode >= 48 && charCode <= 57) {
-                        e.preventDefault();
-                    }
-                });
-            });
+         // Block numbers in LastName, FirstName, and MiddleName
+         [lastNameInput, firstNameInput, middleNameInput].forEach(function (input) {
+             input.addEventListener('keypress', function (e) {
+                 const charCode = e.which || e.keyCode;
+                 if (charCode >= 48 && charCode <= 57) { // digits 0–9
+                     e.preventDefault();
+                 }
+             });
 
-            // Allow only digits in contact number
-            contactInput.addEventListener('keypress', function (e) {
-                const charCode = e.which || e.keyCode;
-                if (charCode < 48 || charCode > 57) {
-                    e.preventDefault();
-                }
-            });
+             // Prevent pasting numbers into name fields
+             input.addEventListener('paste', function (e) {
+                 const paste = (e.clipboardData || window.clipboardData).getData('text');
+                 if (/\d/.test(paste)) {
+                     e.preventDefault();
+                 }
+             });
+         });
 
-            // Limit to 11 digits
-            contactInput.addEventListener('input', function () {
-                if (contactInput.value.length > 11) {
-                    contactInput.value = contactInput.value.slice(0, 11);
-                }
-            });
+         // Allow only digits in contact number
+         contactInput.addEventListener('keypress', function (e) {
+             const charCode = e.which || e.keyCode;
+             if (charCode < 48 || charCode > 57) {
+                 e.preventDefault();
+             }
+         });
 
-            // Prevent pasting non-numbers
-            contactInput.addEventListener('paste', function (e) {
-                const paste = (e.clipboardData || window.clipboardData).getData('text');
-                if (!/^\d{1,11}$/.test(paste)) {
-                    e.preventDefault();
-                }
-            });
-        };
-    </script>
+         // Limit to 11 digits
+         contactInput.addEventListener('input', function () {
+             if (contactInput.value.length > 11) {
+                 contactInput.value = contactInput.value.slice(0, 11);
+             }
+         });
+
+         // Prevent pasting non-numbers into contact
+         contactInput.addEventListener('paste', function (e) {
+             const paste = (e.clipboardData || window.clipboardData).getData('text');
+             if (!/^\d{1,11}$/.test(paste)) {
+                 e.preventDefault();
+             }
+         });
+     };
+ </script>
+
 </asp:Content>

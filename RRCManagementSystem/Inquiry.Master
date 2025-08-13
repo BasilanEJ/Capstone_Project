@@ -1,460 +1,426 @@
 ﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Inquiry.master.cs" Inherits="RRCManagementSystem.Inquiry" %>
-
 <!DOCTYPE html>
 <html lang="en">
 <head runat="server">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <title><asp:ContentPlaceHolder ID="PageTitle" runat="server" /></title>
-    
-    <!-- Bootstrap CSS -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- Bootstrap & Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
+    <!-- Optional per-page head additions -->
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
     <style>
-        /* General Styles */
-body {
-    font-family: Arial, sans-serif;
-}
+        /* ===== Base / Typography ===== */
+        body { font-family: Arial, sans-serif; animation: fadeIn .8s ease-in-out; padding-top:70px; }
+        .top-header { font-size:14px; }
+        .contact-info i { margin-right:5px; }
 
-/* Header */
-.top-header {
-    font-size: 14px;
-}
+        /* ===== Navbar ===== */
+        .navbar { padding:15px 0; transition: all .3s ease-in-out; }
+        .navbar-brand .logo, .navbar-brand img { height:50px; max-height:60px; transition:max-height .3s ease-in-out; }
+        .navbar-nav .nav-link { font-size:16px; font-weight:600; color:#333; }
+        .navbar-nav .nav-link:hover { color:#007bff; }
+        .navbar-nav .btn-success { font-weight:bold; padding:8px 15px; border-radius:5px; }
 
-.contact-info i {
-    margin-right: 5px;
-}
+        /* Sticky scroll navbar */
+        .scroll-navbar { position:fixed; top:0; left:0; width:100%; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,.1); }
+        .show-navbar { top:0; }
 
-/* Navbar */
-.navbar {
-    padding: 15px 0;
-}
+        /* ===== Footer ===== */
+        .footer { text-align:center; font-size:14px; }
 
-.navbar-brand .logo {
-    height: 50px;
-}
+        /* ===== Animations ===== */
+        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+        @keyframes fadeSlideDown { from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:none;} }
+        header.top-header { animation: fadeSlideDown .8s ease-in-out; }
 
-.navbar-nav .nav-link {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-}
-
-    .navbar-nav .nav-link:hover {
-        color: #007bff;
-    }
-
-.navbar-nav .btn-success {
-    font-weight: bold;
-    padding: 8px 15px;
-    border-radius: 5px;
-}
-
-/* Footer */
-.footer {
-    text-align: center;
-    font-size: 14px;
-}
-
-    .footer p {
-        margin-bottom: 5px;
-    }
-
-/* Fade-in animation */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-/* Navbar & Header Slide-in Effect */
-@keyframes fadeSlideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Apply animations */
-body {
-    animation: fadeIn 0.8s ease-in-out;
-}
-
-header.top-header {
-    animation: fadeSlideDown 0.8s ease-in-out;
-}
-
-/* Navbar responsiveness */
-.navbar {
-    transition: all 0.3s ease-in-out;
-}
-
-/* Navbar Brand Logo Responsiveness */
-.navbar-brand img {
-    max-height: 60px; /* Default size */
-    transition: max-height 0.3s ease-in-out;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 992px) {
-    .navbar-brand img {
-        max-height: 50px; /* Reduce size on tablets */
-    }
-
-    .navbar-nav {
-        text-align: center;
-    }
-
-    .navbar-toggler {
-        transition: transform 0.3s ease-in-out;
-    }
-
-        .navbar-toggler:hover {
-            transform: scale(1.1);
+        /* ===== Responsive tweaks ===== */
+        @media (max-width: 992px) {
+          .navbar-brand img{ max-height:50px; }
+          .navbar-nav{ text-align:center; }
+          .navbar-toggler{ transition: transform .3s ease-in-out; }
+          .navbar-toggler:hover{ transform: scale(1.1); }
         }
-}
-
-@media (max-width: 768px) {
-    .navbar-brand img {
-        max-height: 45px; /* Reduce size on mobile */
-    }
-
-    .container {
-        padding: 0 15px;
-    }
-
-    .footer p {
-        font-size: 14px;
-    }
-}
-
-@media (max-width: 576px) {
-    .top-header {
-        font-size: 14px;
-        padding: 8px 0;
-    }
-
-    .contact-info span {
-        display: block; /* Stack items */
-        margin-bottom: 5px;
-    }
-
-    .social-icons a {
-        font-size: 16px;
-    }
-}
-
-
-
-        /* Navbar initially hidden */
-       .scroll-navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 1000; /* Ensures navbar is above other elements */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Adds slight shadow */
-}
-
-body {
-    padding-top: 70px; /* Prevents content from being hidden behind navbar */
-}
-        /* Show navbar when scrolling up */
-        .show-navbar {
-            top: 0;
+        @media (max-width: 768px) {
+          .navbar-brand img{ max-height:45px; }
+          .container{ padding:0 15px; }
+          .footer p{ font-size:14px; }
+        }
+        @media (max-width: 576px) {
+          .top-header{ font-size:14px; padding:8px 0; }
+          .contact-info span{ display:block; margin-bottom:5px; }
+          .social-icons a{ font-size:16px; }
         }
 
+        /* ===================== Modern Floating Chat (Glass + Dark Mode) ===================== */
+        :root{
+          --chat-accent:#0d6efd;
+          --chat-bg:#ffffffcc;
+          --chat-border:#e9ecef;
+          --chat-text:#212529;
+          --chat-muted:#6c757d;
+          --chat-bot:#f1f5ff;
+          --chat-user:#e8f5e9;
+          --shadow:0 12px 30px rgba(0,0,0,.15);
+        }
+        .dark{
+          --chat-accent:#66b2ff;
+          --chat-bg:#0b1220cc;
+          --chat-border:#1f2937;
+          --chat-text:#e5e7eb;
+          --chat-muted:#9ca3af;
+          --chat-bot:#0f1a33;
+          --chat-user:#0d2814;
+          --shadow:0 12px 30px rgba(0,0,0,.45);
+          background-color:#0b1220;
+          color:#e5e7eb;
+        }
 
+        .rrc-chat{
+          position:fixed; right:20px; bottom:20px; z-index:2000; pointer-events:none;
+        }
+        .rrc-chat *{ box-sizing:border-box; }
+        .rrc-chat .chat-toggle{
+          pointer-events:auto;
+          width:64px; height:64px; border-radius:50%; border:0; cursor:pointer;
+          background:var(--chat-accent); color:#fff; font-size:24px; position:relative;
+          display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow);
+          transition: transform .18s ease, box-shadow .18s ease;
+        }
+        .rrc-chat .chat-toggle:hover{ transform: translateY(-2px); box-shadow:0 16px 36px rgba(13,110,253,.35); }
+        .rrc-chat .pulse{ position:absolute; inset:0; border-radius:50%;
+          box-shadow:0 0 0 0 rgba(13,110,253,.45); animation:pulse 2s infinite; }
+        @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(13,110,253,.45);} 70%{box-shadow:0 0 0 20px rgba(13,110,253,0);} 100%{box-shadow:0 0 0 0 rgba(13,110,253,0);} }
+
+        .rrc-chat .chat-panel{
+          pointer-events:auto;
+          width:min(480px, 95vw);
+          background:var(--chat-bg); backdrop-filter: blur(12px);
+          border:1px solid var(--chat-border); border-radius:16px; overflow:hidden;
+          box-shadow:var(--shadow);
+          position:absolute; right:0; bottom:78px; display:none;
+        }
+        .rrc-chat.open .chat-panel{ display:flex; flex-direction:column; animation:pop .14s ease; }
+        @keyframes pop{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+        .rrc-chat.open .chat-toggle{ transform: scale(.96); }
+
+        .chat-header{
+          display:flex; align-items:center; justify-content:space-between; gap:8px;
+          padding:10px 12px; border-bottom:1px solid var(--chat-border);
+          background:linear-gradient(180deg, rgba(13,110,253,.12), rgba(13,110,253,0));
+        }
+        .chat-header .title{ display:flex; align-items:center; gap:10px; color:var(--chat-text); font-weight:700; }
+        .chat-header .status{ font-size:12px; color:var(--chat-muted); }
+        .chat-header .icon-btn{
+          border:0; background:transparent; width:36px; height:36px; border-radius:10px; cursor:pointer; color:var(--chat-text);
+        }
+        .chat-header .icon-btn:hover{ background:rgba(13,110,253,.08); }
+
+        .chat-body{
+          height:480px; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth;
+        }
+        .msg{
+          max-width:86%; padding:10px 12px; border-radius:12px; line-height:1.4; font-size:14px; color:var(--chat-text);
+          box-shadow:0 2px 8px rgba(0,0,0,.06);
+        }
+        .msg.bot{ background:var(--chat-bot); border:1px solid var(--chat-border); border-top-left-radius:4px; }
+        .msg.user{ background:var(--chat-user); border-top-right-radius:4px; margin-left:auto; }
+        .msg .time{ display:block; margin-top:6px; font-size:11px; color:var(--chat-muted); }
+        .fade-in{ animation:fadeIn .16s ease; }
+        @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+        .quick-bar{ display:flex; flex-wrap:wrap; gap:8px; }
+        .quick-chip{
+          border:1px solid var(--chat-border); background:transparent; color:var(--chat-text);
+          padding:6px 10px; border-radius:999px; font-size:12px; cursor:pointer;
+        }
+        .quick-chip:hover{ border-color:var(--chat-accent); color:var(--chat-accent); }
+
+        .typing{ display:inline-flex; gap:4px; align-items:center; padding:8px 10px; border-radius:12px;
+          background:var(--chat-bot); border:1px solid var(--chat-border); }
+        .dot{ width:6px; height:6px; border-radius:50%; background:var(--chat-muted); opacity:.6; animation:bounce 1.2s infinite; }
+        .dot:nth-child(2){ animation-delay:.15s; } .dot:nth-child(3){ animation-delay:.3s; }
+        @keyframes bounce{ 0%,80%,100%{transform:scale(.8);} 40%{transform:scale(1);} }
+
+        .chat-input{
+          border-top:1px solid var(--chat-border); padding:10px; display:flex; gap:8px; align-items:flex-end;
+          background:linear-gradient(0deg, rgba(13,110,253,.06), rgba(13,110,253,0));
+
+        }
+        .chat-input textarea{
+          resize:none; width:100%; min-height:42px; max-height:140px;
+          border:1px solid var(--chat-border); background:transparent; color:var(--chat-text);
+          border-radius:12px; padding:10px 12px; outline:none;
+        }
+        .chat-input textarea::placeholder{ color:var(--chat-muted); }
+        .chat-input .send-btn{
+          border:0; background:var(--chat-accent); color:#fff; border-radius:12px; padding:10px 14px;
+          display:flex; align-items:center; justify-content:center; height:42px; min-width:46px; cursor:pointer;
+        }
+        .chat-input .send-btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+        @media (max-width: 576px){
+          .rrc-chat{ right:12px; bottom:12px; }
+          .rrc-chat .chat-panel{ width:min(420px, 96vw); }
+        }
     </style>
 </head>
+
 <body>
     <form id="form1" runat="server">
 
-        <!-- Header
-        <header class="top-header bg-primary text-white py-2">
-            <div class="container d-flex justify-content-between align-items-center">
-                <div class="contact-info">
-                    <span><i class="fas fa-phone"></i> +63 912 345 6789</span> |
-                    <span><i class="fas fa-envelope"></i> info@rrctermite.com</span>
-                </div>
-                <div class="social-icons">
-                    <a href="#" class="text-white me-3"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="text-white me-3"><i class="fab fa-instagram"></i></a>
+        <!-- Scroll Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white scroll-navbar" id="scrollNavbar">
+            <div class="container">
+                <!-- Brand -->
+                <a class="navbar-brand" href="Default.aspx">
+                    <img src="/images/rrclogo.jpg" alt="RRC Termite" class="logo" />
+                </a>
+
+                <!-- Toggler -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Links -->
+                <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                    <ul class="navbar-nav align-items-center">
+                        <li class="nav-item">
+                            <a href="../Login.aspx" class="btn btn-primary ms-3">Login</a>
+                        </li>
+                    </ul>
                 </div>
             </div>
-        </header>
-             -->
-
-        <!-- Scroll Navbar -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white scroll-navbar" id="scrollNavbar">
-    <div class="container">
-        <!-- Logo / Brand -->
-        <a class="navbar-brand" href="Default.aspx">
-            <img src="\images\rrclogo.jpg" alt="RRC Termite" class="logo">
-        </a>
-
-        <!-- Navbar Toggler for mobile -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <!-- Navbar Links -->
-        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-            <ul class="navbar-nav align-items-center">
-                <!-- Other links can go here -->
-                
-                <!-- Login Button -->
-                <li class="nav-item">
-                    <a href="../Login.aspx" class="btn btn-primary ms-3">
-                        Login
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
+        </nav>
 
         <!-- Main Content -->
         <div class="container mt-4">
-            <asp:ContentPlaceHolder ID="MainContent" runat="server"></asp:ContentPlaceHolder>
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </div>
 
+        <!-- ===================== Floating Modern Chat Assistant ===================== -->
+        <div class="rrc-chat" id="rrcChat" aria-live="polite">
+            <!-- Toggle button -->
+            <button type="button" class="chat-toggle" id="chatToggle" aria-label="Open chat">
+                <i class="fa-solid fa-message"></i>
+                <span class="pulse" aria-hidden="true"></span>
+            </button>
 
+            <!-- Chat panel -->
+            <div class="chat-panel" role="dialog" aria-modal="false" aria-labelledby="chatTitle">
+                <div class="chat-header">
+                    <div class="title">
+                        <img src="/images/rrclogo.jpg" alt="RRC" style="width:28px;height:28px;border-radius:6px;object-fit:cover;">
+                        <div>
+                            <div id="chatTitle">RRC Assistant</div>
+                            <div class="status">
+                                <i class="fa-solid fa-circle" style="font-size:8px;color:#27ae60;"></i>
+                                Online
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
+                            <i class="fa-solid fa-moon"></i>
+                        </button>
+                       <button type="button" class="icon-btn" id="closeChat" title="Close" aria-label="Close">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
 
+                <div class="chat-body" id="chatBody">
+                    <!-- Welcome message -->
+                    <div class="msg bot fade-in">
+                        Hi! I’m your RRC Assistant. Ask me about bookings, services, warranties, or inspections.
+                        <span class="time" data-time></span>
+                    </div>
+                    <!-- Quick replies -->
+                    <div class="quick-bar" id="quickBar">
+                        <button type="button" class="quick-chip">What services do you offer?</button>
+                        <button type="button" class="quick-chip">How to book?</button>
+                        <button type="button" class="quick-chip">Do you have free inspection?</button>
+                        <button type="button" class="quick-chip">Signs of termites?</button>
+                    </div>
+                </div>
 
-
-
-        <!-- Floating Chatbot -->
-<div id="chatbotContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
-    <!-- Chat button -->
-    <button id="chatBtn" style="background-color: #007bff; color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; cursor: pointer;">
-        💬
-    </button>
-
-    <!-- Chat window -->
-    <div id="chatWindow" style="display: none; width: 300px; background: white; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-radius: 10px; overflow: hidden;">
-        <div style="background: #007bff; color: white; padding: 10px; font-weight: bold;">
-            RRC Assistant
-            <span style="float: right; cursor: pointer;" onclick="toggleChat()">✖</span>
+                <div class="chat-input">
+                    <textarea id="chatInput" rows="1" placeholder=""></textarea>
+                    <button type="button" class="send-btn" id="sendBtn" aria-label="Send">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
         </div>
-        <div id="chatMessages" style="height: 200px; overflow-y: auto; padding: 10px; font-size: 14px;"></div>
-        <div style="padding: 10px; border-top: 1px solid #ccc;">
-            <input id="chatInput" type="text" placeholder="Ask something..." style="width: 80%; padding: 5px;" onkeypress="if(event.key === 'Enter') { sendMessage(event); return false; }" />
-
-            <button type="button" onclick="sendMessage(event)" style="width: 18%; padding: 5px;">➤</button>
-
-        </div>
-    </div>
-</div>
-
-       <script>
-           const smartAnswers = [
-               {
-                   keywords: [
-                       "how can i book", "how to book", "make a booking", "set an appointment",
-                       "schedule service", "book a service", "how to avail", "avail service",
-                       "appointment", "book", "booking", "i want to book", "need to book"
-                   ],
-                   answer: "You can sign up and submit an inquiry using the form on this page. We'll contact you shortly!"
-               },
-               {
-                   keywords: [
-                       "what services", "what service", "services do you offer", "available services",
-                       "treatments", "types of service", "pest control services", "termite treatment",
-                       "general pest treatment", "what treatments", "what do you treat", "service list", "services"
-                   ],
-                   answer: "We offer Termite Control, General Pest Control, Soil Poisoning, Reticulation Systems, and many more varieties."
-               },
-               {
-                   keywords: ["contact", "how do i contact", "contact info", "email", "phone number", "call", "reach you", "get in touch", "how to contact"],
-                   answer: "You can send us an email at rrcpestcontrol28@gmail.com, or contact us at our Smart numbers at +63-947-721-7510 and +63-961-340-3036 and Globe numbers at +63-967-047-9074 and +63-967-047-9056. We're happy to assist you!"
-               },
-               {
-                   keywords: ["location", "address", "where are you located", "branch", "office", "area", "where to find you", "head office", "service area"],
-                   answer: "We are based in the Philippines and serve mainly in NCR but we can perform services in Batangas, Pangasinan."
-               },
-               {
-                   keywords: ["business hours", "schedule", "what time are you open", "office hours", "open", "opening time", "available hours", "operating hours", "when are you open"],
-                   answer: "We're available 24/7."
-               },
-               {
-                   keywords: ["free inspection", "site visit", "initial check", "check my house", "free check up", "assessment", "do you inspect for free", "inspection fee"],
-                   answer: "Yes! We offer FREE ocular site inspections within our serviceable areas. Book now and we'll visit your site for assessment."
-               },
-               {
-                   keywords: ["safe for pets", "safe for kids", "children", "pet friendly", "eco friendly", "toxic", "hazardous", "is it safe", "is your service safe"],
-                   answer: "Our treatments are pet- and child-safe! We use eco-friendly solutions approved by local authorities."
-               },
-               {
-                   keywords: ["signs of termites", "how to know", "termites", "evidence", "infestation", "check for termites", "do i have termites", "termite problem"],
-                   answer: "Signs include hollow wood, mud tubes, droppings, and discarded wings near wooden areas or windows."
-               },
-               {
-                   keywords: ["baiting system", "how baiting works", "termite bait", "station", "colony elimination", "bait station", "how to eliminate termites"],
-                   answer: "Baiting attracts termites to a poisoned station, which they carry back to the colony, eliminating the infestation."
-               },
-               {
-                   keywords: ["soil poisoning", "what is soil treatment", "termites from ground", "soil injection", "underground treatment", "treatment for soil"],
-                   answer: "Soil poisoning involves applying chemicals to the soil foundation to prevent termite entry from underground."
-               },
-               {
-                   keywords: ["reticulation", "reticulation system", "pipe treatment", "how reticulation works", "underfloor piping", "chemical pipe system"],
-                   answer: "A reticulation system is a series of pipes installed during construction that allows chemical re-application without drilling."
-               },
-               {
-                   keywords: ["general pest control", "common pests", "household pests", "cockroach", "mosquito", "rat", "mouse", "ant", "bed bug", "insects", "bugs", "pest control"],
-                   answer: "Our general pest control covers cockroaches, mosquitoes, ants, bed bugs, rats, spiders, and more."
-               },
-               {
-                   keywords: ["commercial pest control", "business", "office", "restaurant", "warehouse", "industrial", "shop", "commercial treatment"],
-                   answer: "Yes, we provide commercial pest control for offices, restaurants, food businesses, and industrial facilities."
-               },
-               {
-                   keywords: ["payment", "how to pay", "gcash", "bank", "mode of payment", "accept credit", "payment options", "how can i pay", "cash only"],
-                   answer: "We currently accept payments via cash only. No online transactions or cards are available at the moment. Bank transfers are possible if the payment is coordinated between the admin and the customer."
-               },
-               {
-                   keywords: ["how long does it take", "treatment time", "how long", "duration", "service duration", "time needed"],
-                   answer: "Most treatments take 3 to 4 hours depending on the severity and area. We'll let you know beforehand!"
-               },
-               {
-                   keywords: ["do i need to leave", "stay inside", "evacuate", "leave the house", "safe to stay", "can i stay during treatment"],
-                   answer: "In most cases, you donâ€™t have to leave. But weâ€™ll inform you if temporary evacuation is needed."
-               },
-               {
-                   keywords: ["how often", "frequency", "maintenance", "monthly", "quarterly", "when to repeat", "how many times"],
-                   answer: "For preventive care, we recommend pest control every 3 to 6 months. Frequency depends on your area and infestation level."
-               },
-               {
-                   keywords: ["smell", "odor", "does it stink", "chemical smell", "strong smell", "any smell"],
-                   answer: "Most of our treatments are odorless or have a very mild scent that disappears quickly."
-               },
-               {
-                   keywords: ["warranty", "guarantee", "after service", "follow up", "come back if not gone", "return visit"],
-                   answer: "Yes, most of our services come with a 30-day to 2-year warranty depending on which service. For more information regarding warranties, please coordinate with the technician and/or inspector assigned to your property."
-               },
-               {
-                   keywords: ["certified", "licensed", "legit", "registered", "qualified", "legal company"],
-                   answer: "We are a registered, certified pest control provider with trained and licensed technicians."
-               }
-           ];
-
-           function findSmartAnswer(userInput) {
-               const cleanInput = userInput.toLowerCase().replace(/[^\w\s]/gi, '');
-               for (const item of smartAnswers) {
-                   for (const keyword of item.keywords) {
-                       if (cleanInput.includes(keyword)) {
-                           return item.answer;
-                       }
-                   }
-               }
-               return "Sorry, I don't have an answer to that.";
-           }
-
-           function toggleChat() {
-               const chat = document.getElementById("chatWindow");
-               chat.style.display = (chat.style.display === "none" || chat.style.display === "") ? "block" : "none";
-           }
-
-           document.getElementById("chatBtn").addEventListener("click", toggleChat);
-
-           function sendMessage(event, text = null) {
-               if (event) event.preventDefault();
-
-               const input = document.getElementById("chatInput");
-               const message = text || input.value.trim();
-               if (message === "") return;
-
-               const chatMessages = document.getElementById("chatMessages");
-               chatMessages.innerHTML += `<div style="text-align: right; margin-bottom: 5px;"><strong>You:</strong> ${message}</div>`;
-
-               input.value = "";
-               const response = findSmartAnswer(message);
-
-               setTimeout(() => {
-                   chatMessages.innerHTML += `<div style="text-align: left; margin-bottom: 10px;"><strong>RRC Bot:</strong> ${response}</div>`;
-                   chatMessages.scrollTop = chatMessages.scrollHeight;
-               }, 500);
-           }
-
-           // Suggested question buttons
-           function renderSuggestedQuestions() {
-               const chatMessages = document.getElementById("chatMessages");
-               const suggestions = ["What services?", "How to book?", "Free inspection?", "Signs of termites?"];
-               let html = '<div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px;">';
-
-               for (const question of suggestions) {
-                   html += `<button onclick=\"sendMessage(null, '${question}')\" style=\"background-color:#007bff; color:white; border:none; padding:5px 10px; border-radius:5px; font-size:12px; cursor:pointer;\">${question}</button>`;
-               }
-
-               html += '</div>';
-               chatMessages.innerHTML += html;
-               chatMessages.scrollTop = chatMessages.scrollHeight;
-           }
-
-           // Render suggestions on load
-           window.addEventListener("DOMContentLoaded", renderSuggestedQuestions);
-
-
-
-       </script>
-
-
 
         <!-- Footer -->
         <footer class="footer bg-dark text-white py-4 mt-4">
             <div class="container text-center">
-                <p>&copy; <%= DateTime.Now.Year %> RRC Termite & Pest Control. All rights reserved.</p>
-                <p>Follow us: 
-                    <a href="https://www.facebook.com/rrcpestcontrolservice" class="text-white mx-2"><i class="fab fa-facebook-f"></i></a>
+                <p>&copy; <%= DateTime.Now.Year %> RRC Termite &amp; Pest Control. All rights reserved.</p>
+                <p>Follow us:
+                    <a href="https://www.facebook.com/rrcpestcontrolservice" class="text-white mx-2">
+                        <i class="fab fa-facebook-f"></i>
+                    </a>
                 </p>
             </div>
         </footer>
 
-
-
+        <!-- Optional per-page scripts -->
+        <asp:ContentPlaceHolder ID="ScriptContent" runat="server" />
 
     </form>
 
+    <!-- Bootstrap Bundle (JS) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-
-
-   
-
-
-    <!-- JavaScript for Scroll Navbar -->
+    <!-- ===== Scroll Navbar behavior ===== -->
     <script>
-        let lastScrollTop = 0;
-        window.addEventListener("scroll", function () {
-            let navbar = document.getElementById("scrollNavbar");
-            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-
-            if (scrollTop < lastScrollTop) {
-                // Scrolling up - Show navbar
-                navbar.classList.add("show-navbar");
-            } else {
-                // Scrolling down - Hide navbar
-                navbar.classList.remove("show-navbar");
-            }
-
-            lastScrollTop = scrollTop;
-        });
+        (function(){
+            let lastScrollTop = 0;
+            const navbar = document.getElementById("scrollNavbar");
+            window.addEventListener("scroll", function(){
+                const st = window.pageYOffset || document.documentElement.scrollTop;
+                if (st < lastScrollTop) {
+                    navbar.classList.add("show-navbar");
+                } else {
+                    navbar.classList.remove("show-navbar");
+                }
+                lastScrollTop = st <= 0 ? 0 : st;
+            });
+        })();
     </script>
 
+    <!-- ===== Modern Chat Assistant Logic ===== -->
+    <script>
+        (function () {
+            const chat = document.getElementById('rrcChat');
+            const toggle = document.getElementById('chatToggle');
+            const panel = chat.querySelector('.chat-panel');
+            const closeBtn = document.getElementById('closeChat');
+            const themeToggle = document.getElementById('themeToggle');
+            const bodyEl = document.getElementById('chatBody');
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const quickBar = document.getElementById('quickBar');
+
+            // Persisted state
+            const savedTheme = localStorage.getItem('rrcTheme');
+            if (savedTheme === 'dark') document.body.classList.add('dark');
+            const savedOpen = localStorage.getItem('rrcChatOpen');
+            if (savedOpen === '1') { chat.classList.add('open'); }
+
+            // Smart answers
+            const smartAnswers = [
+                { keywords: ["how can i book", "how to book", "make a booking", "set an appointment", "schedule service", "book a service", "how to avail", "avail service", "appointment", "book", "booking", "i want to book", "need to book"], answer: "You can sign up and submit an inquiry using the form on this page. We’ll contact you shortly!" },
+                { keywords: ["what services", "what service", "services do you offer", "available services", "treatments", "types of service", "pest control services", "termite treatment", "general pest treatment", "what treatments", "what do you treat", "service list", "services"], answer: "We offer Termite Control, General Pest Control, Soil Poisoning, Reticulation Systems, and more." },
+                { keywords: ["contact", "how do i contact", "contact info", "email", "phone number", "call", "reach you", "get in touch", "how to contact"], answer: "Email: rrcpestcontrol28@gmail.com. Smart: +63 947 721 7510 / +63 961 340 3036. Globe: +63 967 047 9074 / +63 967 047 9056." },
+                { keywords: ["location", "address", "where are you located", "branch", "office", "area", "where to find you", "head office", "service area"], answer: "We’re based in the Philippines (NCR focus) and also serve Batangas & Pangasinan." },
+                { keywords: ["business hours", "schedule", "what time are you open", "office hours", "open", "opening time", "available hours", "operating hours", "when are you open"], answer: "We’re available 24/7." },
+                { keywords: ["free inspection", "site visit", "initial check", "check my house", "free check up", "assessment", "do you inspect for free", "inspection fee"], answer: "Yes! FREE ocular inspections within serviceable areas. Send an inquiry and we’ll schedule a visit." },
+                { keywords: ["safe for pets", "safe for kids", "children", "pet friendly", "eco friendly", "toxic", "hazardous", "is it safe", "is your service safe"], answer: "Our treatments are pet- and child-safe, using eco-friendly solutions approved by local authorities." },
+                { keywords: ["signs of termites", "how to know", "termites", "evidence", "infestation", "check for termites", "do i have termites", "termite problem"], answer: "Watch for hollow wood, mud tubes, droppings, and discarded wings near wooden areas/windows." },
+                { keywords: ["baiting system", "how baiting works", "termite bait", "station", "colony elimination", "bait station", "how to eliminate termites"], answer: "Bait stations attract termites to a slow-acting toxic bait they share in the colony, eliminating it." },
+                { keywords: ["soil poisoning", "what is soil treatment", "termites from ground", "soil injection", "underground treatment", "treatment for soil"], answer: "We apply termiticide to the soil foundation to prevent termite entry from underground." },
+                { keywords: ["reticulation", "reticulation system", "pipe treatment", "how reticulation works", "underfloor piping", "chemical pipe system"], answer: "Pipes installed during construction let us re-apply chemicals later without drilling." },
+                { keywords: ["general pest control", "common pests", "household pests", "cockroach", "mosquito", "rat", "mouse", "ant", "bed bug", "insects", "bugs", "pest control"], answer: "General pest control includes cockroaches, mosquitoes, ants, bed bugs, rats, spiders, and more." },
+                { keywords: ["commercial pest control", "business", "office", "restaurant", "warehouse", "industrial", "shop", "commercial treatment"], answer: "Yes, we service offices, restaurants/food businesses, warehouses, and industrial sites." },
+                { keywords: ["payment", "how to pay", "gcash", "bank", "mode of payment", "accept credit", "payment options", "how can i pay", "cash only"], answer: "We currently accept cash. Bank transfers may be arranged with admin coordination." },
+                { keywords: ["how long does it take", "treatment time", "how long", "duration", "service duration", "time needed"], answer: "Most treatments take 3–4 hours depending on severity and area size." },
+                { keywords: ["do i need to leave", "stay inside", "evacuate", "leave the house", "safe to stay", "can i stay during treatment"], answer: "Usually you can stay. If temporary evacuation is needed, we’ll let you know before the service." },
+                { keywords: ["warranty", "guarantee", "after service", "follow up", "come back if not gone", "return visit"], answer: "Warranties vary from 30 days up to 2 years depending on service. Confirm with the assigned technician/inspector." },
+                { keywords: ["certified", "licensed", "legit", "registered", "qualified", "legal company"], answer: "We’re a registered provider with trained and licensed technicians." }
+            ];
+
+            function nowTime() {
+                const d = new Date();
+                return d.toLocaleString('en-PH', { hour: '2-digit', minute: '2-digit' });
+            }
+
+            function addMsg(text, who = 'bot') {
+                const wrap = document.createElement('div');
+                wrap.className = `msg ${who} fade-in`;
+                wrap.innerHTML = `${text}<span class="time">${nowTime()}</span>`;
+                bodyEl.appendChild(wrap);
+                bodyEl.scrollTop = bodyEl.scrollHeight;
+                return wrap;
+            }
+
+            function addTyping() {
+                const box = document.createElement('div');
+                box.className = 'typing fade-in';
+                box.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+                bodyEl.appendChild(box);
+                bodyEl.scrollTop = bodyEl.scrollHeight;
+                return box;
+            }
+
+            function findSmartAnswer(userInput) {
+                const clean = userInput.toLowerCase().replace(/[^\w\s]/g, '');
+                for (const item of smartAnswers) {
+                    for (const k of item.keywords) {
+                        if (clean.includes(k)) return item.answer;
+                    }
+                }
+                return "Sorry, I don’t have an answer to that. You can send us an inquiry and we’ll get back to you.";
+            }
+
+            function send(message) {
+                if (!message || !message.trim()) return;
+                addMsg(message.trim(), 'user');
+                const typing = addTyping();
+                setTimeout(() => {
+                    typing.remove();
+                    const reply = findSmartAnswer(message);
+                    addMsg(reply, 'bot');
+                }, 550);
+            }
+
+            // Quick replies
+            if (quickBar) {
+                quickBar.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.quick-chip');
+                    if (!btn) return;
+                    send(btn.textContent);
+                });
+            }
+
+            // Toggle open/close
+            toggle.addEventListener('click', () => {
+                chat.classList.toggle('open');
+                localStorage.setItem('rrcChatOpen', chat.classList.contains('open') ? '1' : '0');
+            });
+            closeBtn.addEventListener('click', () => {
+                chat.classList.remove('open');
+                localStorage.setItem('rrcChatOpen', '0');
+            });
+
+            // Theme toggle
+            themeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark');
+                localStorage.setItem('rrcTheme', document.body.classList.contains('dark') ? 'dark' : 'light');
+            });
+
+            // Input behaviors
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const val = input.value;
+                    input.value = '';
+                    send(val);
+                }
+            });
+            sendBtn.addEventListener('click', () => { const v = input.value; input.value = ''; send(v); });
+
+            // Set initial welcome time
+            const t = document.querySelector('[data-time]');
+            if (t) { t.textContent = nowTime(); }
+        })();
+    </script>
 </body>
 </html>

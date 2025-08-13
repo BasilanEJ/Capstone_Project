@@ -1,19 +1,25 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
-using System.Text;
 using System.Web;
 using Newtonsoft.Json.Linq;
+using RRCManagementSystem.Helpers;  // BlockchainLogger
 
 namespace RRCManagementSystem
 {
     public class PayPalWebhook : IHttpHandler
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private static readonly string cs =
+            ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         public void ProcessRequest(HttpContext context)
         {
+            context.Response.ContentType = "text/plain";
+            context.Response.TrySkipIisCustomErrors = true;
+
             try
             {
                 if (context.Request.HttpMethod == "POST")
@@ -22,21 +28,40 @@ namespace RRCManagementSystem
                 }
                 else if (context.Request.HttpMethod == "GET")
                 {
+                    // Fallback from your PayPal Smart Buttons fetch(...?custom=&amount=&client=)
                     string bookingIdStr = context.Request.QueryString["custom"];
                     string amountStr = context.Request.QueryString["amount"];
                     string clientIdStr = context.Request.QueryString["client"];
 
-                    if (int.TryParse(bookingIdStr, out int bookingId) && decimal.TryParse(amountStr, out decimal amount))
+                    if (!int.TryParse(bookingIdStr, out int bookingId))
                     {
-                        string remarks = "Manual PayPal confirmation";
-                        int transactionId = LogTransaction(bookingId, "PayPal", amount, remarks);
-                        LogToBlockchain(transactionId, bookingId, amount, "PayPal");
-                        context.Response.Write("✅ Manual PayPal webhook success: Transaction recorded.");
+                        context.Response.Write("❌ Invalid booking id.");
+                        return;
                     }
-                    else
+                    if (!decimal.TryParse(amountStr, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal amount) || amount <= 0m)
                     {
-                        context.Response.Write("❌ Invalid query parameters.");
+                        context.Response.Write("❌ Invalid amount.");
+                        return;
                     }
+                    int clientId = 0;
+                    int.TryParse(clientIdStr, out clientId); // optional
+
+                    int txId = InsertTransaction(bookingId, amount, "PayPal", "Completed", "PayPal Smart Buttons");
+
+                    // 🔗 Write blockchain using the central helper (HMAC + chain)
+                    BlockchainLogger.AppendSaleLog(cs, txId, new
+                    {
+                        TransactionID = txId,
+                        ClientID = clientId,
+                        BookingID = bookingId,
+                        Amount = amount,
+                        Currency = "PHP",
+                        Method = "PayPal",
+                        Status = "Completed",
+                        PaidAtUtc = DateTime.UtcNow
+                    });
+
+                    context.Response.Write("DB updated & blockchain logged.");
                 }
                 else
                 {
@@ -47,26 +72,57 @@ namespace RRCManagementSystem
             catch (Exception ex)
             {
                 context.Response.StatusCode = 500;
-                context.Response.Write("❌ Top-level error: " + ex.Message + "<br/>" + ex.StackTrace);
+                context.Response.Write("❌ Top-level error: " + ex.Message);
             }
         }
 
-        private void HandlePostWebhook(HttpContext context)
+        // ========================= Core DB ops =========================
+
+        private static int InsertTransaction(int bookingId, decimal amount, string method, string status, string remarks)
         {
-            string json;
-            using (var reader = new StreamReader(context.Request.InputStream))
+            using (var con = new SqlConnection(cs))
+            using (var cmd = con.CreateCommand())
             {
-                json = reader.ReadToEnd();
+                cmd.CommandText = @"
+INSERT INTO Transactions (SaleID, Amount, PaymentMethod, Status, TransactionDate, Remarks)
+VALUES (@SaleID, @Amount, @Method, @Status, DATEADD(HOUR, 8, GETUTCDATE()), @Remarks);
+SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+
+                cmd.Parameters.Add("@SaleID", SqlDbType.Int).Value = bookingId;
+
+                var pAmount = cmd.Parameters.Add("@Amount", SqlDbType.Decimal);
+                pAmount.Precision = 18;      // adjust if your column differs
+                pAmount.Scale = 2;
+                pAmount.Value = amount;
+
+                cmd.Parameters.Add("@Method", SqlDbType.NVarChar, 50).Value = method;
+                cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = status;
+                cmd.Parameters.Add("@NowUtc", SqlDbType.DateTime2).Value = DateTime.UtcNow;
+                cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar, 255).Value = remarks ?? "";
+
+                con.Open();
+                return (int)cmd.ExecuteScalar();
             }
+        }
+
+        // ========================= Webhook handler (POST) =========================
+
+        private static void HandlePostWebhook(HttpContext context)
+        {
+            string body;
+            using (var reader = new StreamReader(context.Request.InputStream))
+                body = reader.ReadToEnd();
 
             try
             {
-                JObject payload = JObject.Parse(json);
-                string eventType = payload["event_type"]?.ToString();
+                var payload = JObject.Parse(body);
+                var eventType = payload["event_type"]?.ToString();
 
-                if (eventType != "PAYMENT.CAPTURE.COMPLETED")
+                // Accept only final capture events
+                if (!string.Equals(eventType, "PAYMENT.CAPTURE.COMPLETED", StringComparison.OrdinalIgnoreCase))
                 {
-                    context.Response.Write("Ignored event type: " + eventType);
+                    context.Response.Write("Ignored event: " + (eventType ?? "null"));
                     return;
                 }
 
@@ -74,15 +130,40 @@ namespace RRCManagementSystem
                 string amountStr = payload["resource"]?["amount"]?["value"]?.ToString();
                 string payerEmail = payload["resource"]?["payer"]?["email_address"]?.ToString();
 
-                if (!int.TryParse(bookingIdStr, out int bookingId) || !decimal.TryParse(amountStr, out decimal amount))
+                if (!int.TryParse(bookingIdStr, out int bookingId))
                 {
-                    context.Response.Write("❌ Invalid booking ID or amount in webhook.");
+                    context.Response.Write("❌ Invalid booking id in webhook.");
+                    return;
+                }
+                if (!decimal.TryParse(amountStr, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal amount) || amount <= 0m)
+                {
+                    context.Response.Write("❌ Invalid amount in webhook.");
                     return;
                 }
 
-                string remarks = "✅ PayPal Webhook from: " + payerEmail;
-                int transactionId = LogTransaction(bookingId, "PayPal", amount, remarks);
-                LogToBlockchain(transactionId, bookingId, amount, "PayPal");
+                // optional: look up ClientID from booking for better JSON
+                int clientId = GetClientIdFromBooking(bookingId);
+
+                int txId = InsertTransaction(
+                    bookingId,
+                    amount,
+                    "PayPal",
+                    "Completed",
+                    string.IsNullOrEmpty(payerEmail) ? "PayPal Webhook" : ("PayPal Webhook from: " + payerEmail));
+
+                // 🔗 Write blockchain using the helper
+                BlockchainLogger.AppendSaleLog(cs, txId, new
+                {
+                    TransactionID = txId,
+                    ClientID = clientId,
+                    BookingID = bookingId,
+                    Amount = amount,
+                    Currency = "PHP",
+                    Method = "PayPal",
+                    Status = "Completed",
+                    PaidAtUtc = DateTime.UtcNow
+                });
+
                 context.Response.Write("✅ PayPal webhook processed.");
             }
             catch (Exception ex)
@@ -92,63 +173,17 @@ namespace RRCManagementSystem
             }
         }
 
-        private int LogTransaction(int bookingId, string method, decimal amount, string refNum)
+        // Helper: get ClientID for a booking (if you want it in the JSON)
+        private static int GetClientIdFromBooking(int bookingId)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(cs))
+            using (var cmd = con.CreateCommand())
             {
-                string insert = @"
-                    INSERT INTO Transactions (SaleID, PaymentMethod, Amount, Status, TransactionDate, PerformedBy, Remarks)
-                    OUTPUT INSERTED.TransactionID
-                    VALUES (@SaleID, @Method, @Amount, 'Completed', GETDATE(), 'System - PayPal', @Remarks)";
-
-                SqlCommand cmd = new SqlCommand(insert, con);
-                cmd.Parameters.AddWithValue("@SaleID", bookingId);
-                cmd.Parameters.AddWithValue("@Method", method);
-                cmd.Parameters.AddWithValue("@Amount", amount);
-                cmd.Parameters.AddWithValue("@Remarks", refNum);
+                cmd.CommandText = "SELECT TOP 1 ClientID FROM Bookings WHERE BookingID=@B;";
+                cmd.Parameters.Add("@B", SqlDbType.Int).Value = bookingId;
                 con.Open();
-                return (int)cmd.ExecuteScalar();
-            }
-        }
-
-        private void LogToBlockchain(int transactionId, int bookingId, decimal amount, string paymentMethod)
-        {
-            string saleDataJson = $@"
-{{
-    ""TransactionID"": ""{transactionId}"",
-    ""BookingID"": ""{bookingId}"",
-    ""Amount"": ""{amount}"",
-    ""PaymentMethod"": ""{paymentMethod}"",
-    ""Status"": ""Completed"",
-    ""PerformedBy"": ""System - PayPal"",
-    ""TransactionDate"": ""{DateTime.Now:yyyy-MM-dd HH:mm:ss}""
-}}";
-
-            string saleHash = GenerateSHA256Hash(saleDataJson);
-
-            using (SqlConnection con = new SqlConnection(connectionString))
-            {
-                string insert = @"INSERT INTO BlockchainSalesLog (TransactionID, SaleHash, SaleDataJson, Timestamp)
-                                  VALUES (@TransactionID, @SaleHash, @SaleDataJson, GETDATE())";
-
-                SqlCommand cmd = new SqlCommand(insert, con);
-                cmd.Parameters.AddWithValue("@TransactionID", transactionId);
-                cmd.Parameters.AddWithValue("@SaleHash", saleHash);
-                cmd.Parameters.AddWithValue("@SaleDataJson", saleDataJson);
-                con.Open();
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        private string GenerateSHA256Hash(string rawData)
-        {
-            using (var sha256 = System.Security.Cryptography.SHA256.Create())
-            {
-                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                foreach (byte b in bytes)
-                    builder.Append(b.ToString("x2"));
-                return builder.ToString();
+                var r = cmd.ExecuteScalar();
+                return (r == null || r == DBNull.Value) ? 0 : Convert.ToInt32(r);
             }
         }
 

@@ -18,7 +18,7 @@
         }
 
         body {
-            background: url('images/bg.jpg') no-repeat center center fixed;
+            background: url('images/logo.jpg') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;
@@ -169,7 +169,7 @@
 
                 <!-- CAPTCHA Panel -->
                 <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
-                    <div class="g-recaptcha" data-sitekey="6Lfu6JMrAAAAAPSN_aGxR78zUwJfuNm39ZK3oLaB"></div>
+                    <div class="g-recaptcha" data-sitekey="6LcIAqErAAAAAMOUFC5nxRZOWEvWAntTTE6VPRIH"></div>
                 </asp:Panel>
 
                 <!-- Login Button -->

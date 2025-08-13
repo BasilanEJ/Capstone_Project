@@ -7,94 +7,89 @@ namespace RRCManagementSystem
 {
     public partial class Profile : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["Email"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
-                if (Session["Email"] == null)
-                {
-                    Response.Redirect("~/Login.aspx");
-                    return;
-                }
-
                 LoadProfileData();
             }
         }
 
         private void LoadProfileData()
         {
-            if (Session["Email"] == null)
-            {
-                lblMessage.Text = "⚠ Session expired. Please log in again.";
-                return;
-            }
+            lblMessage.Text = string.Empty;
 
             string email = Session["Email"].ToString();
 
             using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlCommand cmd = new SqlCommand(@"
+                SELECT FirstName, MiddleName, LastName, Email, ContactNumber,
+                       StreetAndUnit, Barangay, City, Region, Country, ProfilePic
+                FROM Clients
+                WHERE Email = @Email;", conn))
             {
-                string query = @"
-                    SELECT FirstName, MiddleName, LastName, Email, ContactNumber, 
-                           StreetAndUnit, Barangay, City, Region, Country, ProfilePic 
-                    FROM Clients 
-                    WHERE Email = @Email";
-
-                SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Email", email);
 
                 try
                 {
                     conn.Open();
-                    SqlDataReader reader = cmd.ExecuteReader();
-
-                    if (reader.Read())
+                    using (SqlDataReader r = cmd.ExecuteReader())
                     {
-                        // Combine full name
-                        string firstName = reader["FirstName"].ToString();
-                        string middleName = reader["MiddleName"].ToString();
-                        string lastName = reader["LastName"].ToString();
-
-                        string fullName = $"{lastName}, {firstName}";
-                        if (!string.IsNullOrWhiteSpace(middleName))
+                        if (r.Read())
                         {
-                            fullName += $" {middleName[0]}.";
+                            string first = r["FirstName"]?.ToString() ?? "";
+                            string middle = r["MiddleName"]?.ToString() ?? "";
+                            string last = r["LastName"]?.ToString() ?? "";
+
+                            string fullName = $"{last}, {first}";
+                            if (!string.IsNullOrWhiteSpace(middle))
+                                fullName += $" {middle[0]}.";
+
+                            // Read-only textboxes
+                            txtFirstName.Text = first;
+                            txtMiddleName.Text = middle;
+                            txtLastName.Text = last;
+                            txtName.Text = fullName;
+                            txtEmail.Text = r["Email"]?.ToString() ?? "";
+                            txtContactNumber.Text = r["ContactNumber"]?.ToString() ?? "";
+                            txtStreetAndUnit.Text = r["StreetAndUnit"]?.ToString() ?? "";
+                            txtBarangay.Text = r["Barangay"]?.ToString() ?? "";
+                            txtCity.Text = r["City"]?.ToString() ?? "";
+                            txtRegion.Text = r["Region"]?.ToString() ?? "";
+                            txtCountry.Text = r["Country"]?.ToString() ?? "";
+
+                            // (Hidden) labels kept for compatibility
+                            lblEmail.Text = txtEmail.Text;
+                            lblContactNumber.Text = txtContactNumber.Text;
+                            lblStreetAndUnit.Text = txtStreetAndUnit.Text;
+                            lblBarangay.Text = txtBarangay.Text;
+                            lblCity.Text = txtCity.Text;
+                            lblRegion.Text = txtRegion.Text;
+                            lblCountry.Text = txtCountry.Text;
+
+                            // Profile picture
+                            string pic = (r["ProfilePic"] != DBNull.Value)
+                                ? (r["ProfilePic"]?.ToString() ?? "")
+                                : "";
+                            if (string.IsNullOrWhiteSpace(pic))
+                                pic = "default-profile.png";
+
+                            imgProfilePic.ImageUrl = "~/Uploads/" + pic;
                         }
-
-                        // View Mode
-                        txtFirstName.Text = firstName;
-                        txtMiddleName.Text = middleName;
-                        txtLastName.Text = lastName;
-                        lblEmail.Text = reader["Email"].ToString();
-                        lblContactNumber.Text = reader["ContactNumber"].ToString();
-                        lblStreetAndUnit.Text = reader["StreetAndUnit"].ToString();
-                        lblBarangay.Text = reader["Barangay"].ToString();
-                        lblCity.Text = reader["City"].ToString();
-                        lblRegion.Text = reader["Region"].ToString();
-                        lblCountry.Text = reader["Country"].ToString();
-
-                        // Edit Mode
-                        txtFirstName.Text = firstName;
-                        txtMiddleName.Text = middleName;
-                        txtLastName.Text = lastName;
-                        txtName.Text = fullName;
-                        txtEmail.Text = reader["Email"].ToString();
-                        txtContactNumber.Text = reader["ContactNumber"].ToString();
-                        txtStreetAndUnit.Text = reader["StreetAndUnit"].ToString();
-                        txtBarangay.Text = reader["Barangay"].ToString();
-                        txtCity.Text = reader["City"].ToString();
-                        txtRegion.Text = reader["Region"].ToString();
-                        txtCountry.Text = reader["Country"].ToString();
-
-                        // Profile Picture
-                        string profilePic = reader["ProfilePic"] != DBNull.Value && !string.IsNullOrWhiteSpace(reader["ProfilePic"].ToString())
-                            ? reader["ProfilePic"].ToString()
-                            : "default-profile.png";
-                        imgProfilePic.ImageUrl = "~/Uploads/" + profilePic;
+                        else
+                        {
+                            lblMessage.Text = "⚠ Profile not found.";
+                        }
                     }
-
-                    reader.Close();
                 }
                 catch (Exception ex)
                 {
@@ -103,124 +98,81 @@ namespace RRCManagementSystem
             }
         }
 
-        protected void btnEditProfile_Click(object sender, EventArgs e)
-        {
-            pnlViewMode.Visible = false;
-            pnlEditMode.Visible = true;
-        }
-
+        // (Visible=false in ASPX, kept only to avoid orphaned handler scenarios)
         protected void btnCancelEdit_Click(object sender, EventArgs e)
         {
-            pnlViewMode.Visible = true;
-            pnlEditMode.Visible = false;
+            LoadProfileData();
         }
 
         protected void btnSaveProfile_Click(object sender, EventArgs e)
         {
             if (Session["Email"] == null)
             {
-                lblMessage.Text = "⚠ Session expired. Please log in again.";
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            string email = Session["Email"].ToString();
-            string firstName = txtFirstName.Text.Trim();
-            string middleName = txtMiddleName.Text.Trim();
-            string lastName = txtLastName.Text.Trim();
-            string contactNumber = txtContactNumber.Text.Trim();
-            string streetAndUnit = txtStreetAndUnit.Text.Trim();
-            string barangay = txtBarangay.Text.Trim();
-            string city = txtCity.Text.Trim();
-            string region = txtRegion.Text.Trim();
-            string country = txtCountry.Text.Trim();
-
-            string profilePicFileName = "";
-
-            // Image upload logic
-            if (fuProfilePic.HasFile)
+            // Only handle photo upload
+            if (!fuProfilePic.HasFile)
             {
-                string fileExtension = Path.GetExtension(fuProfilePic.FileName).ToLower();
-                string[] allowedExtensions = { ".jpg", ".jpeg", ".png" };
-
-                if (!Array.Exists(allowedExtensions, ext => ext == fileExtension))
-                {
-                    lblMessage.Text = "⚠ Only JPG, JPEG, and PNG files are allowed.";
-                    lblMessage.ForeColor = System.Drawing.Color.Red;
-                    return;
-                }
-
-                profilePicFileName = Guid.NewGuid().ToString() + fileExtension;
-                string folderPath = Server.MapPath("~/Uploads/");
-                string fullPath = Path.Combine(folderPath, profilePicFileName);
-
-                if (!Directory.Exists(folderPath))
-                {
-                    Directory.CreateDirectory(folderPath);
-                }
-
-                fuProfilePic.SaveAs(fullPath);
+                lblMessage.Text = "Please choose a photo to upload.";
+                return;
             }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            string ext = Path.GetExtension(fuProfilePic.FileName)?.ToLower() ?? "";
+            string[] allowed = { ".jpg", ".jpeg", ".png" };
+            if (Array.IndexOf(allowed, ext) < 0)
             {
-                string query = @"
-                    UPDATE Clients
-                    SET FirstName = @FirstName,
-                        MiddleName = @MiddleName,
-                        LastName = @LastName,
-                        ContactNumber = @ContactNumber,
-                        StreetAndUnit = @StreetAndUnit,
-                        Barangay = @Barangay,
-                        City = @City,
-                        Region = @Region,
-                        Country = @Country";
+                lblMessage.Text = "⚠ Only JPG, JPEG, and PNG files are allowed.";
+                return;
+            }
 
-                if (!string.IsNullOrEmpty(profilePicFileName))
+            // (Optional) 5 MB limit
+            const int maxBytes = 5 * 1024 * 1024;
+            if (fuProfilePic.PostedFile.ContentLength > maxBytes)
+            {
+                lblMessage.Text = "⚠ File too large. Max size is 5 MB.";
+                return;
+            }
+
+            // Save file
+            string fileName = Guid.NewGuid().ToString("N") + ext;
+            string folder = Server.MapPath("~/Uploads/");
+            string fullPath = Path.Combine(folder, fileName);
+
+            try
+            {
+                if (!Directory.Exists(folder))
+                    Directory.CreateDirectory(folder);
+
+                fuProfilePic.SaveAs(fullPath);
+
+                // Update DB
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand(
+                    "UPDATE Clients SET ProfilePic = @Pic WHERE Email = @Email;", conn))
                 {
-                    query += ", ProfilePic = @ProfilePic";
-                }
+                    cmd.Parameters.AddWithValue("@Pic", fileName);
+                    cmd.Parameters.AddWithValue("@Email", Session["Email"].ToString());
 
-                query += " WHERE Email = @Email";
-
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@FirstName", firstName);
-                cmd.Parameters.AddWithValue("@MiddleName", middleName);
-                cmd.Parameters.AddWithValue("@LastName", lastName);
-                cmd.Parameters.AddWithValue("@ContactNumber", contactNumber);
-                cmd.Parameters.AddWithValue("@StreetAndUnit", streetAndUnit);
-                cmd.Parameters.AddWithValue("@Barangay", barangay);
-                cmd.Parameters.AddWithValue("@City", city);
-                cmd.Parameters.AddWithValue("@Region", region);
-                cmd.Parameters.AddWithValue("@Country", country);
-                cmd.Parameters.AddWithValue("@Email", email);
-
-                if (!string.IsNullOrEmpty(profilePicFileName))
-                {
-                    cmd.Parameters.AddWithValue("@ProfilePic", profilePicFileName);
-                }
-
-                try
-                {
                     conn.Open();
-                    int rowsAffected = cmd.ExecuteNonQuery();
+                    int n = cmd.ExecuteNonQuery();
 
-                    if (rowsAffected > 0)
+                    if (n > 0)
                     {
-                        lblMessage.Text = "✅ Profile updated successfully!";
-                        pnlViewMode.Visible = true;
-                        pnlEditMode.Visible = false;
-                        LoadProfileData();
+                        lblMessage.Text = "✅ Profile photo updated!";
+                        // Refresh UI to show new image
+                        imgProfilePic.ImageUrl = "~/Uploads/" + fileName;
                     }
                     else
                     {
                         lblMessage.Text = "⚠ Update failed. Please try again.";
                     }
                 }
-                catch (Exception ex)
-                {
-                    lblMessage.Text = "⚠ Error updating profile: " + ex.Message;
-                }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "⚠ Error updating profile: " + ex.Message;
             }
         }
     }

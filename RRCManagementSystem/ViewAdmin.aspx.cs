@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
@@ -11,7 +12,12 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
+            // prevent cached/stale view on back-button
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            Response.Cache.SetNoStore();
+            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
+
+            // 🔐 Require login + SuperAdmin
             if (Session["UserID"] == null || Session["Role"] == null || Session["Role"].ToString() != "SuperAdmin")
             {
                 Response.Redirect("~/Login.aspx");
@@ -22,20 +28,41 @@ namespace RRCManagementSystem
             {
                 LoadUsers();
 
-                // Show SweetAlert if redirected from archive
+                // Show SweetAlert if redirected from actions
                 if (Request.QueryString["archived"] == "1")
                 {
                     string script = @"Swal.fire({
-            icon: 'success',
-            title: 'Archived!',
-            text: 'User has been successfully archived.',
-            showConfirmButton: false,
-            timer: 2000
-        });";
-                    ClientScript.RegisterStartupScript(this.GetType(), "showSuccess", script, true);
+                        icon: 'success',
+                        title: 'Archived!',
+                        text: 'User has been successfully archived.',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });";
+                    ClientScript.RegisterStartupScript(this.GetType(), "archivedOk", script, true);
+                }
+                else if (Request.QueryString["deleted"] == "1")
+                {
+                    string script = @"Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: 'User has been permanently deleted.',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });";
+                    ClientScript.RegisterStartupScript(this.GetType(), "deletedOk", script, true);
+                }
+                else if (Request.QueryString["restored"] == "1")
+                {
+                    string script = @"Swal.fire({
+                        icon: 'success',
+                        title: 'Restored!',
+                        text: 'User has been restored.',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });";
+                    ClientScript.RegisterStartupScript(this.GetType(), "restoredOk", script, true);
                 }
             }
-
         }
 
         private void LoadUsers()
@@ -49,8 +76,9 @@ namespace RRCManagementSystem
                         Email, 
                         Role
                     FROM Users
-                    WHERE Role != 'SuperAdmin' AND Status != 'Archived'
-                    ORDER BY UserID";
+                    WHERE Role != 'SuperAdmin'
+                      AND Status IN ('Active', 'Available')
+                    ORDER BY UserID;";
 
                 SqlDataAdapter da = new SqlDataAdapter(query, conn);
                 DataTable dt = new DataTable();
@@ -81,9 +109,10 @@ namespace RRCManagementSystem
                         Email, 
                         Role
                     FROM Users
-                    WHERE Role != 'SuperAdmin' AND Status != 'Archived'
-                        AND (Name LIKE @Keyword OR Email LIKE @Keyword OR Role LIKE @Keyword)
-                    ORDER BY UserID";
+                    WHERE Role != 'SuperAdmin'
+                      AND Status IN ('Active', 'Available')
+                      AND (Name LIKE @Keyword OR Email LIKE @Keyword OR Role LIKE @Keyword)
+                    ORDER BY UserID;";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
@@ -106,7 +135,7 @@ namespace RRCManagementSystem
             }
         }
 
-        protected void gvAdmins_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
+        protected void gvAdmins_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (int.TryParse(e.CommandArgument.ToString(), out int userID))
             {
@@ -129,12 +158,15 @@ namespace RRCManagementSystem
             }
         }
 
-
         private void ArchiveUser(int userID)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = "UPDATE Users SET Status = 'Archived' WHERE UserID = @UserID AND Role != 'SuperAdmin'";
+                string query = @"
+                    UPDATE Users 
+                    SET Status = 'Archived' 
+                    WHERE UserID = @UserID 
+                      AND Role != 'SuperAdmin';";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
@@ -147,6 +179,7 @@ namespace RRCManagementSystem
 
                         if (rows > 0)
                         {
+                            // redirect to force fresh bind and show alert
                             Response.Redirect("ViewAdmin.aspx?archived=1", false);
                             Context.ApplicationInstance.CompleteRequest();
                         }
@@ -161,6 +194,13 @@ namespace RRCManagementSystem
                     }
                 }
             }
+        }
+
+        // Optional: if your GridView uses paging
+        protected void gvAdmins_PageIndexChanging(object sender, GridViewPageEventArgs e)
+        {
+            gvAdmins.PageIndex = e.NewPageIndex;
+            LoadUsers();
         }
     }
 }

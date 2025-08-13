@@ -1,217 +1,284 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
-using System.Text;
 using System.Web;
-using System.Web.Script.Serialization;
+using Newtonsoft.Json.Linq;
+using RRCManagementSystem.Helpers;  // BlockchainLogger
 
-public class PayMongoWebhook : IHttpHandler
+namespace RRCManagementSystem
 {
-    private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-
-    public void ProcessRequest(HttpContext context)
+    public class PayMongoWebhook : IHttpHandler
     {
-        try
+        private static readonly string cs =
+            ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
+        public void ProcessRequest(HttpContext context)
         {
-            if (context.Request.HttpMethod == "POST")
+            context.Response.ContentType = "text/plain";
+            context.Response.TrySkipIisCustomErrors = true;
+
+            try
             {
-                HandlePostWebhook(context);
-            }
-            else if (context.Request.HttpMethod == "GET")
-            {
-                string reference = context.Request.QueryString["ref"];
-                if (!string.IsNullOrEmpty(reference))
+                if (context.Request.HttpMethod == "POST")
                 {
-                    HandleManualWebhook(reference, context);
+                    HandlePostWebhook(context);
+                }
+                else if (context.Request.HttpMethod == "GET")
+                {
+                    // Manual fallback: /PayMongoWebhook.ashx?ref=RRC-123-...
+                    string reference = context.Request.QueryString["ref"];
+                    if (string.IsNullOrWhiteSpace(reference))
+                    {
+                        context.Response.Write("❌ Missing ref.");
+                        return;
+                    }
+
+                    int bookingId = GetBookingIdFromReference(reference);
+                    if (bookingId <= 0)
+                    {
+                        context.Response.Write("❌ No booking matched for reference.");
+                        return;
+                    }
+
+                    decimal remaining = GetRemainingForBooking(bookingId);
+                    if (remaining <= 0m)
+                    {
+                        context.Response.Write("⚠️ Already fully paid.");
+                        return;
+                    }
+
+                    // Avoid duplicate manual insert
+                    if (ExistsDuplicateTx(bookingId, remaining, reference))
+                    {
+                        context.Response.Write("ℹ️ Already recorded.");
+                        return;
+                    }
+
+                    int txId = InsertTransaction(bookingId, remaining, "PayMongo", "Completed", "PayMongo Manual Ref: " + reference);
+
+                    // optional client id for blockchain JSON
+                    int clientId = GetClientIdFromBooking(bookingId);
+                    BlockchainLogger.AppendSaleLog(cs, txId, new
+                    {
+                        TransactionID = txId,
+                        ClientID = clientId,
+                        BookingID = bookingId,
+                        Amount = remaining,
+                        Currency = "PHP",
+                        Method = "PayMongo",
+                        Status = "Completed",
+                        PaidAtUtc = DateTime.UtcNow
+                    });
+
+                    context.Response.Write("✅ Manual webhook success.");
                 }
                 else
                 {
-                    context.Response.StatusCode = 400;
-                    context.Response.Write("❌ Missing 'ref' in GET request.");
+                    context.Response.StatusCode = 405;
+                    context.Response.Write("❌ Unsupported HTTP method.");
                 }
             }
-            else
+            catch (Exception ex)
             {
-                context.Response.StatusCode = 405;
-                context.Response.Write("❌ Unsupported HTTP method.");
+                context.Response.StatusCode = 500;
+                context.Response.Write("❌ Top-level error: " + ex.Message);
             }
         }
-        catch (Exception ex)
+
+        // ============= POST: Real PayMongo webhook =============
+        private static void HandlePostWebhook(HttpContext context)
         {
-            context.Response.StatusCode = 500;
-            context.Response.Write("❌ Top-level error: " + ex.Message + "<br/>" + ex.StackTrace);
-        }
-    }
+            string body;
+            using (var reader = new StreamReader(context.Request.InputStream))
+                body = reader.ReadToEnd();
 
-    private void HandleManualWebhook(string referenceNumber, HttpContext context)
-    {
-        try
-        {
-            string paymentMethod = "gcash";
-            decimal amount = 0;
-
-            int bookingId = GetBookingIdByReference(referenceNumber);
-            if (bookingId == 0)
+            try
             {
-                context.Response.Write("❌ No booking matched for reference: " + referenceNumber);
-                return;
-            }
+                var root = JObject.Parse(body);
 
-            using (SqlConnection con = new SqlConnection(connectionString))
-            {
-                string sql = @"
-                    SELECT Price - ISNULL((SELECT SUM(Amount) FROM Transactions WHERE SaleID = b.BookingID), 0)
-                    FROM Bookings b WHERE BookingID = @BookingID";
+                // Event type
+                string type =
+                    root.SelectToken("data.attributes.type")?.ToString() ??
+                    root.SelectToken("type")?.ToString() ?? "";
 
-                SqlCommand cmd = new SqlCommand(sql, con);
-                cmd.Parameters.AddWithValue("@BookingID", bookingId);
-                con.Open();
-                object result = cmd.ExecuteScalar();
+                // We care about successful payment events
+                bool isPaid =
+                    string.Equals(type, "checkout_session.payment.paid", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(type, "payment.paid", StringComparison.OrdinalIgnoreCase);
 
-                if (result == null || result == DBNull.Value)
+                if (!isPaid)
                 {
-                    context.Response.Write("❌ Could not retrieve remaining balance.");
+                    context.Response.Write("Ignored event: " + (type ?? "null"));
                     return;
                 }
 
-                amount = Convert.ToDecimal(result);
-            }
+                // Reference number (Checkout uses reference_number)
+                string reference =
+                    root.SelectToken("data.attributes.data.attributes.reference_number")?.ToString() ??
+                    root.SelectToken("data.attributes.reference_number")?.ToString() ?? "";
 
-            if (amount <= 0)
+                // Amount in centavos (varies by payload)
+                long amountCents =
+                    root.SelectToken("data.attributes.data.attributes.amount")?.Value<long?>() ??
+                    root.SelectToken("data.attributes.amount")?.Value<long?>() ??
+                    root.SelectToken("data.attributes.data.attributes.line_items[0].amount")?.Value<long?>() ??
+                    0;
+
+                // Payment method
+                string method =
+                    root.SelectToken("data.attributes.data.attributes.payments[0].data.attributes.payment_method.type")?.ToString() ??
+                    root.SelectToken("data.attributes.payments[0].payment_method.type")?.ToString() ??
+                    "PayMongo";
+
+                if (string.IsNullOrWhiteSpace(reference) || amountCents <= 0)
+                {
+                    context.Response.Write("❌ Missing reference or amount.");
+                    return;
+                }
+
+                decimal amount = amountCents / 100m;
+
+                // Map reference -> BookingID
+                int bookingId = GetBookingIdFromReference(reference);
+                if (bookingId <= 0)
+                {
+                    context.Response.Write("❌ No booking for reference.");
+                    return;
+                }
+
+                // Dedup by (BookingID, Amount, Reference)
+                if (ExistsDuplicateTx(bookingId, amount, reference))
+                {
+                    context.Response.Write("ℹ️ Already recorded.");
+                    return;
+                }
+
+                int txId = InsertTransaction(bookingId, amount, "PayMongo", "Completed", "PayMongo Webhook Ref: " + reference);
+
+                int clientId = GetClientIdFromBooking(bookingId);
+                BlockchainLogger.AppendSaleLog(cs, txId, new
+                {
+                    TransactionID = txId,
+                    ClientID = clientId,
+                    BookingID = bookingId,
+                    Amount = amount,
+                    Currency = "PHP",
+                    Method = method ?? "PayMongo",
+                    Status = "Completed",
+                    PaidAtUtc = DateTime.UtcNow
+                });
+
+                context.Response.Write("✅ PayMongo webhook processed.");
+            }
+            catch (Exception ex)
             {
-                context.Response.Write("⚠️ Already fully paid or invalid amount: " + amount);
-                return;
+                context.Response.StatusCode = 500;
+                context.Response.Write("❌ Webhook error: " + ex.Message);
             }
-
-            int transactionId = LogTransaction(bookingId, paymentMethod, amount, referenceNumber);
-            LogToBlockchain(transactionId, bookingId, amount, paymentMethod);
-
-            context.Response.Write("✅ Manual webhook success: Transaction recorded.");
-        }
-        catch (Exception ex)
-        {
-            context.Response.StatusCode = 500;
-            context.Response.Write("❌ Manual webhook error: " + ex.Message + "<br/>" + ex.StackTrace);
-        }
-    }
-
-    private void HandlePostWebhook(HttpContext context)
-    {
-        string json;
-        using (var reader = new StreamReader(context.Request.InputStream))
-        {
-            json = reader.ReadToEnd();
         }
 
-        try
+        // ============= Shared DB helpers (mirror your PayPal code) =============
+        private static int InsertTransaction(int bookingId, decimal amount, string method, string status, string remarks)
         {
-            var serializer = new JavaScriptSerializer();
-            dynamic data = serializer.Deserialize<dynamic>(json);
-
-            string eventType = data["data"]["attributes"]["type"];
-            if (eventType == "checkout.session_paid")
+            using (var con = new SqlConnection(cs))
+            using (var cmd = con.CreateCommand())
             {
-                string referenceNumber = data["data"]["attributes"]["reference_number"];
-                int amountInCents = Convert.ToInt32(data["data"]["attributes"]["line_items"][0]["amount"]);
-                string paymentMethod = data["data"]["attributes"]["payments"][0]["payment_method"]["type"];
-                decimal amount = amountInCents / 100m;
+                cmd.CommandText = @"
+INSERT INTO Transactions (SaleID, Amount, PaymentMethod, Status, TransactionDate, Remarks)
+VALUES (@SaleID, @Amount, @Method, @Status, DATEADD(HOUR, 8, GETUTCDATE()), @Remarks);
+SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
-                ProcessPayment(referenceNumber, paymentMethod, amount);
+
+                cmd.Parameters.Add("@SaleID", SqlDbType.Int).Value = bookingId;
+
+                var pAmount = cmd.Parameters.Add("@Amount", SqlDbType.Decimal);
+                pAmount.Precision = 18;
+                pAmount.Scale = 2;
+                pAmount.Value = amount;
+
+                cmd.Parameters.Add("@Method", SqlDbType.NVarChar, 50).Value = method;
+                cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = status;
+                cmd.Parameters.Add("@NowUtc", SqlDbType.DateTime2).Value = DateTime.UtcNow;
+                cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar, 255).Value = remarks ?? "";
+
+                con.Open();
+                return (int)cmd.ExecuteScalar();
             }
-
-            context.Response.StatusCode = 200;
-            context.Response.Write("✅ Webhook processed successfully.");
         }
-        catch (Exception ex)
+
+        private static bool ExistsDuplicateTx(int bookingId, decimal amount, string reference)
         {
-            context.Response.StatusCode = 500;
-            context.Response.Write("❌ Webhook error: " + ex.Message);
+            using (var con = new SqlConnection(cs))
+            using (var cmd = con.CreateCommand())
+            {
+                cmd.CommandText = @"
+SELECT 1
+FROM Transactions
+WHERE SaleID=@BID
+  AND ABS(Amount - @Amt) < 0.005
+  AND Remarks LIKE @Ref;";
+                cmd.Parameters.Add("@BID", SqlDbType.Int).Value = bookingId;
+
+                var pAmt = cmd.Parameters.Add("@Amt", SqlDbType.Decimal);
+                pAmt.Precision = 18;
+                pAmt.Scale = 2;
+                pAmt.Value = amount;
+
+                cmd.Parameters.Add("@Ref", SqlDbType.NVarChar, 255).Value = "%" + reference + "%";
+
+                con.Open();
+                var o = cmd.ExecuteScalar();
+                return o != null;
+            }
         }
-    }
 
-
-    private int GetBookingIdByReference(string reference)
-    {
-        using (SqlConnection con = new SqlConnection(connectionString))
+        private static int GetClientIdFromBooking(int bookingId)
         {
-            string query = @"SELECT TOP 1 BookingID FROM Bookings WHERE Notes LIKE @ref";
-            SqlCommand cmd = new SqlCommand(query, con);
-            cmd.Parameters.AddWithValue("@ref", "%PayMongoRef: " + reference + "%");
-            con.Open();
-            object result = cmd.ExecuteScalar();
-            return result != null && result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            using (var con = new SqlConnection(cs))
+            using (var cmd = con.CreateCommand())
+            {
+                cmd.CommandText = "SELECT TOP 1 ClientID FROM Bookings WHERE BookingID=@B;";
+                cmd.Parameters.Add("@B", SqlDbType.Int).Value = bookingId;
+                con.Open();
+                var r = cmd.ExecuteScalar();
+                return (r == null || r == DBNull.Value) ? 0 : Convert.ToInt32(r);
+            }
         }
-    }
 
-    private int LogTransaction(int bookingId, string method, decimal amount, string refNum)
-    {
-        using (SqlConnection con = new SqlConnection(connectionString))
+        private static int GetBookingIdFromReference(string reference)
         {
-            string insert = @"
-                INSERT INTO Transactions (SaleID, PaymentMethod, Amount, Status, TransactionDate, PerformedBy, Remarks)
-                OUTPUT INSERTED.TransactionID
-                VALUES (@SaleID, @Method, @Amount, 'Completed', GETDATE(), 'System - PayMongo', @Remarks)";
-
-            SqlCommand cmd = new SqlCommand(insert, con);
-            cmd.Parameters.AddWithValue("@SaleID", bookingId);
-            cmd.Parameters.AddWithValue("@Method", method);
-            cmd.Parameters.AddWithValue("@Amount", amount);
-            cmd.Parameters.AddWithValue("@Remarks", "✅ PayMongoRef: " + refNum);
-            con.Open();
-            return (int)cmd.ExecuteScalar();
+            if (string.IsNullOrWhiteSpace(reference)) return 0;
+            using (var con = new SqlConnection(cs))
+            using (var cmd = con.CreateCommand())
+            {
+                cmd.CommandText = "SELECT TOP 1 BookingID FROM Bookings WHERE Notes LIKE @ref;";
+                cmd.Parameters.Add("@ref", SqlDbType.NVarChar, 255).Value = "%PayMongoRef: " + reference + "%";
+                con.Open();
+                var r = cmd.ExecuteScalar();
+                return (r == null || r == DBNull.Value) ? 0 : Convert.ToInt32(r);
+            }
         }
-    }
 
-    private void LogToBlockchain(int transactionId, int bookingId, decimal amount, string paymentMethod)
-    {
-        string saleDataJson = $@"{{
-            ""TransactionID"": ""{transactionId}"",
-            ""BookingID"": ""{bookingId}"",
-            ""Amount"": ""{amount}"",
-            ""PaymentMethod"": ""{paymentMethod}"",
-            ""Status"": ""Completed"",
-            ""PerformedBy"": ""System - PayMongo"",
-            ""TransactionDate"": ""{DateTime.Now:yyyy-MM-dd HH:mm:ss}""
-        }}";
-
-        string saleHash = GenerateSHA256Hash(saleDataJson);
-
-        using (SqlConnection con = new SqlConnection(connectionString))
+        private static decimal GetRemainingForBooking(int bookingId)
         {
-            string insert = @"INSERT INTO BlockchainSalesLog (TransactionID, SaleHash, SaleDataJson, Timestamp)
-                              VALUES (@TransactionID, @SaleHash, @SaleDataJson, GETDATE())";
-
-            SqlCommand cmd = new SqlCommand(insert, con);
-            cmd.Parameters.AddWithValue("@TransactionID", transactionId);
-            cmd.Parameters.AddWithValue("@SaleHash", saleHash);
-            cmd.Parameters.AddWithValue("@SaleDataJson", saleDataJson);
-            con.Open();
-            cmd.ExecuteNonQuery();
+            using (var con = new SqlConnection(cs))
+            using (var cmd = con.CreateCommand())
+            {
+                cmd.CommandText = @"
+SELECT CAST(b.Price - ISNULL(t.TotalPaid,0) AS decimal(18,2)) AS Remaining
+FROM Bookings b
+OUTER APPLY (SELECT SUM(Amount) AS TotalPaid FROM Transactions WHERE SaleID=b.BookingID) t
+WHERE b.BookingID=@B;";
+                cmd.Parameters.Add("@B", SqlDbType.Int).Value = bookingId;
+                con.Open();
+                var r = cmd.ExecuteScalar();
+                return (r == null || r == DBNull.Value) ? 0m : Convert.ToDecimal(r, CultureInfo.InvariantCulture);
+            }
         }
-    }
-    private void ProcessPayment(string referenceNumber, string paymentMethod, decimal amount)
-    {
-        int bookingId = GetBookingIdByReference(referenceNumber);
-        if (bookingId > 0)
-        {
-            int transactionId = LogTransaction(bookingId, paymentMethod, amount, referenceNumber);
-            LogToBlockchain(transactionId, bookingId, amount, paymentMethod);
-        }
-    }
 
-
-    private string GenerateSHA256Hash(string rawData)
-    {
-        using (var sha256 = System.Security.Cryptography.SHA256.Create())
-        {
-            byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-            StringBuilder builder = new StringBuilder();
-            foreach (byte b in bytes)
-                builder.Append(b.ToString("x2"));
-            return builder.ToString();
-        }
+        public bool IsReusable => false;
     }
-
-    public bool IsReusable => false;
-    }
+}

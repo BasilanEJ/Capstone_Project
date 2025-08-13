@@ -20,7 +20,7 @@
 
         /* Background Image */
         body {
-            background: url('images/banner-1-01.jpg') no-repeat center center fixed;
+            background: url('images/logo.jpg') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;

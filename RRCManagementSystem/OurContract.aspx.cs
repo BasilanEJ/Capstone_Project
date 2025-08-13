@@ -2,7 +2,10 @@
 using System.Configuration;
 using System.Data.SqlClient;
 using System.IO;
-using RRCManagementSystem.Helpers;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.HtmlControls;
+using RRCManagementSystem.Helpers; // AESHelper
 
 namespace RRCManagementSystem
 {
@@ -12,115 +15,152 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (!IsPostBack)
-            {
-                LoadContract();
-            }
+            // IMPORTANT: Rebuild the panel state on every request so the button events are wired.
+            LoadContract();
         }
 
         private void LoadContract()
         {
-            if (Session["ClientID"] == null)
+            lblMessage.Text = "";
+
+            if (Session["ClientID"] == null || !int.TryParse(Session["ClientID"].ToString(), out int clientId))
             {
                 lblMessage.Text = "❌ Session expired. Please log in again.";
+                pnlContract.Visible = false;
+                pnlPreview.Visible = false;
                 return;
             }
 
-            int clientId = Convert.ToInt32(Session["ClientID"]);
+            string filePath = null;
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = @"SELECT TOP 1 * FROM ClientContracts WHERE ClientID = @ClientID ORDER BY UploadedAt DESC";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@ClientID", clientId);
-
-                conn.Open();
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                if (reader.Read())
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand(@"
+            SELECT TOP 1 
+                cc.StartDate,
+                cc.EndDate,
+                cc.UploadedAt,
+                cc.Remarks,
+                cc.FilePath,
+                u.Name AS UploadedByName
+            FROM ClientContracts cc
+            INNER JOIN Users u ON cc.UploadedBy = u.UserID   -- ← join to Users
+            WHERE cc.ClientID = @ClientID
+            ORDER BY cc.UploadedAt DESC;", conn))
                 {
-                    // ✅ Use null checks to avoid InvalidCastException
-                    if (reader["StartDate"] != DBNull.Value)
-                        lblStartDate.Text = Convert.ToDateTime(reader["StartDate"]).ToString("yyyy-MM-dd");
+                    cmd.Parameters.AddWithValue("@ClientID", clientId);
+                    conn.Open();
 
-                    if (reader["EndDate"] != DBNull.Value)
-                        lblEndDate.Text = Convert.ToDateTime(reader["EndDate"]).ToString("yyyy-MM-dd");
-
-                    if (reader["UploadedAt"] != DBNull.Value)
-                        lblUploaded.Text = Convert.ToDateTime(reader["UploadedAt"]).ToString("yyyy-MM-dd hh:mm tt");
-
-                    lblRemarks.Text = reader["Remarks"] != DBNull.Value ? reader["Remarks"].ToString() : "";
-
-                    string filePath = reader["FilePath"] != DBNull.Value ? reader["FilePath"].ToString() : "";
-
-                    if (!string.IsNullOrEmpty(filePath))
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        ViewState["ContractPath"] = filePath;
-                        pnlContract.Visible = true;
+                        if (reader.Read())
+                        {
+                            if (reader["StartDate"] != DBNull.Value)
+                                lblStartDate.Text = Convert.ToDateTime(reader["StartDate"]).ToString("yyyy-MM-dd");
 
-                        // ✅ Show PDF preview
-                        ShowPDFPreview(filePath, clientId);
-                    }
-                    else
-                    {
-                        lblMessage.Text = "❌ No file path found for the contract.";
-                        pnlContract.Visible = false;
-                        pnlPreview.Visible = false;
+                            if (reader["EndDate"] != DBNull.Value)
+                                lblEndDate.Text = Convert.ToDateTime(reader["EndDate"]).ToString("yyyy-MM-dd");
+
+                            // show datetime + admin name
+                            string byName = reader["UploadedByName"] as string ?? "Unknown";
+                            if (reader["UploadedAt"] != DBNull.Value)
+                            {
+                                string when = Convert.ToDateTime(reader["UploadedAt"]).ToString("yyyy-MM-dd hh:mm tt");
+                                lblUploaded.Text = $"{when} by {byName}";
+                            }
+                            else
+                            {
+                                lblUploaded.Text = $"by {byName}";
+                            }
+
+                            lblRemarks.Text = reader["Remarks"] != DBNull.Value ? reader["Remarks"].ToString() : string.Empty;
+                            filePath = reader["FilePath"] != DBNull.Value ? reader["FilePath"].ToString() : null;
+                        }
                     }
                 }
-                else
-                {
-                    lblMessage.Text = "❌ No contract found for your account.";
-                    pnlContract.Visible = false;
-                    pnlPreview.Visible = false;
-                }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "❌ Error loading contract: " + ex.Message;
+                pnlContract.Visible = false;
+                pnlPreview.Visible = false;
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(filePath))
+            {
+                ViewState["ContractPath"] = filePath;
+                pnlContract.Visible = true;
+            }
+            else
+            {
+                lblMessage.Text = "❌ No contract found for your account.";
+                pnlContract.Visible = false;
+                pnlPreview.Visible = false;
             }
         }
 
 
-        private void ShowPDFPreview(string encryptedPath, int clientId)
+
+        protected void btnPreview_Click(object sender, EventArgs e)
         {
+            string relPath = ViewState["ContractPath"] as string;
+            if (string.IsNullOrEmpty(relPath))
+            {
+                lblMessage.Text = "❌ Contract file not found on the server.";
+                pnlPreview.Visible = false;
+                return;
+            }
+
+            string absPath = Server.MapPath(relPath);
+            if (!File.Exists(absPath))
+            {
+                lblMessage.Text = "❌ Contract file not found on the server.";
+                pnlPreview.Visible = false;
+                return;
+            }
+
             try
             {
-                string absoluteEncryptedPath = Server.MapPath(encryptedPath);
-                if (!File.Exists(absoluteEncryptedPath))
-                {
-                    lblMessage.Text = "❌ Contract file not found on the server.";
-                    return;
-                }
-
-                // Decrypt file for preview
-                byte[] encryptedData = File.ReadAllBytes(absoluteEncryptedPath);
-                byte[] decryptedData = AESHelper.Decrypt(encryptedData);
+                // Decrypt to a temp preview file
+                byte[] encrypted = File.ReadAllBytes(absPath);
+                byte[] decrypted = AESHelper.Decrypt(encrypted);
 
                 string previewsDir = Server.MapPath("~/Previews/");
                 if (!Directory.Exists(previewsDir))
                     Directory.CreateDirectory(previewsDir);
 
-                string previewFilename = $"Client_{clientId}_ContractPreview.pdf";
-                string previewPath = Path.Combine(previewsDir, previewFilename);
-                File.WriteAllBytes(previewPath, decryptedData);
+                string clientName = (Session["ClientName"] as string ?? "Client")
+                    .Replace(" ", "_").Replace(",", "").Replace(".", "");
+                string fileName = $"{clientName}_Preview_{DateTime.Now:yyyyMMddHHmmssfff}.pdf";
+                string previewPath = Path.Combine(previewsDir, fileName);
 
-                pdfViewer.Attributes["src"] = ResolveUrl($"~/Previews/{previewFilename}");
+                File.WriteAllBytes(previewPath, decrypted);
+
+                // Set iframe src
+                pdfViewer.Attributes["src"] = ResolveUrl("~/Previews/" + fileName);
                 pnlPreview.Visible = true;
+                lblMessage.Text = "";
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "⚠️ Unable to preview contract: " + ex.Message;
                 pnlPreview.Visible = false;
+                lblMessage.Text = "⚠️ Unable to preview contract: " + ex.Message;
             }
         }
 
         protected void btnDownload_Click(object sender, EventArgs e)
         {
-            string filePath = ViewState["ContractPath"]?.ToString();
-
-            if (!string.IsNullOrEmpty(filePath))
+            string relPath = ViewState["ContractPath"] as string;
+            if (string.IsNullOrEmpty(relPath))
             {
-                filePath = Server.MapPath(filePath); // Convert to physical path
+                lblMessage.Text = "❌ Contract file not found on the server.";
+                return;
             }
 
-            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            string absPath = Server.MapPath(relPath);
+            if (!File.Exists(absPath))
             {
                 lblMessage.Text = "❌ Contract file not found on the server.";
                 return;
@@ -128,37 +168,27 @@ namespace RRCManagementSystem
 
             try
             {
-                byte[] encryptedData = File.ReadAllBytes(filePath);
-                byte[] decryptedData = AESHelper.Decrypt(encryptedData);
+                byte[] encrypted = File.ReadAllBytes(absPath);
+                byte[] decrypted = AESHelper.Decrypt(encrypted);
 
-                // 🔵 Auto-generate Previews folder
-                string previewsDir = Server.MapPath("~/Previews/");
-                if (!Directory.Exists(previewsDir))
-                {
-                    Directory.CreateDirectory(previewsDir);
-                }
+                string clientName = (Session["ClientName"] as string ?? "Client")
+                    .Replace(" ", "_").Replace(",", "").Replace(".", "");
+                string downloadName = $"{clientName}_Contract.pdf";
 
-                // 🔵 Generate unique preview file
-                string clientName = Session["ClientName"]?.ToString() ?? "Client";
-                string safeClientName = clientName.Replace(" ", "_").Replace(",", "").Replace(".", "");
-                string fileName = $"{safeClientName}_Preview_{DateTime.Now.Ticks}.pdf";
-                string previewPath = Path.Combine(previewsDir, fileName);
+                Response.Clear();
+                Response.ContentType = "application/pdf";
+                Response.AddHeader("Content-Disposition", $"attachment; filename=\"{downloadName}\"");
+                Response.Cache.SetCacheability(HttpCacheability.NoCache);
+                Response.BinaryWrite(decrypted);
+                Response.Flush();
 
-                File.WriteAllBytes(previewPath, decryptedData);
-
-                // 🔵 Store preview path in ViewState
-                ViewState["PreviewFilePath"] = $"~/Previews/{fileName}";
-
-                // 🔵 Show preview iframe
-                pdfViewer.Attributes["src"] = ViewState["PreviewFilePath"].ToString();
-                pnlPreview.Visible = true;
-                lblMessage.Text = "";
+                // Avoid ThreadAbortException from Response.End()
+                HttpContext.Current.ApplicationInstance.CompleteRequest();
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "❌ Failed to load contract preview: " + ex.Message;
+                lblMessage.Text = "❌ Failed to download contract: " + ex.Message;
             }
         }
-
     }
 }

@@ -10,51 +10,13 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
         }
-
-        .payment-form h2 {
-            text-align: center;
-            margin-bottom: 25px;
-            color: #004085;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
-
-        .btn-submit {
-            background-color: #004085;
-            color: #fff;
-            padding: 10px 25px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            margin: 5px;
-        }
-
-        .btn-submit:hover {
-            background-color: #002f6c;
-        }
-
-        .message {
-            margin-top: 15px;
-            font-weight: bold;
-            text-align: center;
-        }
-
+        .payment-form h2 { text-align: center; margin-bottom: 25px; color: #004085; }
+        .form-group { margin-bottom: 20px; }
+        .form-label { font-weight: 600; display: block; margin-bottom: 5px; }
+        .form-control { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
+        .btn-submit { background-color: #004085; color: #fff; padding: 10px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 5px; }
+        .btn-submit:hover { background-color: #002f6c; }
+        .message { margin-top: 15px; font-weight: bold; text-align: center; }
         .message.success { color: green; }
         .message.error { color: red; }
     </style>
@@ -64,9 +26,21 @@
 
         <asp:Label ID="lblMessage" runat="server" CssClass="message" />
 
+        <!-- Remember which booking we computed balance for -->
+        <asp:HiddenField ID="hfBookingId" runat="server" />
+
         <div class="form-group">
             <label class="form-label">Client</label>
-            <asp:DropDownList ID="ddlClients" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlClients_SelectedIndexChanged" />
+            <asp:DropDownList ID="ddlClients" runat="server" CssClass="form-control"
+                              AutoPostBack="true"
+                              OnSelectedIndexChanged="ddlClients_SelectedIndexChanged" />
+            <!-- optional validator -->
+            <asp:RequiredFieldValidator ID="rfvClient" runat="server"
+                ControlToValidate="ddlClients"
+                InitialValue=""
+                CssClass="text-danger small"
+                Display="Dynamic"
+                ErrorMessage="Please select a client." />
         </div>
 
         <div class="form-group">
@@ -77,6 +51,13 @@
                 <asp:ListItem Text="Bank Transfer" Value="Bank Transfer" />
                 <asp:ListItem Text="Online Payment" Value="Online Payment" />
             </asp:DropDownList>
+            <!-- optional validator -->
+            <asp:RequiredFieldValidator ID="rfvMethod" runat="server"
+                ControlToValidate="ddlPaymentMethod"
+                InitialValue=""
+                CssClass="text-danger small"
+                Display="Dynamic"
+                ErrorMessage="Please select a payment method." />
         </div>
 
         <div class="form-group">
@@ -100,11 +81,14 @@
         </div>
 
         <div id="previewContainer" style="margin-top: 20px; text-align: center;">
-            <img id="receiptPreview" src="#" alt="Receipt Preview" style="display:none; max-width: 300px; border: 1px solid #ccc; border-radius: 8px; padding: 5px; cursor: pointer;" onclick="openFullImage()" />
+            <img id="receiptPreview" src="#" alt="Receipt Preview"
+                 style="display:none; max-width: 300px; border: 1px solid #ccc; border-radius: 8px; padding: 5px; cursor: pointer;"
+                 onclick="openFullImage()" />
         </div>
 
         <div style="text-align:center; margin-top:20px;">
-            <asp:Button ID="btnSaveReal" runat="server" Text="Save Changes (Hidden)" CssClass="btn-submit" OnClick="btnSave_Click" Style="display:none;" />
+            <asp:Button ID="btnSaveReal" runat="server" Text="Save Changes (Hidden)" CssClass="btn-submit"
+                        OnClick="btnSave_Click" Style="display:none;" />
             <button type="button" class="btn-submit" onclick="showConfirmSwal()">Save Changes</button>
 
             <asp:Button ID="btnPrintReceipt" runat="server" Text="🖸️ Print Receipt" CssClass="btn-submit" Visible="false" OnClick="btnPrintReceipt_Click" />
@@ -139,7 +123,11 @@
         }
 
         function openFullImage() {
-            document.getElementById('imageModal').style.display = 'block';
+            // If you want a modal, implement it here
+            var img = document.getElementById('receiptPreview');
+            if (img && img.src && img.style.display !== 'none') {
+                window.open(img.src, '_blank');
+            }
         }
 
         function showConfirmSwal() {

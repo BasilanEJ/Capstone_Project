@@ -1,6 +1,12 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ViewEquipment.aspx.cs" Inherits="RRCManagementSystem.ViewEquipment" %>
 
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</asp:Content>
+
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
     <style>
@@ -180,28 +186,53 @@
 
         <asp:BoundField DataField="CreatedAt" HeaderText="Date Added" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
 
-        <asp:TemplateField HeaderText="Actions">
-            <ItemTemplate>
-              <asp:HyperLink ID="lnkEdit" runat="server"
-    NavigateUrl='<%# "EditEquipment.aspx?EquipmentID=" + EncodeID(Eval("EquipmentID").ToString()) %>'
-    Text="Edit" CssClass="btn btn-sm btn-primary" />
+       <asp:TemplateField HeaderText="Actions">
+  <ItemTemplate>
+    <div class="d-flex justify-content-center gap-2">
+      <a class="btn btn-success btn-sm"
+         href='<%# "EditEquipment.aspx?EquipmentID=" + EncodeID(Eval("EquipmentID").ToString()) %>'>
+        <i class="bi bi-pencil-square me-1"></i> Edit
+      </a>
 
-                &nbsp;
-                <asp:Button ID="btnDelete" runat="server"
-                    Text="Delete" CssClass="btn btn-sm btn-danger"
-                    CommandName="DeleteEquipment"
-                    CommandArgument='<%# Eval("EquipmentID") %>'
-                    OnClientClick="return confirm('Are you sure you want to delete this equipment?');" />
-            </ItemTemplate>
-        </asp:TemplateField>
+   
+      <asp:Button ID="btnDelete" runat="server"
+          Text="Delete"
+          CssClass="btn btn-danger btn-sm"
+          CommandName="DeleteEquipment"
+          CommandArgument='<%# Eval("EquipmentID") %>'
+          UseSubmitBehavior="false"
+          OnClientClick="return confirmDelete(this);" />
+    </div>
+  </ItemTemplate>
+</asp:TemplateField>
+
+
     </Columns>
 </asp:GridView>
-
-
-
 
                 <asp:Label ID="lblMessage" runat="server" CssClass="message-label" />
             </div>
         </div>
     </div>
+
+    <script>
+  function confirmDelete(btn) {
+    if (window.event) window.event.preventDefault();
+    Swal.fire({
+      title: 'Delete this equipment?',
+      text: 'This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        __doPostBack(btn.name, '');
+      }
+    });
+    return false;
+  }
+    </script>
+
 </asp:Content>

@@ -189,6 +189,45 @@ namespace RRCManagementSystem
             return options;
         }
 
+
+        protected void btnDeleteHidden_Click(object sender, EventArgs e)
+        {
+            if (!int.TryParse(hfDeleteInquiryID.Value, out int inquiryId))
+                return;
+
+            try
+            {
+                DeleteInquiry(inquiryId);
+                LoadInquiries();
+
+                // toast
+                ScriptManager.RegisterStartupScript(this, GetType(), "DeletedOK",
+                    "Swal.fire('Deleted', 'Inquiry has been removed.', 'success');", true);
+            }
+            catch (Exception ex)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "DeletedErr",
+                    $"Swal.fire('Error', 'Failed to delete inquiry: {ex.Message.Replace("'", "\\'")}', 'error');", true);
+            }
+        }
+
+        private void DeleteInquiry(int inquiryId)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlCommand cmd = new SqlCommand(
+                "DELETE FROM InquirySimple WHERE InquiryID = @InquiryID", conn))
+            {
+                cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+                conn.Open();
+                int rows = cmd.ExecuteNonQuery();
+                if (rows == 0)
+                {
+                    throw new InvalidOperationException("Inquiry not found.");
+                }
+            }
+        }
+
+
         protected void gvInquiries_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType == DataControlRowType.DataRow)

@@ -93,7 +93,14 @@ SELECT
     b.CreatedAt,
     b.Price,
     ISNULL(b.Price, 0) - ISNULL((SELECT SUM(t.Amount) FROM Transactions t WHERE t.SaleID = b.BookingID), 0) AS RemainingBalance,
-    ISNULL((SELECT TOP 1 Status FROM ServiceSchedule WHERE BookingID = b.BookingID AND OperationNumber = 1), 'Pending') AS Op1Status
+    b.IsContract,
+    CASE 
+        WHEN b.IsContract = 1 
+             THEN ISNULL((SELECT TOP 1 Status 
+                          FROM ServiceSchedule 
+                          WHERE BookingID = b.BookingID AND OperationNumber = 1), 'Pending')
+        ELSE NULL
+    END AS Op1Status
 FROM Bookings b
 INNER JOIN Clients c ON b.ClientID = c.ClientID
 WHERE 
@@ -102,6 +109,7 @@ WHERE
      OR b.ServiceNames LIKE '%' + @SearchTerm + '%')
     AND (@Status IS NULL OR b.Status = @Status)
 ORDER BY b.CreatedAt DESC";
+
 
                     SqlCommand cmd = new SqlCommand(query, con);
                     cmd.Parameters.AddWithValue("@SearchTerm", string.IsNullOrEmpty(txtSearch.Text.Trim()) ? (object)DBNull.Value : txtSearch.Text.Trim());
@@ -225,17 +233,34 @@ WHERE BookingID = @BookingID AND OperationNumber = 1";
 
         protected void gvBookings_RowDataBound(object sender, GridViewRowEventArgs e)
         {
-            if (e.Row.RowType == DataControlRowType.DataRow)
-            {
-                string status = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
 
-                if (status == "Assigned")
-                    e.Row.Cells[5].CssClass = "status-assigned";
-                else if (status == "Pending")
-                    e.Row.Cells[5].CssClass = "status-pending";
-                else if (status == "Cancelled")
-                    e.Row.Cells[5].CssClass = "status-cancelled";
-            }
+            // Existing status coloring
+            string bookingStatus = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
+            if (bookingStatus == "Assigned") e.Row.Cells[5].CssClass = "status-assigned";
+            else if (bookingStatus == "Pending") e.Row.Cells[5].CssClass = "status-pending";
+            else if (bookingStatus == "Cancelled") e.Row.Cells[5].CssClass = "status-cancelled";
+
+            // Contract-only controls
+            bool isContract = false;
+            var isContractObj = DataBinder.Eval(e.Row.DataItem, "IsContract");
+            if (isContractObj != null && isContractObj != DBNull.Value)
+                isContract = Convert.ToBoolean(isContractObj);
+
+            string op1Status = DataBinder.Eval(e.Row.DataItem, "Op1Status")?.ToString();
+
+            var lblOp1 = (Label)e.Row.FindControl("lblOp1Status");
+            var btnOp1 = (Button)e.Row.FindControl("btnTriggerCompleteOp1");
+
+            // Show OP1 status column value only for contracts
+            if (lblOp1 != null)
+                lblOp1.Visible = isContract;
+
+            // Show action only for contracts, when booking is Assigned and OP1 not yet Completed
+            if (btnOp1 != null)
+                btnOp1.Visible = isContract
+                                 && string.Equals(bookingStatus, "Assigned", StringComparison.OrdinalIgnoreCase)
+                                 && !string.Equals(op1Status, "Completed", StringComparison.OrdinalIgnoreCase);
         }
 
         private void AddAuditLog(int adminId, string action)

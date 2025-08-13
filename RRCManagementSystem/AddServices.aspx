@@ -90,6 +90,31 @@
             background-color: #5a6268;
         }
 
+         .card-body { padding: 20px !important; }
+
+  /* force rounded corners for inputs on this page */
+  .card-body .form-control {
+    border-radius: 8px !important;
+    border: 1px solid #ced4da !important;
+    padding: 10px 12px;
+    width: 100%;
+    box-sizing: border-box;
+    background: #fff;
+  }
+
+  /* make the textarea match */
+  .card-body textarea.form-control {
+    border-radius: 8px !important;
+    resize: vertical;
+  }
+
+  /* optional: subtle inner shadow on focus */
+  .card-body .form-control:focus {
+    border-color: #004085 !important;
+    box-shadow: 0 0 5px rgba(0,64,133,.3) !important;
+    outline: none;
+  }
+
         @media (max-width: 576px) {
             .form-group.text-end {
                 text-align: center !important;
@@ -188,7 +213,7 @@
 
                     <asp:Button ID="Button2" runat="server" Text="Cancel"
                         CssClass="custom-btn secondary-btn"
-                        PostBackUrl="~/ADMIN/ViewServices.aspx" />
+                        PostBackUrl="ViewServices.aspx" />
                 </div>
             </div>
         </div>

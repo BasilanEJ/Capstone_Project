@@ -145,6 +145,7 @@
     <Content Include="CreateCustomerAccount.aspx" />
     <Content Include="Dashboard.aspx" />
     <Content Include="DecryptPDF.aspx" />
+    <Content Include="DecryptReceipt.aspx" />
     <Content Include="DecrypytReceipt.aspx" />
     <Content Include="Default.aspx" />
     <Content Include="DownloadAttachment.aspx" />
@@ -158,6 +159,7 @@
     <Content Include="EmployeeStatus.aspx" />
     <Content Include="Enable2FA.aspx" />
     <Content Include="ForgotPassword.aspx" />
+    <Content Include="GenerateHmacKey.aspx" />
     <Content Include="GenerateSuperAdminPassword.aspx" />
     <Content Include="GetNotifications.aspx" />
     <Content Include="GroupEmployees.aspx" />
@@ -167,6 +169,7 @@
     <Content Include="Images\banner-1-01.jpg" />
     <Content Include="Images\bg.jpg" />
     <Content Include="Images\c&amp;o.png" />
+    <Content Include="Images\logo.jpg" />
     <Content Include="Images\logorrc.png" />
     <Content Include="Images\pestbg.jpg" />
     <Content Include="Images\pestlogo.jpg" />
@@ -195,6 +198,7 @@
     <Content Include="MarkAsRead.ashx" />
     <Content Include="PayMongoWebhook.ashx" />
     <Content Include="PayPalWebhook.ashx" />
+    <Content Include="Anchor.ashx" />
     <None Include="Scripts\jquery-3.7.1.intellisense.js" />
     <Content Include="ManageItem.aspx" />
     <Content Include="ManagePayment.aspx" />
@@ -352,6 +356,9 @@
     <Compile Include="AllRescheduleBooking.aspx.designer.cs">
       <DependentUpon>AllRescheduleBooking.aspx</DependentUpon>
     </Compile>
+    <Compile Include="Anchor.ashx.cs">
+      <DependentUpon>Anchor.ashx</DependentUpon>
+    </Compile>
     <Compile Include="ApproveRejectBookings.aspx.cs">
       <DependentUpon>ApproveRejectBookings.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -402,6 +409,7 @@
     <Compile Include="AuditLogs.aspx.designer.cs">
       <DependentUpon>AuditLogs.aspx</DependentUpon>
     </Compile>
+    <Compile Include="BlockchainLogger.cs" />
     <Compile Include="BookingHistory.aspx.cs">
       <DependentUpon>BookingHistory.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -472,6 +480,13 @@
     </Compile>
     <Compile Include="DecryptPDF.aspx.designer.cs">
       <DependentUpon>DecryptPDF.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="DecryptReceipt.aspx.cs">
+      <DependentUpon>DecryptReceipt.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="DecryptReceipt.aspx.designer.cs">
+      <DependentUpon>DecryptReceipt.aspx</DependentUpon>
     </Compile>
     <Compile Include="DecrypytReceipt.aspx.cs">
       <DependentUpon>DecrypytReceipt.aspx</DependentUpon>
@@ -563,6 +578,13 @@
     </Compile>
     <Compile Include="ForgotPassword.aspx.designer.cs">
       <DependentUpon>ForgotPassword.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="GenerateHmacKey.aspx.cs">
+      <DependentUpon>GenerateHmacKey.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="GenerateHmacKey.aspx.designer.cs">
+      <DependentUpon>GenerateHmacKey.aspx</DependentUpon>
     </Compile>
     <Compile Include="GenerateSuperAdminPassword.aspx.cs">
       <DependentUpon>GenerateSuperAdminPassword.aspx</DependentUpon>

@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Globalization;
 using System.Net;
 using System.Net.Mail;
+using System.Text.RegularExpressions;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -27,14 +28,11 @@ namespace RRCManagementSystem
             try
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand("SELECT RoleName FROM Roles ORDER BY RoleName ASC", conn))
                 {
-                    string query = "SELECT RoleName FROM Roles ORDER BY RoleName ASC";
-
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    conn.Open();
+                    using (SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        conn.Open();
-                        SqlDataReader reader = cmd.ExecuteReader();
-
                         ddlRole.Items.Clear();
                         ddlRole.Items.Add(new ListItem("Select Role", ""));
 
@@ -70,13 +68,42 @@ namespace RRCManagementSystem
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            string name = txtName.Text.Trim();
-            string email = txtEmail.Text.Trim();
+            // Respect ASP.NET validators on the page
+            Page.Validate();
+            if (!Page.IsValid)
+            {
+                ShowError("⚠ Please fix the highlighted errors.");
+                return;
+            }
+
+            string name = (txtName.Text ?? "").Trim();
+            string email = (txtEmail.Text ?? "").Trim().ToLowerInvariant();
             string role = ddlRole.SelectedValue;
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(role))
             {
                 ShowError("⚠ Please fill in all required fields.");
+                return;
+            }
+
+            // Server-side name validation (defense-in-depth vs. client JS/validators)
+            if (!IsValidName(name))
+            {
+                ShowError("⚠ Name can only contain letters, spaces, hyphen (-), and apostrophe (').");
+                return;
+            }
+
+            // Enforce allowed mailbox providers
+            if (!IsAllowedEmailDomain(email))
+            {
+                ShowError("⚠ Email must be Gmail, Yahoo, or Outlook.");
+                return;
+            }
+
+            // Prevent duplicates before insert
+            if (EmailExists(email))
+            {
+                ShowError("⚠ That email is already in use. Please use a different email.");
                 return;
             }
 
@@ -88,36 +115,62 @@ namespace RRCManagementSystem
                 int newUserId;
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand(@"
+                    INSERT INTO Users (Name, Email, Role, ResetToken, TokenExpiry, CreatedAt, Status)
+                    OUTPUT INSERTED.UserID
+                    VALUES (@Name, @Email, @Role, @ResetToken, @TokenExpiry, GETDATE(), 'Active')", conn))
                 {
-                    string insertQuery = @"
-                        INSERT INTO Users (Name, Email, Role, ResetToken, TokenExpiry, CreatedAt, Status)
-                        OUTPUT INSERTED.UserID
-                        VALUES (@Name, @Email, @Role, @ResetToken, @TokenExpiry, GETDATE(), 'Active')";
+                    cmd.Parameters.AddWithValue("@Name", name);
+                    cmd.Parameters.AddWithValue("@Email", email);
+                    cmd.Parameters.AddWithValue("@Role", role);
+                    cmd.Parameters.AddWithValue("@ResetToken", resetToken);
+                    cmd.Parameters.AddWithValue("@TokenExpiry", tokenExpiry);
 
-                    using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@Name", name);
-                        cmd.Parameters.AddWithValue("@Email", email);
-                        cmd.Parameters.AddWithValue("@Role", role);
-                        cmd.Parameters.AddWithValue("@ResetToken", resetToken);
-                        cmd.Parameters.AddWithValue("@TokenExpiry", tokenExpiry);
-
-                        conn.Open();
-                        newUserId = (int)cmd.ExecuteScalar();
-                    }
+                    conn.Open();
+                    newUserId = (int)cmd.ExecuteScalar();
                 }
 
                 SavePermissions(newUserId);
                 bool emailSent = SendResetEmail(email, resetToken, role);
 
                 if (emailSent)
-                    ShowSuccess("✅ Admin account created and email sent successfully!", true);
+                    ShowSuccess("Admin account created and email sent successfully!", true);
                 else
-                    ShowWarning("⚠ Admin account created, but failed to send email.");
+                    ShowWarning("Admin account created, but failed to send email.");
+            }
+            catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601) // unique constraint/index
+            {
+                ShowError("⚠ That email is already in use. Please use a different email.");
             }
             catch (Exception ex)
             {
                 ShowError("⚠ Error creating admin: " + ex.Message);
+            }
+        }
+
+        private static bool IsValidName(string name)
+        {
+            // Same pattern as your ASPX validator: letters (incl. accents), spaces, hyphen, apostrophe
+            return Regex.IsMatch(name, @"^[A-Za-zÀ-ÖØ-öø-ÿ\s'\-]+$");
+        }
+
+        private static bool IsAllowedEmailDomain(string email)
+        {
+            // Enforce gmail.com, yahoo.com, outlook.com only
+            return email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase)
+                || email.EndsWith("@yahoo.com", StringComparison.OrdinalIgnoreCase)
+                || email.EndsWith("@outlook.com", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool EmailExists(string email)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("SELECT 1 FROM Users WHERE Email = @Email", conn))
+            {
+                cmd.Parameters.AddWithValue("@Email", email);
+                conn.Open();
+                var o = cmd.ExecuteScalar();
+                return o != null;
             }
         }
 
@@ -179,11 +232,9 @@ namespace RRCManagementSystem
                     bool canEdit = ((CheckBox)item.FindControl("chkEdit")).Checked;
                     bool canDelete = ((CheckBox)item.FindControl("chkDelete")).Checked;
 
-                    string insert = @"
+                    using (SqlCommand cmd = new SqlCommand(@"
                         INSERT INTO AdminPermissions (UserID, ModuleName, CanView, CanAdd, CanEdit, CanDelete)
-                        VALUES (@UserID, @ModuleName, @CanView, @CanAdd, @CanEdit, @CanDelete)";
-
-                    using (SqlCommand cmd = new SqlCommand(insert, conn))
+                        VALUES (@UserID, @ModuleName, @CanView, @CanAdd, @CanEdit, @CanDelete)", conn))
                     {
                         cmd.Parameters.AddWithValue("@UserID", userId);
                         cmd.Parameters.AddWithValue("@ModuleName", module);
@@ -202,32 +253,87 @@ namespace RRCManagementSystem
             try
             {
                 TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
-                string formattedRole = textInfo.ToTitleCase(role.ToLower());
-                string resetLink = $"https://localhost:44341/ResetAdminPassword.aspx?type=admin&token={token}";
+                string formattedRole = textInfo.ToTitleCase((role ?? "").ToLower());
+                string resetLink = $"https://rrcmanagement-001-site1.ntempurl.com/ResetAdminPassword.aspx?type=admin&token={token}";
                 string subject = "Set Your Password - RRC Management System";
-                string body = $@"
-                    <h3>Welcome to RRC Management System</h3>
-                    <p>You have been invited as a <strong>{formattedRole}</strong>.</p>
-                    <p>Please click the link below to set your password:</p>
-                    <p><a href='{resetLink}'>Set Password</a></p>
-                    <p>This link will expire in 1 hour.</p>";
 
-                using (MailMessage mail = new MailMessage())
+                string body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='UTF-8'>
+  <style>
+    body {{
+      background-color: #f9f9f9;
+      font-family: Arial, sans-serif;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }}
+    .container {{
+      max-width: 600px;
+      margin: 30px auto;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 20px 30px;
+    }}
+    h3 {{
+      color: #2a4fa7;
+      margin-bottom: 10px;
+    }}
+    p {{
+      margin: 10px 0;
+    }}
+    .button {{
+      display: inline-block;
+      padding: 12px 20px;
+      background-color: #add8e6;
+      color: #000000;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+      margin-top: 15px;
+    }}
+    .footer {{
+      font-size: 12px;
+      color: #777;
+      margin-top: 25px;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+    }}
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <h3>Welcome to RRC Management System</h3>
+    <p>You have been invited as a <strong>{formattedRole}</strong>.</p>
+    <p>Click the button below to set your password:</p>
+    <p><a href='{resetLink}' class='button'>Set Password</a></p>
+    <p class='footer'>This link will expire in 1 hour. If you did not request this, you can ignore this email.</p>
+  </div>
+</body>
+</html>";
+
+                using (var mail = new MailMessage())
                 {
-                    mail.From = new MailAddress("edgarjosephbasilan@gmail.com", "RRC Management System");
+                    mail.From = new MailAddress("rrctermiteandpestcontrol@gmail.com", "RRC Management System");
                     mail.To.Add(toEmail);
                     mail.Subject = subject;
                     mail.Body = body;
                     mail.IsBodyHtml = true;
 
-                    using (SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587))
+                    using (var smtp = new SmtpClient("smtp.gmail.com", 587))
                     {
-                        smtp.Credentials = new NetworkCredential("edgarjosephbasilan@gmail.com", "fbryvkhttqobssjy");
+                        smtp.Credentials = new NetworkCredential(
+                            "rrctermiteandpestcontrol@gmail.com",
+                            "pktz jwzp tbvx qheq" // move to Web.config/app settings
+                        );
                         smtp.EnableSsl = true;
                         smtp.Send(mail);
                     }
                 }
-
                 return true;
             }
             catch (Exception ex)

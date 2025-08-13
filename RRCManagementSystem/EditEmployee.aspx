@@ -18,20 +18,32 @@
 
                 <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-semibold d-block mb-3" />
 
-               <div class="mb-3">
+              <div class="mb-3">
     <label for="txtLastName" class="form-label fw-semibold">Last Name:</label>
-    <asp:TextBox ID="txtLastName" runat="server" CssClass="form-control" placeholder="Enter last name" required></asp:TextBox>
+    <asp:TextBox ID="txtLastName" runat="server" CssClass="form-control" 
+        placeholder="Enter last name" required
+        oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '');">
+    </asp:TextBox>
 </div>
 
 <div class="mb-3">
     <label for="txtFirstName" class="form-label fw-semibold">First Name:</label>
-    <asp:TextBox ID="txtFirstName" runat="server" CssClass="form-control" placeholder="Enter first name" required></asp:TextBox>
+    <asp:TextBox ID="txtFirstName" runat="server" CssClass="form-control" 
+        placeholder="Enter first name" required
+        oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '');">
+    </asp:TextBox>
 </div>
 
 <div class="mb-3">
-    <label for="txtMiddleName" class="form-label fw-semibold">Middle Name <span class="text-muted">(optional)</span>:</label>
-    <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-control" placeholder="Enter middle name (optional)"></asp:TextBox>
+    <label for="txtMiddleName" class="form-label fw-semibold">
+        Middle Name <span class="text-muted">(optional)</span>:
+    </label>
+    <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-control" 
+        placeholder="Enter middle name (optional)" 
+        oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '');">
+    </asp:TextBox>
 </div>
+
 
 
                 <div class="mb-3">

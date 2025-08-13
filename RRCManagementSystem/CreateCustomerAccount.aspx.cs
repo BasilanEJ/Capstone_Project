@@ -6,6 +6,7 @@ using System.Net.Mail;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
+
 namespace RRCManagementSystem
 {
     public partial class CreateCustomerAccount : Page
@@ -135,18 +136,76 @@ VALUES
         {
             try
             {
-                string resetLink = $"https://localhost:44341/ResetPassword.aspx?type=admin&token={token}";
+                string resetLink = $"https://rrcmanagement-001-site1.ntempurl.com/ResetPassword.aspx?type=admin&token={token}";
                 string subject = "Set Your Password - RRC Management System";
                 string body = $@"
-<h3>Welcome to RRC Management System</h3>
-<p>You have been registered as a <strong>Client</strong>.</p>
-<p>Click below to set your password:</p>
-<p><a href='{resetLink}'>Set Password</a></p>
-<p>This link will expire in 1 hour.</p>";
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='UTF-8'>
+  <style>
+    body {{
+      background-color: #f9f9f9;
+      font-family: Arial, sans-serif;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }}
+    .container {{
+      max-width: 600px;
+      margin: 30px auto;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 20px 30px;
+    }}
+    h3 {{
+      color: #2a4fa7; /* Royal blue */
+      margin-bottom: 10px;
+    }}
+    p {{
+      margin: 10px 0;
+    }}
+    .button {{
+      display: inline-block;
+      padding: 12px 20px;
+      background-color: #add8e6; /* Light blue */
+      color: #000000; /* Black text */
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+      margin-top: 15px;
+    }}
+    .footer {{
+      font-size: 12px;
+      color: #777;
+      margin-top: 25px;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+    }}
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <h3>Welcome to RRC Management System</h3>
+    <p>You have been registered as a <strong>Client</strong>.</p>
+    <p>Click the button below to set your password:</p>
+    <p>
+      <a href='{resetLink}' class='button'>Set Password</a>
+    </p>
+    <p class='footer'>
+      This link will expire in 1 hour. If you did not request this, you can ignore this email.
+    </p>
+  </div>
+</body>
+</html>";
+
+
 
                 using (MailMessage mail = new MailMessage())
                 {
-                    mail.From = new MailAddress("edgarjosephbasilan@gmail.com", "RRC Management System");
+                    mail.From = new MailAddress("rrctermiteandpestcontrol@gmail.com", "RRC Management System");
                     mail.To.Add(toEmail);
                     mail.Subject = subject;
                     mail.Body = body;
@@ -154,7 +213,7 @@ VALUES
 
                     using (SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587))
                     {
-                        smtp.Credentials = new NetworkCredential("edgarjosephbasilan@gmail.com", "fbryvkhttqobssjy");
+                        smtp.Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq");
                         smtp.EnableSsl = true;
                         smtp.Send(mail);
                     }

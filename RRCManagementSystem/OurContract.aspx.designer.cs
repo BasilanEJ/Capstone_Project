@@ -78,6 +78,24 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Button btnDownload;
 
         /// <summary>
+        /// btnPreview control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnPreview;
+
+        /// <summary>
+        /// hlOpenNewTab control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HyperLink hlOpenNewTab;
+
+        /// <summary>
         /// pnlPreview control.
         /// </summary>
         /// <remarks>

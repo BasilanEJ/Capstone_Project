@@ -94,7 +94,7 @@
 
         <asp:Button ID="btnBack" runat="server" Text="← Back to Clients" CssClass="btn-back" OnClick="btnBack_Click" />
 
-        <div class="card">
+       <!-- <div class="card">
             <div class="card-header">Action History</div>
             <div class="card-body">
                 <asp:GridView ID="gvHistory" runat="server" AutoGenerateColumns="False" CssClass="history-table">
@@ -108,6 +108,6 @@
                 <asp:Label ID="lblNoHistory" runat="server" CssClass="no-history" Visible="false" Text="No history records found."></asp:Label>
             </div>
         </div>
-    </div>
+    </div> -->
 
 </asp:Content>

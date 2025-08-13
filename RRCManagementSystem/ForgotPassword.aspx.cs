@@ -162,7 +162,7 @@ namespace RRCManagementSystem
                 SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587)
                 {
                     UseDefaultCredentials = false,
-                    Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "shdyfyvpwvanxjiq"), // App Password
+                    Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq"), // App Password
                     EnableSsl = true
                 };
 

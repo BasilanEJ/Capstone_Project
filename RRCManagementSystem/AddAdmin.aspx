@@ -13,14 +13,40 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="txtName" class="form-label">Name *</label>
-                    <asp:TextBox ID="txtName" runat="server" CssClass="form-control" placeholder="Enter full name" />
-                </div>
+    <label for="txtName" class="form-label">Name *</label>
+    <asp:TextBox ID="txtName" runat="server" CssClass="form-control"
+                 placeholder="Enter full name"
+                 oninput="sanitizeName(this)" />
+    <!-- Required -->
+    <asp:RequiredFieldValidator ID="rfvName" runat="server"
+        ControlToValidate="txtName" CssClass="text-danger small"
+        Display="Dynamic" ErrorMessage="Name is required." />
+    <!-- Letters, spaces, hyphen, apostrophe only -->
+    <asp:RegularExpressionValidator ID="revName" runat="server"
+        ControlToValidate="txtName" CssClass="text-danger small"
+        Display="Dynamic"
+        ValidationExpression="^[A-Za-zÀ-ÖØ-öø-ÿ\s'\-]+$"
+        ErrorMessage="Use letters, spaces, - or ' only." />
+</div>
 
                 <div class="mb-3">
-                    <label for="txtEmail" class="form-label">Email *</label>
-                    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" placeholder="Enter email address" TextMode="Email" />
-                </div>
+    <label for="txtEmail" class="form-label">Email *</label>
+    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" 
+                 placeholder="Enter email address" TextMode="Email" />
+
+    <!-- Required -->
+    <asp:RequiredFieldValidator ID="rfvEmail" runat="server"
+        ControlToValidate="txtEmail" CssClass="text-danger small"
+        Display="Dynamic" ErrorMessage="Email is required." />
+
+    <!-- Allowed domains: gmail.com, yahoo.com, outlook.com -->
+    <asp:RegularExpressionValidator ID="revEmail" runat="server"
+        ControlToValidate="txtEmail" CssClass="text-danger small"
+        Display="Dynamic"
+        ValidationExpression="^[^@\s]+@(gmail\.com|yahoo\.com|outlook\.com)$"
+        ErrorMessage="Email must be Gmail, Yahoo, or Outlook." />
+</div>
+
 
                 <div class="mb-3">
                     <label for="ddlRole" class="form-label">Select Role *</label>
@@ -67,6 +93,13 @@
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function sanitizeName(el) {
+            // allow letters (incl. accents), spaces, hyphen, apostrophe
+            el.value = el.value.replace(/[^A-Za-z\u00C0-\u024F\s'\-]/g, '');
+        }
+    </script>
+
     <script>
         function confirmCreate() {
             Swal.fire({
