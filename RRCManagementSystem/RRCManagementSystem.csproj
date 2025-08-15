@@ -125,9 +125,11 @@
     <Content Include="AddServices.aspx" />
     <Content Include="AddStocks.aspx" />
     <Content Include="AddSupplier.aspx" />
+    <Content Include="AdminGuide.aspx" />
     <Content Include="AdminReports.aspx" />
     <Content Include="AllBooking.aspx" />
     <Content Include="AllEmployee.aspx" />
+    <Content Include="AllInquiry.aspx" />
     <Content Include="AllRescheduleBooking.aspx" />
     <Content Include="ApproveRejectBookings.aspx" />
     <Content Include="ApproveRescheduleRequests.aspx" />
@@ -143,6 +145,7 @@
     <Content Include="ClientsProfiles.aspx" />
     <Content Include="CreateBooking.aspx" />
     <Content Include="CreateCustomerAccount.aspx" />
+    <Content Include="CreateInquiry.aspx" />
     <Content Include="Dashboard.aspx" />
     <Content Include="DecryptPDF.aspx" />
     <Content Include="DecryptReceipt.aspx" />
@@ -327,6 +330,13 @@
     <Compile Include="Admin.Master.designer.cs">
       <DependentUpon>Admin.Master</DependentUpon>
     </Compile>
+    <Compile Include="AdminGuide.aspx.cs">
+      <DependentUpon>AdminGuide.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AdminGuide.aspx.designer.cs">
+      <DependentUpon>AdminGuide.aspx</DependentUpon>
+    </Compile>
     <Compile Include="AdminReports.aspx.cs">
       <DependentUpon>AdminReports.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -348,6 +358,13 @@
     </Compile>
     <Compile Include="AllEmployee.aspx.designer.cs">
       <DependentUpon>AllEmployee.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="AllInquiry.aspx.cs">
+      <DependentUpon>AllInquiry.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AllInquiry.aspx.designer.cs">
+      <DependentUpon>AllInquiry.aspx</DependentUpon>
     </Compile>
     <Compile Include="AllRescheduleBooking.aspx.cs">
       <DependentUpon>AllRescheduleBooking.aspx</DependentUpon>
@@ -465,6 +482,13 @@
     </Compile>
     <Compile Include="CreateCustomerAccount.aspx.designer.cs">
       <DependentUpon>CreateCustomerAccount.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="CreateInquiry.aspx.cs">
+      <DependentUpon>CreateInquiry.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="CreateInquiry.aspx.designer.cs">
+      <DependentUpon>CreateInquiry.aspx</DependentUpon>
     </Compile>
     <Compile Include="Dashboard.aspx.cs">
       <DependentUpon>Dashboard.aspx</DependentUpon>

@@ -35,13 +35,18 @@ namespace RRCManagementSystem
             {
                 txtFromDate.Text = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
                 txtToDate.Text = DateTime.Now.ToString("yyyy-MM-dd");
-                txtTeamDate.Text = DateTime.Today.ToString("yyyy-MM-dd"); // 👈 default availability date
+                txtTeamDate.Text = DateTime.Today.ToString("yyyy-MM-dd"); // default availability date
+
+                DateTime from = DateTime.Parse(txtFromDate.Text);
+                DateTime to = DateTime.Parse(txtToDate.Text);
+
                 LoadReports();
                 LoadUserAccounts();
-                LoadTeamReports(); // 👈 initial load
-
+                LoadTeamReports();
+                LoadSales(from, to); // ✅ Now works
             }
         }
+
 
 
         protected void btnExportUsers_Click(object sender, EventArgs e)
@@ -49,6 +54,13 @@ namespace RRCManagementSystem
             if (gvUserAccounts.Rows.Count > 0)
                 ExportGridViewToPDF(gvUserAccounts, "Users_Report");
         }
+
+        protected void btnExportSales_Click(object sender, EventArgs e)
+        {
+            if (gvSales.Rows.Count > 0)
+                ExportGridViewToPDF(gvSales, "Sales_Report");
+        }
+
 
         protected void btnExportInquiries_Click(object sender, EventArgs e)
         {
@@ -60,6 +72,12 @@ namespace RRCManagementSystem
         {
             if (gvApprovedClients.Rows.Count > 0)
                 ExportGridViewToPDF(gvApprovedClients, "ApprovedClients_Report");
+        }
+
+        protected void btnExportInventorySnapshots_Click(object sender, EventArgs e)
+        {
+            if (gvInventorySnapshots.Rows.Count > 0)
+                ExportGridViewToPDF(gvInventorySnapshots, "InventorySnapshots_Report");
         }
 
         protected void btnExportInventory_Click(object sender, EventArgs e)
@@ -104,6 +122,62 @@ namespace RRCManagementSystem
             LoadTeamReports(); // 👈 keep Team section in sync with range filter
             AddAuditLog(Convert.ToInt32(Session["UserID"]), "Filtered Admin Reports");
         }
+
+        private void LoadSales(DateTime from, DateTime to)
+        {
+            DateTime toExclusive = to.Date.AddDays(1);
+
+            string query = @"
+        SELECT 
+            t.TransactionID,
+            ISNULL(
+                (c.LastName + ', ' + c.FirstName + 
+                    CASE WHEN ISNULL(c.MiddleName,'') <> '' THEN ' ' + c.MiddleName ELSE '' END),
+                'N/A'
+            ) AS ClientName,
+            t.Amount,
+            t.PaymentMethod,
+            t.Status,
+            FORMAT(DATEADD(HOUR, 8, t.TransactionDate), 'yyyy-MM-dd HH:mm:ss') AS TransactionDatePHT,
+            t.Remarks
+        FROM Transactions t
+        LEFT JOIN Sales s ON t.SaleID = s.SaleID
+        LEFT JOIN Clients c ON s.ClientID = c.ClientID
+        WHERE t.TransactionDate >= @from AND t.TransactionDate < @toExclusive
+        ORDER BY t.TransactionDate DESC";
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@from", from.Date);
+                cmd.Parameters.AddWithValue("@toExclusive", toExclusive);
+
+                var da = new SqlDataAdapter(cmd);
+                var dt = new DataTable();
+                da.Fill(dt);
+
+                // Add new column for formatted ID
+                dt.Columns.Add("TransactionIDFormatted", typeof(string));
+
+                foreach (DataRow row in dt.Rows)
+                {
+                    row["TransactionIDFormatted"] = PrettyId("Transaction", row["TransactionID"]);
+                }
+
+                gvSales.DataSource = dt;
+                gvSales.DataBind();
+
+                decimal total = 0;
+                foreach (DataRow row in dt.Rows)
+                {
+                    total += row.Field<decimal>("Amount");
+                }
+                lblSalesSummary.Text = $"Total Sales: ₱{total:N2} ({dt.Rows.Count} transactions)";
+            }
+        }
+
+
+
 
         private void LoadTeamReports()
         {
@@ -209,6 +283,7 @@ ORDER BY t.GroupName, e.LastName, e.FirstName;";
                 AddGridToPDF(doc, gvApprovedClients, "✅ Approved Clients");
                 AddGridToPDF(doc, gvInventorySnapshots, "📦 Total Stocks Snapshot (Daily)");
                 AddGridToPDF(doc, gvInventory, "📦 Inventory Details");
+                AddGridToPDF(doc, gvSales, "Sales");
                 AddGridToPDF(doc, gvEquipment, "🛠️ Equipment Status");
                 AddGridToPDF(doc, gvBookings, "📅 Booking Details");
                 AddGridToPDF(doc, gvInspections, "🔍 Inspection Details");
@@ -301,7 +376,7 @@ ORDER BY t.GroupName, e.LastName, e.FirstName;";
         private void LoadReports()
         {
             DateTime from = DateTime.Parse(txtFromDate.Text);
-            DateTime to = DateTime.Parse(txtToDate.Text); 
+            DateTime to = DateTime.Parse(txtToDate.Text);
 
             LoadSummaryCounts(from, to);
             LoadInquiries(from, to);
@@ -311,7 +386,9 @@ ORDER BY t.GroupName, e.LastName, e.FirstName;";
             LoadEquipment();
             LoadBookings(from, to);
             LoadInspections(from, to);
+            LoadSales(from, to); 
         }
+
 
 
         private void LoadSummaryCounts(DateTime from, DateTime to)
@@ -569,6 +646,7 @@ ORDER BY ins.ScheduledDate DESC;";
             if (keyName.IndexOf("item", StringComparison.OrdinalIgnoreCase) >= 0) return "Item";
             if (keyName.IndexOf("inspect", StringComparison.OrdinalIgnoreCase) >= 0) return "Inspect";
             if (keyName.IndexOf("team", StringComparison.OrdinalIgnoreCase) >= 0) return "Team";
+            if (keyName.IndexOf("sales", StringComparison.OrdinalIgnoreCase) >=0) return "Sales";
             return "ID";
         }
 

@@ -135,7 +135,6 @@
                         <label class="form-label">⏰ Preferred Service Time</label>
                         <asp:TextBox ID="TextBox2" runat="server" CssClass="form-control" TextMode="Time" />
                     </div>
-                    <div class="form-text">You can book from today up to 6 months ahead.</div>
                 </div>
 
                 <div class="modal-footer">

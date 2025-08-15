@@ -284,26 +284,60 @@ namespace RRCManagementSystem
             {
                 conn.Open();
 
-                using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Clients", conn))
-                    lblTotalClients.Text = cmd.ExecuteScalar().ToString();
+                // Simple counts
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Clients", conn))
+                    lblTotalClients.Text = (Convert.ToInt32(cmd.ExecuteScalar())).ToString("N0");
 
-                using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM Employees", conn))
-                    lblTotalWorkers.Text = cmd.ExecuteScalar().ToString();
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Employees", conn))
+                    lblTotalWorkers.Text = (Convert.ToInt32(cmd.ExecuteScalar())).ToString("N0");
 
-                using (SqlCommand cmd = new SqlCommand(@"
-                    SELECT ISNULL(SUM(Amount), 0) 
-                    FROM Transactions 
-                    WHERE CAST(TransactionDate AS DATE) = CAST(GETDATE() AS DATE)", conn))
-                    lblTodaySales.Text = "₱" + Convert.ToDecimal(cmd.ExecuteScalar()).ToString("N2");
+                // --- Build PH time boundaries in SQL once, reuse them (robust + fast) ---
+                // We compute:
+                //   @phtTodayStart = today 00:00 PHT
+                //   @phtTomorrowStart = tomorrow 00:00 PHT  (exclusive)
+                //   @phtMonthStart = 1st day of this month 00:00 PHT
+                //   @phtNextMonthStart = 1st day of next month 00:00 PHT (exclusive)
+                string timeCte = @"
+;WITH tz AS (
+    SELECT 
+        CAST(SYSDATETIMEOFFSET() AT TIME ZONE 'Singapore Standard Time' AS datetimeoffset) AS NowPht
+),
+bounds AS (
+    SELECT
+        CAST(CAST(NowPht AS date) AS datetime)       AS PhtTodayStart,      -- today 00:00 PHT
+        DATEADD(day, 1, CAST(CAST(NowPht AS date) AS datetime)) AS PhtTomorrowStart,
+        CAST(DATEFROMPARTS(YEAR(NowPht), MONTH(NowPht), 1) AS datetime) AS PhtMonthStart,
+        CAST(DATEADD(month, 1, DATEFROMPARTS(YEAR(NowPht), MONTH(NowPht), 1)) AS datetime) AS PhtNextMonthStart
+    FROM tz
+)
+";
 
-                using (SqlCommand cmd = new SqlCommand(@"
-                    SELECT ISNULL(SUM(Amount), 0) 
-                    FROM Transactions 
-                    WHERE MONTH(TransactionDate) = MONTH(GETDATE()) 
-                      AND YEAR(TransactionDate) = YEAR(GETDATE())", conn))
-                    lblMonthSales.Text = "₱" + Convert.ToDecimal(cmd.ExecuteScalar()).ToString("N2");
+                // TODAY (PHT): sum Amount where TransactionDate shifted to +08:00 is in [today, tomorrow)
+                using (var cmd = new SqlCommand(timeCte + @"
+SELECT ISNULL(SUM(t.Amount), 0)
+FROM Transactions t
+CROSS JOIN bounds b
+WHERE SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') >= b.PhtTodayStart
+  AND SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') <  b.PhtTomorrowStart
+", conn))
+                {
+                    lblTodaySales.Text = "₱" + Convert.ToDecimal(cmd.ExecuteScalar() ?? 0m).ToString("N2");
+                }
+
+                // THIS MONTH (PHT): sum Amount where shifted timestamp is in [monthStart, nextMonthStart)
+                using (var cmd = new SqlCommand(timeCte + @"
+SELECT ISNULL(SUM(t.Amount), 0)
+FROM Transactions t
+CROSS JOIN bounds b
+WHERE SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') >= b.PhtMonthStart
+  AND SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') <  b.PhtNextMonthStart
+", conn))
+                {
+                    lblMonthSales.Text = "₱" + Convert.ToDecimal(cmd.ExecuteScalar() ?? 0m).ToString("N2");
+                }
             }
         }
+
 
         // ==================== BLOCKCHAIN LOG ====================
         private void LoadBlockchainLog()
@@ -471,7 +505,8 @@ ORDER BY LogID ASC;";
             else
             {
                 lblVerificationResult.ForeColor = System.Drawing.Color.Red;
-                lblVerificationResult.Text = $"❌ {tamperedCount} of {checkedCount} record(s) failed JSON/chain/HMAC verification.";
+                lblVerificationResult.Text = $"❌ {tamperedCount} out of {checkedCount} record(s) appear to have been altered or are inconsistent.";
+
             }
 
             AddAuditLog(Convert.ToInt32(Session["AdminID"]), "Performed blockchain verification.");

@@ -15,6 +15,8 @@ namespace RRCManagementSystem
         private static readonly string cs =
             ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
+        public bool IsReusable => false;
+
         public void ProcessRequest(HttpContext context)
         {
             context.Response.ContentType = "text/plain";
@@ -43,29 +45,40 @@ namespace RRCManagementSystem
                         return;
                     }
 
-                    decimal remaining = GetRemainingForBooking(bookingId);
+                    // Ensure Sale exists for this booking
+                    int saleId = GetOrCreateSaleId(bookingId);
+
+                    decimal remaining = GetRemainingForSale(saleId);
                     if (remaining <= 0m)
                     {
                         context.Response.Write("⚠️ Already fully paid.");
                         return;
                     }
 
-                    // Avoid duplicate manual insert
-                    if (ExistsDuplicateTx(bookingId, remaining, reference))
+                    // Avoid duplicate manual insert (by SaleID + Amount + Ref)
+                    if (ExistsDuplicateTx(saleId, remaining, reference))
                     {
                         context.Response.Write("ℹ️ Already recorded.");
                         return;
                     }
 
-                    int txId = InsertTransaction(bookingId, remaining, "PayMongo", "Completed", "PayMongo Manual Ref: " + reference);
+                    int txId = InsertTransaction(
+                        saleId,
+                        remaining,
+                        method: "PayMongo",
+                        status: "Completed",
+                        remarks: "PayMongo Manual Ref: " + reference
+                    );
 
-                    // optional client id for blockchain JSON
                     int clientId = GetClientIdFromBooking(bookingId);
+
+                    // Blockchain JSON (UTC timestamp stored; display in PHT as needed)
                     BlockchainLogger.AppendSaleLog(cs, txId, new
                     {
                         TransactionID = txId,
                         ClientID = clientId,
                         BookingID = bookingId,
+                        SaleID = saleId,
                         Amount = remaining,
                         Currency = "PHP",
                         Method = "PayMongo",
@@ -88,6 +101,9 @@ namespace RRCManagementSystem
             }
         }
 
+        // Philippine local time helper (UTC+08:00)
+        private static DateTime NowPh() => DateTime.UtcNow.AddHours(8);
+
         // ============= POST: Real PayMongo webhook =============
         private static void HandlePostWebhook(HttpContext context)
         {
@@ -97,14 +113,19 @@ namespace RRCManagementSystem
 
             try
             {
+                if (string.IsNullOrWhiteSpace(body))
+                {
+                    context.Response.Write("❌ Empty body.");
+                    return;
+                }
+
                 var root = JObject.Parse(body);
 
-                // Event type
+                // Event type (accept main success types)
                 string type =
                     root.SelectToken("data.attributes.type")?.ToString() ??
                     root.SelectToken("type")?.ToString() ?? "";
 
-                // We care about successful payment events
                 bool isPaid =
                     string.Equals(type, "checkout_session.payment.paid", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(type, "payment.paid", StringComparison.OrdinalIgnoreCase);
@@ -120,14 +141,14 @@ namespace RRCManagementSystem
                     root.SelectToken("data.attributes.data.attributes.reference_number")?.ToString() ??
                     root.SelectToken("data.attributes.reference_number")?.ToString() ?? "";
 
-                // Amount in centavos (varies by payload)
+                // Amount (in centavos; try several paths)
                 long amountCents =
                     root.SelectToken("data.attributes.data.attributes.amount")?.Value<long?>() ??
                     root.SelectToken("data.attributes.amount")?.Value<long?>() ??
                     root.SelectToken("data.attributes.data.attributes.line_items[0].amount")?.Value<long?>() ??
                     0;
 
-                // Payment method
+                // Payment method (best-effort)
                 string method =
                     root.SelectToken("data.attributes.data.attributes.payments[0].data.attributes.payment_method.type")?.ToString() ??
                     root.SelectToken("data.attributes.payments[0].payment_method.type")?.ToString() ??
@@ -149,21 +170,33 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                // Dedup by (BookingID, Amount, Reference)
-                if (ExistsDuplicateTx(bookingId, amount, reference))
+                // Ensure Sale exists for this booking
+                int saleId = GetOrCreateSaleId(bookingId);
+
+                // Dedup by (SaleID, Amount, Reference pattern in Remarks)
+                if (ExistsDuplicateTx(saleId, amount, reference))
                 {
                     context.Response.Write("ℹ️ Already recorded.");
                     return;
                 }
 
-                int txId = InsertTransaction(bookingId, amount, "PayMongo", "Completed", "PayMongo Webhook Ref: " + reference);
+                int txId = InsertTransaction(
+                    saleId,
+                    amount,
+                    method: method ?? "PayMongo",
+                    status: "Completed",
+                    remarks: "PayMongo Webhook Ref: " + reference
+                );
 
                 int clientId = GetClientIdFromBooking(bookingId);
+
+                // Blockchain JSON (UTC timestamp stored; display in PHT as needed)
                 BlockchainLogger.AppendSaleLog(cs, txId, new
                 {
                     TransactionID = txId,
                     ClientID = clientId,
                     BookingID = bookingId,
+                    SaleID = saleId,
                     Amount = amount,
                     Currency = "PHP",
                     Method = method ?? "PayMongo",
@@ -180,8 +213,57 @@ namespace RRCManagementSystem
             }
         }
 
-        // ============= Shared DB helpers (mirror your PayPal code) =============
-        private static int InsertTransaction(int bookingId, decimal amount, string method, string status, string remarks)
+        // ============= DB helpers =============
+
+        /// <summary>
+        /// Returns existing SaleID for BookingID, or creates a new Sales row using Bookings.ClientID.
+        /// </summary>
+        private static int GetOrCreateSaleId(int bookingId)
+        {
+            using (var con = new SqlConnection(cs))
+            using (var cmd = con.CreateCommand())
+            {
+                con.Open();
+                using (var tx = con.BeginTransaction())
+                {
+                    cmd.Transaction = tx;
+
+                    // 1) Try to find existing Sale for this Booking
+                    cmd.CommandText = "SELECT SaleID FROM Sales WHERE BookingID = @BookingID";
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.AddWithValue("@BookingID", bookingId);
+                    var existing = cmd.ExecuteScalar();
+                    if (existing != null && existing != DBNull.Value)
+                    {
+                        tx.Commit();
+                        return Convert.ToInt32(existing);
+                    }
+
+                    // 2) Get ClientID from Bookings
+                    cmd.CommandText = "SELECT ClientID FROM Bookings WHERE BookingID = @BookingID";
+                    var clientIdObj = cmd.ExecuteScalar();
+                    if (clientIdObj == null || clientIdObj == DBNull.Value)
+                        throw new InvalidOperationException("Booking has no ClientID.");
+
+                    int clientId = Convert.ToInt32(clientIdObj);
+
+                    // 3) Create the Sale row
+                    cmd.CommandText = @"
+INSERT INTO Sales (BookingID, ClientID)
+VALUES (@BookingID, @ClientID);
+SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.AddWithValue("@BookingID", bookingId);
+                    cmd.Parameters.AddWithValue("@ClientID", clientId);
+
+                    int saleId = Convert.ToInt32(cmd.ExecuteScalar());
+                    tx.Commit();
+                    return saleId;
+                }
+            }
+        }
+
+        private static int InsertTransaction(int saleId, decimal amount, string method, string status, string remarks)
         {
             using (var con = new SqlConnection(cs))
             using (var cmd = con.CreateCommand())
@@ -191,8 +273,7 @@ INSERT INTO Transactions (SaleID, Amount, PaymentMethod, Status, TransactionDate
 VALUES (@SaleID, @Amount, @Method, @Status, DATEADD(HOUR, 8, GETUTCDATE()), @Remarks);
 SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
-
-                cmd.Parameters.Add("@SaleID", SqlDbType.Int).Value = bookingId;
+                cmd.Parameters.Add("@SaleID", SqlDbType.Int).Value = saleId;
 
                 var pAmount = cmd.Parameters.Add("@Amount", SqlDbType.Decimal);
                 pAmount.Precision = 18;
@@ -201,7 +282,6 @@ SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
                 cmd.Parameters.Add("@Method", SqlDbType.NVarChar, 50).Value = method;
                 cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = status;
-                cmd.Parameters.Add("@NowUtc", SqlDbType.DateTime2).Value = DateTime.UtcNow;
                 cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar, 255).Value = remarks ?? "";
 
                 con.Open();
@@ -209,7 +289,7 @@ SELECT CAST(SCOPE_IDENTITY() AS INT);";
             }
         }
 
-        private static bool ExistsDuplicateTx(int bookingId, decimal amount, string reference)
+        private static bool ExistsDuplicateTx(int saleId, decimal amount, string reference)
         {
             using (var con = new SqlConnection(cs))
             using (var cmd = con.CreateCommand())
@@ -217,10 +297,10 @@ SELECT CAST(SCOPE_IDENTITY() AS INT);";
                 cmd.CommandText = @"
 SELECT 1
 FROM Transactions
-WHERE SaleID=@BID
+WHERE SaleID = @SID
   AND ABS(Amount - @Amt) < 0.005
   AND Remarks LIKE @Ref;";
-                cmd.Parameters.Add("@BID", SqlDbType.Int).Value = bookingId;
+                cmd.Parameters.Add("@SID", SqlDbType.Int).Value = saleId;
 
                 var pAmt = cmd.Parameters.Add("@Amt", SqlDbType.Decimal);
                 pAmt.Precision = 18;
@@ -251,9 +331,11 @@ WHERE SaleID=@BID
         private static int GetBookingIdFromReference(string reference)
         {
             if (string.IsNullOrWhiteSpace(reference)) return 0;
+
             using (var con = new SqlConnection(cs))
             using (var cmd = con.CreateCommand())
             {
+                // Match whatever pattern you save the reference in (adjust if needed)
                 cmd.CommandText = "SELECT TOP 1 BookingID FROM Bookings WHERE Notes LIKE @ref;";
                 cmd.Parameters.Add("@ref", SqlDbType.NVarChar, 255).Value = "%PayMongoRef: " + reference + "%";
                 con.Open();
@@ -262,23 +344,25 @@ WHERE SaleID=@BID
             }
         }
 
-        private static decimal GetRemainingForBooking(int bookingId)
+        /// <summary>
+        /// Remaining balance for a Sale (Booking total - sum of Transactions on that Sale).
+        /// </summary>
+        private static decimal GetRemainingForSale(int saleId)
         {
             using (var con = new SqlConnection(cs))
             using (var cmd = con.CreateCommand())
             {
                 cmd.CommandText = @"
 SELECT CAST(b.Price - ISNULL(t.TotalPaid,0) AS decimal(18,2)) AS Remaining
-FROM Bookings b
-OUTER APPLY (SELECT SUM(Amount) AS TotalPaid FROM Transactions WHERE SaleID=b.BookingID) t
-WHERE b.BookingID=@B;";
-                cmd.Parameters.Add("@B", SqlDbType.Int).Value = bookingId;
+FROM Sales s
+JOIN Bookings b ON b.BookingID = s.BookingID
+OUTER APPLY (SELECT SUM(Amount) AS TotalPaid FROM Transactions WHERE SaleID = s.SaleID) t
+WHERE s.SaleID = @SID;";
+                cmd.Parameters.Add("@SID", SqlDbType.Int).Value = saleId;
                 con.Open();
                 var r = cmd.ExecuteScalar();
                 return (r == null || r == DBNull.Value) ? 0m : Convert.ToDecimal(r, CultureInfo.InvariantCulture);
             }
         }
-
-        public bool IsReusable => false;
     }
 }

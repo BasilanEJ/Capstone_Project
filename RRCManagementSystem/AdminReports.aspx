@@ -196,6 +196,7 @@
         <asp:BoundField DataField="SnapshotDate" HeaderText="Snapshot Date" />
     </Columns>
 </asp:GridView>
+  <asp:Button ID="btnExportInventorySnapshots" runat="server" Text="Export Inventory Snapshots to PDF" CssClass="btn-sales" OnClick="btnExportInventorySnapshots_Click" />
 
 <h3>📦 Inventory Details</h3>
 <asp:GridView ID="gvInventory" runat="server" AutoGenerateColumns="False" CssClass="custom-table">
@@ -210,6 +211,29 @@
     </Columns>
 </asp:GridView>
 <asp:Button ID="btnExportInventory" runat="server" Text="Export Inventory to PDF" CssClass="btn-sales" OnClick="btnExportInventory_Click" />
+
+
+<h3>💰 Sales</h3>
+
+<div class="mb-2">
+    <asp:Label ID="lblSalesSummary" runat="server" CssClass="text-muted"></asp:Label>
+</div>
+
+<asp:GridView ID="gvSales" runat="server" AutoGenerateColumns="False" CssClass="custom-table">
+    <Columns>
+        <asp:BoundField DataField="TransactionIDFormatted" HeaderText="Txn ID" />
+        <asp:BoundField DataField="ClientName" HeaderText="Client" />
+        <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="{0:N2}" HtmlEncode="False" />
+        <asp:BoundField DataField="PaymentMethod" HeaderText="Method" />
+        <asp:BoundField DataField="Status" HeaderText="Status" />
+        <asp:BoundField DataField="TransactionDatePHT" HeaderText="Date" />
+        <asp:BoundField DataField="Remarks" HeaderText="Remarks" />
+    </Columns>
+</asp:GridView>
+
+<asp:Button ID="btnExportSales" runat="server" Text="Export Sales to PDF" CssClass="btn-sales" OnClick="btnExportSales_Click" />
+
+
 
 <h3>🛠️ Equipment Status</h3>
 <asp:GridView ID="gvEquipment" runat="server" AutoGenerateColumns="False" CssClass="custom-table">

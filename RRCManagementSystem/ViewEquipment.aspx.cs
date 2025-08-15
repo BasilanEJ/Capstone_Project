@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using System.Collections.Generic;
 
 namespace RRCManagementSystem
 {
@@ -49,24 +50,21 @@ namespace RRCManagementSystem
         private bool HasViewPermission(int adminId, string moduleName)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
+            using (SqlCommand cmd = new SqlCommand(
+                "SELECT CanView FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName", con))
             {
-                string query = "SELECT CanView FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
+                cmd.Parameters.AddWithValue("@UserID", adminId);
+                cmd.Parameters.AddWithValue("@ModuleName", moduleName);
 
-                using (SqlCommand cmd = new SqlCommand(query, con))
+                try
                 {
-                    cmd.Parameters.AddWithValue("@UserID", adminId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-
-                    try
-                    {
-                        con.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
+                    con.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && result != DBNull.Value && Convert.ToBoolean(result);
+                }
+                catch
+                {
+                    return false;
                 }
             }
         }
@@ -80,47 +78,63 @@ namespace RRCManagementSystem
                     con.Open();
 
                     // Step 1: Get all equipments
-                    string queryEquipments = @"
-                        SELECT EquipmentID, Name, Status AS OriginalStatus, ImagePath, CreatedAt 
-                        FROM EquipmentStatus 
-                        ORDER BY CreatedAt DESC";
+                    const string queryEquipments = @"
+                        SELECT EquipmentID, Name, Status AS OriginalStatus, ImagePath, CreatedAt
+                        FROM EquipmentStatus
+                        ORDER BY CreatedAt DESC;";
 
-                    SqlDataAdapter daEquipments = new SqlDataAdapter(queryEquipments, con);
                     DataTable dtEquipments = new DataTable();
-                    daEquipments.Fill(dtEquipments);
+                    using (SqlDataAdapter daEquipments = new SqlDataAdapter(queryEquipments, con))
+                    {
+                        daEquipments.Fill(dtEquipments);
+                    }
 
-                    // Step 2: Get assigned equipments with count
-                    string queryAssigned = @"
+                    // Step 2: Get assigned equipments COUNT for the selected date (date-only)
+                    const string queryAssigned = @"
                         SELECT BE.EquipmentID, COUNT(*) AS AssignmentsCount
-                        FROM BookingEquipments BE
-                        INNER JOIN Bookings B ON BE.BookingID = B.BookingID
-                        WHERE CAST(B.ScheduledDate AS DATE) = @ScheduledDate
-                        GROUP BY BE.EquipmentID";
+                        FROM BookingEquipments AS BE
+                        INNER JOIN Bookings AS B ON BE.BookingID = B.BookingID
+                        WHERE CAST(B.ScheduledDate AS date) = @ScheduledDate
+                        GROUP BY BE.EquipmentID;";
 
-                    SqlCommand cmdAssigned = new SqlCommand(queryAssigned, con);
-                    cmdAssigned.Parameters.AddWithValue("@ScheduledDate", targetDate);
-
-                    SqlDataAdapter daAssigned = new SqlDataAdapter(cmdAssigned);
                     DataTable dtAssigned = new DataTable();
-                    daAssigned.Fill(dtAssigned);
+                    using (SqlCommand cmdAssigned = new SqlCommand(queryAssigned, con))
+                    {
+                        cmdAssigned.Parameters.Add("@ScheduledDate", SqlDbType.Date).Value = targetDate.Date; // ✅ date-only
+                        using (SqlDataAdapter daAssigned = new SqlDataAdapter(cmdAssigned))
+                        {
+                            daAssigned.Fill(dtAssigned);
+                        }
+                    }
 
-                    var assignedEquipmentsCount = dtAssigned.AsEnumerable()
-                        .ToDictionary(
-                            r => r.Field<int>("EquipmentID"),
-                            r => r.Field<int>("AssignmentsCount")
-                        );
+                    Dictionary<int, int> assignedEquipmentsCount = dtAssigned
+                        .AsEnumerable()
+                        .ToDictionary(r => r.Field<int>("EquipmentID"),
+                                      r => r.Field<int>("AssignmentsCount"));
 
-                    // Step 3: Add derived status and formatted ID
-                    var equipmentList = dtEquipments.AsEnumerable().Select(eq => new
+                    // Step 3: Build list with derived Status + optional status filter
+                    var allEquipment = dtEquipments.AsEnumerable().Select(eq => new
                     {
                         EquipmentID = eq.Field<int>("EquipmentID"),
                         FormattedID = "Equipment" + eq.Field<int>("EquipmentID").ToString("D3"),
                         Name = eq.Field<string>("Name"),
-                        ImagePath = eq.Field<string>("ImagePath"),
+                        ImagePath = eq.Field<string>("ImagePath") ?? string.Empty,
                         CreatedAt = eq.Field<DateTime>("CreatedAt"),
-                        Status = assignedEquipmentsCount.ContainsKey(eq.Field<int>("EquipmentID")) && assignedEquipmentsCount[eq.Field<int>("EquipmentID")] >= 2
-                            ? "Unavailable" : "Available"
-                    }).ToList();
+                        Status = (assignedEquipmentsCount.ContainsKey(eq.Field<int>("EquipmentID"))
+                                  && assignedEquipmentsCount[eq.Field<int>("EquipmentID")] >= 2)
+                                 ? "Unavailable"
+                                 : "Available"
+                    });
+
+                    // Optional dropdown filter: expects values "All", "Available", "Unavailable"
+                    string wanted = (ddlStatus.SelectedValue ?? "All").Trim();
+                    if (!string.Equals(wanted, "All", StringComparison.OrdinalIgnoreCase))
+                    {
+                        allEquipment = allEquipment.Where(x =>
+                            string.Equals(x.Status, wanted, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    var equipmentList = allEquipment.ToList();
 
                     gvEquipment.DataSource = equipmentList;
                     gvEquipment.DataBind();
@@ -157,7 +171,7 @@ namespace RRCManagementSystem
         private void FilterAndLoadEquipment()
         {
             DateTime selectedDate = DateTime.TryParse(txtFilterDate.Text, out DateTime date)
-                ? date
+                ? date.Date
                 : DateTime.Today;
 
             LoadEquipmentsWithAvailability(selectedDate);
@@ -172,17 +186,15 @@ namespace RRCManagementSystem
         private void ShowSwal(string icon, string title, string text)
         {
             string script = $@"Swal.fire({{
-        icon: '{icon}', title: '{title}', text: '{text}',
-        showConfirmButton: false, timer: 1800
-    }});";
+                icon: '{icon}', title: '{title}', text: '{text}',
+                showConfirmButton: false, timer: 1800
+            }});";
             var key = Guid.NewGuid().ToString();
             if (ScriptManager.GetCurrent(this) != null)
                 ScriptManager.RegisterStartupScript(this, GetType(), key, script, true);
             else
                 ClientScript.RegisterStartupScript(GetType(), key, script, true);
         }
-
-
 
         protected void gvEquipment_RowCommand(object sender, GridViewCommandEventArgs e)
         {
@@ -209,13 +221,10 @@ namespace RRCManagementSystem
             }
         }
 
-
-
         public string EncodeID(string id)
         {
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(id);
             return Convert.ToBase64String(bytes).Replace("=", "").Replace("+", "-").Replace("/", "_");
         }
-
     }
 }

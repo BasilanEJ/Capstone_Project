@@ -57,7 +57,7 @@
           .social-icons a{ font-size:16px; }
         }
 
-        /* ===================== Modern Floating Chat (Glass + Dark Mode) ===================== */
+        /* ===================== Modern Floating Chat (Glass) ===================== */
         :root{
           --chat-accent:#0d6efd;
           --chat-bg:#ffffffcc;
@@ -68,22 +68,8 @@
           --chat-user:#e8f5e9;
           --shadow:0 12px 30px rgba(0,0,0,.15);
         }
-        .dark{
-          --chat-accent:#66b2ff;
-          --chat-bg:#0b1220cc;
-          --chat-border:#1f2937;
-          --chat-text:#e5e7eb;
-          --chat-muted:#9ca3af;
-          --chat-bot:#0f1a33;
-          --chat-user:#0d2814;
-          --shadow:0 12px 30px rgba(0,0,0,.45);
-          background-color:#0b1220;
-          color:#e5e7eb;
-        }
 
-        .rrc-chat{
-          position:fixed; right:20px; bottom:20px; z-index:2000; pointer-events:none;
-        }
+        .rrc-chat{ position:fixed; right:20px; bottom:20px; z-index:2000; pointer-events:none; }
         .rrc-chat *{ box-sizing:border-box; }
         .rrc-chat .chat-toggle{
           pointer-events:auto;
@@ -116,18 +102,11 @@
         }
         .chat-header .title{ display:flex; align-items:center; gap:10px; color:var(--chat-text); font-weight:700; }
         .chat-header .status{ font-size:12px; color:var(--chat-muted); }
-        .chat-header .icon-btn{
-          border:0; background:transparent; width:36px; height:36px; border-radius:10px; cursor:pointer; color:var(--chat-text);
-        }
+        .chat-header .icon-btn{ border:0; background:transparent; width:36px; height:36px; border-radius:10px; cursor:pointer; color:var(--chat-text); }
         .chat-header .icon-btn:hover{ background:rgba(13,110,253,.08); }
 
-        .chat-body{
-          height:480px; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth;
-        }
-        .msg{
-          max-width:86%; padding:10px 12px; border-radius:12px; line-height:1.4; font-size:14px; color:var(--chat-text);
-          box-shadow:0 2px 8px rgba(0,0,0,.06);
-        }
+        .chat-body{ height:480px; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth; }
+        .msg{ max-width:86%; padding:10px 12px; border-radius:12px; line-height:1.4; font-size:14px; color:var(--chat-text); box-shadow:0 2px 8px rgba(0,0,0,.06); }
         .msg.bot{ background:var(--chat-bot); border:1px solid var(--chat-border); border-top-left-radius:4px; }
         .msg.user{ background:var(--chat-user); border-top-right-radius:4px; margin-left:auto; }
         .msg .time{ display:block; margin-top:6px; font-size:11px; color:var(--chat-muted); }
@@ -135,39 +114,18 @@
         @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
 
         .quick-bar{ display:flex; flex-wrap:wrap; gap:8px; }
-        .quick-chip{
-          border:1px solid var(--chat-border); background:transparent; color:var(--chat-text);
-          padding:6px 10px; border-radius:999px; font-size:12px; cursor:pointer;
-        }
+        .quick-chip{ border:1px solid var(--chat-border); background:transparent; color:var(--chat-text); padding:6px 10px; border-radius:999px; font-size:14px; cursor:pointer; }
         .quick-chip:hover{ border-color:var(--chat-accent); color:var(--chat-accent); }
 
-        .typing{ display:inline-flex; gap:4px; align-items:center; padding:8px 10px; border-radius:12px;
-          background:var(--chat-bot); border:1px solid var(--chat-border); }
+        .typing{ display:inline-flex; gap:4px; align-items:center; padding:8px 10px; border-radius:12px; background:var(--chat-bot); border:1px solid var(--chat-border); }
         .dot{ width:6px; height:6px; border-radius:50%; background:var(--chat-muted); opacity:.6; animation:bounce 1.2s infinite; }
         .dot:nth-child(2){ animation-delay:.15s; } .dot:nth-child(3){ animation-delay:.3s; }
         @keyframes bounce{ 0%,80%,100%{transform:scale(.8);} 40%{transform:scale(1);} }
 
-        .chat-input{
-          border-top:1px solid var(--chat-border); padding:10px; display:flex; gap:8px; align-items:flex-end;
-          background:linear-gradient(0deg, rgba(13,110,253,.06), rgba(13,110,253,0));
+        .chat-input{ border-top:1px solid var(--chat-border); padding:10px; display:flex; gap:8px; align-items:flex-end; background:linear-gradient(0deg, rgba(13,110,253,.06), rgba(13,110,253,0)); }
+        .chat-input .notice { font-size:13px; color:var(--chat-muted); padding:6px 2px; }
 
-        }
-        .chat-input textarea{
-          resize:none; width:100%; min-height:42px; max-height:140px;
-          border:1px solid var(--chat-border); background:transparent; color:var(--chat-text);
-          border-radius:12px; padding:10px 12px; outline:none;
-        }
-        .chat-input textarea::placeholder{ color:var(--chat-muted); }
-        .chat-input .send-btn{
-          border:0; background:var(--chat-accent); color:#fff; border-radius:12px; padding:10px 14px;
-          display:flex; align-items:center; justify-content:center; height:42px; min-width:46px; cursor:pointer;
-        }
-        .chat-input .send-btn:disabled{ opacity:.6; cursor:not-allowed; }
-
-        @media (max-width: 576px){
-          .rrc-chat{ right:12px; bottom:12px; }
-          .rrc-chat .chat-panel{ width:min(420px, 96vw); }
-        }
+        @media (max-width: 576px){ .rrc-chat{ right:12px; bottom:12px; } .rrc-chat .chat-panel{ width:min(420px, 96vw); } }
     </style>
 </head>
 
@@ -204,7 +162,7 @@
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </div>
 
-        <!-- ===================== Floating Modern Chat Assistant ===================== -->
+        <!-- ===================== Floating Modern Chat Assistant (FAQ-only) ===================== -->
         <div class="rrc-chat" id="rrcChat" aria-live="polite">
             <!-- Toggle button -->
             <button type="button" class="chat-toggle" id="chatToggle" aria-label="Open chat">
@@ -226,10 +184,7 @@
                         </div>
                     </div>
                     <div class="d-flex gap-1">
-                        <button type="button" class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
-                            <i class="fa-solid fa-moon"></i>
-                        </button>
-                       <button type="button" class="icon-btn" id="closeChat" title="Close" aria-label="Close">
+                        <button type="button" class="icon-btn" id="closeChat" title="Close" aria-label="Close">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -238,24 +193,44 @@
                 <div class="chat-body" id="chatBody">
                     <!-- Welcome message -->
                     <div class="msg bot fade-in">
-                        Hi! I’m your RRC Assistant. Ask me about bookings, services, warranties, or inspections.
+                        Hi! I’m your RRC Assistant. Tap a question below to see answers about bookings, services, warranties, or inspections.
                         <span class="time" data-time></span>
                     </div>
-                    <!-- Quick replies -->
+
+                    <!-- Quick replies (FAQ buttons) -->
                     <div class="quick-bar" id="quickBar">
-                        <button type="button" class="quick-chip">What services do you offer?</button>
-                        <button type="button" class="quick-chip">How to book?</button>
-                        <button type="button" class="quick-chip">Do you have free inspection?</button>
-                        <button type="button" class="quick-chip">Signs of termites?</button>
+                        <!-- Booking -->
+                        <button type="button" class="quick-chip" data-question="How to book?">How to book?</button>
+                        <button type="button" class="quick-chip" data-question="Do you have free inspection?">Free inspection?</button>
+                        <button type="button" class="quick-chip" data-question="What are your business hours?">Business hours?</button>
+
+                        <!-- Services -->
+                        <button type="button" class="quick-chip" data-question="What services do you offer?">Services offered</button>
+                        <button type="button" class="quick-chip" data-question="What is soil poisoning?">Soil poisoning</button>
+                        <button type="button" class="quick-chip" data-question="How does the reticulation system work?">Reticulation system</button>
+                        <button type="button" class="quick-chip" data-question="What is general pest control?">General pest control</button>
+                        <button type="button" class="quick-chip" data-question="Do you handle commercial pest control?">Commercial pest control</button>
+
+                        <!-- Safety & Warranty -->
+                        <button type="button" class="quick-chip" data-question="Is the treatment safe for kids and pets?">Kid/Pet safety</button>
+                        <button type="button" class="quick-chip" data-question="Do you provide a warranty?">Warranty</button>
+
+                        <!-- Termite Info -->
+                        <button type="button" class="quick-chip" data-question="What are the signs of termites?">Signs of termites</button>
+                        <button type="button" class="quick-chip" data-question="How does termite baiting work?">Baiting system</button>
+
+                        <!-- Coverage & Contact -->
+                        <button type="button" class="quick-chip" data-question="What areas do you cover?">Service areas</button>
+                        <button type="button" class="quick-chip" data-question="How can I contact you?">Contact info</button>
+
+                        <!-- Payments & Duration -->
+                        <button type="button" class="quick-chip" data-question="What payment methods do you accept?">Payment methods</button>
+                        <button type="button" class="quick-chip" data-question="How long does a treatment take?">Treatment duration</button>
+                        <button type="button" class="quick-chip" data-question="Do I need to leave the house during treatment?">Do I need to leave?</button>
                     </div>
                 </div>
 
-                <div class="chat-input">
-                    <textarea id="chatInput" rows="1" placeholder=""></textarea>
-                    <button type="button" class="send-btn" id="sendBtn" aria-label="Send">
-                        <i class="fa-solid fa-paper-plane"></i>
-                    </button>
-                </div>
+             
             </div>
         </div>
 
@@ -296,45 +271,38 @@
         })();
     </script>
 
-    <!-- ===== Modern Chat Assistant Logic ===== -->
+    <!-- ===== Modern Chat Assistant Logic (FAQ-only, no dark mode) ===== -->
     <script>
         (function () {
             const chat = document.getElementById('rrcChat');
             const toggle = document.getElementById('chatToggle');
-            const panel = chat.querySelector('.chat-panel');
             const closeBtn = document.getElementById('closeChat');
-            const themeToggle = document.getElementById('themeToggle');
             const bodyEl = document.getElementById('chatBody');
-            const input = document.getElementById('chatInput');
-            const sendBtn = document.getElementById('sendBtn');
             const quickBar = document.getElementById('quickBar');
 
-            // Persisted state
-            const savedTheme = localStorage.getItem('rrcTheme');
-            if (savedTheme === 'dark') document.body.classList.add('dark');
+            // Persisted open/close state only
             const savedOpen = localStorage.getItem('rrcChatOpen');
             if (savedOpen === '1') { chat.classList.add('open'); }
 
-            // Smart answers
-            const smartAnswers = [
-                { keywords: ["how can i book", "how to book", "make a booking", "set an appointment", "schedule service", "book a service", "how to avail", "avail service", "appointment", "book", "booking", "i want to book", "need to book"], answer: "You can sign up and submit an inquiry using the form on this page. We’ll contact you shortly!" },
-                { keywords: ["what services", "what service", "services do you offer", "available services", "treatments", "types of service", "pest control services", "termite treatment", "general pest treatment", "what treatments", "what do you treat", "service list", "services"], answer: "We offer Termite Control, General Pest Control, Soil Poisoning, Reticulation Systems, and more." },
-                { keywords: ["contact", "how do i contact", "contact info", "email", "phone number", "call", "reach you", "get in touch", "how to contact"], answer: "Email: rrcpestcontrol28@gmail.com. Smart: +63 947 721 7510 / +63 961 340 3036. Globe: +63 967 047 9074 / +63 967 047 9056." },
-                { keywords: ["location", "address", "where are you located", "branch", "office", "area", "where to find you", "head office", "service area"], answer: "We’re based in the Philippines (NCR focus) and also serve Batangas & Pangasinan." },
-                { keywords: ["business hours", "schedule", "what time are you open", "office hours", "open", "opening time", "available hours", "operating hours", "when are you open"], answer: "We’re available 24/7." },
-                { keywords: ["free inspection", "site visit", "initial check", "check my house", "free check up", "assessment", "do you inspect for free", "inspection fee"], answer: "Yes! FREE ocular inspections within serviceable areas. Send an inquiry and we’ll schedule a visit." },
-                { keywords: ["safe for pets", "safe for kids", "children", "pet friendly", "eco friendly", "toxic", "hazardous", "is it safe", "is your service safe"], answer: "Our treatments are pet- and child-safe, using eco-friendly solutions approved by local authorities." },
-                { keywords: ["signs of termites", "how to know", "termites", "evidence", "infestation", "check for termites", "do i have termites", "termite problem"], answer: "Watch for hollow wood, mud tubes, droppings, and discarded wings near wooden areas/windows." },
-                { keywords: ["baiting system", "how baiting works", "termite bait", "station", "colony elimination", "bait station", "how to eliminate termites"], answer: "Bait stations attract termites to a slow-acting toxic bait they share in the colony, eliminating it." },
-                { keywords: ["soil poisoning", "what is soil treatment", "termites from ground", "soil injection", "underground treatment", "treatment for soil"], answer: "We apply termiticide to the soil foundation to prevent termite entry from underground." },
-                { keywords: ["reticulation", "reticulation system", "pipe treatment", "how reticulation works", "underfloor piping", "chemical pipe system"], answer: "Pipes installed during construction let us re-apply chemicals later without drilling." },
-                { keywords: ["general pest control", "common pests", "household pests", "cockroach", "mosquito", "rat", "mouse", "ant", "bed bug", "insects", "bugs", "pest control"], answer: "General pest control includes cockroaches, mosquitoes, ants, bed bugs, rats, spiders, and more." },
-                { keywords: ["commercial pest control", "business", "office", "restaurant", "warehouse", "industrial", "shop", "commercial treatment"], answer: "Yes, we service offices, restaurants/food businesses, warehouses, and industrial sites." },
-                { keywords: ["payment", "how to pay", "gcash", "bank", "mode of payment", "accept credit", "payment options", "how can i pay", "cash only"], answer: "We currently accept cash. Bank transfers may be arranged with admin coordination." },
-                { keywords: ["how long does it take", "treatment time", "how long", "duration", "service duration", "time needed"], answer: "Most treatments take 3–4 hours depending on severity and area size." },
-                { keywords: ["do i need to leave", "stay inside", "evacuate", "leave the house", "safe to stay", "can i stay during treatment"], answer: "Usually you can stay. If temporary evacuation is needed, we’ll let you know before the service." },
-                { keywords: ["warranty", "guarantee", "after service", "follow up", "come back if not gone", "return visit"], answer: "Warranties vary from 30 days up to 2 years depending on service. Confirm with the assigned technician/inspector." },
-                { keywords: ["certified", "licensed", "legit", "registered", "qualified", "legal company"], answer: "We’re a registered provider with trained and licensed technicians." }
+            // ---- ANSWER BANK (FAQ) ----
+            const FAQ = [
+                { q: "How to book?", a: "You can sign up and submit an inquiry using the form on this page. We’ll contact you shortly to schedule!" },
+                { q: "Do you have free inspection?", a: "Yes! FREE ocular inspections within serviceable areas. Send an inquiry and we’ll set a visit." },
+                { q: "What are your business hours?", a: "We’re available 24/7." },
+                { q: "What services do you offer?", a: "We offer Termite Control, General Pest Control, Soil Poisoning, Reticulation Systems, and more." },
+                { q: "What is soil poisoning?", a: "We apply termiticide to the soil foundation to prevent termite entry from underground." },
+                { q: "How does the reticulation system work?", a: "Pipes installed during construction let us re-apply chemicals later without drilling." },
+                { q: "What is general pest control?", a: "General pest control includes cockroaches, mosquitoes, ants, bed bugs, rats, spiders, and more." },
+                { q: "Do you handle commercial pest control?", a: "Yes, we service offices, restaurants/food businesses, warehouses, and industrial sites." },
+                { q: "Is the treatment safe for kids and pets?", a: "Our treatments are pet- and child-safe, using eco-friendly solutions approved by local authorities." },
+                { q: "Do you provide a warranty?", a: "Warranties range from 30 days up to 2 years depending on the service. Confirm with your technician/inspector." },
+                { q: "What are the signs of termites?", a: "Watch for hollow wood, mud tubes, droppings, and discarded wings near wooden areas/windows." },
+                { q: "How does termite baiting work?", a: "Bait stations attract termites to a slow-acting toxic bait they share in the colony, eliminating it." },
+                { q: "What areas do you cover?", a: "We’re based in the Philippines (NCR focus) and also serve Batangas & Pangasinan." },
+                { q: "How can I contact you?", a: "Email: rrcpestcontrol28@gmail.com. Smart: +63 947 721 7510 / +63 961 340 3036. Globe: +63 967 047 9074 / +63 967 047 9056." },
+                { q: "What payment methods do you accept?", a: "We currently accept cash. Bank transfers may be arranged with admin coordination." },
+                { q: "How long does a treatment take?", a: "Most treatments take 3–4 hours depending on severity and area size." },
+                { q: "Do I need to leave the house during treatment?", a: "Usually you can stay. If temporary evacuation is needed, we’ll let you know before the service." }
             ];
 
             function nowTime() {
@@ -360,37 +328,32 @@
                 return box;
             }
 
-            function findSmartAnswer(userInput) {
-                const clean = userInput.toLowerCase().replace(/[^\w\s]/g, '');
-                for (const item of smartAnswers) {
-                    for (const k of item.keywords) {
-                        if (clean.includes(k)) return item.answer;
-                    }
-                }
-                return "Sorry, I don’t have an answer to that. You can send us an inquiry and we’ll get back to you.";
+            function answerFor(question) {
+                const qClean = String(question).trim().toLowerCase();
+                const hit = FAQ.find(x => x.q.trim().toLowerCase() === qClean);
+                return hit ? hit.a : "Sorry, that’s not in our FAQs yet.";
             }
 
-            function send(message) {
-                if (!message || !message.trim()) return;
-                addMsg(message.trim(), 'user');
+            function sendFAQ(questionText) {
+                addMsg(questionText, 'user');
                 const typing = addTyping();
                 setTimeout(() => {
                     typing.remove();
-                    const reply = findSmartAnswer(message);
-                    addMsg(reply, 'bot');
-                }, 550);
+                    addMsg(answerFor(questionText), 'bot');
+                }, 450);
             }
 
-            // Quick replies
+            // Wire quick buttons (no typing)
             if (quickBar) {
                 quickBar.addEventListener('click', (e) => {
                     const btn = e.target.closest('.quick-chip');
                     if (!btn) return;
-                    send(btn.textContent);
+                    const q = btn.getAttribute('data-question') || btn.textContent.trim();
+                    sendFAQ(q);
                 });
             }
 
-            // Toggle open/close
+            // Toggle open/close (no page scroll changes)
             toggle.addEventListener('click', () => {
                 chat.classList.toggle('open');
                 localStorage.setItem('rrcChatOpen', chat.classList.contains('open') ? '1' : '0');
@@ -400,24 +363,7 @@
                 localStorage.setItem('rrcChatOpen', '0');
             });
 
-            // Theme toggle
-            themeToggle.addEventListener('click', () => {
-                document.body.classList.toggle('dark');
-                localStorage.setItem('rrcTheme', document.body.classList.contains('dark') ? 'dark' : 'light');
-            });
-
-            // Input behaviors
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    const val = input.value;
-                    input.value = '';
-                    send(val);
-                }
-            });
-            sendBtn.addEventListener('click', () => { const v = input.value; input.value = ''; send(v); });
-
-            // Set initial welcome time
+            // Set initial welcome time if present
             const t = document.querySelector('[data-time]');
             if (t) { t.textContent = nowTime(); }
         })();

@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
-using RRCManagementSystem.Helpers; // AESHelper
+using RRCManagementSystem.Helpers; // AESHelper, BlockchainLogger
 
 // Avoid ListItem ambiguity with iTextSharp
 using WebListItem = System.Web.UI.WebControls.ListItem;
@@ -45,16 +45,14 @@ namespace RRCManagementSystem
         }
 
         // --- Time helpers (Philippine Time) ------------------------------
-
         private static DateTime NowPht()
         {
-            // Windows ID for Manila time zone
+            // Windows TZ ID for Manila (same offset): "Singapore Standard Time"
             var tz = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
         }
 
         // --- UI/Data ------------------------------------------------------
-
         private void LoadClients()
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -89,7 +87,11 @@ ORDER BY LastName, FirstName;";
             {
                 conn.Open();
 
-                // Get the latest payable booking (Assigned or Approved)
+                // 1) Get the latest payable booking (Assigned or Approved)
+                int clientId = Convert.ToInt32(ddlClients.SelectedValue);
+                int bookingId = 0;
+                decimal price = 0m;
+
                 const string bookingQuery = @"
 SELECT TOP 1 b.BookingID, b.Price
 FROM Bookings b
@@ -99,8 +101,7 @@ ORDER BY b.CreatedAt DESC;";
 
                 using (SqlCommand cmd = new SqlCommand(bookingQuery, conn))
                 {
-                    cmd.Parameters.AddWithValue("@ClientID", ddlClients.SelectedValue);
-
+                    cmd.Parameters.AddWithValue("@ClientID", clientId);
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (!reader.Read())
@@ -109,34 +110,35 @@ ORDER BY b.CreatedAt DESC;";
                             return;
                         }
 
-                        int bookingId = Convert.ToInt32(reader["BookingID"]);
-                        decimal price = Convert.ToDecimal(reader["Price"]);
-                        reader.Close(); // close before next command
+                        bookingId = Convert.ToInt32(reader["BookingID"]);
+                        price = Convert.ToDecimal(reader["Price"]);
+                    }
+                }
 
-                        // Sum valid payments for that booking
-                        const string paymentQuery = @"
+                // 2) Ensure a Sales row exists and get SaleID
+                int saleId = GetOrCreateSaleId(bookingId);
+
+                // 3) Sum valid payments for that SaleID
+                const string paymentQuery = @"
 SELECT ISNULL(SUM(Amount), 0)
 FROM Transactions
-WHERE SaleID = @BookingID
+WHERE SaleID = @SaleID
   AND (Status IS NULL OR Status NOT IN ('Refunded','Voided'));";
 
-                        using (SqlCommand payCmd = new SqlCommand(paymentQuery, conn))
-                        {
-                            payCmd.Parameters.AddWithValue("@BookingID", bookingId);
-                            decimal totalPayments = Convert.ToDecimal(payCmd.ExecuteScalar());
+                using (SqlCommand payCmd = new SqlCommand(paymentQuery, conn))
+                {
+                    payCmd.Parameters.AddWithValue("@SaleID", saleId);
+                    decimal totalPayments = Convert.ToDecimal(payCmd.ExecuteScalar());
 
-                            decimal remaining = price - totalPayments;
-                            if (remaining < 0) remaining = 0;
+                    decimal remaining = price - totalPayments;
+                    if (remaining < 0) remaining = 0;
 
-                            txtRemainingBalance.Text = remaining.ToString("N2");
-                        }
-                    }
+                    txtRemainingBalance.Text = remaining.ToString("N2");
                 }
             }
         }
 
         // --- Save ---------------------------------------------------------
-
         protected void btnSave_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(ddlClients.SelectedValue) || string.IsNullOrEmpty(ddlPaymentMethod.SelectedValue))
@@ -202,10 +204,18 @@ Swal.fire({
             }
         }
 
+        /// <summary>
+        /// Inserts the manual/over-the-counter payment into Transactions (PHT timestamp),
+        /// then appends a signed, chained blockchain log using the shared helper.
+        /// </summary>
         private int SavePaymentAndBlockchain(decimal amount, string performedBy)
         {
-            int bookingId = GetLatestPayableBookingId(Convert.ToInt32(ddlClients.SelectedValue));
+            int clientId = Convert.ToInt32(ddlClients.SelectedValue);
+            int bookingId = GetLatestPayableBookingId(clientId);
             if (bookingId == 0) throw new InvalidOperationException("No payable booking found for this client.");
+
+            // Ensure a Sales row exists for this booking
+            int saleId = GetOrCreateSaleId(bookingId);
 
             // Save encrypted receipt image
             string receiptFolder = Server.MapPath("~/Receipts/");
@@ -223,8 +233,11 @@ Swal.fire({
                 File.WriteAllBytes(savePath, encrypted);
             }
 
+            // Optional: clamp overly long remarks to avoid exceeding column length (e.g., nvarchar(255))
+            string remarks = (txtRemarks.Text ?? string.Empty).Trim();
+            if (remarks.Length > 255) remarks = remarks.Substring(0, 255);
+
             int transactionId;
-            DateTime nowPht = NowPht();
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -233,67 +246,68 @@ Swal.fire({
 
                 try
                 {
-                    // 1) Insert Transaction (PHT timestamp)
+                    // 1) Insert Transaction — PHT timestamp from DB (no app-server clock drift)
                     const string insertTransaction = @"
 INSERT INTO Transactions
     (SaleID, Amount, TransactionDate, PaymentMethod, Status, PerformedBy, Remarks, Receipt)
 OUTPUT INSERTED.TransactionID
 VALUES
-    (@SaleID, @Amount, @NowPht, @PaymentMethod, 'Manual Adjustment', @PerformedBy, @Remarks, @Receipt);";
+    (@SaleID, @Amount, DATEADD(HOUR, 8, GETUTCDATE()), @PaymentMethod, 'Manual Adjustment', @PerformedBy, @Remarks, @Receipt);";
 
                     using (SqlCommand cmd = new SqlCommand(insertTransaction, conn, trans))
                     {
-                        cmd.Parameters.AddWithValue("@SaleID", bookingId);
-                        cmd.Parameters.AddWithValue("@Amount", amount);
-                        cmd.Parameters.AddWithValue("@NowPht", nowPht);
+                        cmd.Parameters.AddWithValue("@SaleID", saleId);
+
+                        // Explicit precision/scale for decimal amount
+                        var pAmt = cmd.Parameters.Add("@Amount", SqlDbType.Decimal);
+                        pAmt.Precision = 18;
+                        pAmt.Scale = 2;
+                        pAmt.Value = amount;
+
                         cmd.Parameters.AddWithValue("@PaymentMethod", ddlPaymentMethod.SelectedValue);
                         cmd.Parameters.AddWithValue("@PerformedBy", performedBy);
-                        cmd.Parameters.AddWithValue("@Remarks", txtRemarks.Text.Trim());
+                        cmd.Parameters.AddWithValue("@Remarks", remarks);
                         cmd.Parameters.AddWithValue("@Receipt", "~/Receipts/" + receiptFileName);
 
                         transactionId = (int)cmd.ExecuteScalar();
                     }
 
-                    // 2) Insert Blockchain (PHT timestamp)
-                    string saleDataJson = $@"{{
-  ""TransactionID"": ""{transactionId}"",
-  ""SaleID"": ""{bookingId}"",
-  ""Amount"": ""{amount}"",
-  ""PaymentMethod"": ""{ddlPaymentMethod.SelectedValue}"",
-  ""Status"": ""Manual Adjustment"",
-  ""PerformedBy"": ""{performedBy}"",
-  ""Remarks"": ""{txtRemarks.Text.Trim()}"",
-  ""TransactionDate"": ""{nowPht:yyyy-MM-dd HH:mm:ss}""
-}}";
-
-                    string saleHash = GenerateSHA256Hash(saleDataJson);
-
-                    const string insertBlockchain = @"
-INSERT INTO BlockchainSalesLog (TransactionID, SaleHash, SaleDataJson, Timestamp)
-VALUES (@TransactionID, @SaleHash, @SaleDataJson, @NowPht);";
-
-                    using (SqlCommand cmd = new SqlCommand(insertBlockchain, conn, trans))
-                    {
-                        cmd.Parameters.AddWithValue("@TransactionID", transactionId);
-                        cmd.Parameters.AddWithValue("@SaleHash", saleHash);
-                        cmd.Parameters.AddWithValue("@SaleDataJson", saleDataJson);
-                        cmd.Parameters.AddWithValue("@NowPht", nowPht);
-                        cmd.ExecuteNonQuery();
-                    }
-
+                    // Commit DB work before writing blockchain
                     trans.Commit();
                 }
                 catch
                 {
-                    trans.Rollback();
+                    try { trans.Rollback(); } catch { /* ignore */ }
                     throw;
                 }
+            }
+
+            // 2) Append to blockchain (canonical JSON + HMAC + chaining) using UTC for consistency
+            try
+            {
+                BlockchainLogger.AppendSaleLog(connectionString, transactionId, new
+                {
+                    TransactionID = transactionId,
+                    ClientID = clientId,
+                    BookingID = bookingId,
+                    SaleID = saleId,
+                    Amount = amount,
+                    Currency = "PHP",
+                    Method = ddlPaymentMethod.SelectedValue,
+                    Status = "Manual Adjustment",
+                    PaidAtUtc = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                // Payment is saved; surface that blockchain failed
+                throw new ApplicationException("Payment saved but blockchain logging failed: " + ex.Message, ex);
             }
 
             return transactionId;
         }
 
-        // Use same PHT timestamp in the PDF
+        // Use same PHT timestamp in the PDF (display layer only)
         private string GenerateReceiptPDF(int transactionId, string performedBy)
         {
             string folderPath = Server.MapPath("~/ReceiptsPDF/");
@@ -355,20 +369,55 @@ ORDER BY CreatedAt DESC;";
             }
         }
 
-        // --- Utils --------------------------------------------------------
-
-        private string GenerateSHA256Hash(string rawData)
+        /// <summary>
+        /// Returns existing SaleID for BookingID, or creates a new Sales row using Bookings.ClientID.
+        /// </summary>
+        private int GetOrCreateSaleId(int bookingId)
         {
-            using (SHA256 sha256 = SHA256.Create())
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = con.CreateCommand())
             {
-                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder sb = new StringBuilder();
-                foreach (byte b in bytes)
-                    sb.Append(b.ToString("x2"));
-                return sb.ToString();
+                con.Open();
+                using (var tx = con.BeginTransaction())
+                {
+                    cmd.Transaction = tx;
+
+                    // 1) Try to find existing Sale for this Booking
+                    cmd.CommandText = "SELECT SaleID FROM Sales WHERE BookingID = @BookingID";
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.AddWithValue("@BookingID", bookingId);
+                    var existing = cmd.ExecuteScalar();
+                    if (existing != null && existing != DBNull.Value)
+                    {
+                        tx.Commit();
+                        return Convert.ToInt32(existing);
+                    }
+
+                    // 2) Get ClientID from Bookings
+                    cmd.CommandText = "SELECT ClientID FROM Bookings WHERE BookingID = @BookingID";
+                    var clientIdObj = cmd.ExecuteScalar();
+                    if (clientIdObj == null || clientIdObj == DBNull.Value)
+                        throw new InvalidOperationException("Booking has no ClientID.");
+
+                    int clientId = Convert.ToInt32(clientIdObj);
+
+                    // 3) Create the Sale row
+                    cmd.CommandText = @"
+INSERT INTO Sales (BookingID, ClientID)
+VALUES (@BookingID, @ClientID);
+SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.AddWithValue("@BookingID", bookingId);
+                    cmd.Parameters.AddWithValue("@ClientID", clientId);
+
+                    int saleId = Convert.ToInt32(cmd.ExecuteScalar());
+                    tx.Commit();
+                    return saleId;
+                }
             }
         }
 
+        // --- Utils --------------------------------------------------------
         private void ShowError(string message)
         {
             lblMessage.Text = message;
