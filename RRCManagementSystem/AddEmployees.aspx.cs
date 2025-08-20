@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -14,16 +15,13 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
+            // auth & role checks
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
-
             string role = Session["Role"].ToString();
-
-            // 🔐 Deny access for SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -31,8 +29,6 @@ namespace RRCManagementSystem
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
-
-            // 🔐 Module permission check (e.g., ManageEmployees)
             if (!HasPermissionToAdd(userId, "ManageEmployees"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
@@ -41,102 +37,75 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                // ✅ Your page logic (e.g., dropdown population)
                 ddlPosition.Items.Insert(0, new ListItem("Select Position", ""));
             }
         }
 
-
-
-
         private bool HasPermissionToAdd(int userId, string moduleName)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdminPermission_CanAdd", conn))
             {
-                string query = @"
-                    SELECT CanAdd 
-                    FROM AdminPermissions
-                    WHERE UserID = @UserID AND ModuleName = @ModuleName";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", userId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-
-                    try
-                    {
-                        conn.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && Convert.ToBoolean(result);
-                    }
-                    catch (Exception ex)
-                    {
-                        ShowMessage("❌ Error checking permissions: " + ex.Message, false);
-                        return false;
-                    }
-                }
+                conn.Open();
+                object result = cmd.ExecuteScalar();
+                return result != null && Convert.ToBoolean(result);
             }
         }
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
             int adminId = Convert.ToInt32(Session["UserID"]);
-
             if (!HasPermissionToAdd(adminId, "ManageEmployees"))
             {
                 ShowMessage("❌ You do not have permission to add employees.", false);
                 return;
             }
 
+            // basic validation
             if (string.IsNullOrWhiteSpace(txtLastName.Text) || string.IsNullOrWhiteSpace(txtFirstName.Text))
             {
                 ShowMessage("⚠ Last Name and First Name are required.", false);
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(txtEmail.Text) ||
-    !Regex.IsMatch(txtEmail.Text.Trim(), @"^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook)\.com$", RegexOptions.IgnoreCase))
+                !Regex.IsMatch(txtEmail.Text.Trim(), @"^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook)\.com$", RegexOptions.IgnoreCase))
             {
                 ShowMessage("⚠ Please enter a valid Gmail, Yahoo, or Outlook email address.", false);
                 return;
             }
-
-
             string phoneNumber = txtPhone.Text.Trim();
             if (!Regex.IsMatch(phoneNumber, @"^\d{11}$"))
             {
                 ShowMessage("⚠ Please enter a valid 11-digit phone number.", false);
                 return;
             }
-
             if (ddlPosition.SelectedIndex == 0)
             {
                 ShowMessage("⚠ Please select a Position.", false);
                 return;
             }
 
+            // upload
             string imagePath = string.Empty;
             if (fuProfilePicture.HasFile)
             {
-                string fileExtension = Path.GetExtension(fuProfilePicture.FileName).ToLower();
-                string[] allowedExtensions = { ".jpg", ".jpeg", ".png" };
-
-                if (!Array.Exists(allowedExtensions, ext => ext == fileExtension))
+                string ext = Path.GetExtension(fuProfilePicture.FileName).ToLowerInvariant();
+                string[] allowed = { ".jpg", ".jpeg", ".png" };
+                if (Array.IndexOf(allowed, ext) < 0)
                 {
                     ShowMessage("⚠ Only JPG, JPEG, and PNG files are allowed.", false);
                     return;
                 }
 
-                string fileName = Guid.NewGuid().ToString() + fileExtension;
-                string folderPath = Server.MapPath("~/EmployeeImages/");
-                string fullPath = Path.Combine(folderPath, fileName);
+                string fileName = Guid.NewGuid().ToString("N") + ext;
+                string folder = Server.MapPath("~/EmployeeImages/");
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
-                if (!Directory.Exists(folderPath))
-                {
-                    Directory.CreateDirectory(folderPath);
-                }
-
-                fuProfilePicture.SaveAs(fullPath);
+                fuProfilePicture.SaveAs(Path.Combine(folder, fileName));
                 imagePath = "~/EmployeeImages/" + fileName;
             }
             else
@@ -147,42 +116,38 @@ namespace RRCManagementSystem
 
             try
             {
-                using (SqlConnection conn = new SqlConnection(connectionString))
+                // optional: ensure email unique
+                if (IsEmployeeEmailTaken(txtEmail.Text.Trim()))
                 {
-                    string query = @"
-        INSERT INTO Employees (LastName, FirstName, MiddleName, Email, Phone, Position, ProfileImage, Status) 
-        VALUES (@LastName, @FirstName, @MiddleName, @Email, @Phone, @Position, @ProfileImage, @Status)";
-
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@LastName", txtLastName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@FirstName", txtFirstName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrWhiteSpace(txtMiddleName.Text) ? (object)DBNull.Value : txtMiddleName.Text.Trim());
-                        cmd.Parameters.AddWithValue("@Email", txtEmail.Text.Trim());
-                        cmd.Parameters.AddWithValue("@Phone", phoneNumber);
-                        cmd.Parameters.AddWithValue("@Position", ddlPosition.SelectedValue);
-                        cmd.Parameters.AddWithValue("@ProfileImage", imagePath);
-                        cmd.Parameters.AddWithValue("@Status", "Active");
-
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-
-                        string fullName = $"{txtLastName.Text.Trim()}, {txtFirstName.Text.Trim()}" +
-                                          (string.IsNullOrWhiteSpace(txtMiddleName.Text) ? "" : $" {txtMiddleName.Text.Trim()}");
-
-                        AddAuditLog(adminId, $"Added a new employee: {fullName}");
-                    }
+                    ShowMessage("⚠ This email is already used by another employee.", false);
+                    return;
                 }
 
+                int newId = InsertEmployee(
+                    txtLastName.Text.Trim(),
+                    txtFirstName.Text.Trim(),
+                    string.IsNullOrWhiteSpace(txtMiddleName.Text) ? null : txtMiddleName.Text.Trim(),
+                    txtEmail.Text.Trim(),
+                    phoneNumber,
+                    ddlPosition.SelectedValue,
+                    imagePath);
 
-                ShowMessage("✅ Employee added successfully!", true);
+                if (newId > 0)
+                {
+                    string fullName = $"{txtLastName.Text.Trim()}, {txtFirstName.Text.Trim()}"
+                                      + (string.IsNullOrWhiteSpace(txtMiddleName.Text) ? "" : $" {txtMiddleName.Text.Trim()}");
+                    AddAuditLog(adminId, $"Added a new employee: {fullName}");
 
-                txtLastName.Text = "";
-                txtFirstName.Text = "";
-                txtMiddleName.Text = "";
-                txtEmail.Text = "";
-                txtPhone.Text = "";
-                ddlPosition.SelectedIndex = 0;
+                    ShowMessage("✅ Employee added successfully!", true);
+
+                    // reset form
+                    txtLastName.Text = txtFirstName.Text = txtMiddleName.Text = txtEmail.Text = txtPhone.Text = "";
+                    ddlPosition.SelectedIndex = 0;
+                }
+                else
+                {
+                    ShowMessage("❌ Failed to add employee. Please try again.", false);
+                }
             }
             catch (Exception ex)
             {
@@ -190,36 +155,60 @@ namespace RRCManagementSystem
             }
         }
 
+        private bool IsEmployeeEmailTaken(string email)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spEmployees_EmailExists", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+
+                conn.Open();
+                object result = cmd.ExecuteScalar();
+                return result != null && Convert.ToBoolean(result);
+            }
+        }
+
+        private int InsertEmployee(string lastName, string firstName, string middleName,
+                                   string email, string phone, string position, string profileImage)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spEmployee_Insert", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = lastName;
+                cmd.Parameters.Add("@FirstName", SqlDbType.NVarChar, 100).Value = firstName;
+                cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value = (object)middleName ?? DBNull.Value;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                cmd.Parameters.Add("@Phone", SqlDbType.NVarChar, 15).Value = phone;
+                cmd.Parameters.Add("@Position", SqlDbType.NVarChar, 50).Value = position;
+                cmd.Parameters.Add("@ProfileImage", SqlDbType.NVarChar, 255).Value = profileImage;
+                cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 20).Value = "Active";
+
+                conn.Open();
+                object result = cmd.ExecuteScalar(); // NewEmployeeID from SP
+                return (result != null && int.TryParse(result.ToString(), out int id)) ? id : 0;
+            }
+        }
+
+        private void AddAuditLog(int? userID, string action)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = (object)userID ?? DBNull.Value;
+                cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action;
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
 
         private void ShowMessage(string message, bool isSuccess)
         {
             lblMessage.Text = message;
             lblMessage.ForeColor = isSuccess ? System.Drawing.Color.Green : System.Drawing.Color.Red;
-        }
-
-        // ✅ Audit Log Method
-        private void AddAuditLog(int? userID, string action)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // Optional: handle/log exception silently
-                    }
-                }
-            }
         }
     }
 }

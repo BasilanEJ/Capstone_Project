@@ -86,25 +86,32 @@ namespace RRCManagementSystem
             }
 
 
-            // ✅ Insert into DB
             try
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand("dbo.spInquirySimple_Insert", conn))
                 {
-                    string query = @"
-                        INSERT INTO InquirySimple (Email, ContactNumber, Message, PhotoPath, SubmittedAt)
-                        VALUES (@Email, @ContactNumber, @Message, @PhotoPath, GETDATE());";
+                    cmd.CommandType = CommandType.StoredProcedure;
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@Email", email);
-                        cmd.Parameters.AddWithValue("@ContactNumber", contact);
-                        cmd.Parameters.AddWithValue("@Message", message);
-                        cmd.Parameters.AddWithValue("@PhotoPath", string.IsNullOrEmpty(photoPath) ? DBNull.Value : (object)photoPath);
+                    cmd.Parameters.AddWithValue("@Email", email);
+                    cmd.Parameters.AddWithValue("@ContactNumber", contact);
+                    cmd.Parameters.AddWithValue("@Message", (object)message ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@PhotoPath", string.IsNullOrEmpty(photoPath) ? (object)DBNull.Value : photoPath);
 
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
+                    // If you don’t have name/address inputs on this form, send safe defaults:
+                    cmd.Parameters.AddWithValue("@LastName", "");   // or pull from a textbox if you add one
+                    cmd.Parameters.AddWithValue("@FirstName", "");
+                    cmd.Parameters.AddWithValue("@MiddleName", "");
+
+                    cmd.Parameters.AddWithValue("@StreetAndUnit", DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Barangay", DBNull.Value);
+                    cmd.Parameters.AddWithValue("@City", DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Region", DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Country", DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Landmark", DBNull.Value);
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
                 }
 
                 SendConfirmationEmail(email);

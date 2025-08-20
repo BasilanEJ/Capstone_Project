@@ -15,103 +15,141 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                // Dropdown is already populated in .aspx
+                // dropdown items are in .aspx
             }
         }
 
         protected void btnGenerate_Click(object sender, EventArgs e)
         {
-            string selected = ddlModule.SelectedValue;
+            lblMessage.Text = "";
+            gvReports.DataSource = null;
+            gvReports.DataBind();
 
+            string selected = ddlModule.SelectedValue;
             if (string.IsNullOrEmpty(selected))
             {
                 lblMessage.Text = "Please select a module.";
-                gvReports.DataSource = null;
-                gvReports.DataBind();
                 return;
             }
 
-            // Parse dates exactly from yyyy-MM-dd (HTML5 date format)
-            DateTime fromDate;
-            DateTime toDate;
+            // Parse yyyy-MM-dd (HTML5 date inputs)
+            DateTime fromDate, toDate;
             bool hasFrom = DateTime.TryParseExact(txtDateFrom.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out fromDate);
             bool hasTo = DateTime.TryParseExact(txtDateTo.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out toDate);
 
-            // 🐛 Debug: show what was parsed
-            lblDebug.Text = $"Raw From: {txtDateFrom.Text} | Parsed From: {(hasFrom ? fromDate.ToString("yyyy-MM-dd") : "INVALID")}<br/>" +
-                            $"Raw To: {txtDateTo.Text} | Parsed To: {(hasTo ? toDate.ToString("yyyy-MM-dd") : "INVALID")}";
+            // Optional guard
+            if (hasFrom && hasTo && fromDate.Date > toDate.Date)
+            {
+                lblMessage.Text = "“Date From” must be earlier than or equal to “Date To”.";
+                return;
+            }
 
-            string query = "";
+            // Debug (optional)
+            lblDebug.Text =
+                $"Raw From: {txtDateFrom.Text} | Parsed: {(hasFrom ? fromDate.ToString("yyyy-MM-dd") : "INVALID")}<br/>" +
+                $"Raw To: {txtDateTo.Text} | Parsed: {(hasTo ? toDate.ToString("yyyy-MM-dd") : "INVALID")}";
+
+            string procName;
+            bool sendDates = true;
 
             switch (selected)
             {
                 case "Admins":
-                    query = @"
-                SELECT UserID, Name, Email, Role, CreatedAt 
-                FROM Users 
-                WHERE Status = 'Active' AND Role <> 'SuperAdmin'
-                AND (@From IS NULL OR CreatedAt >= @From)
-                AND (@To IS NULL OR CreatedAt < DATEADD(DAY, 1, @To))";
+                    procName = "dbo.spReport_Admins";
                     break;
-
                 case "ArchivedAdmins":
-                    query = @"
-                SELECT UserID, Name, Email, Role, CreatedAt 
-                FROM Users 
-                WHERE Status = 'Archived' AND Role <> 'SuperAdmin'
-                AND (@From IS NULL OR CAST(CreatedAt AS DATE) >= @From)
-                AND (@To IS NULL OR CAST(CreatedAt AS DATE) <= @To)";
+                    procName = "dbo.spReport_ArchivedAdmins";
                     break;
-
                 case "Roles":
-                    query = "SELECT RoleID, RoleName FROM Roles";
+                    procName = "dbo.spReport_Roles";
+                    sendDates = false; // this proc has no date params
                     break;
-
                 case "AuditLogs":
-                    query = @"
-                SELECT a.LogID, u.Name AS AdminName, a.Action, a.Timestamp
-                FROM AuditLogs a
-                LEFT JOIN Users u ON a.AdminID = u.UserID
-                WHERE (@From IS NULL OR a.Timestamp >= @From)
-                AND (@To IS NULL OR a.Timestamp <= @To)
-                ORDER BY a.Timestamp DESC";
+                    procName = "dbo.spReport_AuditLogs";
                     break;
-
                 case "SystemChanges":
-                    query = @"
-                SELECT SettingID, SettingName, SettingValue, UpdatedAt
-                FROM SystemSettings
-                WHERE (@From IS NULL OR UpdatedAt >= @From)
-                AND (@To IS NULL OR UpdatedAt <= @To)
-                ORDER BY UpdatedAt DESC";
+                    procName = "dbo.spReport_SystemChanges";
                     break;
-
                 default:
                     lblMessage.Text = "Invalid module selected.";
                     return;
             }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(query, conn))
+            DataTable dt = new DataTable();
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(procName, conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                if (query.Contains("@From"))
-                    cmd.Parameters.AddWithValue("@From", hasFrom ? (object)fromDate : DBNull.Value);
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                if (query.Contains("@To"))
-                    cmd.Parameters.AddWithValue("@To", hasTo ? (object)toDate : DBNull.Value);
+                if (sendDates)
+                {
+                    var pFrom = cmd.Parameters.Add("@From", SqlDbType.Date);
+                    pFrom.Value = hasFrom ? (object)fromDate.Date : DBNull.Value;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(cmd);
-                DataTable dt = new DataTable();
-                adapter.Fill(dt);
+                    var pTo = cmd.Parameters.Add("@To", SqlDbType.Date);
+                    pTo.Value = hasTo ? (object)toDate.Date : DBNull.Value;
+                }
 
-                gvReports.DataSource = dt;
-                gvReports.DataBind();
+                try
+                {
+                    da.Fill(dt);
+                    gvReports.DataSource = dt;
+                    gvReports.DataBind();
 
-                lblMessage.Text = (dt.Rows.Count == 0)
-                    ? "No data found for the selected module and date range."
-                    : "";
+                    if (dt.Rows.Count == 0)
+                        lblMessage.Text = "No data found for the selected module and date range.";
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "Error generating report: " + ex.Message;
+                    return;
+                }
+            }
+
+            // ✅ Log the report generation (non-blocking of the main result)
+            try
+            {
+                int userId = 0;
+                if (Session["UserID"] != null)
+                {
+                    int.TryParse(Session["UserID"].ToString(), out userId);
+                }
+
+                LogReport(selected,
+                          userId,
+                          hasFrom ? fromDate.Date : (DateTime?)null,
+                          hasTo ? toDate.Date : (DateTime?)null,
+                          $"{dt.Rows.Count} row(s) returned");
+            }
+            catch
+            {
+                // swallow logging errors by design; don't break the report
             }
         }
 
+        private void LogReport(string reportType, int generatedBy, DateTime? from, DateTime? to, string remarks)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spReportsLog_Insert", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("@ReportType", SqlDbType.NVarChar, 100).Value = (object)reportType ?? DBNull.Value;
+                cmd.Parameters.Add("@GeneratedBy", SqlDbType.Int).Value = generatedBy; // 0 is OK if not logged-in context
+                cmd.Parameters.Add("@FromDate", SqlDbType.Date).Value = from.HasValue ? (object)from.Value : DBNull.Value;
+                cmd.Parameters.Add("@ToDate", SqlDbType.Date).Value = to.HasValue ? (object)to.Value : DBNull.Value;
+                cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar, -1).Value = string.IsNullOrWhiteSpace(remarks) ? (object)DBNull.Value : remarks;
+
+                var pOut = new SqlParameter("@NewReportID", SqlDbType.Int) { Direction = ParameterDirection.Output };
+                cmd.Parameters.Add(pOut);
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+                // int newId = (pOut.Value == DBNull.Value) ? 0 : Convert.ToInt32(pOut.Value); // use if needed
+            }
+        }
     }
 }
+    

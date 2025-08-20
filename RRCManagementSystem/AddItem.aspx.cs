@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Web.UI;
@@ -8,7 +9,8 @@ namespace RRCManagementSystem
 {
     public partial class AddItem : Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -30,41 +32,40 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 Check CanAdd permission for ManageItem
+            // 🔐 Check CanAdd permission for ManageItem (via SP)
             if (!HasPermissionToAdd(userId, "ManageItem"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
-            } 
+            }
 
             if (!IsPostBack)
             {
-                // ✅ Page logic here (e.g., populate fields, setup UI)
+                // init UI if needed
             }
         }
 
-
         private bool HasPermissionToAdd(int userId, string moduleName)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = "SELECT CanAdd FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@UserID", userId);
-                cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-
-                try
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", conn))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.Parameters.AddWithValue("@Permission", "CanAdd");
                     conn.Open();
                     object result = cmd.ExecuteScalar();
                     return result != null && result != DBNull.Value && Convert.ToBoolean(result);
                 }
-                catch (Exception ex)
-                {
-                    lblMessage.Text = "❌ Error checking permissions: " + ex.Message;
-                    lblMessage.ForeColor = System.Drawing.Color.Red;
-                    return false;
-                }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "❌ Error checking permissions: " + ex.Message;
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return false;
             }
         }
 
@@ -80,19 +81,22 @@ namespace RRCManagementSystem
 
             string itemName = txtItemName.Text.Trim();
             string itemType = ddlType.SelectedValue;
-            int quantity;
-            decimal excessML = 0;
-            DateTime? expirationDate = null;
-            string imagePath = null;
+            if (string.IsNullOrWhiteSpace(itemName))
+            {
+                lblMessage.Text = "⚠ Item name is required.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return;
+            }
 
-            if (!int.TryParse(txtQuantity.Text.Trim(), out quantity) || quantity <= 0)
+            if (!int.TryParse(txtQuantity.Text.Trim(), out int quantity) || quantity <= 0)
             {
                 lblMessage.Text = "⚠ Please enter a valid quantity.";
                 lblMessage.ForeColor = System.Drawing.Color.Red;
                 return;
             }
 
-            if (!string.IsNullOrEmpty(txtExcessML.Text))
+            decimal excessML = 0;
+            if (!string.IsNullOrWhiteSpace(txtExcessML.Text))
             {
                 if (!decimal.TryParse(txtExcessML.Text.Trim(), out excessML) || excessML < 0)
                 {
@@ -102,96 +106,120 @@ namespace RRCManagementSystem
                 }
             }
 
-            if (!string.IsNullOrEmpty(txtExpirationDate.Text))
+            DateTime? expirationDate = null;
+            if (!string.IsNullOrWhiteSpace(txtExpirationDate.Text))
             {
-                if (!DateTime.TryParse(txtExpirationDate.Text, out DateTime parsedDate))
+                if (!DateTime.TryParse(txtExpirationDate.Text, out DateTime parsed))
                 {
                     lblMessage.Text = "⚠ Invalid expiration date.";
                     lblMessage.ForeColor = System.Drawing.Color.Red;
                     return;
                 }
-                expirationDate = parsedDate;
+                expirationDate = parsed;
             }
 
+            // 🔎 Optional: enforce expiration requirement for chemicals
+            // if ((itemType == "Bottled Chemical" || itemType == "Sachet Pack Chemical") && expirationDate == null)
+            // {
+            //     lblMessage.Text = "⚠ Please provide an expiration date for chemicals.";
+            //     lblMessage.ForeColor = System.Drawing.Color.Red;
+            //     return;
+            // }
+
+            // 📷 Save image if provided
+            string imagePath = null;
             if (fuItemImage.HasFile)
             {
-                string fileExtension = Path.GetExtension(fuItemImage.FileName).ToLower();
-                string[] allowedExtensions = { ".jpg", ".jpeg", ".png" };
-
-                if (!Array.Exists(allowedExtensions, ext => ext == fileExtension))
+                string ext = Path.GetExtension(fuItemImage.FileName).ToLowerInvariant();
+                string[] allowed = { ".jpg", ".jpeg", ".png" };
+                if (Array.IndexOf(allowed, ext) < 0)
                 {
                     lblMessage.Text = "⚠ Only JPG, JPEG, and PNG files are allowed.";
                     lblMessage.ForeColor = System.Drawing.Color.Red;
                     return;
                 }
 
-                string fileName = Guid.NewGuid().ToString() + fileExtension;
-                string folderPath = Server.MapPath("~/ItemImages/");
-                string fullPath = Path.Combine(folderPath, fileName);
-
-                if (!Directory.Exists(folderPath))
-                {
-                    Directory.CreateDirectory(folderPath);
-                }
-
-                fuItemImage.SaveAs(fullPath);
+                string fileName = Guid.NewGuid() + ext;
+                string folder = Server.MapPath("~/ItemImages/");
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                string full = Path.Combine(folder, fileName);
+                fuItemImage.SaveAs(full);
                 imagePath = "~/ItemImages/" + fileName;
             }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            // 💾 Insert via stored procedure
+            int newItemId = 0;
+            try
             {
-                string query = @"
-                    INSERT INTO Inventory (Name, Type, Quantity, ExpirationDate, CreatedAt, ImagePath, ExcessML)
-                    VALUES (@Name, @Type, @Quantity, @ExpirationDate, GETDATE(), @ImagePath, @ExcessML)";
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spInventory_Add", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
 
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Name", itemName);
-                cmd.Parameters.AddWithValue("@Type", itemType);
-                cmd.Parameters.AddWithValue("@Quantity", quantity);
-                cmd.Parameters.AddWithValue("@ExpirationDate", (object)expirationDate ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@ImagePath", (object)imagePath ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@ExcessML", excessML);
+                    cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = itemName;
+                    cmd.Parameters.Add("@Type", SqlDbType.NVarChar, 50).Value = itemType;
+                    cmd.Parameters.Add("@Quantity", SqlDbType.Int).Value = quantity;
+                    if (expirationDate.HasValue)
+                        cmd.Parameters.Add("@ExpirationDate", SqlDbType.DateTime).Value = expirationDate.Value;
+                    else
+                        cmd.Parameters.Add("@ExpirationDate", SqlDbType.DateTime).Value = DBNull.Value;
 
-                conn.Open();
-                cmd.ExecuteNonQuery();
+                    if (!string.IsNullOrWhiteSpace(imagePath))
+                        cmd.Parameters.Add("@ImagePath", SqlDbType.NVarChar, 255).Value = imagePath;
+                    else
+                        cmd.Parameters.Add("@ImagePath", SqlDbType.NVarChar, 255).Value = DBNull.Value;
 
-                // ✅ Insert audit log
-                AddAuditLog(currentUserId, $"Added new item: {itemName} ({itemType})");
+                    var pExcess = cmd.Parameters.Add("@ExcessML", SqlDbType.Decimal);
+                    pExcess.Precision = 10;
+                    pExcess.Scale = 2;
+                    pExcess.Value = excessML;
+
+                    var pOut = cmd.Parameters.Add("@NewItemID", SqlDbType.Int);
+                    pOut.Direction = ParameterDirection.Output;
+
+                    conn.Open();
+                    // Option 1: rely on OUTPUT param
+                    cmd.ExecuteNonQuery();
+                    newItemId = (pOut.Value == DBNull.Value) ? 0 : Convert.ToInt32(pOut.Value);
+                }
+
+                // 🧾 Audit
+                InsertAudit(currentUserId, $"Added new item: {itemName} ({itemType}), ID={newItemId}");
+
+                lblMessage.Text = "✅ Item added successfully!";
+                lblMessage.ForeColor = System.Drawing.Color.Green;
+
+                // Clear fields
+                txtItemName.Text = "";
+                ddlType.SelectedIndex = 0;
+                txtQuantity.Text = "";
+                txtExpirationDate.Text = "";
+                txtExcessML.Text = "";
             }
-
-            lblMessage.Text = "✅ Item added successfully!";
-            lblMessage.ForeColor = System.Drawing.Color.Green;
-
-            // Clear fields
-            txtItemName.Text = "";
-            ddlType.SelectedIndex = 0;
-            txtQuantity.Text = "";
-            txtExpirationDate.Text = "";
-            txtExcessML.Text = "";
+            catch (Exception ex)
+            {
+                lblMessage.Text = "❌ Failed to add item: " + ex.Message;
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+            }
         }
 
-        // ✅ Manual Audit Log Method
-        private void AddAuditLog(int? userID, string action)
+        private void InsertAudit(int? adminId, string action)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@AdminID", (object)adminId ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Action", action);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // Optional: handle/log silently
-                    }
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
                 }
+            }
+            catch
+            {
+                // swallow/log as desired
             }
         }
     }

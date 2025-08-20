@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.Web.UI;
@@ -16,7 +17,7 @@ namespace RRCManagementSystem
 
         protected void btnSave_Click(object sender, EventArgs e)
         {
-            string roleName = txtRoleName.Text.Trim();
+            string roleName = (txtRoleName.Text ?? string.Empty).Trim();
 
             if (string.IsNullOrEmpty(roleName))
             {
@@ -24,38 +25,46 @@ namespace RRCManagementSystem
                 return;
             }
 
-            TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
-            roleName = textInfo.ToTitleCase(roleName.ToLower());
+            // Optional: Title Case for display consistency
+            TextInfo ti = new CultureInfo("en-US", false).TextInfo;
+            roleName = ti.ToTitleCase(roleName.ToLower());
 
             try
             {
-                using (SqlConnection conn = new SqlConnection(connectionString))
+                int newRoleId;
+
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spRole_Add", conn))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@RoleName", SqlDbType.NVarChar, 100).Value = roleName;
+
+                    var outParam = new SqlParameter("@NewRoleID", SqlDbType.Int)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
+                    cmd.Parameters.Add(outParam);
+
                     conn.Open();
+                    cmd.ExecuteNonQuery();
 
-                    string checkQuery = "SELECT COUNT(*) FROM Roles WHERE LOWER(RoleName) = LOWER(@RoleName)";
-                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
-                    {
-                        checkCmd.Parameters.AddWithValue("@RoleName", roleName);
-                        int count = (int)checkCmd.ExecuteScalar();
-
-                        if (count > 0)
-                        {
-                            ShowSweetAlert("Duplicate", "This role already exists.", "error");
-                            return;
-                        }
-                    }
-
-                    string insertQuery = "INSERT INTO Roles (RoleName, CreatedAt) VALUES (@RoleName, GETDATE())";
-                    using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
-                    {
-                        insertCmd.Parameters.AddWithValue("@RoleName", roleName);
-                        insertCmd.ExecuteNonQuery();
-                    }
+                    newRoleId = (outParam.Value == DBNull.Value) ? 0 : Convert.ToInt32(outParam.Value);
                 }
 
-                ShowSweetAlert("Success", "✅ Role added successfully!", "success");
-                txtRoleName.Text = string.Empty;
+                if (newRoleId > 0)
+                {
+                    ShowSweetAlert("Success", "✅ Role added successfully!", "success");
+                    txtRoleName.Text = string.Empty;
+                }
+                else
+                {
+                    // Either duplicate or not inserted for some reason
+                    ShowSweetAlert("Duplicate", "This role already exists.", "error");
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601) // unique violation
+            {
+                ShowSweetAlert("Duplicate", "This role already exists.", "error");
             }
             catch (Exception ex)
             {

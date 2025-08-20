@@ -13,41 +13,41 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
+                // 🔐 Require SuperAdmin
                 if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
                 {
                     Response.Redirect("~/Login.aspx");
                     return;
                 }
 
-                LoadDashboardStats();
-                LoadRecentAuditLogs();
-                CheckFailedLoginThreshold();
+                LoadDashboardStats();        // via SP
+                LoadRecentAuditLogs(10);     // via SP
+                CheckFailedLoginThreshold(); // via SP
             }
         }
 
         private void LoadDashboardStats()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spDashboard_GetStats", conn))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
+
                 try
                 {
                     conn.Open();
-
-                    // ✅ Total Admin Accounts
-                    string totalUsersQuery = "SELECT COUNT(*) FROM Users WHERE Status = 'Active' AND LOWER(Role) <> 'SuperAdmin'";
-                    using (SqlCommand cmdUsers = new SqlCommand(totalUsersQuery, conn))
+                    using (var rdr = cmd.ExecuteReader())
                     {
-                        object result = cmdUsers.ExecuteScalar();
-                        lblTotalAdmins.Text = result != null ? result.ToString() : "0";
-                    }
-
-
-                    // ✅ Total Audit Logs
-                    string totalLogsQuery = "SELECT COUNT(*) FROM AuditLogs";
-                    using (SqlCommand cmdLogs = new SqlCommand(totalLogsQuery, conn))
-                    {
-                        object result = cmdLogs.ExecuteScalar();
-                        lblAuditLogs.Text = result != null ? result.ToString() : "0";
+                        if (rdr.Read())
+                        {
+                            lblTotalAdmins.Text = Convert.ToString(rdr["TotalUsers"] ?? "0");
+                            lblAuditLogs.Text = Convert.ToString(rdr["TotalAuditLogs"] ?? "0");
+                        }
+                        else
+                        {
+                            lblTotalAdmins.Text = "0";
+                            lblAuditLogs.Text = "0";
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -59,25 +59,19 @@ namespace RRCManagementSystem
             }
         }
 
-        private void LoadRecentAuditLogs()
+        private void LoadRecentAuditLogs(int topN)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAuditLogs_GetRecent", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Top", SqlDbType.Int).Value = topN;
+
+                var dt = new DataTable();
                 try
                 {
-                    string query = @"
-                        SELECT TOP 10
-                            LogID,
-                            (SELECT Name FROM Users WHERE Users.UserID = AuditLogs.AdminID) AS AdminName,
-                            Action,
-                            Timestamp
-                        FROM AuditLogs
-                        ORDER BY Timestamp DESC";
-
-                    SqlDataAdapter da = new SqlDataAdapter(query, conn);
-                    DataTable dt = new DataTable();
                     da.Fill(dt);
-
                     gvAuditLogs.DataSource = dt;
                     gvAuditLogs.DataBind();
                 }
@@ -90,30 +84,24 @@ namespace RRCManagementSystem
 
         private void CheckFailedLoginThreshold()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            const int windowMinutes = 10;
+            const int threshold = 50;
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spLoginAttempt_CountRecentFailures", conn))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
+                // Pass NULL for @IPAddress to count ALL failed attempts in the window
+                cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = DBNull.Value;
+                cmd.Parameters.Add("@WindowMinutes", SqlDbType.Int).Value = windowMinutes;
+
                 try
                 {
                     conn.Open();
+                    var result = cmd.ExecuteScalar();
+                    int failedCount = (result == null || result == DBNull.Value) ? 0 : Convert.ToInt32(result);
 
-                    string query = @"
-                        SELECT COUNT(*) 
-                        FROM LoginAttempts 
-                        WHERE IsSuccess = 0 
-                          AND AttemptTime > DATEADD(MINUTE, -10, GETDATE())";
-
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        int failedAttempts = Convert.ToInt32(cmd.ExecuteScalar());
-                        if (failedAttempts >= 50)
-                        {
-                            hfShowModal.Value = "1"; // Trigger SweetAlert
-                        }
-                        else
-                        {
-                            hfShowModal.Value = "0";
-                        }
-                    }
+                    hfShowModal.Value = failedCount >= threshold ? "1" : "0";
                 }
                 catch (Exception ex)
                 {
@@ -128,14 +116,13 @@ namespace RRCManagementSystem
             try
             {
                 string logPath = Server.MapPath("~/Logs/ErrorLog.txt");
-                string message = $"{DateTime.Now}: [{context}] {ex.Message}{Environment.NewLine}";
-
+                string message = $"{DateTime.Now:u}: [{context}] {ex}{Environment.NewLine}";
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath));
                 System.IO.File.AppendAllText(logPath, message);
             }
             catch
             {
-                // Ignore logging failures
+                // swallow logging failures
             }
         }
     }

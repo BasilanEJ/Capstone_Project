@@ -11,7 +11,8 @@ namespace RRCManagementSystem
 {
     public partial class ViewTeams : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -33,7 +34,7 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 View permission check for ManageEmployees module
+            // 🔐 View permission check for ManageEmployees module (via SP)
             if (!HasViewPermission(userId, "ManageEmployees"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
@@ -47,25 +48,26 @@ namespace RRCManagementSystem
             }
         }
 
-        private bool HasViewPermission(int adminId, string moduleName)
+        private bool HasViewPermission(int userId, string moduleName)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(
-                "SELECT CanView FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName", conn))
+            try
             {
-                cmd.Parameters.AddWithValue("@UserID", adminId);
-                cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-
-                try
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", conn))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.Parameters.AddWithValue("@Permission", "CanView");
+
                     conn.Open();
                     object result = cmd.ExecuteScalar();
                     return result != null && result != DBNull.Value && Convert.ToBoolean(result);
                 }
-                catch
-                {
-                    return false;
-                }
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -86,73 +88,53 @@ namespace RRCManagementSystem
         {
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.sp_ViewTeams_LoadForDate", con))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ScheduledDate", SqlDbType.Date).Value = targetDate.Date;
+
                     con.Open();
-
-                    // 1) All teams
-                    const string queryTeams = "SELECT TeamID, GroupName FROM Teams ORDER BY GroupName;";
-                    DataTable dtTeams = new DataTable();
-                    using (SqlDataAdapter daTeams = new SqlDataAdapter(queryTeams, con))
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        daTeams.Fill(dtTeams);
+                        // RS1: Teams
+                        var dtTeams = new DataTable();
+                        dtTeams.Load(reader);
+
+                        // RS2: Members
+                        var dtMembers = new DataTable();
+                        dtMembers.Load(reader);
+
+                        // RS3: Assigned counts
+                        var dtAssigned = new DataTable();
+                        dtAssigned.Load(reader);
+
+                        var assignedCounts = dtAssigned.AsEnumerable()
+                            .ToDictionary(r => r.Field<int>("TeamID"),
+                                          r => r.Field<int>("AssignmentsCount"));
+
+                        // Project: add derived "Status" and attach members table
+                        var teamsWithMembers = dtTeams.AsEnumerable()
+                            .Select(team => new
+                            {
+                                TeamID = team.Field<int>("TeamID"),
+                                GroupName = team.Field<string>("GroupName"),
+                                Status = (assignedCounts.ContainsKey(team.Field<int>("TeamID")) &&
+                                          assignedCounts[team.Field<int>("TeamID")] >= 2)
+                                         ? "Unavailable"
+                                         : "Available",
+                                Employees = dtMembers.AsEnumerable()
+                                    .Where(m => m.Field<int>("TeamID") == team.Field<int>("TeamID"))
+                                    .CopyToDataTableOrNull()
+                            })
+                            .ToList();
+
+                        rptTeams.DataSource = teamsWithMembers;
+                        rptTeams.DataBind();
+
+                        lblMessage.Text = $"✅ Teams loaded for {targetDate:yyyy-MM-dd}.";
+                        lblMessage.ForeColor = System.Drawing.Color.Green;
                     }
-
-                    // 2) Members per team
-                    const string queryMembers = @"
-                        SELECT tm.TeamID, e.EmployeeID, e.LastName, e.FirstName, e.MiddleName, e.Department
-                        FROM TeamMembers tm
-                        INNER JOIN Employees e ON tm.EmployeeID = e.EmployeeID;";
-                    DataTable dtMembers = new DataTable();
-                    using (SqlDataAdapter daMembers = new SqlDataAdapter(queryMembers, con))
-                    {
-                        daMembers.Fill(dtMembers);
-                    }
-
-                    // 3) Count team assignments for selected date from BookingTeams + Bookings
-                    const string queryAssignedTeams = @"
-                        SELECT bt.TeamID, COUNT(*) AS AssignmentsCount
-                        FROM BookingTeams bt
-                        INNER JOIN Bookings b ON bt.BookingID = b.BookingID
-                        WHERE CAST(b.ScheduledDate AS date) = @ScheduledDate
-                        GROUP BY bt.TeamID;";
-
-                    DataTable dtAssignedTeams = new DataTable();
-                    using (SqlCommand cmdAssignedTeams = new SqlCommand(queryAssignedTeams, con))
-                    {
-                        cmdAssignedTeams.Parameters.Add("@ScheduledDate", SqlDbType.Date).Value = targetDate.Date; // ✅ date-only
-                        using (SqlDataAdapter daAssignedTeams = new SqlDataAdapter(cmdAssignedTeams))
-                        {
-                            daAssignedTeams.Fill(dtAssignedTeams);
-                        }
-                    }
-
-                    Dictionary<int, int> assignedTeamsCount = dtAssignedTeams
-                        .AsEnumerable()
-                        .ToDictionary(r => r.Field<int>("TeamID"),
-                                      r => r.Field<int>("AssignmentsCount"));
-
-                    // 4) Project teams + derived availability + members data
-                    var teamsWithMembers = dtTeams.AsEnumerable()
-                        .Select(team => new
-                        {
-                            TeamID = team.Field<int>("TeamID"),
-                            GroupName = team.Field<string>("GroupName"),
-                            Status = (assignedTeamsCount.ContainsKey(team.Field<int>("TeamID")) &&
-                                      assignedTeamsCount[team.Field<int>("TeamID")] >= 2)
-                                     ? "Unavailable"
-                                     : "Available",
-                            Employees = dtMembers.AsEnumerable()
-                                .Where(m => m.Field<int>("TeamID") == team.Field<int>("TeamID"))
-                                .CopyToDataTableOrNull()
-                        })
-                        .ToList();
-
-                    rptTeams.DataSource = teamsWithMembers;
-                    rptTeams.DataBind();
-
-                    lblMessage.Text = $"✅ Teams loaded for {targetDate:yyyy-MM-dd}.";
-                    lblMessage.ForeColor = System.Drawing.Color.Green;
                 }
             }
             catch (Exception ex)
@@ -185,15 +167,13 @@ namespace RRCManagementSystem
         }
     }
 
-    // ✅ Extension to safely handle empty DataTable generation
-    public static class Extensions
+    // Helper to safely turn an IEnumerable<DataRow> into a DataTable
+    public static class DataTableExtensions
     {
         public static DataTable CopyToDataTableOrNull(this IEnumerable<DataRow> rows)
         {
             if (rows != null && rows.Any())
-            {
                 return rows.CopyToDataTable();
-            }
             return new DataTable();
         }
     }

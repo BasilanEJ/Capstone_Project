@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
-using RRCManagementSystem.Helpers; // Ensure PasswordHelper.cs is in this namespace
+using RRCManagementSystem.Helpers; // PasswordHelper
 
 namespace RRCManagementSystem
 {
@@ -13,8 +14,8 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                // ✅ Ensure only logged-in SuperAdmin can access
-                if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
+                // Only logged-in SuperAdmin can access
+                if (Session["UserID"] == null || !string.Equals(Session["Role"]?.ToString(), "SuperAdmin", StringComparison.OrdinalIgnoreCase))
                 {
                     Response.Redirect("~/Login.aspx");
                     return;
@@ -26,58 +27,49 @@ namespace RRCManagementSystem
 
         private void LoadProfile()
         {
-            if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
-            {
-                Response.Redirect("~/Login.aspx");
-                return;
-            }
-
             int superAdminId = Convert.ToInt32(Session["UserID"]);
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spSuperAdmin_GetProfile", conn))
             {
-                string query = "SELECT Name, Email FROM Users WHERE UserID = @UserID AND Role = 'SuperAdmin'";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = superAdminId;
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                try
                 {
-                    cmd.Parameters.AddWithValue("@UserID", superAdminId);
-
-                    try
+                    conn.Open();
+                    using (var rdr = cmd.ExecuteReader())
                     {
-                        conn.Open();
-                        SqlDataReader reader = cmd.ExecuteReader();
-
-                        if (reader.Read())
+                        if (rdr.Read())
                         {
-                            txtName.Text = reader["Name"].ToString();
-                            txtEmail.Text = reader["Email"].ToString();
+                            txtName.Text = rdr["Name"].ToString();
+                            txtEmail.Text = rdr["Email"].ToString();
                         }
                         else
                         {
                             lblMessage.Text = "⚠ SuperAdmin not found.";
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = "⚠ Error loading profile: " + ex.Message;
-                    }
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "⚠ Error loading profile: " + ex.Message;
                 }
             }
         }
 
-
         protected void btnSaveProfile_Click(object sender, EventArgs e)
         {
-            if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
+            if (Session["UserID"] == null || !string.Equals(Session["Role"]?.ToString(), "SuperAdmin", StringComparison.OrdinalIgnoreCase))
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
             int superAdminId = Convert.ToInt32(Session["UserID"]);
-            string newName = txtName.Text.Trim();
-            string newEmail = txtEmail.Text.Trim();
-            string newPassword = txtNewPassword.Text.Trim();
+            string newName = (txtName.Text ?? "").Trim();
+            string newEmail = (txtEmail.Text ?? "").Trim();
+            string newPw = (txtNewPassword.Text ?? "").Trim();
 
             if (string.IsNullOrEmpty(newName) || string.IsNullOrEmpty(newEmail))
             {
@@ -85,51 +77,58 @@ namespace RRCManagementSystem
                 return;
             }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            // Only hash if a new password was entered
+            string hashed = string.IsNullOrEmpty(newPw) ? null : PasswordHelper.HashPassword(newPw);
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spSuperAdmin_UpdateProfile", conn))
             {
-                string query;
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = superAdminId;
+                cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = newName;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = newEmail;
 
-                if (!string.IsNullOrEmpty(newPassword))
+                var pHash = cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, -1);
+                pHash.Value = (object)hashed ?? DBNull.Value;
+
+                try
                 {
-                    string hashedPassword = PasswordHelper.HashPassword(newPassword);
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
 
-                    query = @"UPDATE Users
-                      SET Name = @Name,
-                          Email = @Email,
-                          PasswordHash = @PasswordHash
-                      WHERE UserID = @UserID AND Role = 'SuperAdmin'";
+                    // Optional: log it
+                    TryAudit(superAdminId, "SuperAdmin updated own profile.");
+
+                    lblMessage.CssClass = "alert success";
+                    lblMessage.Text = "✅ Profile updated successfully!";
+                    // Clear password box
+                    txtNewPassword.Text = string.Empty;
                 }
-                else
+                catch (Exception ex)
                 {
-                    query = @"UPDATE Users
-                      SET Name = @Name,
-                          Email = @Email
-                      WHERE UserID = @UserID AND Role = 'SuperAdmin'";
-                }
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Name", newName);
-                    cmd.Parameters.AddWithValue("@Email", newEmail);
-                    if (!string.IsNullOrEmpty(newPassword))
-                        cmd.Parameters.AddWithValue("@PasswordHash", PasswordHelper.HashPassword(newPassword));
-                    cmd.Parameters.AddWithValue("@UserID", superAdminId);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                        lblMessage.CssClass = "alert success";
-                        lblMessage.Text = "✅ Profile updated successfully!";
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = "⚠ Error saving profile: " + ex.Message;
-                    }
+                    lblMessage.Text = "⚠ Error saving profile: " + ex.Message;
                 }
             }
         }
 
+        private void TryAudit(int userId, string action)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = userId;
+                    cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action;
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // non-blocking: ignore audit failures
+            }
+        }
     }
 }
-    

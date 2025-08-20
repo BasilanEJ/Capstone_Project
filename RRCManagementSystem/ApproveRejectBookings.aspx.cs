@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Configuration;
 
 namespace RRCManagementSystem
 {
     public partial class ApproveRejectBookings : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -19,7 +19,6 @@ namespace RRCManagementSystem
             }
 
             string role = Session["Role"].ToString();
-
             // 🔐 Block SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
@@ -46,26 +45,24 @@ namespace RRCManagementSystem
 
         private bool HasEditPermission(int adminId, string moduleName)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            try
             {
-                string query = "SELECT CanEdit FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-
-                using (SqlCommand cmd = new SqlCommand(query, con))
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
                 {
-                    cmd.Parameters.AddWithValue("@UserID", adminId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+                    cmd.Parameters.Add("@Permission", SqlDbType.NVarChar, 10).Value = "CanEdit";
 
-                    try
-                    {
-                        con.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
+                    con.Open();
+                    object allowed = cmd.ExecuteScalar();
+                    return allowed != null && allowed != DBNull.Value && Convert.ToBoolean(allowed);
                 }
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -73,35 +70,22 @@ namespace RRCManagementSystem
         {
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spBooking_ListPendingForApproval", con))
                 {
-                    string query = @"
-SELECT 
-    b.BookingID,
-    (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName, '')) AS ClientName,
-    b.ServiceNames AS ServiceName,
-    b.ScheduledDate,
-    b.StartTime,
-    b.Status,
-    b.SQM,
-    b.Price
-FROM Bookings b
-INNER JOIN Clients c ON b.ClientID = c.ClientID
-WHERE b.Status = 'Pending'
-ORDER BY b.ScheduledDate ASC";
+                    cmd.CommandType = CommandType.StoredProcedure;
 
+                    using (var da = new SqlDataAdapter(cmd))
+                    {
+                        var dt = new DataTable();
+                        da.Fill(dt);
 
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
+                        gvBookings.DataSource = dt;
+                        gvBookings.DataBind();
 
-                    gvBookings.DataSource = dt;
-                    gvBookings.DataBind();
-
-                    lblMessage.Text = dt.Rows.Count == 0
-                        ? "No pending bookings found."
-                        : "";
-                    lblMessage.ForeColor = System.Drawing.Color.Green;
+                        lblMessage.Text = dt.Rows.Count == 0 ? "No pending bookings found." : string.Empty;
+                        lblMessage.ForeColor = System.Drawing.Color.Green;
+                    }
                 }
             }
             catch (Exception ex)
@@ -120,27 +104,24 @@ ORDER BY b.ScheduledDate ASC";
                 return;
             }
 
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            int adminId = Convert.ToInt32(Session["UserID"]);
 
             if (e.CommandName == "Approve")
             {
-                if (UpdateBookingStatus(bookingID, "Approved"))
+                if (SetBookingStatus(bookingID, "Approved"))
                 {
-                    decimal price = GetBookingPrice(bookingID);
-                    int sqm = GetBookingSQM(bookingID);
-                    string serviceName = GetServiceName(bookingID);
-                    DateTime scheduledDate = GetScheduledDate(bookingID);
-
+                    // Pull essentials for AssignBooking
+                    var info = GetBookingBasics(bookingID);
                     Session["BookingID"] = bookingID;
-                    Session["Price"] = price;
-                    Session["SQM"] = sqm;
-                    Session["ServiceName"] = serviceName;
-                    Session["ScheduledDate"] = scheduledDate;
+                    Session["Price"] = info.Price;
+                    Session["SQM"] = info.SQM;
+                    Session["ServiceName"] = info.ServiceNames;
+                    Session["ScheduledDate"] = info.ScheduledDate;
 
                     lblMessage.Text = $"✅ Booking {bookingID} approved! Redirecting to assign team...";
                     lblMessage.ForeColor = System.Drawing.Color.Green;
 
-                    // ✅ Log approval
+                    // audit
                     AddAuditLog(adminId, $"Approved booking ID: {bookingID}");
 
                     Response.AddHeader("REFRESH", "1.5;URL=AssignBooking.aspx?BookingID=" + bookingID);
@@ -153,12 +134,12 @@ ORDER BY b.ScheduledDate ASC";
             }
             else if (e.CommandName == "Reject")
             {
-                if (UpdateBookingStatus(bookingID, "Rejected"))
+                if (SetBookingStatus(bookingID, "Rejected"))
                 {
                     lblMessage.Text = $"⚠️ Booking {bookingID} rejected.";
                     lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
 
-                    // ✅ Log rejection
+                    // audit
                     AddAuditLog(adminId, $"Rejected booking ID: {bookingID}");
 
                     LoadPendingBookings();
@@ -171,23 +152,20 @@ ORDER BY b.ScheduledDate ASC";
             }
         }
 
-        private bool UpdateBookingStatus(int bookingID, string status)
+        private bool SetBookingStatus(int bookingID, string status)
         {
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spBooking_SetStatus", con))
                 {
-                    string query = "UPDATE Bookings SET Status = @Status WHERE BookingID = @BookingID";
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                    cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = status;
 
-                    using (SqlCommand cmd = new SqlCommand(query, con))
-                    {
-                        cmd.Parameters.AddWithValue("@Status", status);
-                        cmd.Parameters.AddWithValue("@BookingID", bookingID);
-
-                        con.Open();
-                        int rows = cmd.ExecuteNonQuery();
-                        return rows > 0;
-                    }
+                    con.Open();
+                    object rows = cmd.ExecuteScalar(); // returns RowsAffected
+                    return rows != null && rows != DBNull.Value && Convert.ToInt32(rows) > 0;
                 }
             }
             catch (Exception ex)
@@ -198,83 +176,46 @@ ORDER BY b.ScheduledDate ASC";
             }
         }
 
-        private decimal GetBookingPrice(int bookingID)
+        private (decimal Price, int SQM, string ServiceNames, DateTime ScheduledDate) GetBookingBasics(int bookingID)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spBooking_GetBasics", con))
             {
-                string query = "SELECT Price FROM Bookings WHERE BookingID = @BookingID";
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@BookingID", bookingID);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+
                 con.Open();
-                return Convert.ToDecimal(cmd.ExecuteScalar());
-            }
-        }
-
-        private int GetBookingSQM(int bookingID)
-        {
-            using (SqlConnection con = new SqlConnection(connectionString))
-            {
-                string query = "SELECT SQM FROM Bookings WHERE BookingID = @BookingID";
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@BookingID", bookingID);
-                con.Open();
-                return Convert.ToInt32(cmd.ExecuteScalar());
-            }
-        }
-
-        private string GetServiceName(int bookingID)
-        {
-            using (SqlConnection con = new SqlConnection(connectionString))
-            {
-                string query = @"
-            SELECT STRING_AGG(s.Name, ', ') AS ServiceNames
-            FROM BookingServices bs
-            INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-            WHERE bs.BookingID = @BookingID";
-
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@BookingID", bookingID);
-                con.Open();
-                return cmd.ExecuteScalar()?.ToString() ?? "";
-            }
-        }
-
-
-        private DateTime GetScheduledDate(int bookingID)
-        {
-            using (SqlConnection con = new SqlConnection(connectionString))
-            {
-                string query = "SELECT ScheduledDate FROM Bookings WHERE BookingID = @BookingID";
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@BookingID", bookingID);
-                con.Open();
-                return (DateTime)cmd.ExecuteScalar();
-            }
-        }
-
-        // ✅ AddAuditLog method for recording actions
-        private void AddAuditLog(int? userID, string action)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var r = cmd.ExecuteReader())
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-
-                    try
+                    if (r.Read())
                     {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // Optionally handle errors silently
+                        decimal price = r["Price"] != DBNull.Value ? Convert.ToDecimal(r["Price"]) : 0m;
+                        int sqm = r["SQM"] != DBNull.Value ? Convert.ToInt32(r["SQM"]) : 0;
+                        string services = r["ServiceNames"]?.ToString() ?? "";
+                        DateTime sched = r["ScheduledDate"] != DBNull.Value ? Convert.ToDateTime(r["ScheduledDate"]) : DateTime.MinValue;
+                        return (price, sqm, services, sched);
                     }
                 }
             }
+            return (0m, 0, "", DateTime.MinValue);
+        }
+
+        private void AddAuditLog(int? userID, string action)
+        {
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", con))
+                {
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = (object)userID ?? DBNull.Value;
+                    cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action;
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch { /* ignore audit errors */ }
         }
     }
 }

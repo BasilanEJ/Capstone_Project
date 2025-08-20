@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Web;
 using System.Web.UI;
-using System.Web.UI.HtmlControls;
 using RRCManagementSystem.Helpers; // AESHelper
 
 namespace RRCManagementSystem
@@ -15,19 +15,22 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // IMPORTANT: Rebuild the panel state on every request so the button events are wired.
-            LoadContract();
+            // IMPORTANT: rebuild panel state each request so events are wired
+            if (!IsPostBack)
+            {
+                LoadContract();
+            }
         }
 
         private void LoadContract()
         {
             lblMessage.Text = "";
+            pnlContract.Visible = false;
+            pnlPreview.Visible = false;
 
             if (Session["ClientID"] == null || !int.TryParse(Session["ClientID"].ToString(), out int clientId))
             {
                 lblMessage.Text = "❌ Session expired. Please log in again.";
-                pnlContract.Visible = false;
-                pnlPreview.Visible = false;
                 return;
             }
 
@@ -36,23 +39,13 @@ namespace RRCManagementSystem
             try
             {
                 using (var conn = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand(@"
-            SELECT TOP 1 
-                cc.StartDate,
-                cc.EndDate,
-                cc.UploadedAt,
-                cc.Remarks,
-                cc.FilePath,
-                u.Name AS UploadedByName
-            FROM ClientContracts cc
-            INNER JOIN Users u ON cc.UploadedBy = u.UserID   -- ← join to Users
-            WHERE cc.ClientID = @ClientID
-            ORDER BY cc.UploadedAt DESC;", conn))
+                using (var cmd = new SqlCommand("dbo.usp_ClientContract_GetLatest", conn))
                 {
-                    cmd.Parameters.AddWithValue("@ClientID", clientId);
-                    conn.Open();
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
-                    using (var reader = cmd.ExecuteReader())
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader(CommandBehavior.SingleRow))
                     {
                         if (reader.Read())
                         {
@@ -62,7 +55,6 @@ namespace RRCManagementSystem
                             if (reader["EndDate"] != DBNull.Value)
                                 lblEndDate.Text = Convert.ToDateTime(reader["EndDate"]).ToString("yyyy-MM-dd");
 
-                            // show datetime + admin name
                             string byName = reader["UploadedByName"] as string ?? "Unknown";
                             if (reader["UploadedAt"] != DBNull.Value)
                             {
@@ -74,8 +66,8 @@ namespace RRCManagementSystem
                                 lblUploaded.Text = $"by {byName}";
                             }
 
-                            lblRemarks.Text = reader["Remarks"] != DBNull.Value ? reader["Remarks"].ToString() : string.Empty;
-                            filePath = reader["FilePath"] != DBNull.Value ? reader["FilePath"].ToString() : null;
+                            lblRemarks.Text = reader["Remarks"] as string ?? string.Empty;
+                            filePath = reader["FilePath"] as string;
                         }
                     }
                 }
@@ -83,25 +75,20 @@ namespace RRCManagementSystem
             catch (Exception ex)
             {
                 lblMessage.Text = "❌ Error loading contract: " + ex.Message;
-                pnlContract.Visible = false;
-                pnlPreview.Visible = false;
                 return;
             }
 
             if (!string.IsNullOrWhiteSpace(filePath))
             {
+                // Optional: ensure the resolved path stays under an expected base folder for extra safety
                 ViewState["ContractPath"] = filePath;
                 pnlContract.Visible = true;
             }
             else
             {
                 lblMessage.Text = "❌ No contract found for your account.";
-                pnlContract.Visible = false;
-                pnlPreview.Visible = false;
             }
         }
-
-
 
         protected void btnPreview_Click(object sender, EventArgs e)
         {
@@ -123,7 +110,6 @@ namespace RRCManagementSystem
 
             try
             {
-                // Decrypt to a temp preview file
                 byte[] encrypted = File.ReadAllBytes(absPath);
                 byte[] decrypted = AESHelper.Decrypt(encrypted);
 
@@ -138,7 +124,6 @@ namespace RRCManagementSystem
 
                 File.WriteAllBytes(previewPath, decrypted);
 
-                // Set iframe src
                 pdfViewer.Attributes["src"] = ResolveUrl("~/Previews/" + fileName);
                 pnlPreview.Visible = true;
                 lblMessage.Text = "";
@@ -181,8 +166,6 @@ namespace RRCManagementSystem
                 Response.Cache.SetCacheability(HttpCacheability.NoCache);
                 Response.BinaryWrite(decrypted);
                 Response.Flush();
-
-                // Avoid ThreadAbortException from Response.End()
                 HttpContext.Current.ApplicationInstance.CompleteRequest();
             }
             catch (Exception ex)

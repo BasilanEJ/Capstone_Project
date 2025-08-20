@@ -8,7 +8,8 @@ namespace RRCManagementSystem
 {
     public partial class ViewItem : Page
     {
-        private readonly string connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            System.Configuration.ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -30,7 +31,7 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 Check CanView permission for ManageItem module
+            // 🔐 Check CanView permission for ManageItem via SP
             if (!HasViewPermission(userId, "ManageItem"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
@@ -46,23 +47,24 @@ namespace RRCManagementSystem
 
         private bool HasViewPermission(int adminId, string moduleName)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = "SELECT CanView FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@UserID", adminId);
-                cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-
-                try
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", conn))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@UserID", adminId);
+                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.Parameters.AddWithValue("@Permission", "CanView");
+
                     conn.Open();
                     object result = cmd.ExecuteScalar();
                     return result != null && result != DBNull.Value && Convert.ToBoolean(result);
                 }
-                catch
-                {
-                    return false;
-                }
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -70,24 +72,20 @@ namespace RRCManagementSystem
         {
             try
             {
-                using (SqlConnection conn = new SqlConnection(connectionString))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spInventory_List", conn))
                 {
-                    string query = "SELECT ItemID, Name, Type, Quantity, ExpirationDate, CreatedAt, ImagePath, ExcessML FROM Inventory";
-                    if (typeFilter != "All")
-                    {
-                        query += " WHERE Type = @Type";
-                    }
-                    query += " ORDER BY CreatedAt DESC";
+                    cmd.CommandType = CommandType.StoredProcedure;
 
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        if (typeFilter != "All")
-                        {
-                            cmd.Parameters.AddWithValue("@Type", typeFilter);
-                        }
+                    // Convert "All" -> NULL so SP returns all types
+                    if (string.Equals(typeFilter, "All", StringComparison.OrdinalIgnoreCase))
+                        cmd.Parameters.AddWithValue("@Type", DBNull.Value);
+                    else
+                        cmd.Parameters.AddWithValue("@Type", typeFilter);
 
-                        SqlDataAdapter da = new SqlDataAdapter(cmd);
-                        DataTable dt = new DataTable();
+                    using (var da = new SqlDataAdapter(cmd))
+                    {
+                        var dt = new DataTable();
                         da.Fill(dt);
 
                         gvItems.DataSource = dt;
@@ -95,22 +93,20 @@ namespace RRCManagementSystem
 
                         lblMessage.Text = dt.Rows.Count == 0 ? "⚠ No items found." : "";
 
-                        // 🔔 Restocking Alert Logic
+                        // 🔔 Restocking Alert Logic (from SP’s RestockMessage)
                         string restockMsg = "";
-
                         foreach (DataRow row in dt.Rows)
                         {
-                            string itemName = row["Name"].ToString();
-                            string itemType = row["Type"].ToString();
-                            int quantity = Convert.ToInt32(row["Quantity"]);
-
-                            if (itemType == "Bottled Chemical" && quantity <= 3)
+                            if (row.Table.Columns.Contains("RestockFlag") &&
+                                row.Table.Columns.Contains("RestockMessage") &&
+                                row["RestockFlag"] != DBNull.Value &&
+                                Convert.ToBoolean(row["RestockFlag"]))
                             {
-                                restockMsg += $"• <strong>{itemName}</strong> is a bottled chemical and only <strong>{quantity} bottles</strong> are left. Restock soon!<br/>";
-                            }
-                            else if (itemType == "Sachet Pack Chemical" && quantity <= 10)
-                            {
-                                restockMsg += $"• <strong>{itemName}</strong> is a sachet pack chemical and only <strong>{quantity} packs</strong> are left. Restock soon!<br/>";
+                                var msg = Convert.ToString(row["RestockMessage"]);
+                                if (!string.IsNullOrWhiteSpace(msg))
+                                {
+                                    restockMsg += msg + "<br/>";
+                                }
                             }
                         }
 
@@ -137,7 +133,6 @@ namespace RRCManagementSystem
             LoadItems(ddlType.SelectedValue);
         }
 
-        // 🔐 You can remove this handler if you're now using direct URL in the GridView Action link
         protected void gvItems_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName == "EditItem")
@@ -148,61 +143,58 @@ namespace RRCManagementSystem
             }
         }
 
-
         protected void gvItems_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType == DataControlRowType.DataRow)
             {
-                // Get the quantity as int
                 int quantity = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "Quantity"));
-
-                // Find the Label control inside the Quantity column
                 Label lblQuantity = (Label)e.Row.FindControl("lblQuantity");
 
                 if (lblQuantity != null)
                 {
                     if (quantity > 10)
-                    {
                         lblQuantity.ForeColor = System.Drawing.Color.Black;
-                    }
                     else if (quantity > 5 && quantity <= 10)
-                    {
                         lblQuantity.ForeColor = System.Drawing.Color.Goldenrod; // Yellow
-                    }
-                    else // 5 or below
-                    {
+                    else
                         lblQuantity.ForeColor = System.Drawing.Color.Red;
-                    }
                 }
             }
         }
 
-
         protected void btnDeleteHidden_Click(object sender, EventArgs e)
         {
-            int itemId;
-            if (int.TryParse(hiddenItemId.Value, out itemId))
+            if (int.TryParse(hiddenItemId.Value, out int itemId))
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                try
                 {
-                    SqlCommand cmd = new SqlCommand("DELETE FROM Inventory WHERE ItemID = @ItemID", con);
-                    cmd.Parameters.AddWithValue("@ItemID", itemId);
-                    con.Open();
-                    cmd.ExecuteNonQuery();
+                    using (var con = new SqlConnection(connectionString))
+                    using (var cmd = new SqlCommand("dbo.spInventory_Delete", con))
+                    {
+                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@ItemID", itemId);
+
+                        con.Open();
+                        var affected = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+
+                        string script = @"
+<script>
+    Swal.fire({
+        icon: '" + (affected > 0 ? "success" : "warning") + @"',
+        title: '" + (affected > 0 ? "Deleted!" : "Not Found") + @"',
+        text: '" + (affected > 0 ? "Stocks have been successfully deleted." : "Item was not found.") + @"',
+        confirmButtonColor: '#28a745'
+    });
+</script>";
+                        ClientScript.RegisterStartupScript(this.GetType(), "deleteResult", script);
+                    }
+
+                    LoadItems(ddlType.SelectedValue);
                 }
-
-                string script = @"
-    <script>
-        Swal.fire({
-            icon: 'success',
-            title: 'Deleted!',
-            text: 'Stocks have been successfully deleted.',
-            confirmButtonColor: '#28a745'
-        });
-    </script>";
-                ClientScript.RegisterStartupScript(this.GetType(), "deleteSuccess", script);
-
-                LoadItems();
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "❌ Delete failed: " + ex.Message;
+                }
             }
             else
             {
@@ -216,6 +208,5 @@ namespace RRCManagementSystem
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(id);
             return Convert.ToBase64String(bytes).Replace("=", "").Replace("+", "-").Replace("/", "_");
         }
-
     }
 }

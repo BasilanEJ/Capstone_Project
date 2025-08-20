@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Linq;
+using System.Web.Script.Services;
+using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using System.Collections.Generic;
-using System.Web.Services;
-using System.Web.Script.Services;
 
 namespace RRCManagementSystem
 {
@@ -24,97 +25,80 @@ namespace RRCManagementSystem
 
         private void LoadServices()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_Services_List", con))
             {
-                string query = "SELECT ServiceID, Name FROM Services ORDER BY Name ASC";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                conn.Open();
-                cblServices.DataSource = cmd.ExecuteReader();
-                cblServices.DataTextField = "Name";
-                cblServices.DataValueField = "ServiceID";
-                cblServices.DataBind();
+                cmd.CommandType = CommandType.StoredProcedure;
+                con.Open();
+                using (var rdr = cmd.ExecuteReader())
+                {
+                    cblServices.DataSource = rdr;
+                    cblServices.DataTextField = "Name";
+                    cblServices.DataValueField = "ServiceID";
+                    cblServices.DataBind();
+                }
             }
         }
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            // ✅ Check if user is logged in and is an Inspector
-            if (Session["UserID"] == null || Session["Role"] == null || Session["Role"].ToString() != "Inspector")
+            // ✅ must be logged in AND Inspector
+            if (Session["UserID"] == null || Session["Role"] == null || !string.Equals(Session["Role"].ToString(), "Inspector", StringComparison.OrdinalIgnoreCase))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "noInspector", "Swal.fire('Unauthorized', 'You must be logged in as an Inspector.', 'error');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "noInspector",
+                    "Swal.fire('Unauthorized', 'You must be logged in as an Inspector.', 'error');", true);
                 return;
             }
 
-            if (string.IsNullOrEmpty(hfClientID.Value))
+            if (string.IsNullOrWhiteSpace(hfClientID.Value) || !int.TryParse(hfClientID.Value, out int clientId))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "selectClient", "Swal.fire('Missing', 'Please select a client.', 'warning');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "selectClient",
+                    "Swal.fire('Missing', 'Please select a client.', 'warning');", true);
                 return;
             }
 
-            if (!int.TryParse(txtSQM.Text.Trim(), out int sqm))
+            if (!int.TryParse(txtSQM.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int sqm))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "invalidSQM", "Swal.fire('Invalid', 'Please enter a valid SQM.', 'error');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "invalidSQM",
+                    "Swal.fire('Invalid', 'Please enter a valid SQM.', 'error');", true);
                 return;
             }
 
-            if (!decimal.TryParse(txtTotalPrice.Text.Trim(), out decimal total) || total <= 0)
+            if (!decimal.TryParse(txtTotalPrice.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal total) || total <= 0)
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "invalidPrice", "Swal.fire('Invalid', 'Please enter a valid total price.', 'error');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "invalidPrice",
+                    "Swal.fire('Invalid', 'Please enter a valid total price.', 'error');", true);
                 return;
             }
 
             var selectedItems = cblServices.Items.Cast<ListItem>().Where(i => i.Selected).ToList();
             if (!selectedItems.Any())
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "noServices", "Swal.fire('No Services', 'Please select at least one service.', 'error');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "noServices",
+                    "Swal.fire('No Services', 'Please select at least one service.', 'error');", true);
                 return;
             }
 
             string selectedServiceIDs = string.Join(",", selectedItems.Select(i => i.Value));
             string selectedServiceNames = string.Join(", ", selectedItems.Select(i => i.Text));
-            bool isContract = false;
+            int inspectorId = Convert.ToInt32(Session["UserID"], CultureInfo.InvariantCulture);
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                conn.Open();
+            bool isContract = GetIsAnyContract(selectedServiceIDs);
 
-                foreach (ListItem item in selectedItems)
-                {
-                    int serviceId = int.Parse(item.Value);
+            // ✅ Insert pending quotation
+            int newId = InsertPendingQuotation(
+                clientId: clientId,
+                inspectorId: inspectorId,
+                serviceNames: selectedServiceNames,
+                serviceIdCsv: selectedServiceIDs,
+                sqm: sqm,
+                price: total,
+                isContract: isContract
+            );
 
-                    if (!isContract)
-                    {
-                        string typeQuery = "SELECT ServiceType FROM Services WHERE ServiceID = @ServiceID";
-                        SqlCommand typeCmd = new SqlCommand(typeQuery, conn);
-                        typeCmd.Parameters.AddWithValue("@ServiceID", serviceId);
-                        object typeResult = typeCmd.ExecuteScalar();
-                        if (typeResult != null && typeResult.ToString() == "Termite Control")
-                        {
-                            isContract = true;
-                        }
-                    }
-                }
-
-                // ✅ Save quotation for client
-                string insertQuery = @"
-                    INSERT INTO PendingQuotations 
-                        (ClientID, InspectorID, ServiceNames, ServiceID, SQM, Price, IsContract, CreatedAt) 
-                    VALUES 
-                        (@ClientID, @InspectorID, @ServiceNames, @ServiceID, @SQM, @Price, @IsContract, GETDATE())";
-
-                SqlCommand cmd = new SqlCommand(insertQuery, conn);
-                cmd.Parameters.AddWithValue("@ClientID", hfClientID.Value);
-                cmd.Parameters.AddWithValue("@InspectorID", Convert.ToInt32(Session["UserID"]));
-                cmd.Parameters.AddWithValue("@ServiceNames", selectedServiceNames);
-                cmd.Parameters.AddWithValue("@ServiceID", selectedServiceIDs);
-                cmd.Parameters.AddWithValue("@SQM", sqm);
-                cmd.Parameters.AddWithValue("@Price", total);
-                cmd.Parameters.AddWithValue("@IsContract", isContract);
-                cmd.ExecuteNonQuery();
-            }
-
-            // ✅ Show success
-            ScriptManager.RegisterStartupScript(this, GetType(), "success", "Swal.fire('Success', 'Quotation submitted for client!', 'success');", true);
+            // ✅ Success UI
+            ScriptManager.RegisterStartupScript(this, GetType(), "success",
+                "Swal.fire('Success', 'Quotation submitted for client!', 'success');", true);
 
             // ✅ Reset fields
             txtClientSearch.Text = "";
@@ -124,48 +108,85 @@ namespace RRCManagementSystem
             txtTotalPrice.Text = "";
         }
 
+        private bool GetIsAnyContract(string serviceIdCsv)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_Services_IsAnyContract", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ServiceIDs", SqlDbType.NVarChar, -1).Value = (object)serviceIdCsv ?? DBNull.Value;
+
+                var pOut = cmd.Parameters.Add("@IsContract", SqlDbType.Bit);
+                pOut.Direction = ParameterDirection.Output;
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+
+                return (pOut.Value != DBNull.Value) && Convert.ToBoolean(pOut.Value, CultureInfo.InvariantCulture);
+            }
+        }
+
+        private int InsertPendingQuotation(int clientId, int inspectorId, string serviceNames, string serviceIdCsv, int sqm, decimal price, bool isContract)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_PendingQuotations_Insert", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
+                cmd.Parameters.Add("@ServiceNames", SqlDbType.NVarChar, 4000).Value = (object)serviceNames ?? DBNull.Value;
+                cmd.Parameters.Add("@ServiceIDCsv", SqlDbType.NVarChar, 4000).Value = (object)serviceIdCsv ?? DBNull.Value;
+                cmd.Parameters.Add("@SQM", SqlDbType.Int).Value = sqm;
+
+                var pPrice = cmd.Parameters.Add("@Price", SqlDbType.Decimal);
+                pPrice.Precision = 18; pPrice.Scale = 2; pPrice.Value = price;
+
+                cmd.Parameters.Add("@IsContract", SqlDbType.Bit).Value = isContract;
+
+                var pOutId = cmd.Parameters.Add("@PendingQuotationID", SqlDbType.Int);
+                pOutId.Direction = ParameterDirection.Output;
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+
+                return (pOutId.Value == DBNull.Value) ? 0 : Convert.ToInt32(pOutId.Value, CultureInfo.InvariantCulture);
+            }
+        }
+
+        // ===== Ajax AutoComplete endpoint (stored procedure) =====
         [WebMethod]
         [ScriptMethod]
-        public static List<string> SearchClients(string prefixText, int count)
+        public static System.Collections.Generic.List<string> SearchClients(string prefixText, int count)
         {
-            List<string> clients = new List<string>();
-            string connStr = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+            var results = new System.Collections.Generic.List<string>();
+            string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
-            using (SqlConnection conn = new SqlConnection(connStr))
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.usp_Clients_Search", con))
             {
-                string query = $@"
-            SELECT TOP {count} 
-                (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) AS FullName, 
-                ClientID 
-            FROM Clients 
-            WHERE 
-                (
-                    FirstName LIKE @prefix + '%' OR
-                    LastName LIKE @prefix + '%' OR
-                    MiddleName LIKE @prefix + '%' OR
-                    (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) LIKE @prefix + '%'
-                )
-                AND Status = 'Approved'
-            ORDER BY LastName ASC, FirstName ASC";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Prefix", SqlDbType.NVarChar, 200).Value =
+                    (object)(prefixText ?? string.Empty) ?? DBNull.Value;
 
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@prefix", prefixText);
-                conn.Open();
+                // Bounds check for sanity
+                int capped = Math.Max(1, Math.Min(count <= 0 ? 10 : count, 50));
+                cmd.Parameters.Add("@Top", SqlDbType.Int).Value = capped;
 
-                SqlDataReader reader = cmd.ExecuteReader();
-                while (reader.Read())
+                con.Open();
+                using (var rdr = cmd.ExecuteReader())
                 {
-                    clients.Add(
-                        AjaxControlToolkit.AutoCompleteExtender.CreateAutoCompleteItem(
-                            reader["FullName"].ToString(),
-                            reader["ClientID"].ToString()
-                        )
-                    );
+                    while (rdr.Read())
+                    {
+                        string fullName = rdr["FullName"]?.ToString() ?? "";
+                        string id = rdr["ClientID"]?.ToString() ?? "";
+                        // Keep the same format your extender expects
+                        results.Add(AjaxControlToolkit.AutoCompleteExtender.CreateAutoCompleteItem(fullName, id));
+                    }
                 }
             }
 
-            return clients;
+            return results;
         }
-
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 
@@ -28,27 +29,24 @@ namespace RRCManagementSystem
         {
             lblMessage.Text = string.Empty;
 
-            string email = Session["Email"].ToString();
+            var email = Session["Email"].ToString();
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(@"
-                SELECT FirstName, MiddleName, LastName, Email, ContactNumber,
-                       StreetAndUnit, Barangay, City, Region, Country, ProfilePic
-                FROM Clients
-                WHERE Email = @Email;", conn))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_ClientProfile_GetByEmail", conn))
             {
-                cmd.Parameters.AddWithValue("@Email", email);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 320).Value = email;
 
                 try
                 {
                     conn.Open();
-                    using (SqlDataReader r = cmd.ExecuteReader())
+                    using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
                     {
                         if (r.Read())
                         {
-                            string first = r["FirstName"]?.ToString() ?? "";
-                            string middle = r["MiddleName"]?.ToString() ?? "";
-                            string last = r["LastName"]?.ToString() ?? "";
+                            string first = r["FirstName"] as string ?? "";
+                            string middle = r["MiddleName"] as string ?? "";
+                            string last = r["LastName"] as string ?? "";
 
                             string fullName = $"{last}, {first}";
                             if (!string.IsNullOrWhiteSpace(middle))
@@ -59,13 +57,13 @@ namespace RRCManagementSystem
                             txtMiddleName.Text = middle;
                             txtLastName.Text = last;
                             txtName.Text = fullName;
-                            txtEmail.Text = r["Email"]?.ToString() ?? "";
-                            txtContactNumber.Text = r["ContactNumber"]?.ToString() ?? "";
-                            txtStreetAndUnit.Text = r["StreetAndUnit"]?.ToString() ?? "";
-                            txtBarangay.Text = r["Barangay"]?.ToString() ?? "";
-                            txtCity.Text = r["City"]?.ToString() ?? "";
-                            txtRegion.Text = r["Region"]?.ToString() ?? "";
-                            txtCountry.Text = r["Country"]?.ToString() ?? "";
+                            txtEmail.Text = r["Email"] as string ?? "";
+                            txtContactNumber.Text = r["ContactNumber"] as string ?? "";
+                            txtStreetAndUnit.Text = r["StreetAndUnit"] as string ?? "";
+                            txtBarangay.Text = r["Barangay"] as string ?? "";
+                            txtCity.Text = r["City"] as string ?? "";
+                            txtRegion.Text = r["Region"] as string ?? "";
+                            txtCountry.Text = r["Country"] as string ?? "";
 
                             // (Hidden) labels kept for compatibility
                             lblEmail.Text = txtEmail.Text;
@@ -77,9 +75,7 @@ namespace RRCManagementSystem
                             lblCountry.Text = txtCountry.Text;
 
                             // Profile picture
-                            string pic = (r["ProfilePic"] != DBNull.Value)
-                                ? (r["ProfilePic"]?.ToString() ?? "")
-                                : "";
+                            var pic = r["ProfilePic"] as string;
                             if (string.IsNullOrWhiteSpace(pic))
                                 pic = "default-profile.png";
 
@@ -119,7 +115,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string ext = Path.GetExtension(fuProfilePic.FileName)?.ToLower() ?? "";
+            string ext = (Path.GetExtension(fuProfilePic.FileName) ?? "").ToLowerInvariant();
             string[] allowed = { ".jpg", ".jpeg", ".png" };
             if (Array.IndexOf(allowed, ext) < 0)
             {
@@ -135,7 +131,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Save file
+            // Save file with a GUID name (no user-controlled path)
             string fileName = Guid.NewGuid().ToString("N") + ext;
             string folder = Server.MapPath("~/Uploads/");
             string fullPath = Path.Combine(folder, fileName);
@@ -147,13 +143,13 @@ namespace RRCManagementSystem
 
                 fuProfilePic.SaveAs(fullPath);
 
-                // Update DB
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                using (SqlCommand cmd = new SqlCommand(
-                    "UPDATE Clients SET ProfilePic = @Pic WHERE Email = @Email;", conn))
+                // Update via stored procedure
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.usp_ClientProfile_UpdateProfilePic", conn))
                 {
-                    cmd.Parameters.AddWithValue("@Pic", fileName);
-                    cmd.Parameters.AddWithValue("@Email", Session["Email"].ToString());
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 320).Value = Session["Email"].ToString();
+                    cmd.Parameters.Add("@ProfilePic", SqlDbType.NVarChar, 255).Value = fileName;
 
                     conn.Open();
                     int n = cmd.ExecuteNonQuery();
@@ -161,7 +157,6 @@ namespace RRCManagementSystem
                     if (n > 0)
                     {
                         lblMessage.Text = "✅ Profile photo updated!";
-                        // Refresh UI to show new image
                         imgProfilePic.ImageUrl = "~/Uploads/" + fileName;
                     }
                     else

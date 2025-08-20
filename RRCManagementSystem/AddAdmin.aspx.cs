@@ -23,23 +23,29 @@ namespace RRCManagementSystem
             }
         }
 
+        /* =========================
+           STORED PROCEDURE CALLS
+           ========================= */
+
         private void LoadRoles()
         {
             try
             {
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                using (SqlCommand cmd = new SqlCommand("SELECT RoleName FROM Roles ORDER BY RoleName ASC", conn))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spRoles_List", conn))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
                     conn.Open();
-                    using (SqlDataReader reader = cmd.ExecuteReader())
+
+                    using (var reader = cmd.ExecuteReader())
                     {
                         ddlRole.Items.Clear();
                         ddlRole.Items.Add(new ListItem("Select Role", ""));
 
                         while (reader.Read())
                         {
-                            string role = reader["RoleName"].ToString();
-                            ddlRole.Items.Add(new ListItem(role, role));
+                            string roleName = reader["RoleName"].ToString();
+                            ddlRole.Items.Add(new ListItem(roleName, roleName)); // keeping Users.Role as NVARCHAR(RoleName)
                         }
                     }
                 }
@@ -49,6 +55,80 @@ namespace RRCManagementSystem
                 ShowError("❌ Error loading roles: " + ex.Message);
             }
         }
+
+        private bool EmailExists(string email)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spUser_EmailExists", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                conn.Open();
+                var existsFlag = cmd.ExecuteScalar();
+                return existsFlag != null && Convert.ToInt32(existsFlag) == 1;
+            }
+        }
+
+        private int CreateAdminUser(string name, string email, string role, string resetToken, DateTime tokenExpiry)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spUser_CreateAdmin", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = name;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                cmd.Parameters.Add("@Role", SqlDbType.NVarChar, 100).Value = role;
+                cmd.Parameters.Add("@ResetToken", SqlDbType.NVarChar, 100).Value = resetToken;
+                cmd.Parameters.Add("@TokenExpiry", SqlDbType.DateTime).Value = tokenExpiry;
+
+                var pOut = cmd.Parameters.Add("@NewUserID", SqlDbType.Int);
+                pOut.Direction = ParameterDirection.Output;
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+                return (int)pOut.Value;
+            }
+        }
+
+        private void SavePermissionsBulk(int userId)
+        {
+            // Build a DataTable that matches dbo.AdminPermissionTVP
+            var tvp = new DataTable();
+            tvp.Columns.Add("ModuleName", typeof(string));
+            tvp.Columns.Add("CanView", typeof(bool));
+            tvp.Columns.Add("CanAdd", typeof(bool));
+            tvp.Columns.Add("CanEdit", typeof(bool));
+            tvp.Columns.Add("CanDelete", typeof(bool));
+
+            foreach (RepeaterItem item in rptPermissions.Items)
+            {
+                string module = ((HiddenField)item.FindControl("hfModuleName")).Value;
+                bool canView = ((CheckBox)item.FindControl("chkView")).Checked;
+                bool canAdd = ((CheckBox)item.FindControl("chkAdd")).Checked;
+                bool canEdit = ((CheckBox)item.FindControl("chkEdit")).Checked;
+                bool canDelete = ((CheckBox)item.FindControl("chkDelete")).Checked;
+
+                tvp.Rows.Add(module, canView, canAdd, canEdit, canDelete);
+            }
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdminPermissions_BulkReplace", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+
+                var p = cmd.Parameters.AddWithValue("@Perms", tvp);
+                p.SqlDbType = SqlDbType.Structured;
+                p.TypeName = "dbo.AdminPermissionTVP";
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        /* =========================
+           UI / EVENTS
+           ========================= */
 
         protected void ddlRole_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -68,7 +148,6 @@ namespace RRCManagementSystem
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            // Respect ASP.NET validators on the page
             Page.Validate();
             if (!Page.IsValid)
             {
@@ -86,21 +165,18 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Server-side name validation (defense-in-depth vs. client JS/validators)
             if (!IsValidName(name))
             {
                 ShowError("⚠ Name can only contain letters, spaces, hyphen (-), and apostrophe (').");
                 return;
             }
 
-            // Enforce allowed mailbox providers
             if (!IsAllowedEmailDomain(email))
             {
                 ShowError("⚠ Email must be Gmail, Yahoo, or Outlook.");
                 return;
             }
 
-            // Prevent duplicates before insert
             if (EmailExists(email))
             {
                 ShowError("⚠ That email is already in use. Please use a different email.");
@@ -112,25 +188,13 @@ namespace RRCManagementSystem
 
             try
             {
-                int newUserId;
+                // 1) Create user via SP (returns new UserID)
+                int newUserId = CreateAdminUser(name, email, role, resetToken, tokenExpiry);
 
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                using (SqlCommand cmd = new SqlCommand(@"
-                    INSERT INTO Users (Name, Email, Role, ResetToken, TokenExpiry, CreatedAt, Status)
-                    OUTPUT INSERTED.UserID
-                    VALUES (@Name, @Email, @Role, @ResetToken, @TokenExpiry, GETDATE(), 'Active')", conn))
-                {
-                    cmd.Parameters.AddWithValue("@Name", name);
-                    cmd.Parameters.AddWithValue("@Email", email);
-                    cmd.Parameters.AddWithValue("@Role", role);
-                    cmd.Parameters.AddWithValue("@ResetToken", resetToken);
-                    cmd.Parameters.AddWithValue("@TokenExpiry", tokenExpiry);
+                // 2) Save permissions in one go via TVP
+                SavePermissionsBulk(newUserId);
 
-                    conn.Open();
-                    newUserId = (int)cmd.ExecuteScalar();
-                }
-
-                SavePermissions(newUserId);
+                // 3) Email invite
                 bool emailSent = SendResetEmail(email, resetToken, role);
 
                 if (emailSent)
@@ -138,39 +202,13 @@ namespace RRCManagementSystem
                 else
                     ShowWarning("Admin account created, but failed to send email.");
             }
-            catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601) // unique constraint/index
+            catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
             {
                 ShowError("⚠ That email is already in use. Please use a different email.");
             }
             catch (Exception ex)
             {
                 ShowError("⚠ Error creating admin: " + ex.Message);
-            }
-        }
-
-        private static bool IsValidName(string name)
-        {
-            // Same pattern as your ASPX validator: letters (incl. accents), spaces, hyphen, apostrophe
-            return Regex.IsMatch(name, @"^[A-Za-zÀ-ÖØ-öø-ÿ\s'\-]+$");
-        }
-
-        private static bool IsAllowedEmailDomain(string email)
-        {
-            // Enforce gmail.com, yahoo.com, outlook.com only
-            return email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase)
-                || email.EndsWith("@yahoo.com", StringComparison.OrdinalIgnoreCase)
-                || email.EndsWith("@outlook.com", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private bool EmailExists(string email)
-        {
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("SELECT 1 FROM Users WHERE Email = @Email", conn))
-            {
-                cmd.Parameters.AddWithValue("@Email", email);
-                conn.Open();
-                var o = cmd.ExecuteScalar();
-                return o != null;
             }
         }
 
@@ -204,7 +242,7 @@ namespace RRCManagementSystem
 
             foreach (string module in modules)
             {
-                DataRow row = dt.NewRow();
+                var row = dt.NewRow();
                 row["ModuleName"] = module;
                 row["CanView"] = fullPermission;
                 row["CanAdd"] = fullPermission;
@@ -218,34 +256,20 @@ namespace RRCManagementSystem
             rptPermissions.Visible = true;
         }
 
-        private void SavePermissions(int userId)
+        /* =========================
+           HELPERS
+           ========================= */
+
+        private static bool IsValidName(string name)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                conn.Open();
+            return Regex.IsMatch(name, @"^[A-Za-zÀ-ÖØ-öø-ÿ\s'\-]+$");
+        }
 
-                foreach (RepeaterItem item in rptPermissions.Items)
-                {
-                    string module = ((HiddenField)item.FindControl("hfModuleName")).Value;
-                    bool canView = ((CheckBox)item.FindControl("chkView")).Checked;
-                    bool canAdd = ((CheckBox)item.FindControl("chkAdd")).Checked;
-                    bool canEdit = ((CheckBox)item.FindControl("chkEdit")).Checked;
-                    bool canDelete = ((CheckBox)item.FindControl("chkDelete")).Checked;
-
-                    using (SqlCommand cmd = new SqlCommand(@"
-                        INSERT INTO AdminPermissions (UserID, ModuleName, CanView, CanAdd, CanEdit, CanDelete)
-                        VALUES (@UserID, @ModuleName, @CanView, @CanAdd, @CanEdit, @CanDelete)", conn))
-                    {
-                        cmd.Parameters.AddWithValue("@UserID", userId);
-                        cmd.Parameters.AddWithValue("@ModuleName", module);
-                        cmd.Parameters.AddWithValue("@CanView", canView);
-                        cmd.Parameters.AddWithValue("@CanAdd", canAdd);
-                        cmd.Parameters.AddWithValue("@CanEdit", canEdit);
-                        cmd.Parameters.AddWithValue("@CanDelete", canDelete);
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-            }
+        private static bool IsAllowedEmailDomain(string email)
+        {
+            return email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase)
+                || email.EndsWith("@yahoo.com", StringComparison.OrdinalIgnoreCase)
+                || email.EndsWith("@outlook.com", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool SendResetEmail(string toEmail, string token, string role)
@@ -254,7 +278,7 @@ namespace RRCManagementSystem
             {
                 TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
                 string formattedRole = textInfo.ToTitleCase((role ?? "").ToLower());
-                string resetLink = $"https://rrcmanagement-001-site1.ntempurl.com/ResetAdminPassword.aspx?type=admin&token={token}";
+                string resetLink = $"https://rrcmanagement-bcfgfpa5hzaafhdy.eastasia-01.azurewebsites.net/ResetAdminPassword.aspx?type=admin&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
                 string body = $@"
@@ -279,13 +303,8 @@ namespace RRCManagementSystem
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       padding: 20px 30px;
     }}
-    h3 {{
-      color: #2a4fa7;
-      margin-bottom: 10px;
-    }}
-    p {{
-      margin: 10px 0;
-    }}
+    h3 {{ color: #2a4fa7; margin-bottom: 10px; }}
+    p {{ margin: 10px 0; }}
     .button {{
       display: inline-block;
       padding: 12px 20px;
@@ -328,7 +347,7 @@ namespace RRCManagementSystem
                     {
                         smtp.Credentials = new NetworkCredential(
                             "rrctermiteandpestcontrol@gmail.com",
-                            "pktz jwzp tbvx qheq" // move to Web.config/app settings
+                            "pktz jwzp tbvx qheq" // move to Web.config/appSettings
                         );
                         smtp.EnableSsl = true;
                         smtp.Send(mail);

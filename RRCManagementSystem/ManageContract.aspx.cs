@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Web.UI;
@@ -11,7 +12,6 @@ namespace RRCManagementSystem
     public partial class ManageContract : System.Web.UI.Page
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-        private readonly string saveDirectory = @"D:\EncryptedContracts\"; // External path
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -24,48 +24,31 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Deny access for SuperAdmin and Inspector
+            // 🔐 Deny SuperAdmin and Inspector (kept from your version)
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            int userId = Convert.ToInt32(Session["UserID"]);
-
-            /*🔐 Optional: Check CanView permission (if applicable)
-            if (!HasPermission(userId, "ManageClients"))
-            {
-                Response.Redirect("~/Unauthorized.aspx");
-                return;
-             } */
-
             if (!IsPostBack)
             {
                 LoadClients();
-            } 
+            }
         }
-
 
         private void LoadClients()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClients_ListApproved", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = @"
-            SELECT 
-                ClientID, 
-                LastName + ', ' + FirstName +
-                CASE 
-                    WHEN MiddleName IS NULL OR LTRIM(RTRIM(MiddleName)) = '' THEN ''
-                    ELSE ' ' + MiddleName
-                END AS Name
-            FROM Clients
-            WHERE Status = 'Approved'";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                SqlCommand cmd = new SqlCommand(query, conn);
-                conn.Open();
-                SqlDataReader reader = cmd.ExecuteReader();
-                ddlClients.DataSource = reader;
+                var dt = new DataTable();
+                da.Fill(dt);
+
+                ddlClients.DataSource = dt;
                 ddlClients.DataTextField = "Name";
                 ddlClients.DataValueField = "ClientID";
                 ddlClients.DataBind();
@@ -73,30 +56,41 @@ namespace RRCManagementSystem
             }
         }
 
-
         protected void btnUpload_Click(object sender, EventArgs e)
         {
             lblMessage.CssClass = "message";
+            lblMessage.Text = "";
 
+            // session re-check
             if (Session["UserID"] == null)
             {
-                lblMessage.Text = "❌ You must be logged in to upload a contract.";
-                lblMessage.CssClass += " error";
+                Fail("❌ You must be logged in to upload a contract.");
                 return;
             }
 
-
-            if (!fuContract.HasFile || Path.GetExtension(fuContract.FileName).ToLower() != ".pdf")
+            // file checks
+            if (!fuContract.HasFile || Path.GetExtension(fuContract.FileName).ToLowerInvariant() != ".pdf")
             {
-                lblMessage.Text = "❌ Please upload a valid PDF file.";
-                lblMessage.CssClass += " error";
+                Fail("❌ Please upload a valid PDF file.");
                 return;
             }
 
             if (string.IsNullOrEmpty(ddlClients.SelectedValue))
             {
-                lblMessage.Text = "❌ Please select a client.";
-                lblMessage.CssClass += " error";
+                Fail("❌ Please select a client.");
+                return;
+            }
+
+            if (!DateTime.TryParse(txtStartDate.Text, out var startDate) ||
+                !DateTime.TryParse(txtEndDate.Text, out var endDate))
+            {
+                Fail("❌ Please enter valid Start/End dates.");
+                return;
+            }
+
+            if (endDate < startDate)
+            {
+                Fail("❌ End Date cannot be earlier than Start Date.");
                 return;
             }
 
@@ -104,48 +98,38 @@ namespace RRCManagementSystem
             {
                 int clientId = Convert.ToInt32(ddlClients.SelectedValue);
                 int uploadedBy = Convert.ToInt32(Session["UserID"]);
-                DateTime startDate = Convert.ToDateTime(txtStartDate.Text);
-                DateTime endDate = Convert.ToDateTime(txtEndDate.Text);
-                string remarks = txtRemarks.Text.Trim();
+                string remarks = (txtRemarks.Text ?? string.Empty).Trim();
 
-                string fileName = Guid.NewGuid().ToString() + ".pdf";
+                // Save encrypted PDF under a virtual path that maps inside the app
+                string fileName = Guid.NewGuid().ToString("N") + ".pdf";
+                string relativePath = "~/EncryptedContracts/" + fileName;     // path saved in DB
+                string physicalPath = Server.MapPath(relativePath);           // where we store the file
 
-                // ✅ Save virtual path (for database)
-                string relativePath = "~/EncryptedContracts/" + fileName;
+                // ensure folder exists
+                Directory.CreateDirectory(Path.GetDirectoryName(physicalPath) ?? Server.MapPath("~/"));
 
-                // ✅ Map virtual to real physical path (for saving file)
-                string physicalPath = Server.MapPath(relativePath);
-
-                // ✅ Ensure folder exists
-                string folderPath = Path.GetDirectoryName(physicalPath);
-                if (!Directory.Exists(folderPath))
-                    Directory.CreateDirectory(folderPath);
-
-                // ✅ Encrypt and save
-                using (MemoryStream ms = new MemoryStream())
+                // encrypt and save
+                using (var ms = new MemoryStream())
                 {
                     fuContract.PostedFile.InputStream.CopyTo(ms);
-                    byte[] encryptedData = AESHelper.Encrypt(ms.ToArray());
-                    File.WriteAllBytes(physicalPath, encryptedData);
+                    byte[] encrypted = AESHelper.Encrypt(ms.ToArray());
+                    File.WriteAllBytes(physicalPath, encrypted);
                 }
 
-                // ✅ Save metadata to database (virtual path only)
-                using (SqlConnection conn = new SqlConnection(connectionString))
+                // DB insert via SP
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spClientContract_Insert", conn))
                 {
-                    string query = @"INSERT INTO ClientContracts 
-                            (ClientID, FilePath, StartDate, EndDate, UploadedBy, Remarks)
-                            VALUES (@ClientID, @FilePath, @StartDate, @EndDate, @UploadedBy, @Remarks)";
-
-                    SqlCommand cmd = new SqlCommand(query, conn);
-                    cmd.Parameters.AddWithValue("@ClientID", clientId);
-                    cmd.Parameters.AddWithValue("@FilePath", relativePath); // 🔵 Save virtual path here
-                    cmd.Parameters.AddWithValue("@StartDate", startDate);
-                    cmd.Parameters.AddWithValue("@EndDate", endDate);
-                    cmd.Parameters.AddWithValue("@UploadedBy", uploadedBy);
-                    cmd.Parameters.AddWithValue("@Remarks", remarks);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                    cmd.Parameters.Add("@FilePath", SqlDbType.NVarChar, 260).Value = relativePath;
+                    cmd.Parameters.Add("@StartDate", SqlDbType.DateTime).Value = startDate;
+                    cmd.Parameters.Add("@EndDate", SqlDbType.DateTime).Value = endDate;
+                    cmd.Parameters.Add("@UploadedBy", SqlDbType.Int).Value = uploadedBy;
+                    cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar).Value = (object)remarks ?? DBNull.Value;
 
                     conn.Open();
-                    cmd.ExecuteNonQuery();
+                    object newId = cmd.ExecuteScalar(); // ContractID if you want it
                 }
 
                 lblMessage.Text = "✅ Contract uploaded and encrypted successfully!";
@@ -154,12 +138,9 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "❌ Error: " + ex.Message;
-                lblMessage.CssClass += " error";
+                Fail("❌ Error: " + ex.Message);
             }
         }
-
-
 
         private void ClearForm()
         {
@@ -167,6 +148,12 @@ namespace RRCManagementSystem
             txtStartDate.Text = "";
             txtEndDate.Text = "";
             txtRemarks.Text = "";
+        }
+
+        private void Fail(string msg)
+        {
+            lblMessage.Text = msg;
+            lblMessage.CssClass = "message error";
         }
     }
 }

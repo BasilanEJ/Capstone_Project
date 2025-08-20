@@ -12,12 +12,13 @@ using System.Web.UI.WebControls;
 using System.Web;
 using System.Linq;
 using System.Globalization;
+
 namespace RRCManagementSystem
 {
     public partial class Dashboard : System.Web.UI.Page
     {
         protected string salesDataJson = "{}";
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -30,6 +31,7 @@ namespace RRCManagementSystem
             }
         }
 
+        // ==================== SALES CHART (AJAX) ====================
         [WebMethod]
         [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
         public static object GetSalesData(string type)
@@ -38,172 +40,51 @@ namespace RRCManagementSystem
             var data = new List<decimal>();
 
             string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-            DateTime today = DateTime.Today;
+            string mode = (type ?? "").ToLowerInvariant();
 
-            using (var conn = new SqlConnection(cs))
+            // Map modes: "", "daily", "weekly", "monthly", "yearly"
+            if (mode != "weekly" && mode != "monthly" && mode != "yearly" && mode != "daily")
+                mode = "daily";
+
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spDashboard_Sales_Aggregate", con))
             {
-                conn.Open();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Mode", SqlDbType.NVarChar, 10).Value = mode;
+                con.Open();
 
-                if (type == "weekly")
+                using (var r = cmd.ExecuteReader())
                 {
-                    // Current month, always 4 buckets. Extra days -> Week 4
-                    DateTime start = new DateTime(today.Year, today.Month, 1);
-                    DateTime end = start.AddMonths(1); // exclusive
-
-                    // Labels: Week 1..Week 4
-                    for (int w = 1; w <= 4; w++) labels.Add("Week " + w);
-                    var totals = new decimal[4];
-
-                    string q = @"SELECT TransactionDate, Amount
-                         FROM Transactions
-                         WHERE TransactionDate >= @start AND TransactionDate < @end";
-                    using (var cmd = new SqlCommand(q, conn))
+                    while (r.Read())
                     {
-                        cmd.Parameters.AddWithValue("@start", start);
-                        cmd.Parameters.AddWithValue("@end", end);
-
-                        using (var rdr = cmd.ExecuteReader())
-                        {
-                            while (rdr.Read())
-                            {
-                                DateTime d = Convert.ToDateTime(rdr["TransactionDate"]);
-                                int idx = (d.Day - 1) / 7;   // 0..4 (potentially)
-                                if (idx < 0) idx = 0;
-                                if (idx > 3) idx = 3;       // roll week 5 days into Week 4
-                                totals[idx] += Convert.ToDecimal(rdr["Amount"]);
-                            }
-                        }
+                        labels.Add(Convert.ToString(r["BucketLabel"]));
+                        data.Add(Convert.ToDecimal(r["Total"]));
                     }
-
-                    data.AddRange(totals);
-                }
-                else if (type == "monthly")
-                {
-                    // Current year: Jan..Dec
-                    string[] monthNames = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-                    labels.AddRange(monthNames);
-                    var totals = new decimal[12];
-
-                    string q = @"SELECT MONTH(TransactionDate) AS M, SUM(Amount) AS Total
-                         FROM Transactions
-                         WHERE YEAR(TransactionDate) = @yr
-                         GROUP BY MONTH(TransactionDate)";
-                    using (var cmd = new SqlCommand(q, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@yr", today.Year);
-                        using (var rdr = cmd.ExecuteReader())
-                        {
-                            while (rdr.Read())
-                            {
-                                int m = Convert.ToInt32(rdr["M"]); // 1..12
-                                totals[m - 1] = Convert.ToDecimal(rdr["Total"]);
-                            }
-                        }
-                    }
-
-                    data.AddRange(totals);
-                }
-                else if (type == "yearly")
-                {
-                    // Last 6 years including current (e.g., 2020..2025)
-                    int startYear = today.Year - 5;
-                    var map = new Dictionary<int, decimal>();
-                    for (int y = startYear; y <= today.Year; y++)
-                    {
-                        labels.Add(y.ToString());
-                        map[y] = 0m;
-                    }
-
-                    string q = @"SELECT YEAR(TransactionDate) AS Y, SUM(Amount) AS Total
-                         FROM Transactions
-                         WHERE YEAR(TransactionDate) BETWEEN @y1 AND @y2
-                         GROUP BY YEAR(TransactionDate)";
-                    using (var cmd = new SqlCommand(q, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@y1", startYear);
-                        cmd.Parameters.AddWithValue("@y2", today.Year);
-
-                        using (var rdr = cmd.ExecuteReader())
-                        {
-                            while (rdr.Read())
-                            {
-                                int y = Convert.ToInt32(rdr["Y"]);
-                                map[y] = Convert.ToDecimal(rdr["Total"]);
-                            }
-                        }
-                    }
-
-                    foreach (var lab in labels) data.Add(map[int.Parse(lab)]);
-                }
-                else
-                {
-                    // Daily for current month: 1..last day
-                    DateTime start = new DateTime(today.Year, today.Month, 1);
-                    DateTime end = start.AddMonths(1);
-                    int daysInMonth = DateTime.DaysInMonth(today.Year, today.Month);
-
-                    var totals = new decimal[daysInMonth];
-                    for (int d = 1; d <= daysInMonth; d++) labels.Add(d.ToString());
-
-                    string q = @"SELECT DAY(TransactionDate) AS D, SUM(Amount) AS Total
-                         FROM Transactions
-                         WHERE TransactionDate >= @start AND TransactionDate < @end
-                         GROUP BY DAY(TransactionDate)";
-                    using (var cmd = new SqlCommand(q, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@start", start);
-                        cmd.Parameters.AddWithValue("@end", end);
-
-                        using (var rdr = cmd.ExecuteReader())
-                        {
-                            while (rdr.Read())
-                            {
-                                int d = Convert.ToInt32(rdr["D"]); // 1..daysInMonth
-                                totals[d - 1] = Convert.ToDecimal(rdr["Total"]);
-                            }
-                        }
-                    }
-
-                    data.AddRange(totals);
                 }
             }
 
             return new { labels, data };
         }
 
-
+        // ==================== WEEKLY CALENDAR ====================
         private void LoadWeeklyBookingCalendar()
         {
-            // Always start fresh
             tblCalendar.Rows.Clear();
 
-            // Sunday-start week
             DateTime today = DateTime.Today;
             DateTime sunday = today.AddDays(-(int)today.DayOfWeek);
             DateTime saturday = sunday.AddDays(6);
 
-            // Prepare buckets per day
             var calendarData = new Dictionary<DayOfWeek, List<string>>();
             foreach (DayOfWeek d in Enum.GetValues(typeof(DayOfWeek)))
                 calendarData[d] = new List<string>();
 
-            // Pull bookings for the week (ok if none)
-            using (SqlConnection con = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(@"
-        SELECT 
-            b.ScheduledDate,
-            c.FirstName, c.LastName,
-            c.StreetAndUnit, c.Barangay, c.City,
-            t.GroupName
-        FROM Bookings b
-        INNER JOIN Clients c ON b.ClientID = c.ClientID
-        LEFT JOIN Teams t ON b.TeamID = t.TeamID
-        WHERE CAST(b.ScheduledDate AS DATE) BETWEEN @Sunday AND @Saturday
-          AND b.Status NOT IN ('Cancelled')
-        ORDER BY b.ScheduledDate", con))
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spDashboard_WeeklyCalendar", con))
             {
-                cmd.Parameters.AddWithValue("@Sunday", sunday.Date);
-                cmd.Parameters.AddWithValue("@Saturday", saturday.Date);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Sunday", SqlDbType.Date).Value = sunday.Date;
+                cmd.Parameters.Add("@Saturday", SqlDbType.Date).Value = saturday.Date;
 
                 con.Open();
                 using (var reader = cmd.ExecuteReader())
@@ -235,7 +116,6 @@ namespace RRCManagementSystem
                 }
             }
 
-            // Optional: header row with dates (Sun–Sat)
             var header = new TableHeaderRow();
             for (int i = 0; i < 7; i++)
             {
@@ -249,7 +129,6 @@ namespace RRCManagementSystem
             }
             tblCalendar.Rows.Add(header);
 
-            // Body row with cells for each day (show placeholder if empty)
             var row = new TableRow();
             for (int i = 0; i < 7; i++)
             {
@@ -262,7 +141,7 @@ namespace RRCManagementSystem
                 }
                 else
                 {
-                    var sb = new System.Text.StringBuilder();
+                    var sb = new StringBuilder();
                     foreach (var entry in calendarData[day])
                     {
                         sb.Append(entry);
@@ -276,97 +155,58 @@ namespace RRCManagementSystem
             tblCalendar.Rows.Add(row);
         }
 
-
-        // ==================== METRICS ====================
+        // ==================== METRICS (PHT TODAY / THIS MONTH) ====================
         private void LoadTotalCounts()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            // simple totals
+            using (var con = new SqlConnection(cs))
             {
-                conn.Open();
+                con.Open();
 
-                // Simple counts
-                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Clients", conn))
-                    lblTotalClients.Text = (Convert.ToInt32(cmd.ExecuteScalar())).ToString("N0");
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Clients", con))
+                    lblTotalClients.Text = Convert.ToInt32(cmd.ExecuteScalar()).ToString("N0");
 
-                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Employees", conn))
-                    lblTotalWorkers.Text = (Convert.ToInt32(cmd.ExecuteScalar())).ToString("N0");
+                using (var cmd = new SqlCommand("SELECT COUNT(*) FROM Employees", con))
+                    lblTotalWorkers.Text = Convert.ToInt32(cmd.ExecuteScalar()).ToString("N0");
+            }
 
-                // --- Build PH time boundaries in SQL once, reuse them (robust + fast) ---
-                // We compute:
-                //   @phtTodayStart = today 00:00 PHT
-                //   @phtTomorrowStart = tomorrow 00:00 PHT  (exclusive)
-                //   @phtMonthStart = 1st day of this month 00:00 PHT
-                //   @phtNextMonthStart = 1st day of next month 00:00 PHT (exclusive)
-                string timeCte = @"
-;WITH tz AS (
-    SELECT 
-        CAST(SYSDATETIMEOFFSET() AT TIME ZONE 'Singapore Standard Time' AS datetimeoffset) AS NowPht
-),
-bounds AS (
-    SELECT
-        CAST(CAST(NowPht AS date) AS datetime)       AS PhtTodayStart,      -- today 00:00 PHT
-        DATEADD(day, 1, CAST(CAST(NowPht AS date) AS datetime)) AS PhtTomorrowStart,
-        CAST(DATEFROMPARTS(YEAR(NowPht), MONTH(NowPht), 1) AS datetime) AS PhtMonthStart,
-        CAST(DATEADD(month, 1, DATEFROMPARTS(YEAR(NowPht), MONTH(NowPht), 1)) AS datetime) AS PhtNextMonthStart
-    FROM tz
-)
-";
-
-                // TODAY (PHT): sum Amount where TransactionDate shifted to +08:00 is in [today, tomorrow)
-                using (var cmd = new SqlCommand(timeCte + @"
-SELECT ISNULL(SUM(t.Amount), 0)
-FROM Transactions t
-CROSS JOIN bounds b
-WHERE SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') >= b.PhtTodayStart
-  AND SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') <  b.PhtTomorrowStart
-", conn))
+            // PHT sales totals via SP (returns two scalars)
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spDashboard_TotalsPHT", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                con.Open();
+                using (var r = cmd.ExecuteReader())
                 {
-                    lblTodaySales.Text = "₱" + Convert.ToDecimal(cmd.ExecuteScalar() ?? 0m).ToString("N2");
-                }
-
-                // THIS MONTH (PHT): sum Amount where shifted timestamp is in [monthStart, nextMonthStart)
-                using (var cmd = new SqlCommand(timeCte + @"
-SELECT ISNULL(SUM(t.Amount), 0)
-FROM Transactions t
-CROSS JOIN bounds b
-WHERE SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') >= b.PhtMonthStart
-  AND SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') <  b.PhtNextMonthStart
-", conn))
-                {
-                    lblMonthSales.Text = "₱" + Convert.ToDecimal(cmd.ExecuteScalar() ?? 0m).ToString("N2");
+                    if (r.Read())
+                    {
+                        decimal today = Convert.ToDecimal(r["TodayTotal"]);
+                        decimal month = Convert.ToDecimal(r["MonthTotal"]);
+                        lblTodaySales.Text = "₱" + today.ToString("N2");
+                        lblMonthSales.Text = "₱" + month.ToString("N2");
+                    }
                 }
             }
         }
 
-
-        // ==================== BLOCKCHAIN LOG ====================
+        // ==================== BLOCKCHAIN LOG LIST/FILTER ====================
         private void LoadBlockchainLog()
         {
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = conn.CreateCommand())
+            DateTime fromDate, toDate;
+            bool hasFrom = DateTime.TryParse(txtFromDate.Text, out fromDate);
+            bool hasTo = DateTime.TryParse(txtToDate.Text, out toDate);
+
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spBlockchain_Log_List", con))
             {
-                // Parse dates if provided
-                DateTime fromDate, toDate;
-                bool hasFrom = DateTime.TryParse(txtFromDate.Text, out fromDate);
-                bool hasTo = DateTime.TryParse(txtToDate.Text, out toDate);
-
-                // Make 'to' an exclusive upper bound so the full end date is included
-                if (hasTo) toDate = toDate.Date.AddDays(1);
-
-                cmd.CommandText = @"
-            SELECT LogID, TransactionID, SaleHash, Timestamp
-            FROM BlockchainSalesLog
-            WHERE (@From IS NULL OR Timestamp >= @From)
-              AND (@To   IS NULL OR Timestamp <  @To)
-            ORDER BY Timestamp DESC;";
-
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@From", SqlDbType.DateTime).Value = hasFrom ? (object)fromDate.Date : DBNull.Value;
-                cmd.Parameters.Add("@To", SqlDbType.DateTime).Value = hasTo ? (object)toDate : DBNull.Value;
+                cmd.Parameters.Add("@To", SqlDbType.DateTime).Value = hasTo ? (object)toDate.Date.AddDays(1) : DBNull.Value; // exclusive
 
                 var dt = new DataTable();
                 using (var da = new SqlDataAdapter(cmd))
                 {
-                    conn.Open();
+                    con.Open();
                     da.Fill(dt);
                 }
 
@@ -375,12 +215,12 @@ WHERE SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') >= b.Ph
             }
         }
 
-
         protected void btnFilterBlockchain_Click(object sender, EventArgs e)
         {
             LoadBlockchainLog();
         }
 
+        // ==================== BLOCKCHAIN VERIFY ====================
         protected void btnVerifyBlockchain_Click(object sender, EventArgs e)
         {
             int checkedCount = 0, tamperedCount = 0;
@@ -393,7 +233,7 @@ WHERE SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') >= b.Ph
 
             string expectedPrev = new string('0', 64);
 
-            // Try to read HMAC key; if missing, we'll skip HMAC checks
+            // Optional HMAC key
             byte[] hmacKey = null;
             try
             {
@@ -403,23 +243,17 @@ WHERE SWITCHOFFSET(CONVERT(datetimeoffset, t.TransactionDate), '+08:00') >= b.Ph
             }
             catch { hmacKey = null; }
 
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = conn.CreateCommand())
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spBlockchain_Log_ListForVerify", con))
             {
-                cmd.CommandText = @"
-SELECT LogID, TransactionID, SaleHash, SaleDataJson, PrevHash, ChainHash, Timestamp, AuthTag
-FROM BlockchainSalesLog
-WHERE (@From IS NULL OR Timestamp >= @From)
-  AND (@To   IS NULL OR Timestamp <  @To)
-ORDER BY LogID ASC;";
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@From", SqlDbType.DateTime).Value = hasFrom ? (object)fromDate.Date : DBNull.Value;
-                cmd.Parameters.Add("@To", SqlDbType.DateTime).Value = hasTo ? (object)toDate : DBNull.Value;
+                cmd.Parameters.Add("@To", SqlDbType.DateTime).Value = hasTo ? (object)toDate : DBNull.Value; // exclusive
 
-                conn.Open();
+                con.Open();
                 using (var r = cmd.ExecuteReader())
                 {
-                    bool isFirstRowInRange = true;
-
+                    bool isFirst = true;
                     while (r.Read())
                     {
                         checkedCount++;
@@ -430,13 +264,13 @@ ORDER BY LogID ASC;";
                         string chainHash = r["ChainHash"] as string ?? "";
                         int txId = (int)r["TransactionID"];
                         DateTime ts = (DateTime)r["Timestamp"];
-                        byte[] tag = r["AuthTag"] as byte[]; // may be null for legacy
+                        byte[] tag = r["AuthTag"] as byte[];
 
-                        // 1) JSON hash
+                        // JSON hash
                         string recomputedSaleHash = GenerateSHA256Hash(saleJson);
-                        bool okSale = string.Equals(saleHashDb, recomputedSaleHash, StringComparison.OrdinalIgnoreCase);
+                        bool okSale = saleHashDb.Equals(recomputedSaleHash, StringComparison.OrdinalIgnoreCase);
 
-                        // Detect whether this row has chain fields
+                        // Chain checks (if present)
                         bool hasChain = !string.IsNullOrWhiteSpace(prevHash) && prevHash.Length == 64
                                      && !string.IsNullOrWhiteSpace(chainHash) && chainHash.Length == 64;
 
@@ -444,37 +278,26 @@ ORDER BY LogID ASC;";
 
                         if (hasChain)
                         {
-                            if (isFirstRowInRange)
-                            {
-                                // For the first row in a filtered set, accept its PrevHash as the starting point.
-                                expectedPrev = prevHash;
-                            }
-                            // 2) prev link (now we can compare)
-                            okPrev = string.Equals(prevHash, expectedPrev, StringComparison.OrdinalIgnoreCase);
+                            if (isFirst) expectedPrev = prevHash; // accept starting point for filtered range
+                            okPrev = prevHash.Equals(expectedPrev, StringComparison.OrdinalIgnoreCase);
 
-                            // 3) chain hash
                             string material = $"{prevHash}|{recomputedSaleHash}|{txId}|{ts.ToUniversalTime():O}";
                             string recomputedChain = GenerateSHA256Hash(material);
-                            okChain = string.Equals(chainHash, recomputedChain, StringComparison.OrdinalIgnoreCase);
+                            okChain = chainHash.Equals(recomputedChain, StringComparison.OrdinalIgnoreCase);
 
-                            // advance expected link only when we have chain
                             expectedPrev = chainHash;
                         }
 
-                        // 4) HMAC (optional if key/tag missing)
+                        // HMAC (optional)
                         bool okHmac = true;
-                        if (hmacKey != null)
+                        if (hmacKey != null && tag != null && tag.Length > 0)
                         {
-                            if (tag != null && tag.Length > 0)
-                            {
-                                string paidAtIso = ts.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
-                                string macMaterial = $"{saleJson}|{txId}|{paidAtIso}";
-                                byte[] expected;
-                                using (var h = new HMACSHA256(hmacKey))
-                                    expected = h.ComputeHash(Encoding.UTF8.GetBytes(macMaterial));
-                                okHmac = tag.SequenceEqual(expected);
-                            }
-                            // else: legacy row without tag -> treat as OK
+                            string paidAtIso = ts.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
+                            string macMaterial = $"{saleJson}|{txId}|{paidAtIso}";
+                            byte[] expected;
+                            using (var h = new HMACSHA256(hmacKey))
+                                expected = h.ComputeHash(Encoding.UTF8.GetBytes(macMaterial));
+                            okHmac = tag.SequenceEqual(expected);
                         }
 
                         if (!(okSale && okPrev && okChain && okHmac))
@@ -483,7 +306,7 @@ ORDER BY LogID ASC;";
                             tamperedCount++;
                         }
 
-                        isFirstRowInRange = false;
+                        isFirst = false;
                     }
                 }
             }
@@ -496,48 +319,39 @@ ORDER BY LogID ASC;";
             else if (allValid)
             {
                 lblVerificationResult.ForeColor = System.Drawing.Color.Green;
-                lblVerificationResult.Text = "✅ Verification complete.<br/>" +
-     "Your records match what was originally saved.<br/>" +
-     "The sequence of records is correct.<br/>" +
-     "No signs of changes or tampering.";
-
+                lblVerificationResult.Text = "✅ Verification complete.<br/>Your records match what was originally saved.<br/>The sequence is correct.<br/>No signs of tampering.";
             }
             else
             {
                 lblVerificationResult.ForeColor = System.Drawing.Color.Red;
-                lblVerificationResult.Text = $"❌ {tamperedCount} out of {checkedCount} record(s) appear to have been altered or are inconsistent.";
-
+                lblVerificationResult.Text = $"❌ {tamperedCount} of {checkedCount} record(s) appear altered or inconsistent.";
             }
 
-            AddAuditLog(Convert.ToInt32(Session["AdminID"]), "Performed blockchain verification.");
+            LogAudit("Performed blockchain verification.");
         }
 
-
-
+        // JSON popup
         protected void rptBlockchainLog_ItemCommand(object source, RepeaterCommandEventArgs e)
         {
             if (e.CommandName == "ViewJson")
             {
-                var arg = e.CommandArgument?.ToString();
-                if (!int.TryParse(arg, out var transactionId))
+                if (!int.TryParse(e.CommandArgument?.ToString(), out var transactionId))
                     return;
 
-                using (var conn = new SqlConnection(connectionString))
-                using (var cmd = conn.CreateCommand())
+                string saleDataJson = null;
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spBlockchain_GetLatestJsonByTransaction", con))
                 {
-                    cmd.CommandText = "SELECT TOP 1 SaleDataJson FROM BlockchainSalesLog WHERE TransactionID = @TransactionID ORDER BY Timestamp DESC;";
+                    cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@TransactionID", SqlDbType.Int).Value = transactionId;
+                    con.Open();
+                    saleDataJson = Convert.ToString(cmd.ExecuteScalar());
+                }
 
-                    conn.Open();
-                    var result = cmd.ExecuteScalar();
-
-                    if (result != null)
-                    {
-                        string saleDataJson = result.ToString();
-                        string safeJson = HttpUtility.JavaScriptStringEncode(saleDataJson);
-                        // openModal expects a string; pass a JS-safe version
-                        ScriptManager.RegisterStartupScript(this, GetType(), "PopupJson", $"openModal('{safeJson}');", true);
-                    }
+                if (saleDataJson != null)
+                {
+                    string safeJson = HttpUtility.JavaScriptStringEncode(saleDataJson);
+                    ScriptManager.RegisterStartupScript(this, GetType(), "PopupJson", $"openModal('{safeJson}');", true);
                 }
             }
         }
@@ -547,35 +361,55 @@ ORDER BY LogID ASC;";
             using (SHA256 sha256Hash = SHA256.Create())
             {
                 byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-                StringBuilder builder = new StringBuilder();
-                foreach (byte b in bytes)
-                    builder.Append(b.ToString("x2"));
-                return builder.ToString();
+                var sb = new StringBuilder();
+                foreach (byte b in bytes) sb.Append(b.ToString("x2"));
+                return sb.ToString();
             }
         }
 
-        private void AddAuditLog(int? userID, string action)
+        protected string FormatLocalPH(object tsObj)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            if (tsObj == null || tsObj == DBNull.Value) return "—";
+
+            DateTime utc;
+            if (tsObj is DateTime dt)
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
+                // SQL DateTime2 usually arrives as Kind=Unspecified; treat as UTC because we store UTC
+                utc = (dt.Kind == DateTimeKind.Utc)
+                      ? dt
+                      : DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+            }
+            else
+            {
+                // If the provider gives a string
+                if (!DateTime.TryParse(tsObj.ToString(), out var parsed)) return tsObj.ToString();
+                utc = DateTime.SpecifyKind(parsed, DateTimeKind.Utc);
+            }
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+            // PH time zone on Windows = "Singapore Standard Time" (UTC+08:00)
+            var tz = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+            var local = TimeZoneInfo.ConvertTimeFromUtc(utc, tz);
+
+            // format however you like
+            return local.ToString("yyyy-MM-dd h:mm tt"); // e.g., 2025-08-20 10:20 AM
+        }
+
+
+        private void LogAudit(string action)
+        {
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", con))
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // swallow
-                    }
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = Convert.ToInt32(Session["UserID"]);
+                    cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action;
+                    con.Open();
+                    cmd.ExecuteNonQuery();
                 }
             }
+            catch { /* do not break UX */ }
         }
     }
 }

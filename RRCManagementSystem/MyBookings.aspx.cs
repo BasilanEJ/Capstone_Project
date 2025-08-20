@@ -28,77 +28,51 @@ namespace RRCManagementSystem
                 CheckIfContractCompleted(clientId);
                 CheckUpcomingContractualOperation(clientId);
                 CheckForMissedOperations(clientId);
+
+                // 🔔 Seed notifications for any bookings that are already confirmed/assigned
+                // (DedupKey prevents duplicates if this runs again)
+                try { SeedConfirmedBookingNotifications(clientId); } catch { /* non-blocking */ }
             }
         }
 
         private void LoadMyBookings(int clientId)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var da = new SqlDataAdapter("dbo.usp_ClientBookings_ListAndAutocomplete", con))
             {
-                string query = @"
-                    SELECT b.BookingID, b.ServiceNames, b.ScheduledDate,
-                           CONVERT(varchar(5), b.StartTime, 108) AS StartTime,
-                           ISNULL(b.Status, 'Pending') AS Status,
-                           b.Notes, b.CreatedAt,
-                           (SELECT COUNT(*) FROM ServiceSchedule ss WHERE ss.BookingID = b.BookingID) AS TotalOps,
-                           (SELECT COUNT(*) FROM ServiceSchedule ss WHERE ss.BookingID = b.BookingID AND ss.Status = 'Completed') AS CompletedOps
-                    FROM Bookings b
-                    WHERE b.ClientID = @ClientID
-                    ORDER BY b.CreatedAt DESC";
+                da.SelectCommand.CommandType = CommandType.StoredProcedure;
+                da.SelectCommand.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@ClientID", clientId);
-                SqlDataAdapter da = new SqlDataAdapter(cmd);
-                DataTable dt = new DataTable();
+                var dt = new DataTable();
                 da.Fill(dt);
-
-                con.Open();
-                foreach (DataRow row in dt.Rows)
-                {
-                    int total = Convert.ToInt32(row["TotalOps"]);
-                    int completed = Convert.ToInt32(row["CompletedOps"]);
-                    int bookingId = Convert.ToInt32(row["BookingID"]);
-
-                    if (total > 0 && completed == total && row["Status"].ToString() != "Completed")
-                    {
-                        string updateQuery = "UPDATE Bookings SET Status = 'Completed' WHERE BookingID = @BookingID";
-                        SqlCommand updateCmd = new SqlCommand(updateQuery, con);
-                        updateCmd.Parameters.AddWithValue("@BookingID", bookingId);
-                        updateCmd.ExecuteNonQuery();
-                        row["Status"] = "Completed";
-                    }
-                }
 
                 gvMyBookings.DataSource = dt;
                 gvMyBookings.DataBind();
 
-                lblMessage.Text = dt.Rows.Count > 0
-                    ? $"✅ You have {dt.Rows.Count} booking(s)."
-                    : "⚠️ You have no bookings yet.";
-                lblMessage.ForeColor = dt.Rows.Count > 0 ? System.Drawing.Color.Green : System.Drawing.Color.Orange;
+                // ✅ Plain label update (no SweetAlert)
+                if (dt.Rows.Count > 0)
+                {
+                    lblMessage.Text = $"✅ You have {dt.Rows.Count} booking(s).";
+                    lblMessage.ForeColor = System.Drawing.Color.Green;
+                }
+                else
+                {
+                    lblMessage.Text = "⚠️ You have no bookings yet.";
+                    lblMessage.ForeColor = System.Drawing.Color.Orange;
+                }
             }
         }
 
         private void LoadUpcomingOperations(int clientId)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var da = new SqlDataAdapter("dbo.usp_ClientUpcomingOps_TermiteControl", con))
             {
-                string query = @"
-                    SELECT ss.ScheduleID, ss.ScheduledDate, ss.OperationNumber, ss.Status
-                    FROM ServiceSchedule ss
-                    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
-                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-                    WHERE b.ClientID = @ClientID
-                      AND s.ServiceType = 'Termite Control'
-                      AND ss.Status != 'Completed'
-                      AND ss.ScheduledDate BETWEEN GETDATE() AND DATEADD(DAY, 30, GETDATE())
-                    ORDER BY ss.ScheduledDate";
+                da.SelectCommand.CommandType = CommandType.StoredProcedure;
+                da.SelectCommand.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                da.SelectCommand.Parameters.Add("@DaysAhead", SqlDbType.Int).Value = 30;
 
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@ClientID", clientId);
-                SqlDataAdapter da = new SqlDataAdapter(cmd);
-                DataTable dt = new DataTable();
+                var dt = new DataTable();
                 da.Fill(dt);
 
                 gvUpcoming.DataSource = dt;
@@ -115,32 +89,18 @@ namespace RRCManagementSystem
                 {
                     lblNextOperationNotice.Visible = false;
                 }
-
             }
         }
 
         private void LoadAllOperations(int clientId)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var da = new SqlDataAdapter("dbo.usp_ClientAllOps_AfterFirstCompleted", con))
             {
-                string query = @"
-                    SELECT ss.ScheduleID, ss.BookingID, ss.OperationNumber, ss.ScheduledDate, ss.Status, b.CreatedAt
-                    FROM ServiceSchedule ss
-                    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
-                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-                    WHERE b.ClientID = @ClientID
-                      AND s.ServiceType = 'Termite Control'
-                      AND EXISTS (
-                        SELECT 1 FROM ServiceSchedule s2 
-                        WHERE s2.BookingID = b.BookingID AND s2.OperationNumber = 1 AND s2.Status = 'Completed'
-                      )
-                    ORDER BY ss.ScheduledDate";
+                da.SelectCommand.CommandType = CommandType.StoredProcedure;
+                da.SelectCommand.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@ClientID", clientId);
-                SqlDataAdapter da = new SqlDataAdapter(cmd);
-                DataTable dt = new DataTable();
+                var dt = new DataTable();
                 da.Fill(dt);
 
                 gvAllOps.DataSource = dt;
@@ -182,96 +142,72 @@ namespace RRCManagementSystem
 
         private void CheckIfContractCompleted(int clientId)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_ClientContractProgress", con))
             {
-                string query = @"
-                    SELECT COUNT(*) AS TotalOps,
-                           SUM(CASE WHEN ss.Status = 'Completed' THEN 1 ELSE 0 END) AS CompletedOps
-                    FROM ServiceSchedule ss
-                    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
-                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-                    WHERE b.ClientID = @ClientID AND s.ServiceType = 'Termite Control'";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@ClientID", clientId);
                 con.Open();
-
-                SqlDataReader reader = cmd.ExecuteReader();
-                if (reader.Read())
+                using (var rdr = cmd.ExecuteReader())
                 {
-                    int totalOps = Convert.ToInt32(reader["TotalOps"]);
-                    int completedOps = reader["CompletedOps"] != DBNull.Value ? Convert.ToInt32(reader["CompletedOps"]) : 0;
-
-                    if (completedOps == totalOps && totalOps > 0)
+                    if (rdr.Read())
                     {
-                        lblContractStatus.Text = $"🎉 Congratulations! Your Termite Control service contract is fully completed as of {DateTime.Today:MMMM dd, yyyy}.";
-                        lblContractStatus.Visible = true;
+                        int totalOps = rdr["TotalOps"] == DBNull.Value ? 0 : Convert.ToInt32(rdr["TotalOps"]);
+                        int completedOps = rdr["CompletedOps"] == DBNull.Value ? 0 : Convert.ToInt32(rdr["CompletedOps"]);
+
+                        if (completedOps == totalOps && totalOps > 0)
+                        {
+                            lblContractStatus.Text = $"🎉 Congratulations! Your Termite Control service contract is fully completed as of {DateTime.Today:MMMM dd, yyyy}.";
+                            lblContractStatus.Visible = true;
+                        }
                     }
                 }
-
             }
         }
 
         private void CheckUpcomingContractualOperation(int clientId)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_ClientUpcomingOpInNDays", con))
             {
-                string query = @"
-                    SELECT TOP 1 ss.ScheduledDate, ss.OperationNumber
-                    FROM ServiceSchedule ss
-                    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
-                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-                    WHERE b.ClientID = @ClientID 
-                      AND s.ServiceType = 'Termite Control'
-                      AND ss.Status = 'Scheduled'
-                      AND DATEDIFF(DAY, GETDATE(), ss.ScheduledDate) = 3
-                    ORDER BY ss.ScheduledDate";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                cmd.Parameters.Add("@Days", SqlDbType.Int).Value = 3;
 
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@ClientID", clientId);
                 con.Open();
-
-                SqlDataReader reader = cmd.ExecuteReader();
-                if (reader.Read())
+                using (var rdr = cmd.ExecuteReader())
                 {
-                    int op = Convert.ToInt32(reader["OperationNumber"]);
-                    lblContractStatus.Text = $"⏰ Reminder: Your Operation #{op} is coming up in 3 days. Please confirm your availability.";
-                    lblContractStatus.Visible = true;
+                    if (rdr.Read())
+                    {
+                        int op = Convert.ToInt32(rdr["OperationNumber"]);
+                        lblContractStatus.Text = $"⏰ Reminder: Your Operation #{op} is coming up in 3 days. Please confirm your availability.";
+                        lblContractStatus.Visible = true;
+                    }
                 }
             }
         }
 
         private void CheckForMissedOperations(int clientId)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_ClientLatestMissedOp", con))
             {
-                string query = @"
-                    SELECT TOP 1 ss.ScheduledDate, ss.OperationNumber
-                    FROM ServiceSchedule ss
-                    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-                    INNER JOIN BookingServices bs ON b.BookingID = bs.BookingID
-                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-                    WHERE b.ClientID = @ClientID
-                      AND s.ServiceType = 'Termite Control'
-                      AND ss.Status != 'Completed'
-                      AND ss.ScheduledDate < GETDATE()
-                    ORDER BY ss.ScheduledDate DESC";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@ClientID", clientId);
                 con.Open();
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                if (reader.Read())
+                using (var rdr = cmd.ExecuteReader())
                 {
-                    DateTime missedDate = Convert.ToDateTime(reader["ScheduledDate"]);
-                    int op = Convert.ToInt32(reader["OperationNumber"]);
+                    if (rdr.Read())
+                    {
+                        DateTime missedDate = Convert.ToDateTime(rdr["ScheduledDate"]);
+                        int op = Convert.ToInt32(rdr["OperationNumber"]);
 
-                    lblContractStatus.Text = $"⚠️ You missed Operation #{op} on {missedDate:MMMM dd, yyyy}. Please contact us to reschedule.";
-                    lblContractStatus.CssClass = "alert alert-warning fw-bold mt-4 d-block";
-                    lblContractStatus.Visible = true;
+                        lblContractStatus.Text = $"⚠️ You missed Operation #{op} on {missedDate:MMMM dd, yyyy}. Please contact us to reschedule.";
+                        lblContractStatus.CssClass = "alert alert-warning fw-bold mt-4 d-block";
+                        lblContractStatus.Visible = true;
+                    }
                 }
             }
         }
@@ -318,42 +254,21 @@ namespace RRCManagementSystem
             {
                 int scheduleId = Convert.ToInt32(hfSelectedScheduleID.Value);
                 int clientId = Convert.ToInt32(Session["ClientID"]);
+
                 DateTime newDate = DateTime.Parse(txtNewScheduleDate.Text);
                 TimeSpan newTime = TimeSpan.Parse(txtNewScheduleTime.Text);
                 DateTime combinedDate = newDate.Add(newTime);
 
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.usp_ServiceSchedule_ClientReschedule", con))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleId;
+                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                    cmd.Parameters.Add("@NewDateTime", SqlDbType.DateTime).Value = combinedDate;
+
                     con.Open();
-
-                    string updateScheduleQuery = "UPDATE ServiceSchedule SET ScheduledDate = @NewDate WHERE ScheduleID = @ScheduleID";
-                    using (SqlCommand cmd = new SqlCommand(updateScheduleQuery, con))
-                    {
-                        cmd.Parameters.AddWithValue("@NewDate", combinedDate);
-                        cmd.Parameters.AddWithValue("@ScheduleID", scheduleId);
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    string checkRequestQuery = "SELECT COUNT(*) FROM RescheduleRequests WHERE ScheduleID = @ScheduleID AND Status = 'Pending'";
-                    using (SqlCommand checkCmd = new SqlCommand(checkRequestQuery, con))
-                    {
-                        checkCmd.Parameters.AddWithValue("@ScheduleID", scheduleId);
-                        int count = (int)checkCmd.ExecuteScalar();
-
-                        if (count == 0)
-                        {
-                            string insertRequestQuery = @"
-                                INSERT INTO RescheduleRequests (ScheduleID, ClientID, RequestedDate, Status)
-                                VALUES (@ScheduleID, @ClientID, GETDATE(), 'Pending')";
-
-                            using (SqlCommand insertCmd = new SqlCommand(insertRequestQuery, con))
-                            {
-                                insertCmd.Parameters.AddWithValue("@ScheduleID", scheduleId);
-                                insertCmd.Parameters.AddWithValue("@ClientID", clientId);
-                                insertCmd.ExecuteNonQuery();
-                            }
-                        }
-                    }
+                    cmd.ExecuteNonQuery();
                 }
 
                 ScriptManager.RegisterStartupScript(this, GetType(), "ScheduleSuccess", "Swal.fire('Saved!', 'Schedule updated successfully.', 'success');", true);
@@ -368,25 +283,84 @@ namespace RRCManagementSystem
             if (e.CommandName == "CancelBooking")
             {
                 int bookingId = Convert.ToInt32(e.CommandArgument);
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.usp_Booking_CancelIfPending", con))
                 {
-                    string query = "UPDATE Bookings SET Status = 'Cancelled' WHERE BookingID = @BookingID AND Status = 'Pending'";
-                    SqlCommand cmd = new SqlCommand(query, con);
-                    cmd.Parameters.AddWithValue("@BookingID", bookingId);
-                    con.Open();
-                    int rowsAffected = cmd.ExecuteNonQuery();
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
 
-                    if (rowsAffected > 0)
-                    {
+                    con.Open();
+                    int rows = cmd.ExecuteNonQuery();
+
+                    if (rows > 0)
                         ScriptManager.RegisterStartupScript(this, GetType(), "CancelSuccess", "Swal.fire('Cancelled!', 'Booking cancelled successfully.', 'success');", true);
-                    }
                     else
-                    {
                         ScriptManager.RegisterStartupScript(this, GetType(), "CancelFail", "Swal.fire('Oops!', 'Unable to cancel. Booking may already be processed.', 'warning');", true);
-                    }
                 }
 
                 LoadMyBookings(Convert.ToInt32(Session["ClientID"]));
+            }
+        }
+
+        /// <summary>
+        /// Creates a "Booking Confirmed" notification for any booking that is assigned/approved/confirmed
+        /// and has a scheduled date/time. DedupKey prevents duplicates across page visits.
+        /// </summary>
+        private void SeedConfirmedBookingNotifications(int clientId)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(@"
+                SELECT TOP 50 b.BookingID,
+                       b.ScheduledDate,      -- DATE
+                       b.StartTime,          -- TIME
+                       b.Status
+                FROM dbo.Bookings b
+                WHERE b.ClientID = @ClientID
+                  AND b.Status IN ('Assigned','Approved','Confirmed')
+                  AND b.ScheduledDate IS NOT NULL
+                  AND b.StartTime IS NOT NULL
+                ORDER BY b.ScheduledDate DESC, b.StartTime DESC;", con))
+            {
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+
+                con.Open();
+                using (var r = cmd.ExecuteReader())
+                {
+                    while (r.Read())
+                    {
+                        int bookingId = Convert.ToInt32(r["BookingID"]);
+                        DateTime scheduledDate = Convert.ToDateTime(r["ScheduledDate"]);
+                        // StartTime from SQL TIME → read as TimeSpan
+                        TimeSpan startTime = (r["StartTime"] is TimeSpan)
+                            ? (TimeSpan)r["StartTime"]
+                            : TimeSpan.Parse(r["StartTime"].ToString());
+
+                        // 🔔 Insert via SP (dedup ensures this is only added once)
+                        try
+                        {
+                            using (var con2 = new SqlConnection(connectionString))
+                            using (var cmd2 = new SqlCommand("dbo.usp_Notifications_Add", con2))
+                            {
+                                cmd2.CommandType = CommandType.StoredProcedure;
+                                cmd2.Parameters.AddWithValue("@ClientID", clientId);
+                                cmd2.Parameters.AddWithValue("@Type", "booking");
+                                cmd2.Parameters.AddWithValue("@Title", "Booking Confirmed");
+                                cmd2.Parameters.AddWithValue("@Body",
+                                    "Your service is scheduled on " +
+                                    scheduledDate.ToString("MMM dd, yyyy") +
+                                    " at " + startTime.ToString(@"hh\:mm") + ".");
+                                cmd2.Parameters.AddWithValue("@Url", "MyBookings.aspx");
+                                cmd2.Parameters.AddWithValue("@DedupKey", "BOOK-" + bookingId + "-CONFIRMED");
+                                con2.Open();
+                                cmd2.ExecuteNonQuery();
+                            }
+                        }
+                        catch
+                        {
+                            // Ignore dup/other errors so the page keeps working
+                        }
+                    }
+                }
             }
         }
     }

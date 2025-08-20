@@ -22,17 +22,12 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Block SuperAdmin and Inspector
+            // 🔐 Block SuperAdmin and Inspector (kept as in your code)
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
-
-            int userId = Convert.ToInt32(Session["UserID"]);
-
-            // 🔐 Check CanView permission for ManageClients (or use "ArchivedClients" if it's a separate module)
-           
 
             if (!IsPostBack)
             {
@@ -40,27 +35,16 @@ namespace RRCManagementSystem
             }
         }
 
-
         private void LoadArchivedClients()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClients_ListArchived", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = @"
-    SELECT ClientID,
-           LastName + ', ' + FirstName +
-           CASE 
-               WHEN MiddleName IS NULL OR LTRIM(RTRIM(MiddleName)) = '' THEN ''
-               ELSE ' ' + MiddleName
-           END AS Name,
-           Email, ContactNumber, City, Country
-    FROM Clients
-    WHERE Status = 'Inactive'
-    ORDER BY CreatedAt DESC";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-
-                SqlDataAdapter adapter = new SqlDataAdapter(query, conn);
-                DataTable dt = new DataTable();
-                adapter.Fill(dt);
+                var dt = new DataTable();
+                da.Fill(dt);
 
                 gvArchivedClients.DataSource = dt;
                 gvArchivedClients.DataBind();
@@ -101,51 +85,53 @@ namespace RRCManagementSystem
 
         private void UpdateClientStatus(int clientId, string newStatus, string successMessage)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClient_UpdateStatus", conn))
             {
-                string query = "UPDATE Clients SET Status = @Status WHERE ClientID = @ClientID";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Status", newStatus);
-                    cmd.Parameters.AddWithValue("@ClientID", clientId);
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
-            }
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = newStatus;
 
-            LoadArchivedClients();
-            ShowSweetAlert("Success", successMessage, "success");
+                conn.Open();
+                var rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+
+                LoadArchivedClients();
+                ShowSweetAlert(rows > 0 ? "Success" : "Not Found",
+                               rows > 0 ? successMessage : "Client not found.",
+                               rows > 0 ? "success" : "warning");
+            }
         }
 
         private void DeleteClient(int clientId)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClient_Delete", conn))
             {
-                string query = "DELETE FROM Clients WHERE ClientID = @ClientID";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@ClientID", clientId);
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
-            }
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
-            LoadArchivedClients();
-            ShowSweetAlert("Deleted", "Client has been permanently deleted.", "success");
+                conn.Open();
+                var rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+
+                LoadArchivedClients();
+                ShowSweetAlert(rows > 0 ? "Deleted" : "Not Found",
+                               rows > 0 ? "Client has been permanently deleted." : "Client not found.",
+                               rows > 0 ? "success" : "warning");
+            }
         }
 
         private void ShowSweetAlert(string title, string message, string icon)
         {
             string script = $@"
-            <script>
-                Swal.fire({{
-                    title: '{title}',
-                    text: '{message}',
-                    icon: '{icon}',
-                    confirmButtonColor: '#3085d6'
-                }});
-            </script>";
-            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert", script, false);
+<script>
+Swal.fire({{
+    title: '{title}',
+    text: '{message.Replace("'", "\\'")}',
+    icon: '{icon}',
+    confirmButtonColor: '#3085d6'
+}});
+</script>";
+            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert" + Guid.NewGuid(), script, false);
         }
     }
 }

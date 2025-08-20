@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
 
@@ -7,7 +8,7 @@ namespace RRCManagementSystem
 {
     public partial class EditBooking : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -19,7 +20,6 @@ namespace RRCManagementSystem
             }
 
             string role = Session["Role"].ToString();
-
             // 🔐 Block SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
@@ -27,12 +27,10 @@ namespace RRCManagementSystem
                 return;
             }
 
-            int userId = Convert.ToInt32(Session["UserID"]);
-
             if (!IsPostBack)
             {
-                // 🔐 Check Edit permission for ManageBooking
-                if (!HasEditPermission(userId, "ManageBooking"))
+                int adminId = Convert.ToInt32(Session["UserID"]);
+                if (!HasEditPermission(adminId, "ManageBooking"))
                 {
                     lblMessage.Text = "❌ You do not have permission to edit bookings.";
                     lblMessage.ForeColor = System.Drawing.Color.Red;
@@ -40,7 +38,7 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                if (Request.QueryString["BookingID"] != null && int.TryParse(Request.QueryString["BookingID"], out int bookingID))
+                if (int.TryParse(Request.QueryString["BookingID"], out int bookingID))
                 {
                     LoadBookingDetails(bookingID);
                 }
@@ -52,31 +50,28 @@ namespace RRCManagementSystem
             }
         }
 
-
         private bool HasEditPermission(int adminId, string moduleName)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            try
             {
-                string query = "SELECT CanEdit FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-
-                using (SqlCommand cmd = new SqlCommand(query, con))
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
                 {
-                    cmd.Parameters.AddWithValue("@UserID", adminId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+                    cmd.Parameters.Add("@Permission", SqlDbType.NVarChar, 10).Value = "CanEdit";
 
-                    try
-                    {
-                        con.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = $"❌ Permission check failed: {ex.Message}";
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                        return false;
-                    }
+                    con.Open();
+                    object scalar = cmd.ExecuteScalar();
+                    return scalar != null && scalar != DBNull.Value && Convert.ToBoolean(scalar);
                 }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = $"❌ Permission check failed: {ex.Message}";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return false;
             }
         }
 
@@ -84,41 +79,30 @@ namespace RRCManagementSystem
         {
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spBooking_GetForEdit", con))
                 {
-                    string query = @"
-            SELECT 
-                b.BookingID,
-                (c.Lastname + ', ' + c.Firstname + ' ' + ISNULL(c.Middlename, '')) AS ClientName,
-                b.ScheduledDate,
-                b.StartTime,
-                b.Status,
-                b.Notes,
-                (
-                    SELECT STRING_AGG(s.Name, ', ')
-                    FROM BookingServices bs
-                    INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-                    WHERE bs.BookingID = b.BookingID
-                ) AS ServiceNames
-            FROM Bookings b
-            LEFT JOIN Clients c ON b.ClientID = c.ClientID
-            WHERE b.BookingID = @BookingID";
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
 
-                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    con.Open();
+                    using (var r = cmd.ExecuteReader())
                     {
-                        cmd.Parameters.AddWithValue("@BookingID", bookingID);
-                        con.Open();
-
-                        SqlDataReader reader = cmd.ExecuteReader();
-                        if (reader.Read())
+                        if (r.Read())
                         {
-                            lblBookingID.Text = reader["BookingID"].ToString();
-                            txtClientName.Text = reader["ClientName"].ToString();
-                            txtServiceName.Text = reader["ServiceNames"].ToString(); // Update label or textbox name accordingly
-                            txtScheduledDate.Text = Convert.ToDateTime(reader["ScheduledDate"]).ToString("yyyy-MM-dd");
-                            txtStartTime.Text = reader["StartTime"].ToString();
-                            ddlStatus.SelectedValue = reader["Status"].ToString();
-                            txtNotes.Text = reader["Notes"].ToString();
+                            lblBookingID.Text = r["BookingID"].ToString();
+                            txtClientName.Text = r["ClientName"]?.ToString();
+                            txtServiceName.Text = r["ServiceNames"]?.ToString();
+
+                            if (r["ScheduledDate"] != DBNull.Value)
+                                txtScheduledDate.Text = Convert.ToDateTime(r["ScheduledDate"]).ToString("yyyy-MM-dd");
+
+                            // StartTime is time(7) → TimeSpan
+                            if (r["StartTime"] != DBNull.Value)
+                                txtStartTime.Text = TimeSpan.Parse(r["StartTime"].ToString()).ToString(@"hh\:mm");
+
+                            ddlStatus.SelectedValue = r["Status"]?.ToString() ?? "Pending";
+                            txtNotes.Text = r["Notes"]?.ToString() ?? "";
                         }
                         else
                         {
@@ -135,12 +119,9 @@ namespace RRCManagementSystem
             }
         }
 
-
-
         protected void btnSave_Click(object sender, EventArgs e)
         {
             int adminId = Convert.ToInt32(Session["UserID"]);
-
             if (!HasEditPermission(adminId, "ManageBooking"))
             {
                 lblMessage.Text = "❌ You do not have permission to edit bookings.";
@@ -148,40 +129,42 @@ namespace RRCManagementSystem
                 return;
             }
 
+            if (!int.TryParse(lblBookingID.Text, out int bookingID))
+            {
+                lblMessage.Text = "❌ Invalid Booking ID.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return;
+            }
+
+            string newStatus = ddlStatus.SelectedValue;
+
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                int affected = 0;
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spBooking_UpdateStatus", con))
                 {
-                    string query = @"
-                        UPDATE Bookings
-                        SET Status = @Status
-                        WHERE BookingID = @BookingID";
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                    cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = newStatus;
 
-                    using (SqlCommand cmd = new SqlCommand(query, con))
-                    {
-                        int bookingID = Convert.ToInt32(lblBookingID.Text);
-                        string newStatus = ddlStatus.SelectedValue;
+                    con.Open();
+                    object result = cmd.ExecuteScalar(); // proc returns RowsAffected
+                    affected = (result == null || result == DBNull.Value) ? 0 : Convert.ToInt32(result);
+                }
 
-                        cmd.Parameters.AddWithValue("@Status", newStatus);
-                        cmd.Parameters.AddWithValue("@BookingID", bookingID);
+                if (affected > 0)
+                {
+                    lblMessage.Text = "✅ Booking status updated successfully!";
+                    lblMessage.ForeColor = System.Drawing.Color.Green;
 
-                        con.Open();
-                        int rowsAffected = cmd.ExecuteNonQuery();
-
-                        if (rowsAffected > 0)
-                        {
-                            lblMessage.Text = "✅ Booking status updated successfully!";
-                            lblMessage.ForeColor = System.Drawing.Color.Green;
-
-                            // ✅ Log the edit to AuditLogs
-                            AddAuditLog(adminId, $"Updated status of Booking ID {bookingID} to '{newStatus}'");
-                        }
-                        else
-                        {
-                            lblMessage.Text = "❌ Failed to update booking.";
-                            lblMessage.ForeColor = System.Drawing.Color.Red;
-                        }
-                    }
+                    // audit
+                    AddAuditLog(adminId, $"Updated status of Booking ID {bookingID} to '{newStatus}'");
+                }
+                else
+                {
+                    lblMessage.Text = "❌ Failed to update booking.";
+                    lblMessage.ForeColor = System.Drawing.Color.Red;
                 }
             }
             catch (Exception ex)
@@ -196,29 +179,22 @@ namespace RRCManagementSystem
             Response.Redirect("AllBooking.aspx");
         }
 
-        // ✅ Audit Log Method
         private void AddAuditLog(int? userID, string action)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", con))
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = (object)userID ?? DBNull.Value;
+                    cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action;
 
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // Optional: log or ignore
-                    }
+                    con.Open();
+                    cmd.ExecuteNonQuery();
                 }
             }
+            catch { /* don't block UI if audit fails */ }
         }
     }
 }

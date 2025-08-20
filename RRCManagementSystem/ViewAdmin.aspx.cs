@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.UI;
 using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
@@ -26,63 +27,31 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                LoadUsers();
+                BindUsers(null);
 
-                // Show SweetAlert if redirected from actions
+                // show toast if redirected from actions
                 if (Request.QueryString["archived"] == "1")
-                {
-                    string script = @"Swal.fire({
-                        icon: 'success',
-                        title: 'Archived!',
-                        text: 'User has been successfully archived.',
-                        showConfirmButton: false,
-                        timer: 2000
-                    });";
-                    ClientScript.RegisterStartupScript(this.GetType(), "archivedOk", script, true);
-                }
-                else if (Request.QueryString["deleted"] == "1")
-                {
-                    string script = @"Swal.fire({
-                        icon: 'success',
-                        title: 'Deleted!',
-                        text: 'User has been permanently deleted.',
-                        showConfirmButton: false,
-                        timer: 2000
-                    });";
-                    ClientScript.RegisterStartupScript(this.GetType(), "deletedOk", script, true);
-                }
-                else if (Request.QueryString["restored"] == "1")
-                {
-                    string script = @"Swal.fire({
-                        icon: 'success',
-                        title: 'Restored!',
-                        text: 'User has been restored.',
-                        showConfirmButton: false,
-                        timer: 2000
-                    });";
-                    ClientScript.RegisterStartupScript(this.GetType(), "restoredOk", script, true);
-                }
+                    Toast("Archived!", "User has been successfully archived.", "success");
             }
         }
 
-        private void LoadUsers()
+        /* =========================
+           Data binding via SP
+           ========================= */
+        private void BindUsers(string keyword)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spUsers_List", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = @"
-                    SELECT 
-                        UserID, 
-                        Name, 
-                        Email, 
-                        Role
-                    FROM Users
-                    WHERE Role != 'SuperAdmin'
-                      AND Status IN ('Active', 'Available')
-                    ORDER BY UserID;";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter da = new SqlDataAdapter(query, conn);
-                DataTable dt = new DataTable();
+                if (string.IsNullOrWhiteSpace(keyword))
+                    cmd.Parameters.Add("@Keyword", SqlDbType.NVarChar, 100).Value = DBNull.Value;
+                else
+                    cmd.Parameters.Add("@Keyword", SqlDbType.NVarChar, 100).Value = keyword.Trim();
 
+                var dt = new DataTable();
                 try
                 {
                     da.Fill(dt);
@@ -98,109 +67,83 @@ namespace RRCManagementSystem
 
         protected void btnSearch_Click(object sender, EventArgs e)
         {
-            string keyword = txtSearch.Text.Trim();
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = @"
-                    SELECT 
-                        UserID, 
-                        Name, 
-                        Email, 
-                        Role
-                    FROM Users
-                    WHERE Role != 'SuperAdmin'
-                      AND Status IN ('Active', 'Available')
-                      AND (Name LIKE @Keyword OR Email LIKE @Keyword OR Role LIKE @Keyword)
-                    ORDER BY UserID;";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Keyword", "%" + keyword + "%");
-
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    DataTable dt = new DataTable();
-
-                    try
-                    {
-                        da.Fill(dt);
-                        gvAdmins.DataSource = dt;
-                        gvAdmins.DataBind();
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = "⚠ Error searching users: " + ex.Message;
-                    }
-                }
-            }
+            BindUsers(txtSearch.Text);
         }
 
+        /* =========================
+           Grid actions
+           ========================= */
         protected void gvAdmins_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (int.TryParse(e.CommandArgument.ToString(), out int userID))
+            if (e.CommandName == "EditAdmin" && int.TryParse(e.CommandArgument.ToString(), out int userID))
             {
-                if (e.CommandName == "EditAdmin")
-                {
-                    Response.Redirect($"EditAdmin.aspx?UserID={userID}");
-                }
-                else if (e.CommandName == "ArchiveAdmin")
-                {
-                    ArchiveUser(userID);
-                }
+                Response.Redirect($"EditAdmin.aspx?UserID={userID}", false);
+                Context.ApplicationInstance.CompleteRequest();
             }
         }
 
+        // Fired by your SweetAlert confirmation handler
         protected void btnConfirmArchive_Click(object sender, EventArgs e)
         {
-            if (int.TryParse(hfUserToArchive.Value, out int userId))
+            if (!int.TryParse(hfUserToArchive.Value, out int userId))
             {
-                ArchiveUser(userId);
+                lblMessage.Text = "⚠ Invalid user selection.";
+                return;
             }
+
+            ArchiveUser(userId);
         }
 
         private void ArchiveUser(int userID)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spUser_Archive", conn))
             {
-                string query = @"
-                    UPDATE Users 
-                    SET Status = 'Archived' 
-                    WHERE UserID = @UserID 
-                      AND Role != 'SuperAdmin';";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userID;
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                try
                 {
-                    cmd.Parameters.AddWithValue("@UserID", userID);
-
-                    try
+                    conn.Open();
+                    // spUser_Archive returns @@ROWCOUNT as RowsAffected
+                    int rows = 0;
+                    using (var rdr = cmd.ExecuteReader())
                     {
-                        conn.Open();
-                        int rows = cmd.ExecuteNonQuery();
+                        if (rdr.Read() && rdr["RowsAffected"] != DBNull.Value)
+                            rows = Convert.ToInt32(rdr["RowsAffected"]);
+                    }
 
-                        if (rows > 0)
-                        {
-                            // redirect to force fresh bind and show alert
-                            Response.Redirect("ViewAdmin.aspx?archived=1", false);
-                            Context.ApplicationInstance.CompleteRequest();
-                        }
-                        else
-                        {
-                            lblMessage.Text = "⚠ No matching user found to archive.";
-                        }
-                    }
-                    catch (Exception ex)
+                    if (rows > 0)
                     {
-                        lblMessage.Text = "⚠ Error archiving user: " + ex.Message;
+                        // redirect to force fresh bind and show toast
+                        Response.Redirect("ViewAdmin.aspx?archived=1", false);
+                        Context.ApplicationInstance.CompleteRequest();
                     }
+                    else
+                    {
+                        lblMessage.Text = "⚠ No matching user found to archive (or user is SuperAdmin).";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "⚠ Error archiving user: " + ex.Message;
                 }
             }
         }
 
-        // Optional: if your GridView uses paging
-        protected void gvAdmins_PageIndexChanging(object sender, GridViewPageEventArgs e)
+        /* =========================
+           UI helpers
+           ========================= */
+        private void Toast(string title, string text, string icon)
         {
-            gvAdmins.PageIndex = e.NewPageIndex;
-            LoadUsers();
+            var script = $@"Swal.fire({{
+                icon: '{icon}',
+                title: '{title}',
+                text: '{text}',
+                showConfirmButton: false,
+                timer: 1800
+            }});";
+            ScriptManager.RegisterStartupScript(this, GetType(), Guid.NewGuid().ToString(), script, true);
         }
     }
 }

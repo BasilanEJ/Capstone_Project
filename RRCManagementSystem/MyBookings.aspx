@@ -224,18 +224,6 @@
 
     <script>
         // Success toast if lblMessage has content (from server)
-        window.addEventListener('load', function () {
-            var msgLabel = document.getElementById('<%= lblMessage.ClientID %>');
-            if (msgLabel && msgLabel.innerText.trim() !== "") {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: msgLabel.innerText.trim(),
-                    confirmButtonColor: '#0d6efd'
-                });
-                msgLabel.style.display = 'none';
-            }
-        });
 
         let setScheduleBsModal = null;
         function ensureModal() {

@@ -8,7 +8,8 @@ namespace RRCManagementSystem
 {
     public partial class TotalStocks : Page
     {
-        private readonly string connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            System.Configuration.ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -21,7 +22,7 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Block SuperAdmin and Inspector
+            // 🔐 Block SuperAdmin and Inspector (follow your pattern)
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -30,7 +31,8 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                CreateYesterdaySnapshot(); // ✅ Snapshot for yesterday only if not yet created
+                // Create yesterday’s snapshot once if it doesn’t exist yet
+                EnsureYesterdaySnapshot();
 
                 txtFromDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
                 txtToDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
@@ -38,57 +40,59 @@ namespace RRCManagementSystem
             }
         }
 
-        private void CreateYesterdaySnapshot()
+        private void EnsureYesterdaySnapshot()
         {
             DateTime snapshotDate = DateTime.Today.AddDays(-1);
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                conn.Open();
-
-                string checkQuery = "SELECT COUNT(*) FROM InventorySnapshots WHERE SnapshotDate = @SnapshotDate";
-                SqlCommand checkCmd = new SqlCommand(checkQuery, conn);
-                checkCmd.Parameters.AddWithValue("@SnapshotDate", snapshotDate);
-
-                int count = (int)checkCmd.ExecuteScalar();
-
-                if (count == 0)
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spInventorySnapshot_EnsureForDate", conn))
                 {
-                    string insertQuery = @"
-                        INSERT INTO InventorySnapshots (ItemID, Name, Type, Quantity, ExcessML, SnapshotDate)
-                        SELECT ItemID, Name, Type, Quantity, ExcessML, @SnapshotDate
-                        FROM Inventory";
-
-                    SqlCommand insertCmd = new SqlCommand(insertQuery, conn);
-                    insertCmd.Parameters.AddWithValue("@SnapshotDate", snapshotDate);
-                    insertCmd.ExecuteNonQuery();
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@SnapshotDate", snapshotDate);
+                    conn.Open();
+                    // Optional: read the row count the proc returns
+                    using (var rdr = cmd.ExecuteReader())
+                    {
+                        // int inserted = rdr.Read() ? Convert.ToInt32(rdr["Inserted"]) : 0;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "⚠ Failed to ensure yesterday snapshot: " + ex.Message;
             }
         }
 
         private void LoadSnapshot(DateTime fromDate, DateTime toDate)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = @"SELECT ItemID, Name, Type, Quantity, ExcessML, SnapshotDate 
-                                 FROM InventorySnapshots 
-                                 WHERE SnapshotDate BETWEEN @FromDate AND @ToDate
-                                 ORDER BY SnapshotDate DESC, Name ASC";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spInventorySnapshot_ListBetween", conn))
                 {
-                    cmd.Parameters.AddWithValue("@FromDate", fromDate);
-                    cmd.Parameters.AddWithValue("@ToDate", toDate);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@FromDate", fromDate.Date);
+                    cmd.Parameters.AddWithValue("@ToDate", toDate.Date);
 
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
+                    using (var da = new SqlDataAdapter(cmd))
+                    {
+                        var dt = new DataTable();
+                        da.Fill(dt);
 
-                    gvTotalStocks.DataSource = dt;
-                    gvTotalStocks.DataBind();
+                        gvTotalStocks.DataSource = dt;
+                        gvTotalStocks.DataBind();
 
-                    lblMessage.Text = dt.Rows.Count == 0 ? "⚠ No snapshot data available for the selected date range." : "";
+                        lblMessage.Text = dt.Rows.Count == 0
+                            ? "⚠ No snapshot data available for the selected date range."
+                            : "";
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "⚠ Error loading snapshot: " + ex.Message;
             }
         }
 
@@ -108,6 +112,7 @@ namespace RRCManagementSystem
         protected void gvTotalStocks_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
             gvTotalStocks.PageIndex = e.NewPageIndex;
+
             if (DateTime.TryParse(txtFromDate.Text, out DateTime fromDate) &&
                 DateTime.TryParse(txtToDate.Text, out DateTime toDate))
             {

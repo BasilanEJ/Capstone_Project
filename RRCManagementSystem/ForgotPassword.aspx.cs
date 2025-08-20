@@ -1,6 +1,6 @@
-﻿
-using System;
+﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Net;
 using System.Net.Mail;
@@ -14,10 +14,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (!IsPostBack)
-            {
-                lblMessage.Text = "";
-            }
+            if (!IsPostBack) lblMessage.Text = "";
         }
 
         protected void btnSubmit_Click(object sender, EventArgs e)
@@ -30,9 +27,8 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Check if the email exists (Clients only here)
+            // ✅ Check if the email exists (Clients – Approved) via SP
             bool emailExists = CheckClientEmailExists(email);
-
             if (!emailExists)
             {
                 lblMessage.Text = "⚠ Email not found or not approved.";
@@ -42,10 +38,13 @@ namespace RRCManagementSystem
             // ✅ Generate OTP
             string otp = GenerateOTP();
 
-            // ✅ Store OTP and email in session
+            // ✅ Store OTP and email in session (2 minutes expiry)
             Session["OTP"] = otp;
-            Session["OTP_Expiry"] = DateTime.Now.AddMinutes(2); // 2 minutes expiry
+            Session["OTP_Expiry"] = DateTime.Now.AddMinutes(2);
             Session["OTP_Email"] = email;
+
+            // (Optional) audit trail
+            TryAudit($"Password reset OTP requested for client email {email}");
 
             // ✅ Send OTP via email
             string emailBody = GenerateOtpEmailBody(otp);
@@ -63,25 +62,22 @@ namespace RRCManagementSystem
 
         private bool CheckClientEmailExists(string email)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClient_EmailExistsApproved", conn))
             {
-                string query = "SELECT COUNT(*) FROM Clients WHERE Email = @Email AND Status = 'Approved';";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                try
                 {
-                    cmd.Parameters.AddWithValue("@Email", email);
-
-                    try
-                    {
-                        conn.Open();
-                        int count = Convert.ToInt32(cmd.ExecuteScalar());
-                        return count > 0;
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = "⚠ Error checking email: " + ex.Message;
-                        return false;
-                    }
+                    conn.Open();
+                    object o = cmd.ExecuteScalar();        // 1 or 0
+                    return (o != null && Convert.ToInt32(o) == 1);
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "⚠ Error checking email: " + ex.Message;
+                    return false;
                 }
             }
         }
@@ -90,12 +86,10 @@ namespace RRCManagementSystem
         {
             using (var rng = RandomNumberGenerator.Create())
             {
-                byte[] data = new byte[4];
+                var data = new byte[4];
                 rng.GetBytes(data);
-
-                int generatedValue = Math.Abs(BitConverter.ToInt32(data, 0));
-                int otp = generatedValue % 900000 + 100000;
-
+                int value = Math.Abs(BitConverter.ToInt32(data, 0));
+                int otp = value % 900000 + 100000; // 6 digits
                 return otp.ToString();
             }
         }
@@ -105,42 +99,27 @@ namespace RRCManagementSystem
             return $@"
 <!DOCTYPE html>
 <html lang='en'>
-<head>
-  <meta charset='UTF-8'>
-  <title>Your OTP Code</title>
-</head>
+<head><meta charset='UTF-8'><title>Your OTP Code</title></head>
 <body style='font-family: Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 20px;'>
   <table width='100%' cellpadding='0' cellspacing='0' border='0'>
-    <tr>
-      <td align='center'>
-        <table width='500' cellpadding='0' cellspacing='0' border='0' style='background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
-          <tr>
-            <td style='background-color: #007bff; color: #ffffff; text-align: center; padding: 20px;'>
-              <h2 style='margin: 0;'>RRC Management System</h2>
-            </td>
-          </tr>
-          <tr>
-            <td style='padding: 30px; color: #333333;'>
-              <h3 style='margin-top: 0; text-align: center;'>One-Time Password (OTP)</h3>
-              <p>Hello,</p>
-              <p>Use the OTP code below to reset your password:</p>
-              <div style='text-align: center; margin: 30px 0;'>
-                <span style='display: inline-block; background-color: #f3f4f6; color: #333; padding: 15px 30px; font-size: 28px; font-weight: bold; border-radius: 6px; letter-spacing: 4px; border: 1px solid #ddd;'>
-                  {otp}
-                </span>
-              </div>
-              <p>This code is valid for <strong>2 minutes</strong>.</p>
-              <p>If you didn’t request a password reset, please ignore this message.</p>
-            </td>
-          </tr>
-          <tr>
-            <td style='background-color: #f9f9f9; color: #999999; text-align: center; padding: 15px; font-size: 12px;'>
-              &copy; 2025 RRC Management System
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
+    <tr><td align='center'>
+      <table width='500' cellpadding='0' cellspacing='0' border='0' style='background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
+        <tr><td style='background-color: #007bff; color: #ffffff; text-align: center; padding: 20px;'>
+          <h2 style='margin: 0;'>RRC Management System</h2>
+        </td></tr>
+        <tr><td style='padding: 30px; color: #333333;'>
+          <h3 style='margin-top: 0; text-align: center;'>One-Time Password (OTP)</h3>
+          <p>Hello,</p>
+          <p>Use the OTP code below to reset your password:</p>
+          <div style='text-align: center; margin: 30px 0;'>
+            <span style='display: inline-block; background-color: #f3f4f6; color: #333; padding: 15px 30px; font-size: 28px; font-weight: bold; border-radius: 6px; letter-spacing: 4px; border: 1px solid #ddd;'>{otp}</span>
+          </div>
+          <p>This code is valid for <strong>2 minutes</strong>.</p>
+          <p>If you didn’t request a password reset, please ignore this message.</p>
+        </td></tr>
+        <tr><td style='background-color: #f9f9f9; color: #999; text-align: center; padding: 15px; font-size: 12px;'>&copy; 2025 RRC Management System</td></tr>
+      </table>
+    </td></tr>
   </table>
 </body>
 </html>";
@@ -150,7 +129,7 @@ namespace RRCManagementSystem
         {
             try
             {
-                MailMessage mail = new MailMessage
+                var mail = new MailMessage
                 {
                     From = new MailAddress("rrctermiteandpestcontrol@gmail.com", "RRC Management System"),
                     Subject = "Your OTP Code for Password Reset",
@@ -159,10 +138,10 @@ namespace RRCManagementSystem
                 };
                 mail.To.Add(recipientEmail);
 
-                SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587)
+                var smtp = new SmtpClient("smtp.gmail.com", 587)
                 {
                     UseDefaultCredentials = false,
-                    Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq"), // App Password
+                    Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq"), // app password; move to config
                     EnableSsl = true
                 };
 
@@ -175,6 +154,23 @@ namespace RRCManagementSystem
                 return false;
             }
         }
+
+        private void TryAudit(string action)
+        {
+            // best-effort; ignore failures
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = 0; // 0 or NULL since it's a client-side event
+                    cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action ?? "";
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch { /* swallow */ }
+        }
     }
 }
-

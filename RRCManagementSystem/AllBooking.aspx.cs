@@ -2,8 +2,8 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Web.UI.WebControls;
 using System.Web.UI;
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
@@ -32,6 +32,7 @@ namespace RRCManagementSystem
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
             }
+
             if (!IsPostBack)
             {
                 LoadAllBookings();
@@ -39,12 +40,12 @@ namespace RRCManagementSystem
                 if (Request.QueryString["op1"] == "completed")
                 {
                     string script = @"Swal.fire({
-                icon: 'success',
-                title: 'Completed!',
-                text: 'Operation 1 was successfully marked as completed.',
-                showConfirmButton: false,
-                timer: 2000
-            });";
+                        icon: 'success',
+                        title: 'Completed!',
+                        text: 'Operation 1 was successfully marked as completed.',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });";
                     ClientScript.RegisterStartupScript(this.GetType(), "ShowSuccess", script, true);
                 }
             }
@@ -52,25 +53,24 @@ namespace RRCManagementSystem
 
         private bool HasViewPermission(int adminId, string moduleName)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = "SELECT CanView FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", conn))
                 {
-                    cmd.Parameters.AddWithValue("@UserID", adminId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+                    cmd.Parameters.Add("@Permission", SqlDbType.NVarChar, 10).Value = "CanView";
 
-                    try
-                    {
-                        conn.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return (result != null && result != DBNull.Value) && Convert.ToBoolean(result);
                 }
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -78,52 +78,31 @@ namespace RRCManagementSystem
         {
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spBooking_ListAllFiltered", con))
                 {
-                    con.Open();
+                    cmd.CommandType = CommandType.StoredProcedure;
 
-                    string query = @"
-SELECT 
-    b.BookingID,
-    (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName, '')) AS ClientName,
-    b.ServiceNames AS ServiceName,
-    b.ScheduledDate,
-    b.StartTime,
-    b.Status,
-    b.CreatedAt,
-    b.Price,
-    ISNULL(b.Price, 0) - ISNULL((SELECT SUM(t.Amount) FROM Transactions t WHERE t.SaleID = b.BookingID), 0) AS RemainingBalance,
-    b.IsContract,
-    CASE 
-        WHEN b.IsContract = 1 
-             THEN ISNULL((SELECT TOP 1 Status 
-                          FROM ServiceSchedule 
-                          WHERE BookingID = b.BookingID AND OperationNumber = 1), 'Pending')
-        ELSE NULL
-    END AS Op1Status
-FROM Bookings b
-INNER JOIN Clients c ON b.ClientID = c.ClientID
-WHERE 
-    (@SearchTerm IS NULL OR c.LastName LIKE '%' + @SearchTerm + '%' 
-     OR c.FirstName LIKE '%' + @SearchTerm + '%' 
-     OR b.ServiceNames LIKE '%' + @SearchTerm + '%')
-    AND (@Status IS NULL OR b.Status = @Status)
-ORDER BY b.CreatedAt DESC";
+                    string search = txtSearch.Text.Trim();
+                    string status = ddlStatusFilter.SelectedValue;
 
+                    var pSearch = cmd.Parameters.Add("@SearchTerm", SqlDbType.NVarChar, 200);
+                    pSearch.Value = string.IsNullOrWhiteSpace(search) ? (object)DBNull.Value : search;
 
-                    SqlCommand cmd = new SqlCommand(query, con);
-                    cmd.Parameters.AddWithValue("@SearchTerm", string.IsNullOrEmpty(txtSearch.Text.Trim()) ? (object)DBNull.Value : txtSearch.Text.Trim());
-                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrEmpty(ddlStatusFilter.SelectedValue) ? (object)DBNull.Value : ddlStatusFilter.SelectedValue);
+                    var pStatus = cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50);
+                    pStatus.Value = string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status;
 
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
+                    using (var da = new SqlDataAdapter(cmd))
+                    {
+                        var dt = new DataTable();
+                        da.Fill(dt);
 
-                    gvBookings.DataSource = dt;
-                    gvBookings.DataBind();
+                        gvBookings.DataSource = dt;
+                        gvBookings.DataBind();
 
-                    lblMessage.Text = $"{dt.Rows.Count} booking(s) found.";
-                    lblMessage.ForeColor = System.Drawing.Color.Green;
+                        lblMessage.Text = $"{dt.Rows.Count} booking(s) found.";
+                        lblMessage.ForeColor = System.Drawing.Color.Green;
+                    }
                 }
             }
             catch (Exception ex)
@@ -153,59 +132,51 @@ ORDER BY b.CreatedAt DESC";
 
         protected void gvBookings_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            lblMessage.Text = $"Command triggered: {e.CommandName} for Argument: {e.CommandArgument}";
-            lblMessage.ForeColor = System.Drawing.Color.Black;
-
             if (e.CommandName == "EditBooking")
             {
-                int bookingId;
-                if (int.TryParse(e.CommandArgument.ToString(), out bookingId))
-                {
+                if (int.TryParse(e.CommandArgument.ToString(), out int bookingId))
                     Response.Redirect($"EditBooking.aspx?BookingID={bookingId}");
-                }
             }
         }
-
-
-
 
         private void MarkOp1AsCompleted(int bookingId)
         {
             try
             {
-                using (SqlConnection con = new SqlConnection(connectionString))
+                int completedFlag = 0;
+
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spServiceSchedule_CompleteOp1", con))
                 {
-                    string updateQuery = @"
-UPDATE ServiceSchedule
-SET Status = 'Completed'
-WHERE BookingID = @BookingID AND OperationNumber = 1";
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
 
-                    using (SqlCommand cmd = new SqlCommand(updateQuery, con))
-                    {
-                        cmd.Parameters.AddWithValue("@BookingID", bookingId);
-                        con.Open();
-                        int rowsAffected = cmd.ExecuteNonQuery();
+                    con.Open();
+                    object result = cmd.ExecuteScalar();
+                    completedFlag = (result == null || result == DBNull.Value) ? 0 : Convert.ToInt32(result);
+                }
 
-                        if (rowsAffected > 0)
-                        {
-                            // ✅ Explicit audit log line as requested
-                            AddAuditLog(Convert.ToInt32(Session["UserID"]), $"Marked Op1 completed for BookingID {bookingId}");
+                // Write audit regardless; message can reflect whether anything changed.
+                AddAuditLog(Convert.ToInt32(Session["UserID"]),
+                    completedFlag == 1
+                        ? $"Marked Op1 completed for BookingID {bookingId}"
+                        : $"Attempted to mark Op1 completed (no change) for BookingID {bookingId}");
 
-                            string script = @"Swal.fire({
+                if (completedFlag == 1)
+                {
+                    string script = @"Swal.fire({
                         icon: 'success',
                         title: 'Marked Completed!',
                         text: 'Operation 1 was successfully marked as completed.',
                         showConfirmButton: false,
                         timer: 2000
                     });";
-                            ClientScript.RegisterStartupScript(this.GetType(), "CompleteSuccess", script, true);
-                        }
-                        else
-                        {
-                            lblMessage.Text = "⚠️ Operation 1 not found or already completed.";
-                            lblMessage.ForeColor = System.Drawing.Color.Orange;
-                        }
-                    }
+                    ClientScript.RegisterStartupScript(this.GetType(), "CompleteSuccess", script, true);
+                }
+                else
+                {
+                    lblMessage.Text = "⚠️ Operation 1 not found or already completed.";
+                    lblMessage.ForeColor = System.Drawing.Color.Orange;
                 }
             }
             catch (Exception ex)
@@ -215,33 +186,24 @@ WHERE BookingID = @BookingID AND OperationNumber = 1";
             }
         }
 
-
         protected void btnHiddenCompleteOp1_Click(object sender, EventArgs e)
         {
             if (int.TryParse(hfBookingIDToComplete.Value, out int bookingId))
             {
-                // Update operation status
                 MarkOp1AsCompleted(bookingId);
-
-                // Redirect to trigger full page reload with SweetAlert
                 Response.Redirect("AllBooking.aspx?op1=completed");
             }
         }
-
-
-
 
         protected void gvBookings_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
 
-            // Existing status coloring
             string bookingStatus = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
             if (bookingStatus == "Assigned") e.Row.Cells[5].CssClass = "status-assigned";
             else if (bookingStatus == "Pending") e.Row.Cells[5].CssClass = "status-pending";
             else if (bookingStatus == "Cancelled") e.Row.Cells[5].CssClass = "status-cancelled";
 
-            // Contract-only controls
             bool isContract = false;
             var isContractObj = DataBinder.Eval(e.Row.DataItem, "IsContract");
             if (isContractObj != null && isContractObj != DBNull.Value)
@@ -252,11 +214,8 @@ WHERE BookingID = @BookingID AND OperationNumber = 1";
             var lblOp1 = (Label)e.Row.FindControl("lblOp1Status");
             var btnOp1 = (Button)e.Row.FindControl("btnTriggerCompleteOp1");
 
-            // Show OP1 status column value only for contracts
-            if (lblOp1 != null)
-                lblOp1.Visible = isContract;
+            if (lblOp1 != null) lblOp1.Visible = isContract;
 
-            // Show action only for contracts, when booking is Assigned and OP1 not yet Completed
             if (btnOp1 != null)
                 btnOp1.Visible = isContract
                                  && string.Equals(bookingStatus, "Assigned", StringComparison.OrdinalIgnoreCase)
@@ -265,18 +224,22 @@ WHERE BookingID = @BookingID AND OperationNumber = 1";
 
         private void AddAuditLog(int adminId, string action)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", adminId);
-                    cmd.Parameters.AddWithValue("@Action", action);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = adminId;
+                    cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action;
                     conn.Open();
                     cmd.ExecuteNonQuery();
                 }
             }
+            catch
+            {
+                // Swallow audit failures (don’t break main flow)
+            }
         }
-
     }
 }

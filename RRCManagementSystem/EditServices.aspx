@@ -33,7 +33,7 @@
                         OnClientClick="return confirmUpdate();" OnClick="btnUpdate_Click" />
 
                     <asp:Button ID="btnCancel" runat="server" Text="Cancel" CssClass="btn btn-secondary px-4"
-                        PostBackUrl="~/ADMIN/ViewServices.aspx" />
+                        PostBackUrl="ViewServices.aspx" />
                 </div>
             </div>
         </div>

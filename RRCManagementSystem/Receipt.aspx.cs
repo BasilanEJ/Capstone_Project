@@ -1,61 +1,78 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 
 namespace RRCManagementSystem
 {
     public partial class Receipt : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (!IsPostBack)
+            if (IsPostBack) return;
+
+            var qs = Request.QueryString["TransactionID"];
+            if (!int.TryParse(qs, out int transactionId) || transactionId <= 0)
             {
-                if (Request.QueryString["TransactionID"] != null)
-                {
-                    int transactionId;
-                    if (int.TryParse(Request.QueryString["TransactionID"], out transactionId))
-                    {
-                        LoadReceipt(transactionId);
-                    }
-                    else
-                    {
-                        Response.Write("Invalid Transaction ID");
-                    }
-                }
-                else
-                {
-                    Response.Write("No Transaction ID Provided");
-                }
+                // Keep behavior similar to your original
+                Response.Write("Invalid or missing Transaction ID");
+                return;
             }
+
+            LoadReceipt(transactionId);
         }
 
         private void LoadReceipt(int transactionId)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = @"
-                    SELECT t.Amount, t.PaymentMethod, t.TransactionDate, t.Remarks, c.Name AS ClientName
-                    FROM Transactions t
-                    INNER JOIN Bookings b ON t.SaleID = b.BookingID
-                    INNER JOIN Clients c ON b.ClientID = c.ClientID
-                    WHERE t.TransactionID = @TransactionID";
+            // Optional: if you want to restrict clients to only their own receipts,
+            // uncomment this and compare later with the returned ClientID.
+            // int sessionClientId = (Session["ClientID"] != null) ? Convert.ToInt32(Session["ClientID"]) : 0;
 
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@TransactionID", transactionId);
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd  = new SqlCommand("dbo.usp_Receipt_GetByTransactionID", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@TransactionID", SqlDbType.Int).Value = transactionId;
 
                 conn.Open();
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                if (reader.Read())
+                using (var r = cmd.ExecuteReader(CommandBehavior.SingleRow))
                 {
-                    lblClientName.Text = reader["ClientName"].ToString();
-                    lblAmount.Text = Convert.ToDecimal(reader["Amount"]).ToString("N2");
-                    lblPaymentMethod.Text = reader["PaymentMethod"].ToString();
-                    lblTransactionDate.Text = Convert.ToDateTime(reader["TransactionDate"]).ToString("yyyy-MM-dd hh:mm tt");
-                    lblRemarks.Text = reader["Remarks"].ToString();
-                    lblTransactionID.Text = transactionId.ToString();
+                    if (!r.Read())
+                    {
+                        Response.Write("Receipt not found.");
+                        return;
+                    }
+
+                    // If you want to enforce “only my receipt” for logged-in clients:
+                    // if (sessionClientId > 0 && r["ClientID"] != DBNull.Value &&
+                    //     sessionClientId != Convert.ToInt32(r["ClientID"]))
+                    // {
+                    //     Response.Write("Receipt not found or access denied.");
+                    //     return;
+                    // }
+
+                    // Safe conversions
+                    string clientName = r["ClientName"] as string ?? "";
+                    decimal amount    = (r["Amount"] == DBNull.Value) ? 0m : Convert.ToDecimal(r["Amount"]);
+                    string method     = r["PaymentMethod"] as string ?? "";
+                    DateTime when     = (r["TransactionDate"] == DBNull.Value)
+                                            ? DateTime.MinValue
+                                            : Convert.ToDateTime(r["TransactionDate"]);
+                    string remarks    = r["Remarks"] as string ?? "";
+
+                    // Bind to labels (same IDs as in your page)
+                    lblClientName.Text      = clientName;
+                    lblAmount.Text          = amount.ToString("N2", CultureInfo.InvariantCulture);
+                    lblPaymentMethod.Text   = method;
+                    lblTransactionDate.Text = when == DateTime.MinValue
+                                                ? ""
+                                                : when.ToString("yyyy-MM-dd hh:mm tt", CultureInfo.InvariantCulture);
+                    lblRemarks.Text         = remarks;
+                    lblTransactionID.Text   = transactionId.ToString(CultureInfo.InvariantCulture);
                 }
             }
         }

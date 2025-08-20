@@ -18,7 +18,13 @@
                 box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             }
             .logo-container { display: flex; align-items: center; }
-            .logo { height: 40px; margin-right: 15px; }
+            .logo {
+    height: 50px;
+    margin-right: 15px;
+    filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 6px #fff);
+    border-radius: 4px; /* optional, makes it softer */
+}
+
             .header h1 { margin: 0; font-size: 20px; }
             .sidebar {
                 position: fixed; top: 70px; left: 0; width: 260px; height: calc(100% - 70px);
@@ -79,7 +85,7 @@
             <header class="header">
                 <div class="logo-container">
                     <img src="\images\logorrc.png" class="logo" alt="RRC Logo" />
-                    <h1>Admin Dashboard</h1>
+
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -97,6 +103,7 @@
             </header>
 
 <!-- Sidebar -->
+<!-- Sidebar -->
 <nav class="sidebar">
     <ul class="sidebar_menu">
         <%
@@ -112,18 +119,26 @@
                 </li>
             <% } %>
 
-            <% if (allowed.Contains("ManageInquiry")) { %>
+            <% if (allowed.Contains("ManageBooking")) { %>
                 <li>
-                    <a class='<%= GetActiveClass("ManageInquiry.aspx") %>' href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'>
-                        <i class="fas fa-file-alt"></i> Manage Inquiry
+                    <a class='<%= GetActiveClass("ManageBooking.aspx") %>' href='<%= ResolveUrl("~/ManageBooking.aspx") %>'>
+                        <i class="fas fa-book"></i> Bookings
                     </a>
                 </li>
             <% } %>
 
-            <% if (allowed.Contains("CreateCustomerAccount")) { %>
+            <% if (allowed.Contains("ManageClient")) { %>
                 <li>
-                    <a class='<%= GetActiveClass("CreateCustomerAccount.aspx") %>' href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
-                        <i class="fas fa-user-plus"></i> Create Customer Account
+                    <a class='<%= GetActiveClass("ManageClient.aspx") %>' href='<%= ResolveUrl("~/ManageClient.aspx") %>'>
+                        <i class="fas fa-users"></i> Clients
+                    </a>
+                </li>
+            <% } %>
+
+            <% if (allowed.Contains("Sales&Transaction")) { %>
+                <li>
+                    <a class='<%= GetActiveClass("SalesAndTransactions.aspx") %>' href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'>
+                        <i class="fas fa-receipt"></i> Sales & Transactions
                     </a>
                 </li>
             <% } %>
@@ -152,26 +167,10 @@
                 </li>
             <% } %>
 
-            <% if (allowed.Contains("ManageClient")) { %>
+            <% if (allowed.Contains("ManageServices")) { %>
                 <li>
-                    <a class='<%= GetActiveClass("ManageClient.aspx") %>' href='<%= ResolveUrl("~/ManageClient.aspx") %>'>
-                        <i class="fas fa-users"></i> Clients
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("ManageBooking")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageBooking.aspx") %>' href='<%= ResolveUrl("~/ManageBooking.aspx") %>'>
-                        <i class="fas fa-book"></i> Bookings
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("Sales&Transaction")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("SalesAndTransactions.aspx") %>' href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'>
-                        <i class="fas fa-receipt"></i> Sales & Transactions
+                    <a class='<%= GetActiveClass("ManageServices.aspx") %>' href='<%= ResolveUrl("~/ManageServices.aspx") %>'>
+                        <i class="fas fa-bug"></i> Manage Services
                     </a>
                 </li>
             <% } %>
@@ -184,18 +183,26 @@
                 </li>
             <% } %>
 
-            <% if (allowed.Contains("ManageServices")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageServices.aspx") %>' href='<%= ResolveUrl("~/ManageServices.aspx") %>'>
-                        <i class="fas fa-bug"></i> Manage Services
-                    </a>
-                </li>
-            <% } %>
-
             <% if (allowed.Contains("AdminReports")) { %>
                 <li>
                     <a class='<%= GetActiveClass("AdminReports.aspx") %>' href='<%= ResolveUrl("~/AdminReports.aspx") %>'>
                         <i class="fas fa-chart-bar"></i> Reports
+                    </a>
+                </li>
+            <% } %>
+
+            <% if (allowed.Contains("ManageInquiry")) { %>
+                <li>
+                    <a class='<%= GetActiveClass("ManageInquiry.aspx") %>' href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'>
+                        <i class="fas fa-file-alt"></i> Manage Inquiry
+                    </a>
+                </li>
+            <% } %>
+
+            <% if (allowed.Contains("CreateCustomerAccount")) { %>
+                <li>
+                    <a class='<%= GetActiveClass("CreateCustomerAccount.aspx") %>' href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
+                        <i class="fas fa-user-plus"></i> Create Customer Account
                     </a>
                 </li>
             <% } %>
@@ -217,6 +224,7 @@
             }
         %>
 
+        <!-- Always visible Logout -->
         <li>
             <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="logout-button">
                 <i class="fas fa-sign-out-alt"></i> Logout
@@ -224,8 +232,6 @@
         </li>
     </ul>
 </nav>
-
-
 
 
 

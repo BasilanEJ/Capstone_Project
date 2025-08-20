@@ -16,6 +16,7 @@
 
     <style>
         /* ===== Base / Typography ===== */
+        html { scroll-behavior: smooth; }
         body { font-family: Arial, sans-serif; animation: fadeIn .8s ease-in-out; padding-top:70px; }
         .top-header { font-size:14px; }
         .contact-info i { margin-right:5px; }
@@ -25,10 +26,10 @@
         .navbar-brand .logo, .navbar-brand img { height:50px; max-height:60px; transition:max-height .3s ease-in-out; }
         .navbar-nav .nav-link { font-size:16px; font-weight:600; color:#333; }
         .navbar-nav .nav-link:hover { color:#007bff; }
-        .navbar-nav .btn-success { font-weight:bold; padding:8px 15px; border-radius:5px; }
+        .navbar-nav .btn-primary { font-weight:bold; padding:8px 15px; border-radius:5px; }
 
         /* Sticky scroll navbar */
-        .scroll-navbar { position:fixed; top:0; left:0; width:100%; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,.1); }
+        .scroll-navbar { position:fixed; top:0; left:0; width:100%; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,.1); background:#fff; }
         .show-navbar { top:0; }
 
         /* ===== Footer ===== */
@@ -38,6 +39,12 @@
         @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
         @keyframes fadeSlideDown { from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:none;} }
         header.top-header { animation: fadeSlideDown .8s ease-in-out; }
+
+        /* ===== Layout container responsiveness ===== */
+        /* Make the content beautifully wide on desktops and big screens, but comfortable on mobiles */
+        .container { max-width: 1200px; }
+        @media (min-width: 1400px) { .container { max-width: 1320px; } }
+        @media (min-width: 1600px) { .container { max-width: 1440px; } }
 
         /* ===== Responsive tweaks ===== */
         @media (max-width: 992px) {
@@ -113,19 +120,21 @@
         .fade-in{ animation:fadeIn .16s ease; }
         @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
 
-        .quick-bar{ display:flex; flex-wrap:wrap; gap:8px; }
-        .quick-chip{ border:1px solid var(--chat-border); background:transparent; color:var(--chat-text); padding:6px 10px; border-radius:999px; font-size:14px; cursor:pointer; }
-        .quick-chip:hover{ border-color:var(--chat-accent); color:var(--chat-accent); }
+        /* Dropdown row */
+        .faq-row { display:flex; gap:8px; align-items:center; padding:8px; border-top:1px solid var(--chat-border); background:linear-gradient(0deg, rgba(13,110,253,.06), rgba(13,110,253,0)); }
+        .faq-row .form-select{ flex:1; }
+        .faq-row .btn{ white-space:nowrap; }
 
         .typing{ display:inline-flex; gap:4px; align-items:center; padding:8px 10px; border-radius:12px; background:var(--chat-bot); border:1px solid var(--chat-border); }
         .dot{ width:6px; height:6px; border-radius:50%; background:var(--chat-muted); opacity:.6; animation:bounce 1.2s infinite; }
         .dot:nth-child(2){ animation-delay:.15s; } .dot:nth-child(3){ animation-delay:.3s; }
         @keyframes bounce{ 0%,80%,100%{transform:scale(.8);} 40%{transform:scale(1);} }
 
-        .chat-input{ border-top:1px solid var(--chat-border); padding:10px; display:flex; gap:8px; align-items:flex-end; background:linear-gradient(0deg, rgba(13,110,253,.06), rgba(13,110,253,0)); }
-        .chat-input .notice { font-size:13px; color:var(--chat-muted); padding:6px 2px; }
-
-        @media (max-width: 576px){ .rrc-chat{ right:12px; bottom:12px; } .rrc-chat .chat-panel{ width:min(420px, 96vw); } }
+        /* Chat safe-zone on very small screens */
+        @media (max-width: 400px){
+          .rrc-chat .chat-panel { width: 95vw; }
+          .chat-body { height: 420px; }
+        }
     </style>
 </head>
 
@@ -136,7 +145,7 @@
         <nav class="navbar navbar-expand-lg navbar-light bg-white scroll-navbar" id="scrollNavbar">
             <div class="container">
                 <!-- Brand -->
-                <a class="navbar-brand" href="Default.aspx">
+                <a class="navbar-brand" href="Default.aspx" aria-label="RRC Home">
                     <img src="/images/rrclogo.jpg" alt="RRC Termite" class="logo" />
                 </a>
 
@@ -162,7 +171,7 @@
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </div>
 
-        <!-- ===================== Floating Modern Chat Assistant (FAQ-only) ===================== -->
+        <!-- ===================== Floating Modern Chat Assistant (FAQ-only via Dropdown) ===================== -->
         <div class="rrc-chat" id="rrcChat" aria-live="polite">
             <!-- Toggle button -->
             <button type="button" class="chat-toggle" id="chatToggle" aria-label="Open chat">
@@ -193,44 +202,21 @@
                 <div class="chat-body" id="chatBody">
                     <!-- Welcome message -->
                     <div class="msg bot fade-in">
-                        Hi! I’m your RRC Assistant. Tap a question below to see answers about bookings, services, warranties, or inspections.
+                        Hi! I’m your RRC Assistant. Select a question from the dropdown below to see quick answers about bookings, services, or inspections.
                         <span class="time" data-time></span>
-                    </div>
-
-                    <!-- Quick replies (FAQ buttons) -->
-                    <div class="quick-bar" id="quickBar">
-                        <!-- Booking -->
-                        <button type="button" class="quick-chip" data-question="How to book?">How to book?</button>
-                        <button type="button" class="quick-chip" data-question="Do you have free inspection?">Free inspection?</button>
-                        <button type="button" class="quick-chip" data-question="What are your business hours?">Business hours?</button>
-
-                        <!-- Services -->
-                        <button type="button" class="quick-chip" data-question="What services do you offer?">Services offered</button>
-                        <button type="button" class="quick-chip" data-question="What is soil poisoning?">Soil poisoning</button>
-                        <button type="button" class="quick-chip" data-question="How does the reticulation system work?">Reticulation system</button>
-                        <button type="button" class="quick-chip" data-question="What is general pest control?">General pest control</button>
-                        <button type="button" class="quick-chip" data-question="Do you handle commercial pest control?">Commercial pest control</button>
-
-                        <!-- Safety & Warranty -->
-                        <button type="button" class="quick-chip" data-question="Is the treatment safe for kids and pets?">Kid/Pet safety</button>
-                        <button type="button" class="quick-chip" data-question="Do you provide a warranty?">Warranty</button>
-
-                        <!-- Termite Info -->
-                        <button type="button" class="quick-chip" data-question="What are the signs of termites?">Signs of termites</button>
-                        <button type="button" class="quick-chip" data-question="How does termite baiting work?">Baiting system</button>
-
-                        <!-- Coverage & Contact -->
-                        <button type="button" class="quick-chip" data-question="What areas do you cover?">Service areas</button>
-                        <button type="button" class="quick-chip" data-question="How can I contact you?">Contact info</button>
-
-                        <!-- Payments & Duration -->
-                        <button type="button" class="quick-chip" data-question="What payment methods do you accept?">Payment methods</button>
-                        <button type="button" class="quick-chip" data-question="How long does a treatment take?">Treatment duration</button>
-                        <button type="button" class="quick-chip" data-question="Do I need to leave the house during treatment?">Do I need to leave?</button>
                     </div>
                 </div>
 
-             
+                <!-- FAQ dropdown + Ask button -->
+                <div class="faq-row">
+                    <select class="form-select" id="faqSelect" aria-label="Select a frequently asked question">
+                        <option value="" selected disabled>Choose a question…</option>
+                        <!-- options will be injected by JS from FAQ array -->
+                    </select>
+                    <button type="button" class="btn btn-primary" id="askBtn">
+                        Ask
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -239,7 +225,7 @@
             <div class="container text-center">
                 <p>&copy; <%= DateTime.Now.Year %> RRC Termite &amp; Pest Control. All rights reserved.</p>
                 <p>Follow us:
-                    <a href="https://www.facebook.com/rrcpestcontrolservice" class="text-white mx-2">
+                    <a href="https://www.facebook.com/rrcpestcontrolservice" class="text-white mx-2" aria-label="Facebook">
                         <i class="fab fa-facebook-f"></i>
                     </a>
                 </p>
@@ -271,39 +257,63 @@
         })();
     </script>
 
-    <!-- ===== Modern Chat Assistant Logic (FAQ-only, no dark mode) ===== -->
+    <!-- ===== Modern Chat Assistant Logic (Dropdown FAQ) ===== -->
     <script>
         (function () {
             const chat = document.getElementById('rrcChat');
             const toggle = document.getElementById('chatToggle');
             const closeBtn = document.getElementById('closeChat');
             const bodyEl = document.getElementById('chatBody');
-            const quickBar = document.getElementById('quickBar');
+            const select = document.getElementById('faqSelect');
+            const askBtn = document.getElementById('askBtn');
 
             // Persisted open/close state only
             const savedOpen = localStorage.getItem('rrcChatOpen');
             if (savedOpen === '1') { chat.classList.add('open'); }
 
-            // ---- ANSWER BANK (FAQ) ----
+            // ---- ANSWER BANK (Your reduced FAQ list) ----
             const FAQ = [
-                { q: "How to book?", a: "You can sign up and submit an inquiry using the form on this page. We’ll contact you shortly to schedule!" },
-                { q: "Do you have free inspection?", a: "Yes! FREE ocular inspections within serviceable areas. Send an inquiry and we’ll set a visit." },
-                { q: "What are your business hours?", a: "We’re available 24/7." },
-                { q: "What services do you offer?", a: "We offer Termite Control, General Pest Control, Soil Poisoning, Reticulation Systems, and more." },
-                { q: "What is soil poisoning?", a: "We apply termiticide to the soil foundation to prevent termite entry from underground." },
-                { q: "How does the reticulation system work?", a: "Pipes installed during construction let us re-apply chemicals later without drilling." },
-                { q: "What is general pest control?", a: "General pest control includes cockroaches, mosquitoes, ants, bed bugs, rats, spiders, and more." },
-                { q: "Do you handle commercial pest control?", a: "Yes, we service offices, restaurants/food businesses, warehouses, and industrial sites." },
-                { q: "Is the treatment safe for kids and pets?", a: "Our treatments are pet- and child-safe, using eco-friendly solutions approved by local authorities." },
-                { q: "Do you provide a warranty?", a: "Warranties range from 30 days up to 2 years depending on the service. Confirm with your technician/inspector." },
-                { q: "What are the signs of termites?", a: "Watch for hollow wood, mud tubes, droppings, and discarded wings near wooden areas/windows." },
-                { q: "How does termite baiting work?", a: "Bait stations attract termites to a slow-acting toxic bait they share in the colony, eliminating it." },
-                { q: "What areas do you cover?", a: "We’re based in the Philippines (NCR focus) and also serve Batangas & Pangasinan." },
-                { q: "How can I contact you?", a: "Email: rrcpestcontrol28@gmail.com. Smart: +63 947 721 7510 / +63 961 340 3036. Globe: +63 967 047 9074 / +63 967 047 9056." },
-                { q: "What payment methods do you accept?", a: "We currently accept cash. Bank transfers may be arranged with admin coordination." },
-                { q: "How long does a treatment take?", a: "Most treatments take 3–4 hours depending on severity and area size." },
-                { q: "Do I need to leave the house during treatment?", a: "Usually you can stay. If temporary evacuation is needed, we’ll let you know before the service." }
+                {
+                    q: "How to book?",
+                    a: "You can submit an inquiry through our inquiry page. Once submitted, our admin will review and dispatch an inspector to check your property."
+                },
+                {
+                    q: "Do you have free inspection?",
+                    a: "Our ocular inspections are FREE within serviceable areas. Send an inquiry here and set the date/time you’re available."
+                },
+                {
+                    q: "What are your business hours?",
+                    a: "We’re open 24/7. You can submit inquiries and bookings anytime."
+                },
+                {
+                    q: "What services do you offer?",
+                    a: "Two service types: Contractual (Baiting System—Above/ In-Ground for colony elimination, Termite Prevention, Soil Poisoning—Pre/Post Construction, Reticulation—Perforated Pipe, Mound Demolition—Queen Finder) and One-Time (General Pest Control for cockroaches, ants, mosquitoes, flies, tick & fleas, bedbugs, rats/rodents)."
+                },
+                {
+                    q: "What areas do you cover?",
+                    a: "We mainly cover NCR and can also reach Pangasinan and Batangas (north and south areas)."
+                },
+                {
+                    q: "How can I contact you?",
+                    a: "Email: rrctermiteandpestcontrol@gmail.com. Smart: +63 947 721 7510 / +63 961 340 3036. Globe: +63 967 047 9074 / +63 967 047 9056."
+                },
+                {
+                    q: "What payment methods do you accept?",
+                    a: "We accept PayPal and PayMongo, plus cash on-hand, online transactions, and bank transfers (arranged with admin)."
+                }
             ];
+
+            // Populate dropdown from FAQ list
+            function populateDropdown() {
+                const frag = document.createDocumentFragment();
+                FAQ.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.q;
+                    opt.textContent = item.q;
+                    frag.appendChild(opt);
+                });
+                select.appendChild(frag);
+            }
 
             function nowTime() {
                 const d = new Date();
@@ -343,15 +353,17 @@
                 }, 450);
             }
 
-            // Wire quick buttons (no typing)
-            if (quickBar) {
-                quickBar.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.quick-chip');
-                    if (!btn) return;
-                    const q = btn.getAttribute('data-question') || btn.textContent.trim();
-                    sendFAQ(q);
-                });
-            }
+            // Ask button handler
+            askBtn.addEventListener('click', () => {
+                const val = select.value;
+                if (!val) {
+                    // simple nudge
+                    select.classList.add('is-invalid');
+                    setTimeout(() => select.classList.remove('is-invalid'), 1000);
+                    return;
+                }
+                sendFAQ(val);
+            });
 
             // Toggle open/close (no page scroll changes)
             toggle.addEventListener('click', () => {
@@ -363,7 +375,8 @@
                 localStorage.setItem('rrcChatOpen', '0');
             });
 
-            // Set initial welcome time if present
+            // Initializations
+            populateDropdown();
             const t = document.querySelector('[data-time]');
             if (t) { t.textContent = nowTime(); }
         })();

@@ -178,7 +178,7 @@
                                                     CausesValidation="false" />
                                             </td>
                                             <td><%# Eval("SaleHash") %></td>
-                                            <td><%# Eval("Timestamp") %></td>
+                                            <td><%# FormatLocalPH(Eval("Timestamp")) %></td>
                                         </tr>
                                     </ItemTemplate>
                                 </asp:Repeater>

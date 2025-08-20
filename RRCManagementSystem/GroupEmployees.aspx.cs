@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Configuration;
 using System.Text;
 using System.Web.UI.WebControls;
 
@@ -20,7 +20,6 @@ namespace RRCManagementSystem
             }
 
             string role = Session["Role"].ToString();
-
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -46,35 +45,34 @@ namespace RRCManagementSystem
             }
         }
 
-        private bool HasEditPermission(int adminId, string moduleName)
+        private bool HasEditPermission(int userId, string module)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
             {
-                string query = "SELECT CanEdit FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-                using (SqlCommand cmd = new SqlCommand(query, con))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", adminId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-                    try
-                    {
-                        con.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
-                    }
-                    catch { return false; }
-                }
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = module;
+                cmd.Parameters.Add("@Permission", SqlDbType.NVarChar, 10).Value = "CanEdit";
+
+                con.Open();
+                object result = cmd.ExecuteScalar();
+                return result != null && Convert.ToBoolean(result);
             }
         }
 
         private void LoadExistingTeams()
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spTeams_ListAll", con))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = "SELECT TeamID, GroupName FROM Teams ORDER BY GroupName";
-                SqlDataAdapter da = new SqlDataAdapter(query, con);
-                DataTable dtTeams = new DataTable();
-                da.Fill(dtTeams);
-                ddlExistingTeams.DataSource = dtTeams;
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                var dt = new DataTable();
+                da.Fill(dt);
+
+                ddlExistingTeams.DataSource = dt;
                 ddlExistingTeams.DataValueField = "TeamID";
                 ddlExistingTeams.DataTextField = "GroupName";
                 ddlExistingTeams.DataBind();
@@ -84,21 +82,15 @@ namespace RRCManagementSystem
 
         private void LoadTechnicians()
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spTechnicians_WithCurrentTeam", con))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = @"
-                    SELECT e.EmployeeID, 
-                           (e.LastName + ', ' + e.FirstName + ' ' + ISNULL(e.MiddleName, '')) AS FullName,
-                           ISNULL(t.GroupName, 'Not Assigned') AS CurrentTeam
-                    FROM Employees e
-                    LEFT JOIN TeamMembers tm ON e.EmployeeID = tm.EmployeeID
-                    LEFT JOIN Teams t ON tm.TeamID = t.TeamID
-                    WHERE e.Position = 'Technician'
-                    ORDER BY e.LastName, e.FirstName";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter da = new SqlDataAdapter(query, con);
-                DataTable dt = new DataTable();
+                var dt = new DataTable();
                 da.Fill(dt);
+
                 gvTechnicians.DataSource = dt;
                 gvTechnicians.DataBind();
             }
@@ -106,117 +98,120 @@ namespace RRCManagementSystem
 
         protected void gvTechnicians_RowDataBound(object sender, GridViewRowEventArgs e)
         {
-            if (e.Row.RowType == DataControlRowType.DataRow)
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+            var ddlAction = (DropDownList)e.Row.FindControl("ddlAction");
+            if (ddlAction == null) return;
+
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spTeams_ListAll", con))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                DropDownList ddlAction = (DropDownList)e.Row.FindControl("ddlAction");
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    string query = "SELECT TeamID, GroupName FROM Teams ORDER BY GroupName";
-                    SqlDataAdapter da = new SqlDataAdapter(query, con);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-                    ddlAction.DataSource = dt;
-                    ddlAction.DataValueField = "TeamID";
-                    ddlAction.DataTextField = "GroupName";
-                    ddlAction.DataBind();
-                    ddlAction.Items.Insert(0, new ListItem("No Action", ""));
-                    ddlAction.Items.Add(new ListItem("Remove from team", "REMOVE"));
-                }
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                var dt = new DataTable();
+                da.Fill(dt);
+
+                ddlAction.DataSource = dt;
+                ddlAction.DataValueField = "TeamID";
+                ddlAction.DataTextField = "GroupName";
+                ddlAction.DataBind();
+                ddlAction.Items.Insert(0, new ListItem("No Action", ""));
+                ddlAction.Items.Add(new ListItem("Remove from team", "REMOVE"));
             }
         }
 
         protected void btnSaveChanges_Click(object sender, EventArgs e)
         {
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            // Use UserID, not AdminID (to match your other pages)
+            int adminId = Convert.ToInt32(Session["UserID"]);
             int changesCount = 0;
-            StringBuilder feedback = new StringBuilder();
+            var feedback = new StringBuilder();
 
             foreach (GridViewRow row in gvTechnicians.Rows)
             {
-                CheckBox cbSelect = (CheckBox)row.FindControl("chkSelect");
-                DropDownList ddlAction = (DropDownList)row.FindControl("ddlAction");
-                HiddenField hfEmployeeName = (HiddenField)row.FindControl("hfEmployeeName");
+                var cbSelect = (CheckBox)row.FindControl("chkSelect");
+                var ddlAction = (DropDownList)row.FindControl("ddlAction");
+                var hfEmployeeName = (HiddenField)row.FindControl("hfEmployeeName");
 
-                int employeeId = int.Parse(gvTechnicians.DataKeys[row.RowIndex].Value.ToString());
-                string employeeName = hfEmployeeName?.Value;
-                string selectedAction = ddlAction?.SelectedValue;
+                if (cbSelect == null || !cbSelect.Checked) continue;
 
-                if (cbSelect != null && cbSelect.Checked)
+                int employeeId = Convert.ToInt32(gvTechnicians.DataKeys[row.RowIndex].Value);
+                string employeeName = hfEmployeeName?.Value ?? $"Emp#{employeeId}";
+                string selected = ddlAction?.SelectedValue;
+
+                if (selected == "REMOVE")
                 {
-                    if (selectedAction == "REMOVE")
+                    if (RemoveEmployeeFromTeam(employeeId))
                     {
-                        if (RemoveEmployeeFromTeam(employeeId))
-                        {
-                            feedback.AppendLine($"✅ Removed {employeeName} from their team.<br/>");
-                            AddAuditLog(adminId, $"Removed technician '{employeeName}' (ID: {employeeId}) from their team.");
-                            changesCount++;
-                        }
+                        feedback.AppendLine($"✅ Removed {employeeName} from their team.<br/>");
+                        AddAudit(adminId, $"Removed technician '{employeeName}' (ID: {employeeId}) from their team.");
+                        changesCount++;
                     }
-                    else if (!string.IsNullOrEmpty(selectedAction))
+                }
+                else if (!string.IsNullOrEmpty(selected))
+                {
+                    int newTeamId = int.Parse(selected);
+                    if (UpsertEmployeeTeam(employeeId, newTeamId))
                     {
-                        int newTeamId = int.Parse(selectedAction);
-                        if (AssignOrUpdateEmployeeTeam(employeeId, newTeamId))
-                        {
-                            feedback.AppendLine($"✅ {employeeName} reassigned to selected team.<br/>");
-                            AddAuditLog(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to TeamID: {newTeamId}.");
-                            changesCount++;
-                        }
+                        feedback.AppendLine($"✅ {employeeName} reassigned to selected team.<br/>");
+                        AddAudit(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to TeamID: {newTeamId}.");
+                        changesCount++;
                     }
-                    else if (!string.IsNullOrEmpty(ddlExistingTeams.SelectedValue))
+                }
+                else if (!string.IsNullOrEmpty(ddlExistingTeams.SelectedValue))
+                {
+                    int fallbackTeamId = int.Parse(ddlExistingTeams.SelectedValue);
+                    if (UpsertEmployeeTeam(employeeId, fallbackTeamId))
                     {
-                        int fallbackTeamId = int.Parse(ddlExistingTeams.SelectedValue);
-                        if (AssignOrUpdateEmployeeTeam(employeeId, fallbackTeamId))
-                        {
-                            feedback.AppendLine($"✅ {employeeName} assigned to team from top dropdown.<br/>");
-                            AddAuditLog(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to TeamID: {fallbackTeamId}.");
-                            changesCount++;
-                        }
+                        feedback.AppendLine($"✅ {employeeName} assigned to team from top dropdown.<br/>");
+                        AddAudit(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to TeamID: {fallbackTeamId}.");
+                        changesCount++;
                     }
                 }
             }
 
-            lblMessage.Text = changesCount > 0 ? $"✅ {changesCount} changes successfully saved!<br/>{feedback}" : "⚠️ No changes made.";
+            lblMessage.Text = changesCount > 0
+                ? $"✅ {changesCount} changes successfully saved!<br/>{feedback}"
+                : "⚠️ No changes made.";
             lblMessage.ForeColor = changesCount > 0 ? System.Drawing.Color.Green : System.Drawing.Color.OrangeRed;
+
             LoadTechnicians();
         }
 
-        private bool AssignOrUpdateEmployeeTeam(int employeeId, int teamId)
+        private bool UpsertEmployeeTeam(int employeeId, int teamId)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spTeamMember_Upsert", con))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeId;
+                cmd.Parameters.Add("@TeamID", SqlDbType.Int).Value = teamId;
+
                 con.Open();
-                string checkExist = "SELECT COUNT(*) FROM TeamMembers WHERE EmployeeID = @EmployeeID";
-                SqlCommand cmdCheck = new SqlCommand(checkExist, con);
-                cmdCheck.Parameters.AddWithValue("@EmployeeID", employeeId);
-                int count = (int)cmdCheck.ExecuteScalar();
-
-                string query = count > 0
-                    ? "UPDATE TeamMembers SET TeamID = @TeamID WHERE EmployeeID = @EmployeeID"
-                    : "INSERT INTO TeamMembers (EmployeeID, TeamID) VALUES (@EmployeeID, @TeamID)";
-
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@EmployeeID", employeeId);
-                cmd.Parameters.AddWithValue("@TeamID", teamId);
-                return cmd.ExecuteNonQuery() > 0;
+                object result = cmd.ExecuteScalar();
+                return Convert.ToInt32(result ?? 0) > 0;
             }
         }
 
         private bool RemoveEmployeeFromTeam(int employeeId)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spTeamMember_Remove", con))
             {
-                string query = "DELETE FROM TeamMembers WHERE EmployeeID = @EmployeeID";
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@EmployeeID", employeeId);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeId;
+
                 con.Open();
-                return cmd.ExecuteNonQuery() > 0;
+                object result = cmd.ExecuteScalar();
+                return Convert.ToInt32(result ?? 0) > 0;
             }
         }
 
         protected void btnCreateTeamModal_Click(object sender, EventArgs e)
         {
             string teamName = txtModalTeamName.Text.Trim();
-            int adminId = Convert.ToInt32(Session["AdminID"]);
+            int adminId = Convert.ToInt32(Session["UserID"]);
 
             if (string.IsNullOrEmpty(teamName))
             {
@@ -225,58 +220,55 @@ namespace RRCManagementSystem
                 return;
             }
 
-            using (SqlConnection con = new SqlConnection(connectionString))
+            try
             {
-                string checkQuery = "SELECT COUNT(*) FROM Teams WHERE GroupName = @GroupName";
-                SqlCommand checkCmd = new SqlCommand(checkQuery, con);
-                checkCmd.Parameters.AddWithValue("@GroupName", teamName);
-
-                string insertQuery = "INSERT INTO Teams (GroupName) VALUES (@GroupName)";
-                SqlCommand insertCmd = new SqlCommand(insertQuery, con);
-                insertCmd.Parameters.AddWithValue("@GroupName", teamName);
-
-                try
+                int teamId = CreateTeam(teamName);
+                if (teamId == 0)
                 {
-                    con.Open();
-                    int exists = (int)checkCmd.ExecuteScalar();
-                    if (exists > 0)
-                    {
-                        lblMessage.Text = $"⚠️ Team '{teamName}' already exists.";
-                        lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
-                    }
-                    else
-                    {
-                        insertCmd.ExecuteNonQuery();
-                        lblMessage.Text = $"✅ Team '{teamName}' created successfully.";
-                        lblMessage.ForeColor = System.Drawing.Color.Green;
-                        txtModalTeamName.Text = "";
-                        LoadExistingTeams();
-                    }
+                    lblMessage.Text = $"⚠️ Team '{teamName}' already exists.";
+                    lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
                 }
-                catch (Exception ex)
+                else
                 {
-                    lblMessage.Text = $"❌ Error creating team: {ex.Message}";
-                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                    lblMessage.Text = $"✅ Team '{teamName}' created successfully.";
+                    lblMessage.ForeColor = System.Drawing.Color.Green;
+                    txtModalTeamName.Text = "";
+                    LoadExistingTeams();
+                    AddAudit(adminId, $"Created team '{teamName}' (ID: {teamId}).");
                 }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = $"❌ Error creating team: {ex.Message}";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
             }
         }
 
-        private void AddAuditLog(int? userID, string action)
+        private int CreateTeam(string name)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spTeam_Create", con))
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch { }
-                }
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@GroupName", SqlDbType.NVarChar, 50).Value = name;
+
+                con.Open();
+                object result = cmd.ExecuteScalar();
+                return Convert.ToInt32(result ?? 0);
+            }
+        }
+
+        private void AddAudit(int adminId, string action)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAudit_Insert", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = adminId;
+                cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action;
+
+                con.Open();
+                cmd.ExecuteNonQuery();
             }
         }
     }

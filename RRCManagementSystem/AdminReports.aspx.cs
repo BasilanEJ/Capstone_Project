@@ -1,299 +1,92 @@
-﻿using System;
-using System.Configuration;
-using System.Data;
-using System.Data.SqlClient;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Web;
-using System.Web.UI;
-using System.Web.UI.WebControls;
-using iTextSharp.text;
-using iTextSharp.text.pdf;
-using RRCManagementSystem.Helpers;
+﻿    using System;
+    using System.Configuration;
+    using System.Data;
+    using System.Data.SqlClient;
+    using System.IO;
+    using System.Text;
+    using System.Web;
+    using System.Web.UI;
+    using System.Web.UI.WebControls;
+    using iTextSharp.text;
+    using iTextSharp.text.pdf;
+    using RRCManagementSystem.Helpers; // keep if you actually have PdfWatermark
 
-namespace RRCManagementSystem
-{
-    public partial class AdminReports : System.Web.UI.Page
+    namespace RRCManagementSystem
     {
-        protected Label lblTotalInquiries;
-        protected Label lblTotalClients;
-        protected Label lblTotalEquipment;
-        protected Label lblTotalBookings;
-        protected TextBox txtFromDate;
-        protected TextBox txtToDate;
-        protected GridView gvUserAccounts, gvInquiries, gvApprovedClients, gvInventorySnapshots, gvInventory, gvEquipment, gvBookings, gvInspections;
-        protected TextBox txtTeamDate;
-        protected GridView gvTeamsSummary, gvTeamMembers;
-
-
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-
-        protected void Page_Load(object sender, EventArgs e)
+        public partial class AdminReports : System.Web.UI.Page
         {
-            if (!IsPostBack)
+            private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
+            protected void Page_Load(object sender, EventArgs e)
             {
-                txtFromDate.Text = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
-                txtToDate.Text = DateTime.Now.ToString("yyyy-MM-dd");
-                txtTeamDate.Text = DateTime.Today.ToString("yyyy-MM-dd"); // default availability date
+                if (!IsPostBack)
+                {
+                    txtFromDate.Text = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
+                    txtToDate.Text   = DateTime.Now.ToString("yyyy-MM-dd");
+                    txtTeamDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
 
-                DateTime from = DateTime.Parse(txtFromDate.Text);
-                DateTime to = DateTime.Parse(txtToDate.Text);
+                    LoadReports();
+                    LoadUserAccounts();
+                    LoadTeamReports();
+                    LoadSales(DateTime.Parse(txtFromDate.Text), DateTime.Parse(txtToDate.Text));
+                }
+            }
 
+            // ---------------------- UI actions ----------------------
+            protected void btnFilter_Click(object sender, EventArgs e)
+            {
                 LoadReports();
-                LoadUserAccounts();
                 LoadTeamReports();
-                LoadSales(from, to); // ✅ Now works
+                AddAuditLog(Convert.ToInt32(Session["UserID"]), "Filtered Admin Reports");
             }
-        }
 
-
-
-        protected void btnExportUsers_Click(object sender, EventArgs e)
-        {
-            if (gvUserAccounts.Rows.Count > 0)
-                ExportGridViewToPDF(gvUserAccounts, "Users_Report");
-        }
-
-        protected void btnExportSales_Click(object sender, EventArgs e)
-        {
-            if (gvSales.Rows.Count > 0)
-                ExportGridViewToPDF(gvSales, "Sales_Report");
-        }
-
-
-        protected void btnExportInquiries_Click(object sender, EventArgs e)
-        {
-            if (gvInquiries.Rows.Count > 0)
-                ExportGridViewToPDF(gvInquiries, "Inquiry_Report");
-        }
-
-        protected void btnExportClients_Click(object sender, EventArgs e)
-        {
-            if (gvApprovedClients.Rows.Count > 0)
-                ExportGridViewToPDF(gvApprovedClients, "ApprovedClients_Report");
-        }
-
-        protected void btnExportInventorySnapshots_Click(object sender, EventArgs e)
-        {
-            if (gvInventorySnapshots.Rows.Count > 0)
-                ExportGridViewToPDF(gvInventorySnapshots, "InventorySnapshots_Report");
-        }
-
-        protected void btnExportInventory_Click(object sender, EventArgs e)
-        {
-            if (gvInventory.Rows.Count > 0)
-                ExportGridViewToPDF(gvInventory, "Inventory_Report");
-        }
-
-        protected void btnExportEquipment_Click(object sender, EventArgs e)
-        {
-            if (gvEquipment.Rows.Count > 0)
-                ExportGridViewToPDF(gvEquipment, "Equipment_Report");
-        }
-
-        protected void btnExportBookings_Click(object sender, EventArgs e)
-        {
-            if (gvBookings.Rows.Count > 0)
-                ExportGridViewToPDF(gvBookings, "Bookings_Report");
-        }
-
-        protected void btnExportInspections_Click(object sender, EventArgs e)
-        {
-            if (gvInspections.Rows.Count > 0)
-                ExportGridViewToPDF(gvInspections, "Inspections_Report");
-        }
-
-        protected void btnExportTeamsSummary_Click(object sender, EventArgs e)
-        {
-            if (gvTeamsSummary.Rows.Count > 0)
-                ExportGridViewToPDF(gvTeamsSummary, "Team_Summary_Report");
-        }
-
-        protected void btnExportTeamMembers_Click(object sender, EventArgs e)
-        {
-            if (gvTeamMembers.Rows.Count > 0)
-                ExportGridViewToPDF(gvTeamMembers, "Team_Members_Report");
-        }
-
-        protected void btnFilter_Click(object sender, EventArgs e)
-        {
-            LoadReports();
-            LoadTeamReports(); // 👈 keep Team section in sync with range filter
-            AddAuditLog(Convert.ToInt32(Session["UserID"]), "Filtered Admin Reports");
-        }
-
-        private void LoadSales(DateTime from, DateTime to)
-        {
-            DateTime toExclusive = to.Date.AddDays(1);
-
-            string query = @"
-        SELECT 
-            t.TransactionID,
-            ISNULL(
-                (c.LastName + ', ' + c.FirstName + 
-                    CASE WHEN ISNULL(c.MiddleName,'') <> '' THEN ' ' + c.MiddleName ELSE '' END),
-                'N/A'
-            ) AS ClientName,
-            t.Amount,
-            t.PaymentMethod,
-            t.Status,
-            FORMAT(DATEADD(HOUR, 8, t.TransactionDate), 'yyyy-MM-dd HH:mm:ss') AS TransactionDatePHT,
-            t.Remarks
-        FROM Transactions t
-        LEFT JOIN Sales s ON t.SaleID = s.SaleID
-        LEFT JOIN Clients c ON s.ClientID = c.ClientID
-        WHERE t.TransactionDate >= @from AND t.TransactionDate < @toExclusive
-        ORDER BY t.TransactionDate DESC";
-
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand(query, conn))
+            protected void btnTeamDateApply_Click(object sender, EventArgs e)
             {
-                cmd.Parameters.AddWithValue("@from", from.Date);
-                cmd.Parameters.AddWithValue("@toExclusive", toExclusive);
-
-                var da = new SqlDataAdapter(cmd);
-                var dt = new DataTable();
-                da.Fill(dt);
-
-                // Add new column for formatted ID
-                dt.Columns.Add("TransactionIDFormatted", typeof(string));
-
-                foreach (DataRow row in dt.Rows)
-                {
-                    row["TransactionIDFormatted"] = PrettyId("Transaction", row["TransactionID"]);
-                }
-
-                gvSales.DataSource = dt;
-                gvSales.DataBind();
-
-                decimal total = 0;
-                foreach (DataRow row in dt.Rows)
-                {
-                    total += row.Field<decimal>("Amount");
-                }
-                lblSalesSummary.Text = $"Total Sales: ₱{total:N2} ({dt.Rows.Count} transactions)";
+                LoadTeamReports();
+                AddAuditLog(Convert.ToInt32(Session["UserID"]), "Applied Team Availability Date in Reports");
             }
-        }
-
-
-
-
-        private void LoadTeamReports()
-        {
-            DateTime from = DateTime.Parse(txtFromDate.Text);
-            DateTime to = DateTime.Parse(txtToDate.Text).AddDays(1);
-            DateTime teamDate = DateTime.TryParse(txtTeamDate.Text, out var d) ? d : DateTime.Today;
-
-            LoadTeamsSummary(from, to, teamDate);
-            LoadTeamMembers();
-        }
-
-        private void LoadTeamsSummary(DateTime from, DateTime to, DateTime teamDate)
-        {
-            string query = @"
-;WITH Members AS (
-    SELECT tm.TeamID, COUNT(*) AS MembersCount
-    FROM TeamMembers tm
-    INNER JOIN Employees e ON tm.EmployeeID = e.EmployeeID
-    GROUP BY tm.TeamID
-),
-JobsOnDate AS (
-    SELECT b.TeamID, COUNT(*) AS AssignmentsOnDate
-    FROM Bookings b
-    WHERE b.TeamID IS NOT NULL
-      AND CAST(b.ScheduledDate AS DATE) = @teamDate
-      AND b.Status NOT IN ('Cancelled')
-    GROUP BY b.TeamID
-),
-JobsInRange AS (
-    SELECT b.TeamID, COUNT(*) AS AssignmentsInRange, MAX(b.ScheduledDate) AS LastScheduled
-    FROM Bookings b
-    WHERE b.TeamID IS NOT NULL
-      AND b.ScheduledDate BETWEEN @from AND @to
-      AND b.Status NOT IN ('Cancelled')
-    GROUP BY b.TeamID
-)
-SELECT 
-    t.TeamID,
-    t.GroupName,
-    ISNULL(m.MembersCount, 0) AS MembersCount,
-    ISNULL(jd.AssignmentsOnDate, 0) AS AssignmentsOnDate,
-    ISNULL(jr.AssignmentsInRange, 0) AS AssignmentsInRange,
-    jr.LastScheduled,
-    CASE WHEN ISNULL(jd.AssignmentsOnDate, 0) >= 2 THEN 'Unavailable' ELSE 'Available' END AS Status
-FROM Teams t
-LEFT JOIN Members m   ON m.TeamID = t.TeamID
-LEFT JOIN JobsOnDate jd ON jd.TeamID = t.TeamID
-LEFT JOIN JobsInRange jr ON jr.TeamID = t.TeamID
-ORDER BY t.GroupName;";
-
-            BindGrid(query, gvTeamsSummary, from, to, teamDate);
-        }
-
-
-        private void LoadTeamMembers()
-        {
-            string query = @"
-SELECT 
-    t.TeamID,
-    t.GroupName,
-    e.EmployeeID,
-    e.LastName, e.FirstName, e.MiddleName,
-    e.Department
-FROM Teams t
-LEFT JOIN TeamMembers tm ON tm.TeamID = t.TeamID
-LEFT JOIN Employees e ON e.EmployeeID = tm.EmployeeID
-ORDER BY t.GroupName, e.LastName, e.FirstName;";
-
-            BindGrid(query, gvTeamMembers);
-        }
-
-        protected void btnTeamDateApply_Click(object sender, EventArgs e)
-        {
-            LoadTeamReports();
-            AddAuditLog(Convert.ToInt32(Session["UserID"]), "Applied Team Availability Date in Reports");
-        }
-
-
-
 
         protected void btnExportPDF_Click(object sender, EventArgs e)
         {
-            // make sure everything is bound for this export postback
+            // Refresh data so the export matches the current filters
             LoadReports();
-            LoadTeamReports();   // <— include team data
+            LoadTeamReports();
 
-            Document doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
-            using (MemoryStream ms = new MemoryStream())
+            var doc = new iTextSharp.text.Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
+            using (var ms = new MemoryStream())
             {
                 PdfWriter writer = PdfWriter.GetInstance(doc, ms);
+
+                // <<< attach watermark (drawn over content)
                 writer.PageEvent = new PdfWatermark();
+
+                // Optional encryption (same as you used before)
                 string userPassword = Session["Password"]?.ToString() ?? "default123";
                 writer.SetEncryption(
                     Encoding.UTF8.GetBytes(userPassword),
                     Encoding.UTF8.GetBytes(userPassword),
                     PdfWriter.ALLOW_PRINTING,
-                    PdfWriter.ENCRYPTION_AES_128);
+                    PdfWriter.ENCRYPTION_AES_128
+                );
 
                 doc.Open();
 
+                // Add each grid as a new section/page
                 AddGridToPDF(doc, gvUserAccounts, "👤 User Accounts");
                 AddGridToPDF(doc, gvInquiries, "📬 Inquiries");
                 AddGridToPDF(doc, gvApprovedClients, "✅ Approved Clients");
                 AddGridToPDF(doc, gvInventorySnapshots, "📦 Total Stocks Snapshot (Daily)");
                 AddGridToPDF(doc, gvInventory, "📦 Inventory Details");
-                AddGridToPDF(doc, gvSales, "Sales");
+                AddGridToPDF(doc, gvSales, "💳 Sales");
                 AddGridToPDF(doc, gvEquipment, "🛠️ Equipment Status");
                 AddGridToPDF(doc, gvBookings, "📅 Booking Details");
                 AddGridToPDF(doc, gvInspections, "🔍 Inspection Details");
-
-                // ✅ Add these two sections
                 AddGridToPDF(doc, gvTeamsSummary, "👥 Team Summary");
                 AddGridToPDF(doc, gvTeamMembers, "👨‍👩‍👧‍👦 Team Members");
 
                 doc.Close();
 
+                // Return the file
                 Response.Clear();
                 Response.ContentType = "application/pdf";
                 Response.AddHeader("content-disposition", $"attachment;filename=All_Reports_{DateTime.Now:yyyyMMdd}.pdf");
@@ -308,452 +101,264 @@ ORDER BY t.GroupName, e.LastName, e.FirstName;";
         }
 
 
-        private void AddGridToPDF(Document doc, GridView grid, string title)
-        {
-            if (grid.Rows.Count == 0) return;
-
-            doc.NewPage();
-            doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
-            doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
-            doc.Add(new Paragraph(" "));
-
-            int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
-            PdfPTable table = new PdfPTable(visibleCols)
+        protected void btnExportTeamsSummary_Click(object sender, EventArgs e)
             {
-                WidthPercentage = 100,
-                SpacingBefore = 10f
-            };
+                if (gvTeamsSummary.Rows.Count > 0)
+                    ExportGridViewToPDF(gvTeamsSummary, "Team_Summary_Report");
+            }
 
-            // headers
-            if (grid.HeaderRow != null)
+            protected void btnExportTeamMembers_Click(object sender, EventArgs e)
             {
-                foreach (TableCell hc in grid.HeaderRow.Cells)
+                if (gvTeamMembers.Rows.Count > 0)
+                    ExportGridViewToPDF(gvTeamMembers, "Team_Members_Report");
+            }
+
+            protected void btnExportUsers_Click(object sender, EventArgs e)
+            {
+                if (gvUserAccounts.Rows.Count > 0) ExportGridViewToPDF(gvUserAccounts, "Users_Report");
+            }
+            protected void btnExportSales_Click(object sender, EventArgs e)
+            {
+                if (gvSales.Rows.Count > 0) ExportGridViewToPDF(gvSales, "Sales_Report");
+            }
+            protected void btnExportInquiries_Click(object sender, EventArgs e)
+            {
+                if (gvInquiries.Rows.Count > 0) ExportGridViewToPDF(gvInquiries, "Inquiry_Report");
+            }
+            protected void btnExportClients_Click(object sender, EventArgs e)
+            {
+                if (gvApprovedClients.Rows.Count > 0) ExportGridViewToPDF(gvApprovedClients, "ApprovedClients_Report");
+            }
+            protected void btnExportInventorySnapshots_Click(object sender, EventArgs e)
+            {
+                if (gvInventorySnapshots.Rows.Count > 0) ExportGridViewToPDF(gvInventorySnapshots, "InventorySnapshots_Report");
+            }
+            protected void btnExportInventory_Click(object sender, EventArgs e)
+            {
+                if (gvInventory.Rows.Count > 0) ExportGridViewToPDF(gvInventory, "Inventory_Report");
+            }
+            protected void btnExportEquipment_Click(object sender, EventArgs e)
+            {
+                if (gvEquipment.Rows.Count > 0) ExportGridViewToPDF(gvEquipment, "Equipment_Report");
+            }
+            protected void btnExportBookings_Click(object sender, EventArgs e)
+            {
+                if (gvBookings.Rows.Count > 0) ExportGridViewToPDF(gvBookings, "Bookings_Report");
+            }
+            protected void btnExportInspections_Click(object sender, EventArgs e)
+            {
+                if (gvInspections.Rows.Count > 0) ExportGridViewToPDF(gvInspections, "Inspections_Report");
+            }
+
+            // ---------------------- Loaders (SP-based) ----------------------
+            private void LoadReports()
+            {
+                var from = DateTime.Parse(txtFromDate.Text).Date;
+                var to   = DateTime.Parse(txtToDate.Text).Date;
+
+                LoadSummaryCounts(from, to);
+                LoadInquiries(from, to);
+                LoadApprovedClients(from, to);
+                LoadInventorySnapshots(from, to);
+                LoadInventory();
+                LoadEquipment();
+                LoadBookings(from, to);
+                LoadInspections(from, to);
+                LoadSales(from, to);
+            }
+
+            private void LoadSummaryCounts(DateTime from, DateTime to)
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spReports_SummaryCounts", con))
                 {
-                    string headerText = HttpUtility.HtmlDecode(GetCellText(hc));
-                    PdfPCell headerCell = new PdfPCell(new Phrase(headerText, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new SqlParameter("@FromDate", SqlDbType.Date){Value = from});
+                    cmd.Parameters.Add(new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
+
+                    con.Open();
+                    using (var r = cmd.ExecuteReader())
                     {
-                        BackgroundColor = BaseColor.DARK_GRAY,
-                        HorizontalAlignment = Element.ALIGN_CENTER,
-                        Padding = 6
-                    };
-                    table.AddCell(headerCell);
+                        if (r.Read())
+                        {
+                            lblTotalInquiries.Text = Convert.ToInt32(r["TotalInquiries"]).ToString();
+                            lblTotalClients.Text   = Convert.ToInt32(r["TotalApprovedClients"]).ToString();
+                            lblTotalEquipment.Text = Convert.ToInt32(r["TotalAvailableEquipment"]).ToString();
+                            lblTotalBookings.Text  = Convert.ToInt32(r["TotalBookings"]).ToString();
+                        }
+                    }
                 }
             }
 
-            // rows – use GetCellText so TemplateFields (your "User0004") are captured
-            foreach (GridViewRow row in grid.Rows)
+            private void LoadUserAccounts()
             {
-                for (int c = 0; c < row.Cells.Count; c++)
-                {
-                    string text = GetCellText(row.Cells[c]);   // <-- key change
-
-                    // simple alignment rules
-                    string header = (grid.HeaderRow != null && c < grid.HeaderRow.Cells.Count)
-                                    ? (grid.HeaderRow.Cells[c].Text ?? "").ToLower()
-                                    : "";
-                    int align = Element.ALIGN_LEFT;
-                    if (header.Contains("quantity") || header.Contains("price") || header.Contains("amount") ||
-                                        header.Contains("sqm") || header.Contains("ml"))
-                        align = Element.ALIGN_RIGHT;
-                    else if (header.Contains("status") || header.Contains("date"))
-                        align = Element.ALIGN_CENTER;
-                    else if (int.TryParse(text, out _))
-                        align = Element.ALIGN_CENTER;
-
-                    PdfPCell bodyCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
-                    {
-                        HorizontalAlignment = align,
-                        Padding = 5
-                    };
-                    table.AddCell(bodyCell);
-                }
+                gvUserAccounts.DataSource = ExecToTable("dbo.spReports_UserAccounts");
+                gvUserAccounts.DataBind();
             }
 
-            doc.Add(table);
-        }
-
-
-        private void LoadReports()
-        {
-            DateTime from = DateTime.Parse(txtFromDate.Text);
-            DateTime to = DateTime.Parse(txtToDate.Text);
-
-            LoadSummaryCounts(from, to);
-            LoadInquiries(from, to);
-            LoadApprovedClients(from, to);
-            LoadInventorySnapshots(from, to);
-            LoadInventory();
-            LoadEquipment();
-            LoadBookings(from, to);
-            LoadInspections(from, to);
-            LoadSales(from, to); 
-        }
-
-
-
-        private void LoadSummaryCounts(DateTime from, DateTime to)
-        {
-            lblTotalInquiries.Text = GetCount("InquirySimple", "SubmittedAt", from, to).ToString();
-            lblTotalClients.Text = GetCount("Clients", "CreatedAt", from, to, "Status = 'Approved'").ToString();
-            lblTotalEquipment.Text = GetCount("EquipmentStatus", null, DateTime.MinValue, DateTime.MaxValue, "Status = 'Available'").ToString();
-            lblTotalBookings.Text = GetBookingsCount(from, to).ToString();
-        } // ✅ closed here
-
-        private int GetBookingsCount(DateTime from, DateTime to)
-        {
-            DateTime toExclusive = to.Date.AddDays(1);
-
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand(@"
-        SELECT COUNT(*)
-        FROM Bookings
-        WHERE ISNULL(ScheduledDate, CreatedAt) >= @from
-          AND ISNULL(ScheduledDate, CreatedAt) <  @toExclusive;", conn))
+            private void LoadInquiries(DateTime from, DateTime to)
             {
-                cmd.Parameters.AddWithValue("@from", from.Date);
-                cmd.Parameters.AddWithValue("@toExclusive", toExclusive);
-                conn.Open();
-                return (int)cmd.ExecuteScalar();
+                gvInquiries.DataSource = ExecToTable("dbo.spReports_Inquiries",
+                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
+                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
+                gvInquiries.DataBind();
             }
-        }
 
+            private void LoadApprovedClients(DateTime from, DateTime to)
+            {
+                gvApprovedClients.DataSource = ExecToTable("dbo.spReports_ApprovedClients",
+                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
+                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
+                gvApprovedClients.DataBind();
+            }
 
+            private void LoadInventorySnapshots(DateTime from, DateTime to)
+            {
+                gvInventorySnapshots.DataSource = ExecToTable("dbo.spReports_InventorySnapshots",
+                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
+                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
+                gvInventorySnapshots.DataBind();
+            }
 
-
-        private void LoadUserAccounts()
-        {
-            string query = "SELECT UserID, Name, Email, Role, CreatedAt FROM Users WHERE Role <> 'SuperAdmin' ORDER BY CreatedAt DESC";
-            BindGrid(query, gvUserAccounts);
-        }
-
-        private void LoadInquiries(DateTime from, DateTime to)
-        {
-            string query = @"
-        SELECT 
-            InquiryID, 
-            Email, 
-            ContactNumber, 
-            CONCAT(Lastname, ', ', Firstname, ' ', Middlename) AS FullName,
-            StreetAndUnit + ', ' + Barangay + ', ' + City + ', ' + Region + ', ' + Country AS Address,
-            SubmittedAt 
-        FROM InquirySimple 
-        WHERE SubmittedAt BETWEEN @from AND @to 
-        ORDER BY SubmittedAt DESC";
-
-            BindGrid(query, gvInquiries, from, to);
-        }
-
-
-
-        private void LoadApprovedClients(DateTime from, DateTime to)
-        {
-            string query = @"
-        SELECT 
-            ClientID, 
-            CONCAT(Lastname, ', ', Firstname, ' ', Middlename) AS FullName,
-            Email, 
-            CreatedAt,
-            CONCAT(StreetAndUnit, ', ', Barangay, ', ', City, ', ', Region, ', ', Country) AS Address
-        FROM Clients 
-        WHERE Status = 'Approved' 
-        AND CreatedAt BETWEEN @from AND @to";
-
-            BindGrid(query, gvApprovedClients, from, to);
-        }
-
-        private void LoadInventorySnapshots(DateTime from, DateTime to)
-        {
-            string query = "SELECT Name, Type, Quantity, ExcessML, SnapshotDate FROM InventorySnapshots WHERE SnapshotDate BETWEEN @from AND @to";
-            BindGrid(query, gvInventorySnapshots, from, to);
-        }
-
-        private void LoadInventory()
-        {
-            string query = "SELECT ItemID, Name, Quantity FROM Inventory";
-            BindGrid(query, gvInventory);
-        }
+            private void LoadInventory()
+            {
+                gvInventory.DataSource = ExecToTable("dbo.spReports_Inventory");
+                gvInventory.DataBind();
+            }
 
         private void LoadEquipment()
         {
-            string query = "SELECT EquipmentID, Name, Status FROM EquipmentStatus WHERE Status = 'Available'";
-            BindGrid(query, gvEquipment);
+            DateTime reportDate = DateTime.Today; // or DateTime.Parse(txtTeamDate.Text).Date;
+
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spReports_EquipmentAvailableOnDate", con))
+            using (var da = new SqlDataAdapter(cmd))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@Date", reportDate);
+
+                var dt = new DataTable();
+                da.Fill(dt);
+
+                gvEquipment.DataSource = dt;
+                gvEquipment.DataBind();
+            }
         }
+
 
         private void LoadBookings(DateTime from, DateTime to)
-        {
-            DateTime toExclusive = to.Date.AddDays(1);
-
-            string query = @"
-SELECT 
-    b.BookingID,
-    (c.Lastname + ', ' + c.Firstname + ' ' + ISNULL(c.Middlename, '')) AS ClientName,
-    (
-        SELECT STRING_AGG(s.Name, ', ')
-        FROM BookingServices bs
-        INNER JOIN Services s ON bs.ServiceID = s.ServiceID
-        WHERE bs.BookingID = b.BookingID
-    ) AS Services,
-    t.GroupName AS TeamName,
-    b.ScheduledDate,
-    b.Status
-FROM Bookings b
-LEFT JOIN Clients c ON b.ClientID = c.ClientID
-LEFT JOIN Teams   t ON b.TeamID   = t.TeamID
-WHERE
-(
-    b.ScheduledDate IS NOT NULL
-    AND b.ScheduledDate >= @From AND b.ScheduledDate < @ToExclusive
-)
-OR
-(
-    b.ScheduledDate IS NULL AND b.CreatedAt IS NOT NULL
-    AND b.CreatedAt >= @From AND b.CreatedAt < @ToExclusive
-)
-OR
-(
-    b.ScheduledDate IS NULL AND b.CreatedAt IS NULL
-    -- include truly undated bookings so they don't disappear
-    -- comment this OR out if you prefer to hide them
-)
-ORDER BY 
-    CASE WHEN b.ScheduledDate IS NOT NULL THEN b.ScheduledDate ELSE b.CreatedAt END DESC;";
-
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand(query, conn))
             {
-                cmd.Parameters.AddWithValue("@From", from.Date);
-                cmd.Parameters.AddWithValue("@ToExclusive", toExclusive);
-
-                var da = new SqlDataAdapter(cmd);
-                var dt = new DataTable();
-                da.Fill(dt);
-                gvBookings.DataSource = dt;
+                gvBookings.DataSource = ExecToTable("dbo.spReports_Bookings",
+                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
+                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
                 gvBookings.DataBind();
             }
-        }
 
-
-
-
-        private void LoadInspections(DateTime from, DateTime to)
-        {
-            string sql = @"
-SELECT 
-    ins.InspectionID,
-    ISNULL(usr.Name, CONCAT('Inspector #', ins.InspectorID)) AS InspectorName,
-    CONCAT(ISNULL(iq.LastName,''), ', ', ISNULL(iq.FirstName,''),
-           CASE WHEN NULLIF(iq.MiddleName,'') IS NOT NULL THEN ' ' + iq.MiddleName ELSE '' END) AS ClientName,
-    RTRIM(
-      CONCAT(
-        ISNULL(NULLIF(iq.StreetAndUnit,'' ) + ', ', ''),
-        ISNULL(NULLIF(iq.Barangay    ,'' ) + ', ', ''),
-        ISNULL(NULLIF(iq.City        ,'' ) + ', ', ''),
-        ISNULL(NULLIF(iq.Region      ,'' ) + ', ', ''),
-        ISNULL(NULLIF(iq.Country     ,'' ), '')
-      )
-    ) AS ClientAddress,
-    ins.ScheduledDate,
-    ins.InspectionStatus,
-    ins.Remarks
-FROM Inspections AS ins
-LEFT JOIN InquirySimple AS iq ON iq.InquiryID = ins.InquiryID
-LEFT JOIN Users        AS usr ON usr.UserID    = ins.InspectorID
-WHERE CAST(ins.ScheduledDate AS date) BETWEEN CAST(@From AS date) AND CAST(@To AS date)
-ORDER BY ins.ScheduledDate DESC;";
-
-            BindGrid(sql, gvInspections, from, to);
-        }
-
-
-
-
-        private void BindGrid(string query, GridView grid, DateTime? from = null, DateTime? to = null, DateTime? teamDate = null)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(query, conn))
+            private void LoadInspections(DateTime from, DateTime to)
             {
-                string q = query.ToLowerInvariant();
+                gvInspections.DataSource = ExecToTable("dbo.spReports_Inspections",
+                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
+                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
+                gvInspections.DataBind();
+            }
 
-                if (q.Contains("@from"))
+            private void LoadSales(DateTime from, DateTime to)
+            {
+                var dt = ExecToTable("dbo.spReports_Sales",
+                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
+                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
+
+                if (!dt.Columns.Contains("TransactionIDFormatted"))
+                    dt.Columns.Add("TransactionIDFormatted", typeof(string));
+
+                foreach (DataRow row in dt.Rows)
                 {
-                    var p = cmd.Parameters.Add("@from", SqlDbType.Date);
-                    p.Value = (object)from?.Date ?? DBNull.Value;
+                    row["TransactionIDFormatted"] = PrettyId("Transaction", row["TransactionID"]);
                 }
 
-                if (q.Contains("@to"))
-                {
-                    var p = cmd.Parameters.Add("@to", SqlDbType.Date);
-                    p.Value = (object)to?.Date ?? DBNull.Value;
-                }
+                gvSales.DataSource = dt;
+                gvSales.DataBind();
 
-                if (q.Contains("@teamdate"))
-                {
-                    var p = cmd.Parameters.Add("@teamDate", SqlDbType.Date);
-                    p.Value = (object)teamDate?.Date ?? DBNull.Value;
-                }
+                decimal total = 0;
+                foreach (DataRow row in dt.Rows) total += row.Field<decimal>("Amount");
+                lblSalesSummary.Text = $"Total Sales: ₱{total:N2} ({dt.Rows.Count} transactions)";
+            }
 
-                var da = new SqlDataAdapter(cmd);
+            private void LoadTeamReports()
+            {
+                var from     = DateTime.Parse(txtFromDate.Text).Date;
+                var to       = DateTime.Parse(txtToDate.Text).Date;
+                var teamDate = DateTime.TryParse(txtTeamDate.Text, out var d) ? d.Date : DateTime.Today;
+
+                LoadTeamsSummary(from, to, teamDate);
+                LoadTeamMembers();
+            }
+
+            private void LoadTeamsSummary(DateTime from, DateTime to, DateTime teamDate)
+            {
+                gvTeamsSummary.DataSource = ExecToTable("dbo.spReports_TeamsSummary",
+                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
+                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to},
+                    new SqlParameter("@TeamDate", SqlDbType.Date){Value = teamDate});
+                gvTeamsSummary.DataBind();
+            }
+
+            private void LoadTeamMembers()
+            {
+                gvTeamMembers.DataSource = ExecToTable("dbo.spReports_TeamMembers");
+                gvTeamMembers.DataBind();
+            }
+
+            // ---------------------- Helpers ----------------------
+            private DataTable ExecToTable(string procName, params SqlParameter[] parameters)
+            {
                 var dt = new DataTable();
-                da.Fill(dt);
-                grid.DataSource = dt;
-                grid.DataBind();
-            }
-        }
-
-
-
-        private int GetCount(string table, string dateField, DateTime from, DateTime to, string where = null)
-        {
-            bool useDate = !string.IsNullOrEmpty(dateField);
-
-            // compute end-exclusive only if needed, and clamp at MaxValue
-            DateTime toExclusive = DateTime.MinValue;
-            if (useDate)
-            {
-                var toDate = to.Date;
-                toExclusive = (toDate == DateTime.MaxValue.Date) ? DateTime.MaxValue : toDate.AddDays(1);
-            }
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                var sb = new StringBuilder();
-                sb.Append($"SELECT COUNT(*) FROM {table} WHERE 1=1");
-                if (useDate)
-                    sb.Append($" AND {dateField} >= @from AND {dateField} < @toExclusive");
-                if (!string.IsNullOrEmpty(where))
-                    sb.Append($" AND {where}");
-
-                using (SqlCommand cmd = new SqlCommand(sb.ToString(), conn))
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand(procName, con))
                 {
-                    if (useDate)
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    if (parameters != null) cmd.Parameters.AddRange(parameters);
+                    using (var da = new SqlDataAdapter(cmd))
                     {
-                        cmd.Parameters.AddWithValue("@from", from.Date);
-                        cmd.Parameters.AddWithValue("@toExclusive", toExclusive);
+                        da.Fill(dt);
                     }
-
-                    conn.Open();
-                    return (int)cmd.ExecuteScalar();
                 }
+                return dt;
             }
-        }
 
-
-        private static string GetIdPrefix(string keyName)
-        {
-            if (keyName.IndexOf("user", StringComparison.OrdinalIgnoreCase) >= 0) return "User";
-            if (keyName.IndexOf("client", StringComparison.OrdinalIgnoreCase) >= 0) return "Client";
-            if (keyName.IndexOf("booking", StringComparison.OrdinalIgnoreCase) >= 0) return "Booking";
-            if (keyName.IndexOf("item", StringComparison.OrdinalIgnoreCase) >= 0) return "Item";
-            if (keyName.IndexOf("inspect", StringComparison.OrdinalIgnoreCase) >= 0) return "Inspect";
-            if (keyName.IndexOf("team", StringComparison.OrdinalIgnoreCase) >= 0) return "Team";
-            if (keyName.IndexOf("sales", StringComparison.OrdinalIgnoreCase) >=0) return "Sales";
-            return "ID";
-        }
-
-        private static string PrettyId(string keyName, object rawVal)
-        {
-            var s = rawVal?.ToString() ?? "";
-            if (int.TryParse(s, out var n)) return $"{GetIdPrefix(keyName)}{n:D4}";
-            return $"{GetIdPrefix(keyName)}{s}";
-        }
-
-        private static string GetCellText(TableCell cell)
-        {
-            // Read inner controls (TemplateFields) first
-            if (cell.Controls != null && cell.Controls.Count > 0)
+            private void AddGridToPDF(Document doc, GridView grid, string title)
             {
-                foreach (Control ctrl in cell.Controls)
-                {
-                    if (ctrl is ITextControl t) return (t.Text ?? "").Trim();
-                    if (ctrl is IButtonControl b) return (b.Text ?? "").Trim();
-                    if (ctrl is Literal l) return (l.Text ?? "").Trim();
-                    if (ctrl is LinkButton lb) return (lb.Text ?? "").Trim();
-                }
-            }
-            var raw = HttpUtility.HtmlDecode(cell.Text ?? "").Trim();
-            return raw == "&nbsp;" ? "" : raw;
-        }
+                if (grid.Rows.Count == 0) return;
 
-        private void ExportGridViewToPDF(GridView grid, string title)
-        {
-            if (grid.Rows.Count == 0) return;
-
-            Document doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
-            using (var ms = new MemoryStream())
-            {
-                var writer = PdfWriter.GetInstance(doc, ms);
-                writer.PageEvent = new PdfWatermark();
-
-                string userPassword = "default123";
-                writer.SetEncryption(
-                    Encoding.UTF8.GetBytes(userPassword),
-                    Encoding.UTF8.GetBytes(userPassword),
-                    PdfWriter.ALLOW_PRINTING,
-                    PdfWriter.ENCRYPTION_AES_128
-                );
-
-                doc.Open();
+                doc.NewPage();
                 doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
                 doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
                 doc.Add(new Paragraph(" "));
 
-                int keyCount = grid.DataKeyNames?.Length ?? 0;
                 int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
-                int columnCount = Math.Max(1, visibleCols) + keyCount;
-
-                var table = new PdfPTable(columnCount) { WidthPercentage = 100 };
-
-                // 1) Headers: DataKey headers first (prettified ID columns)
-                if (keyCount > 0)
+                PdfPTable table = new PdfPTable(visibleCols)
                 {
-                    foreach (var keyName in grid.DataKeyNames)
-                    {
-                        string headerText = $"{GetIdPrefix(keyName)} ID";
-                        var h = new PdfPCell(new Phrase(headerText, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
-                        { BackgroundColor = BaseColor.DARK_GRAY, HorizontalAlignment = Element.ALIGN_CENTER, Padding = 6 };
-                        table.AddCell(h);
-                    }
-                }
-                // Then visible headers
+                    WidthPercentage = 100,
+                    SpacingBefore = 10f
+                };
+
                 if (grid.HeaderRow != null)
                 {
                     foreach (TableCell hc in grid.HeaderRow.Cells)
                     {
-                        var h = new PdfPCell(new Phrase(HttpUtility.HtmlDecode(hc.Text ?? "").Trim(),
-                            FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
-                        { BackgroundColor = BaseColor.DARK_GRAY, HorizontalAlignment = Element.ALIGN_CENTER, Padding = 6 };
-                        table.AddCell(h);
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < visibleCols; i++)
-                    {
-                        var h = new PdfPCell(new Phrase($"Column {i + 1}", FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
-                        { BackgroundColor = BaseColor.DARK_GRAY, HorizontalAlignment = Element.ALIGN_CENTER, Padding = 6 };
-                        table.AddCell(h);
-                    }
-                }
-
-                // 2) Rows
-                for (int r = 0; r < grid.Rows.Count; r++)
-                {
-                    var row = grid.Rows[r];
-
-                    // a) Prettified ID cells from DataKeys
-                    if (keyCount > 0)
-                    {
-                        var keys = grid.DataKeys[r];
-                        foreach (var keyName in grid.DataKeyNames)
+                        string headerText = HttpUtility.HtmlDecode(GetCellText(hc));
+                        PdfPCell headerCell = new PdfPCell(new Phrase(headerText, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
                         {
-                            string pretty = PrettyId(keyName, keys?.Values[keyName]);
-                            var idCell = new PdfPCell(new Phrase(pretty, FontFactory.GetFont("Arial", 11)))
-                            { HorizontalAlignment = Element.ALIGN_CENTER, Padding = 5 };
-                            table.AddCell(idCell);
-                        }
+                            BackgroundColor = BaseColor.DARK_GRAY,
+                            HorizontalAlignment = Element.ALIGN_CENTER,
+                            Padding = 6
+                        };
+                        table.AddCell(headerCell);
                     }
+                }
 
-                    // b) Visible cells (TemplateField-safe)
+                foreach (GridViewRow row in grid.Rows)
+                {
                     for (int c = 0; c < row.Cells.Count; c++)
                     {
                         string text = GetCellText(row.Cells[c]);
@@ -770,55 +375,162 @@ ORDER BY ins.ScheduledDate DESC;";
                         else if (int.TryParse(text, out _))
                             align = Element.ALIGN_CENTER;
 
-                        // Optional: if a visible "...ID" column exists, replace raw with pretty (uses first key)
-                        if (header.EndsWith("id") && keyCount > 0)
+                        PdfPCell bodyCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
                         {
-                            var firstKey = grid.DataKeyNames[0];
-                            text = PrettyId(firstKey, grid.DataKeys[r]?.Values[firstKey]);
-                            align = Element.ALIGN_CENTER;
-                        }
+                            HorizontalAlignment = align,
+                            Padding = 5
+                        };
+                        table.AddCell(bodyCell);
+                    }
+                }
 
-                        var cell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
-                        { HorizontalAlignment = align, Padding = 5 };
-                        table.AddCell(cell);
+                doc.Add(table);
+            }
+
+            private static string GetCellText(TableCell cell)
+            {
+                if (cell.Controls != null && cell.Controls.Count > 0)
+                {
+                    foreach (Control ctrl in cell.Controls)
+                    {
+                        if (ctrl is ITextControl t) return (t.Text ?? "").Trim();
+                        if (ctrl is IButtonControl b) return (b.Text ?? "").Trim();
+                        if (ctrl is Literal l) return (l.Text ?? "").Trim();
+                        if (ctrl is LinkButton lb) return (lb.Text ?? "").Trim();
+                    }
+                }
+                var raw = HttpUtility.HtmlDecode(cell.Text ?? "").Trim();
+                return raw == "&nbsp;" ? "" : raw;
+            }
+
+            private static string GetIdPrefix(string keyName)
+            {
+                if (keyName.IndexOf("user", StringComparison.OrdinalIgnoreCase) >= 0) return "User";
+                if (keyName.IndexOf("client", StringComparison.OrdinalIgnoreCase) >= 0) return "Client";
+                if (keyName.IndexOf("booking", StringComparison.OrdinalIgnoreCase) >= 0) return "Booking";
+                if (keyName.IndexOf("item", StringComparison.OrdinalIgnoreCase) >= 0) return "Item";
+                if (keyName.IndexOf("inspect", StringComparison.OrdinalIgnoreCase) >= 0) return "Inspect";
+                if (keyName.IndexOf("team", StringComparison.OrdinalIgnoreCase) >= 0) return "Team";
+                if (keyName.IndexOf("sales", StringComparison.OrdinalIgnoreCase) >= 0) return "Sales";
+                return "ID";
+            }
+
+            private static string PrettyId(string keyName, object rawVal)
+            {
+                var s = rawVal?.ToString() ?? "";
+                if (int.TryParse(s, out var n)) return $"{GetIdPrefix(keyName)}{n:D4}";
+                return $"{GetIdPrefix(keyName)}{s}";
+            }
+
+        private void ExportGridViewToPDF(GridView grid, string title)
+        {
+            if (grid.Rows.Count == 0) return;
+
+            var doc = new iTextSharp.text.Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
+            using (var ms = new MemoryStream())
+            {
+                var writer = PdfWriter.GetInstance(doc, ms);
+
+                // <<< attach watermark (drawn over content)
+                writer.PageEvent = new PdfWatermark();
+
+                // Optional encryption
+                string userPassword = "default123";
+                writer.SetEncryption(
+                    Encoding.UTF8.GetBytes(userPassword),
+                    Encoding.UTF8.GetBytes(userPassword),
+                    PdfWriter.ALLOW_PRINTING,
+                    PdfWriter.ENCRYPTION_AES_128
+                );
+
+                doc.Open();
+
+                // Title + timestamp
+                doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
+                doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+                doc.Add(new Paragraph(" "));
+
+                int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
+                var table = new PdfPTable(visibleCols) { WidthPercentage = 100, SpacingBefore = 10f };
+
+                // Headers
+                if (grid.HeaderRow != null)
+                {
+                    foreach (TableCell hc in grid.HeaderRow.Cells)
+                    {
+                        string headerText = HttpUtility.HtmlDecode(hc.Text ?? "").Trim();
+                        var headerCell = new PdfPCell(new Phrase(
+                                headerText,
+                                FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
+                        {
+                            BackgroundColor = BaseColor.DARK_GRAY,
+                            HorizontalAlignment = Element.ALIGN_CENTER,
+                            Padding = 6
+                        };
+                        table.AddCell(headerCell);
+                    }
+                }
+
+                // Rows
+                foreach (GridViewRow row in grid.Rows)
+                {
+                    for (int c = 0; c < row.Cells.Count; c++)
+                    {
+                        string text = GetCellText(row.Cells[c]);
+
+                        // simple alignment heuristics
+                        int align = Element.ALIGN_LEFT;
+                        string header = (grid.HeaderRow != null && c < grid.HeaderRow.Cells.Count)
+                                        ? (grid.HeaderRow.Cells[c].Text ?? "").ToLower()
+                                        : "";
+                        if (header.Contains("quantity") || header.Contains("price") || header.Contains("amount") ||
+                            header.Contains("sqm") || header.Contains("ml"))
+                            align = Element.ALIGN_RIGHT;
+                        else if (header.Contains("status") || header.Contains("date"))
+                            align = Element.ALIGN_CENTER;
+                        else if (int.TryParse(text, out _))
+                            align = Element.ALIGN_CENTER;
+
+                        var bodyCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
+                        {
+                            HorizontalAlignment = align,
+                            Padding = 5
+                        };
+                        table.AddCell(bodyCell);
                     }
                 }
 
                 doc.Add(table);
                 doc.Close();
 
+                // Return the file
                 Response.Clear();
                 Response.ContentType = "application/pdf";
                 Response.AddHeader("content-disposition", $"attachment;filename={title.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf");
                 Response.Cache.SetCacheability(HttpCacheability.NoCache);
                 Response.BinaryWrite(ms.ToArray());
-                Response.End();
+                Response.Flush();
+                Response.SuppressContent = true;
+                HttpContext.Current.ApplicationInstance.CompleteRequest();
             }
         }
 
 
-        private void AddAuditLog(int? userID, string action)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+        private void AddAuditLog(int adminId, string action)
             {
-                string query = "INSERT INTO AuditLogs (UserID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                try
                 {
-                    cmd.Parameters.AddWithValue("@UserID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-                    try
+                    using (var con = new SqlConnection(cs))
+                    using (var cmd = new SqlCommand("dbo.spAudit_Insert", con))
                     {
-                        conn.Open();
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@AdminID", SqlDbType.Int){Value = adminId});
+                        cmd.Parameters.Add(new SqlParameter("@Action",  SqlDbType.NVarChar, 255){Value = action});
+                        con.Open();
                         cmd.ExecuteNonQuery();
                     }
-                    catch
-                    {
-                        // Optional logging
-                    }
                 }
+                catch { /* swallow */ }
             }
         }
-
-
     }
-}

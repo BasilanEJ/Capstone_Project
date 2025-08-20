@@ -3,7 +3,6 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
-using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
@@ -18,25 +17,40 @@ namespace RRCManagementSystem
                 LoadRoles();
             }
 
+            // Handle __doPostBack from the SweetAlert confirmDelete()
             string eventTarget = Request["__EVENTTARGET"];
             if (eventTarget == "DeleteRole")
             {
-                int roleId = int.Parse(hfRoleIDToDelete.Value);
-                DeleteRole(roleId);
+                if (int.TryParse(hfRoleIDToDelete.Value, out int roleId))
+                {
+                    DeleteRole(roleId);
+                }
+                else
+                {
+                    ShowAlert("⚠ Invalid role selected.", "warning");
+                }
             }
         }
 
         private void LoadRoles()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spRoles_ListAll", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = "SELECT RoleID, RoleName, CreatedAt FROM Roles ORDER BY CreatedAt DESC";
-                SqlDataAdapter da = new SqlDataAdapter(query, conn);
-                DataTable dt = new DataTable();
-                da.Fill(dt);
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                gvRoles.DataSource = dt;
-                gvRoles.DataBind();
+                var dt = new DataTable();
+                try
+                {
+                    da.Fill(dt);
+                    gvRoles.DataSource = dt;
+                    gvRoles.DataBind();
+                }
+                catch (Exception ex)
+                {
+                    ShowAlert("❌ Error loading roles: " + ex.Message, "error");
+                }
             }
         }
 
@@ -44,44 +58,42 @@ namespace RRCManagementSystem
         {
             try
             {
-                using (SqlConnection conn = new SqlConnection(connectionString))
+                int resultCode;
+
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spRole_DeleteSafe", conn))
                 {
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@RoleID", SqlDbType.Int).Value = roleId;
+
+                    var pOut = new SqlParameter("@ResultCode", SqlDbType.Int)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
+                    cmd.Parameters.Add(pOut);
+
                     conn.Open();
+                    cmd.ExecuteNonQuery();
 
-                    string roleName = "";
-                    using (SqlCommand cmdGet = new SqlCommand("SELECT RoleName FROM Roles WHERE RoleID = @RoleID", conn))
-                    {
-                        cmdGet.Parameters.AddWithValue("@RoleID", roleId);
-                        object result = cmdGet.ExecuteScalar();
-                        if (result != null) roleName = result.ToString();
-                    }
-
-                    if (string.IsNullOrEmpty(roleName))
-                    {
-                        ShowAlert("⚠ Role not found.", "error");
-                        return;
-                    }
-
-                    using (SqlCommand cmdCheck = new SqlCommand("SELECT COUNT(*) FROM Users WHERE Role = @RoleName", conn))
-                    {
-                        cmdCheck.Parameters.AddWithValue("@RoleName", roleName);
-                        int count = (int)cmdCheck.ExecuteScalar();
-                        if (count > 0)
-                        {
-                            ShowAlert("⚠ Cannot delete. Users are assigned to this role.", "warning");
-                            return;
-                        }
-                    }
-
-                    using (SqlCommand cmdDelete = new SqlCommand("DELETE FROM Roles WHERE RoleID = @RoleID", conn))
-                    {
-                        cmdDelete.Parameters.AddWithValue("@RoleID", roleId);
-                        cmdDelete.ExecuteNonQuery();
-                    }
+                    resultCode = (pOut.Value == DBNull.Value) ? -99 : Convert.ToInt32(pOut.Value);
                 }
 
-                ShowAlert("✅ Role deleted successfully.", "success");
-                LoadRoles();
+                switch (resultCode)
+                {
+                    case 1:
+                        ShowAlert("✅ Role deleted successfully.", "success");
+                        LoadRoles();
+                        break;
+                    case 0:
+                        ShowAlert("⚠ Cannot delete. Users are assigned to this role.", "warning");
+                        break;
+                    case -1:
+                        ShowAlert("⚠ Role not found.", "warning");
+                        break;
+                    default:
+                        ShowAlert("❌ Unknown result while deleting role.", "error");
+                        break;
+                }
             }
             catch (Exception ex)
             {
@@ -95,9 +107,7 @@ namespace RRCManagementSystem
             ScriptManager.RegisterStartupScript(this, GetType(), "swalMessage", script, true);
         }
 
-        protected void gvRoles_RowCommand(object sender, GridViewCommandEventArgs e)
-        {
-            // not used anymore since we use __doPostBack for deletion
-        }
+        // Not used because deletion uses __doPostBack() from JS
+        protected void gvRoles_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e) { }
     }
 }

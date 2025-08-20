@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
 
@@ -7,7 +8,8 @@ namespace RRCManagementSystem
 {
     public partial class AddServices : Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -18,8 +20,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string role = Session["Role"].ToString();
-
+            string role = Convert.ToString(Session["Role"]);
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -27,7 +28,6 @@ namespace RRCManagementSystem
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
-
             if (!HasPermissionToAddService(userId, "ManageServices"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
@@ -36,21 +36,19 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                lblMessage.Text = "";
+                lblMessage.Text = string.Empty;
 
-                // ✅ Inject SweetAlert only on initial load
-                if (Session["ServiceAdded"] != null && (bool)Session["ServiceAdded"])
+                // SweetAlert after successful add
+                if (Session["ServiceAdded"] is bool b && b)
                 {
                     litScript.Text = @"
 <script>
-    Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Service added successfully.',
-        confirmButtonColor: '#004085'
-    }).then(() => {
-        window.location.href = 'ViewServices.aspx';
-    });
+Swal.fire({
+  icon: 'success',
+  title: 'Success!',
+  text: 'Service added successfully.',
+  confirmButtonColor: '#004085'
+}).then(() => { window.location.href = 'ViewServices.aspx'; });
 </script>";
                     Session["ServiceAdded"] = null;
                 }
@@ -59,28 +57,26 @@ namespace RRCManagementSystem
 
         private bool HasPermissionToAddService(int adminId, string moduleName)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = "SELECT CanAdd FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", conn))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@UserID", adminId);
                     cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.Parameters.AddWithValue("@Permission", "CanAdd");
 
-                    try
-                    {
-                        conn.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = "❌ Error checking permissions: " + ex.Message;
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                        return false;
-                    }
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && result != DBNull.Value && Convert.ToBoolean(result);
                 }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "❌ Error checking permissions: " + ex.Message;
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return false;
             }
         }
 
@@ -98,40 +94,57 @@ namespace RRCManagementSystem
             string serviceType = ddlServiceType.SelectedValue;
             string description = txtDescription.Text.Trim();
 
-            if (string.IsNullOrEmpty(serviceName))
+            if (string.IsNullOrWhiteSpace(serviceName))
             {
                 lblMessage.Text = "⚠ Please enter a service name.";
                 lblMessage.ForeColor = System.Drawing.Color.Red;
                 return;
             }
 
+            // Your original rule
             bool isContract = serviceType == "Termite Control";
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = @"
-                    INSERT INTO Services 
-                        (Name, ServiceType, Description, IsContract, CreatedAt)
-                    VALUES 
-                        (@Name, @ServiceType, @Description, @IsContract, GETDATE())";
+                int newId = 0;
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spService_Insert", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@Name", serviceName);
+                    cmd.Parameters.AddWithValue("@ServiceType", (object)serviceType ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description);
+                    cmd.Parameters.AddWithValue("@IsContract", isContract);
 
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@Name", serviceName);
-                cmd.Parameters.AddWithValue("@ServiceType", serviceType);
-                cmd.Parameters.AddWithValue("@Description", string.IsNullOrEmpty(description) ? (object)DBNull.Value : description);
-                cmd.Parameters.AddWithValue("@IsContract", isContract);
+                    // If you later add a Price textbox, map it here:
+                    // cmd.Parameters.AddWithValue("@Price", (object)priceOrNull ?? DBNull.Value);
 
-                conn.Open();
-                cmd.ExecuteNonQuery();
+                    conn.Open();
+                    var result = cmd.ExecuteScalar(); // returns new ServiceID
+                    if (result != null && result != DBNull.Value) newId = Convert.ToInt32(result);
+                }
 
-                AddAuditLog(adminId, $"Added new service: {serviceName} ({serviceType}) | Contractual: {isContract}");
+                // Audit
+                using (var conn = new SqlConnection(connectionString))
+                using (var a = new SqlCommand("dbo.spAudit_Insert", conn))
+                {
+                    a.CommandType = CommandType.StoredProcedure;
+                    a.Parameters.AddWithValue("@AdminID", (object)adminId ?? DBNull.Value);
+                    a.Parameters.AddWithValue("@Action", $"Added service (ID: {newId}) - {serviceName} ({serviceType}) | Contractual: {isContract}");
+                    conn.Open();
+                    a.ExecuteNonQuery();
+                }
+
+                Session["ServiceAdded"] = true;
+                lblMessage.Visible = true;
+                lblMessage.Text = "✅ Service added successfully!";
+                lblMessage.ForeColor = System.Drawing.Color.Green;
             }
-
-            Session["ServiceAdded"] = true;
-
-            lblMessage.Visible = true;
-            lblMessage.Text = "✅ Service added successfully!";
-            lblMessage.ForeColor = System.Drawing.Color.Green;
+            catch (Exception ex)
+            {
+                lblMessage.Text = "⚠ Error adding service: " + ex.Message;
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+            }
         }
 
         private void ClearForm()
@@ -139,30 +152,6 @@ namespace RRCManagementSystem
             txtName.Text = "";
             ddlServiceType.SelectedIndex = 0;
             txtDescription.Text = "";
-        }
-
-        private void AddAuditLog(int? userID, string action)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // Silent fail
-                    }
-                }
-            }
         }
     }
 }

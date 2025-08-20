@@ -14,28 +14,17 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
-            if (Session["UserID"] == null || Session["Role"] == null)
+            // 🔐 Require login + SuperAdmin
+            if (Session["UserID"] == null || Session["Role"] == null || !Session["Role"].ToString().Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
-
-            string role = Session["Role"].ToString();
-
-            // 🔐 Allow only SuperAdmins
-            if (role != "SuperAdmin")
-            {
-                Response.Redirect("~/Login.aspx");
-                return;
-            }
-
 
             if (!IsPostBack)
             {
-                if (Request.QueryString["UserID"] != null)
+                if (int.TryParse(Request.QueryString["UserID"], out userID))
                 {
-                    userID = Convert.ToInt32(Request.QueryString["UserID"]);
                     LoadAdminDetails(userID);
                     LoadPermissions(userID);
                 }
@@ -48,98 +37,121 @@ namespace RRCManagementSystem
                 rptPermissions.ItemDataBound += rptPermissions_ItemDataBound;
             }
 
-            // ✅ Show SweetAlert2 success message after postback
+            // ✅ Show SweetAlert2 success message after postback (optional flag from previous save)
             if (Session["ShowSuccess"] != null && (bool)Session["ShowSuccess"])
             {
-                Session.Remove("ShowSuccess"); // Clear the flag
+                Session.Remove("ShowSuccess");
 
                 string script = @"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
-        <script>
-            Swal.fire({
-                icon: 'success',
-                title: 'Changes Saved',
-                text: 'The admin permissions were updated successfully!',
-                confirmButtonColor: '#007bff'
-            });
-        </script>";
-
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Changes Saved',
+    text: 'The admin permissions were updated successfully!',
+    confirmButtonColor: '#007bff'
+});
+</script>";
                 ClientScript.RegisterStartupScript(this.GetType(), "SuccessAlert", script);
             }
         }
 
-
+        /* =========================
+           LOAD: Admin details
+           ========================= */
         private void LoadAdminDetails(int id)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spUser_GetByID", conn))
             {
-                string query = "SELECT Name, Email FROM Users WHERE UserID = @UserID";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = id;
+                conn.Open();
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var reader = cmd.ExecuteReader())
                 {
-                    cmd.Parameters.AddWithValue("@UserID", id);
-                    conn.Open();
-                    SqlDataReader reader = cmd.ExecuteReader();
-
                     if (reader.Read())
                     {
-                        txtName.Text = reader["Name"].ToString();
-                        txtEmail.Text = reader["Email"].ToString();
+                        txtName.Text = reader["Name"]?.ToString() ?? "";
+                        txtEmail.Text = reader["Email"]?.ToString() ?? "";
+                    }
+                    else
+                    {
+                        lblMessage.Text = "⚠ Admin not found.";
                     }
                 }
             }
         }
 
+        /* =========================
+           LOAD: Permissions
+           ========================= */
         private void LoadPermissions(int id)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            DataTable dt = new DataTable();
+            dt.Columns.Add("ModuleName", typeof(string));
+            dt.Columns.Add("CanView", typeof(bool));
+            dt.Columns.Add("CanAdd", typeof(bool));
+            dt.Columns.Add("CanEdit", typeof(bool));
+            dt.Columns.Add("CanDelete", typeof(bool));
+
+            // Pull existing permissions via SP
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdminPermissions_GetByUser", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = "SELECT * FROM AdminPermissions WHERE UserID = @UserID";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = id;
+
+                try
                 {
-                    cmd.Parameters.AddWithValue("@UserID", id);
-                    conn.Open();
-                    SqlDataAdapter adapter = new SqlDataAdapter(cmd);
-                    DataTable dt = new DataTable();
-                    adapter.Fill(dt);
-
-                    string[] modules = {
-                        "Dashboard",
-                        "ManageInquiry",
-                        "ClientApproval",
-                        "CreateCustomerAccount",
-                        "ManageEmployees",
-                        "ManageItem",
-                        "ManageEquipment",
-                        "ManageClient",
-                        "ManageBooking",
-                        "Sales&Transaction",
-                        "ManageSupplier",
-                        "ManageServices",
-                        "AdminReports",
-                        "AdminGuide"
-                    };
-
-                    foreach (string module in modules)
-                    {
-                        if (!dt.AsEnumerable().Any(row => row["ModuleName"].ToString() == module))
-                        {
-                            DataRow newRow = dt.NewRow();
-                            newRow["ModuleName"] = module;
-                            newRow["CanView"] = false;
-                            newRow["CanAdd"] = false;
-                            newRow["CanEdit"] = false;
-                            newRow["CanDelete"] = false;
-                            dt.Rows.Add(newRow);
-                        }
-                    }
-
-                    DataView dv = dt.DefaultView;
-                    dv.Sort = "ModuleName ASC";
-
-                    rptPermissions.DataSource = dv.ToTable();
-                    rptPermissions.DataBind();
+                    da.Fill(dt);
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "⚠ Error loading permissions: " + ex.Message;
                 }
             }
+
+            // Ensure all modules are present (defaults if missing)
+            string[] modules = {
+                "Dashboard",
+                "ManageInquiry",
+                "ClientApproval",
+                "CreateCustomerAccount",
+                "ManageEmployees",
+                "ManageItem",
+                "ManageEquipment",
+                "ManageClient",
+                "ManageBooking",
+                "Sales&Transaction",
+                "ManageSupplier",
+                "ManageServices",
+                "AdminReports",
+                "AdminGuide"
+            };
+
+            var present = dt.AsEnumerable().Select(r => r.Field<string>("ModuleName")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (string m in modules)
+            {
+                if (!present.Contains(m))
+                {
+                    var row = dt.NewRow();
+                    row["ModuleName"] = m;
+                    row["CanView"] = false;
+                    row["CanAdd"] = false;
+                    row["CanEdit"] = false;
+                    row["CanDelete"] = false;
+                    dt.Rows.Add(row);
+                }
+            }
+
+            // Sort by ModuleName
+            DataView dv = dt.DefaultView;
+            dv.Sort = "ModuleName ASC";
+            var finalTable = dv.ToTable();
+
+            rptPermissions.DataSource = finalTable;
+            rptPermissions.DataBind();
         }
 
         protected void rptPermissions_ItemDataBound(object sender, RepeaterItemEventArgs e)
@@ -160,81 +172,88 @@ namespace RRCManagementSystem
             }
         }
 
+        /* =========================
+           SAVE: Update admin + permissions (transaction)
+           ========================= */
         protected void btnSave_Click(object sender, EventArgs e)
         {
-            if (Request.QueryString["UserID"] != null)
+            if (!int.TryParse(Request.QueryString["UserID"], out userID))
             {
-                userID = Convert.ToInt32(Request.QueryString["UserID"]);
+                lblMessage.Text = "⚠ No Admin selected.";
+                return;
+            }
 
-                using (SqlConnection conn = new SqlConnection(connectionString))
+            // Build TVP for permissions
+            var tvp = new DataTable();
+            tvp.Columns.Add("ModuleName", typeof(string));
+            tvp.Columns.Add("CanView", typeof(bool));
+            tvp.Columns.Add("CanAdd", typeof(bool));
+            tvp.Columns.Add("CanEdit", typeof(bool));
+            tvp.Columns.Add("CanDelete", typeof(bool));
+
+            foreach (RepeaterItem item in rptPermissions.Items)
+            {
+                string moduleName = ((HiddenField)item.FindControl("hfModuleName")).Value;
+                bool canView = ((CheckBox)item.FindControl("chkView")).Checked;
+                bool canAdd = ((CheckBox)item.FindControl("chkAdd")).Checked;
+                bool canEdit = ((CheckBox)item.FindControl("chkEdit")).Checked;
+                bool canDelete = ((CheckBox)item.FindControl("chkDelete")).Checked;
+                tvp.Rows.Add(moduleName, canView, canAdd, canEdit, canDelete);
+            }
+
+            using (var conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                using (var tx = conn.BeginTransaction())
                 {
-                    conn.Open();
-                    SqlTransaction transaction = conn.BeginTransaction();
-
                     try
                     {
-                        string updateAdminQuery = @"
-                            UPDATE Users
-                            SET Name = @Name, Email = @Email
-                            WHERE UserID = @UserID";
-
-                        using (SqlCommand cmdUpdate = new SqlCommand(updateAdminQuery, conn, transaction))
+                        // 1) Update basic info
+                        using (var cmdUpdate = new SqlCommand("dbo.spUser_UpdateBasic", conn, tx))
                         {
-                            cmdUpdate.Parameters.AddWithValue("@Name", txtName.Text.Trim());
-                            cmdUpdate.Parameters.AddWithValue("@Email", txtEmail.Text.Trim());
-                            cmdUpdate.Parameters.AddWithValue("@UserID", userID);
+                            cmdUpdate.CommandType = CommandType.StoredProcedure;
+                            cmdUpdate.Parameters.Add("@UserID", SqlDbType.Int).Value = userID;
+                            cmdUpdate.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = (txtName.Text ?? "").Trim();
+                            cmdUpdate.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = (txtEmail.Text ?? "").Trim();
                             cmdUpdate.ExecuteNonQuery();
                         }
 
-                        foreach (RepeaterItem item in rptPermissions.Items)
+                        // 2) Replace permissions in one go (TVP)
+                        using (var cmdPerms = new SqlCommand("dbo.spAdminPermissions_BulkReplace", conn, tx))
                         {
-                            string moduleName = ((HiddenField)item.FindControl("hfModuleName")).Value;
-                            bool canView = ((CheckBox)item.FindControl("chkView")).Checked;
-                            bool canAdd = ((CheckBox)item.FindControl("chkAdd")).Checked;
-                            bool canEdit = ((CheckBox)item.FindControl("chkEdit")).Checked;
-                            bool canDelete = ((CheckBox)item.FindControl("chkDelete")).Checked;
+                            cmdPerms.CommandType = CommandType.StoredProcedure;
+                            cmdPerms.Parameters.Add("@UserID", SqlDbType.Int).Value = userID;
 
-                            string upsertQuery = @"
-                                MERGE AdminPermissions AS target
-                                USING (SELECT @UserID AS UserID, @ModuleName AS ModuleName) AS source
-                                ON target.UserID = source.UserID AND target.ModuleName = source.ModuleName
-                                WHEN MATCHED THEN
-                                    UPDATE SET CanView = @CanView, CanAdd = @CanAdd, CanEdit = @CanEdit, 
-                                               CanDelete = @CanDelete
-                                WHEN NOT MATCHED THEN
-                                    INSERT (UserID, ModuleName, CanView, CanAdd, CanEdit, CanDelete)
-                                    VALUES (@UserID, @ModuleName, @CanView, @CanAdd, @CanEdit, @CanDelete);";
+                            var p = cmdPerms.Parameters.AddWithValue("@Perms", tvp);
+                            p.SqlDbType = SqlDbType.Structured;
+                            p.TypeName = "dbo.AdminPermissionTVP";
 
-                            using (SqlCommand cmd = new SqlCommand(upsertQuery, conn, transaction))
-                            {
-                                cmd.Parameters.AddWithValue("@UserID", userID);
-                                cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-                                cmd.Parameters.AddWithValue("@CanView", canView);
-                                cmd.Parameters.AddWithValue("@CanAdd", canAdd);
-                                cmd.Parameters.AddWithValue("@CanEdit", canEdit);
-                                cmd.Parameters.AddWithValue("@CanDelete", canDelete);
-                                cmd.ExecuteNonQuery();
-                            }
+                            cmdPerms.ExecuteNonQuery();
                         }
 
-                        transaction.Commit();
+                        tx.Commit();
+                        Session["ShowSuccess"] = true; // optional flag for SweetAlert
                         lblMessage.Text = "✅ Admin updated successfully!";
+                    }
+                    catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
+                    {
+                        tx.Rollback();
+                        lblMessage.Text = "⚠ Email already exists. Please use a different email.";
                     }
                     catch (Exception ex)
                     {
-                        transaction.Rollback();
+                        tx.Rollback();
                         lblMessage.Text = "⚠ Error updating admin: " + ex.Message;
 
                         string errorScript = $@"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
-                        <script>
-                            Swal.fire({{
-                                icon: 'error',
-                                title: 'Error Saving',
-                                text: '{ex.Message.Replace("'", "\\'")}',
-                                confirmButtonColor: '#dc3545'
-                            }});
-                        </script>";
-
+<script>
+Swal.fire({{
+    icon: 'error',
+    title: 'Error Saving',
+    text: '{ex.Message.Replace("'", "\\'")}',
+    confirmButtonColor: '#dc3545'
+}});
+</script>";
                         ClientScript.RegisterStartupScript(this.GetType(), "ErrorAlert", errorScript);
                     }
                 }

@@ -23,51 +23,43 @@ namespace RRCManagementSystem
         {
             LoadAuditLogs();
         }
+
         private void LoadAuditLogs()
         {
-            DateTime? fromDate = null, toDate = null;
+            // Parse dates from the HTML5 date inputs (yyyy-MM-dd)
+            DateTime fromDate, toDate;
+            bool hasFrom = DateTime.TryParse(txtFrom.Text.Trim(), out fromDate);
+            bool hasTo = DateTime.TryParse(txtTo.Text.Trim(), out toDate);
 
-            if (DateTime.TryParse(txtFrom.Text.Trim(), out DateTime fDate))
-                fromDate = fDate;
-
-            if (DateTime.TryParse(txtTo.Text.Trim(), out DateTime tDate))
-                toDate = tDate;
+            // Guard: if both provided, ensure range is valid
+            if (hasFrom && hasTo && fromDate.Date > toDate.Date)
+            {
+                lblMessage.Text = "“From Date” must be earlier than or equal to “To Date”.";
+                rptYears.Visible = false;
+                lblNoData.Visible = true;
+                lblNoData.Text = "⚠ Invalid date range.";
+                return;
+            }
 
             DataTable allLogs = new DataTable();
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            // ✅ Call stored procedure instead of inline SQL
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAuditLogs_List", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = @"
-        SELECT 
-            a.LogID, 
-            u.Name AS AdminName, 
-            a.Action, 
-            a.Timestamp
-        FROM AuditLogs a
-        LEFT JOIN Users u ON a.AdminID = u.UserID
-        ORDER BY a.Timestamp DESC";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    da.Fill(allLogs);
-                }
+                var pFrom = cmd.Parameters.Add("@From", SqlDbType.Date);
+                pFrom.Value = hasFrom ? (object)fromDate.Date : DBNull.Value;
+
+                var pTo = cmd.Parameters.Add("@To", SqlDbType.Date);
+                pTo.Value = hasTo ? (object)toDate.Date : DBNull.Value;
+
+                da.Fill(allLogs);
             }
 
-            // Filter by date
-            if (fromDate.HasValue && toDate.HasValue)
-            {
-                var filteredRows = allLogs.AsEnumerable()
-                    .Where(row =>
-                    {
-                        DateTime ts = row.Field<DateTime>("Timestamp");
-                        return ts >= fromDate.Value && ts <= toDate.Value;
-                    });
-
-                allLogs = filteredRows.Any() ? filteredRows.CopyToDataTable() : allLogs.Clone();
-            }
-
-            // Group logs
+            // Group (same as before)
             var groupedLogs = allLogs.AsEnumerable()
                 .GroupBy(r => new { Year = r.Field<DateTime>("Timestamp").Year, Month = r.Field<DateTime>("Timestamp").Month })
                 .Select(g =>
@@ -83,19 +75,12 @@ namespace RRCManagementSystem
                 })
                 .ToList();
 
-            // Group by year
             var finalGroup = groupedLogs
                 .GroupBy(x => x.Year)
-                .Select(y => new
-                {
-                    Year = y.Key,
-                    Months = y.ToList()
-                })
-                // Only keep years with at least one month with logs
+                .Select(y => new { Year = y.Key, Months = y.ToList() })
                 .Where(y => y.Months.Any(m => m.Logs != null && m.Logs.Rows.Count > 0))
                 .ToList();
 
-            // 🔴 SHOW OR HIDE lblNoData
             if (finalGroup.Count == 0)
             {
                 rptYears.Visible = false;
@@ -109,17 +94,17 @@ namespace RRCManagementSystem
                 rptYears.DataSource = finalGroup;
                 rptYears.DataBind();
             }
+
+            // clear any old message
+            lblMessage.Text = "";
         }
-
-
-
 
         protected void rptYears_ItemDataBound(object sender, RepeaterItemEventArgs e)
         {
             if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
             {
                 dynamic yearGroup = e.Item.DataItem;
-                Repeater rptMonths = (Repeater)e.Item.FindControl("rptMonths");
+                var rptMonths = (Repeater)e.Item.FindControl("rptMonths");
                 rptMonths.DataSource = yearGroup.Months;
                 rptMonths.DataBind();
             }
@@ -130,7 +115,7 @@ namespace RRCManagementSystem
             if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
             {
                 dynamic monthGroup = e.Item.DataItem;
-                GridView gvLogs = (GridView)e.Item.FindControl("gvLogs");
+                var gvLogs = (GridView)e.Item.FindControl("gvLogs");
                 gvLogs.DataSource = monthGroup.Logs;
                 gvLogs.DataBind();
             }

@@ -40,9 +40,7 @@
             transition: transform 0.3s ease;
         }
 
-        .login-container:hover {
-            transform: translateY(-5px);
-        }
+        .login-container:hover { transform: translateY(-5px); }
 
         .logo {
             width: 200px;
@@ -60,7 +58,7 @@
         .password-wrapper .input {
             width: 100%;
             padding: 14px 12px;
-            padding-right: 40px;
+            padding-right: 40px; /* space for eye icon */
             border-radius: 8px;
             border: 1px solid #ccc;
             font-size: 15px;
@@ -70,9 +68,7 @@
             margin-bottom: 20px;
         }
 
-        .input::placeholder {
-            color: #999;
-        }
+        .input::placeholder { color: #999; }
 
         .input:focus {
             background: #fff;
@@ -120,9 +116,7 @@
             transform: translateY(-2px);
         }
 
-        .links {
-            margin-top: 20px;
-        }
+        .links { margin-top: 20px; }
 
         .links a {
             color: #007bff;
@@ -136,9 +130,9 @@
             color: #ff4d4f;
         }
 
-        .g-recaptcha {
-            margin-bottom: 20px;
-        }
+        .g-recaptcha { margin-bottom: 20px; }
+
+        .hidden { display: none; }
 
         @media screen and (max-width: 480px) {
             .login-container {
@@ -149,68 +143,106 @@
     </style>
 </head>
 <body>
-    <form id="form1" runat="server">
-        <asp:ScriptManager ID="ScriptManager1" runat="server" />
-        <div class="login-container">
-            <img src="images/logorrc.png" alt="RRC Logo" class="logo" />
-            <h2>Login</h2>
+<form id="form1" runat="server">
+    <asp:ScriptManager ID="ScriptManager1" runat="server" />
+    <div class="login-container">
+        <img src="images/logorrc.png" alt="RRC Logo" class="logo" />
+        <h2>Login</h2>
 
-            <asp:Panel ID="pnlLogin" runat="server" DefaultButton="btnLogin">
-                <!-- Email -->
-                <asp:TextBox ID="txtEmail" runat="server" CssClass="input" placeholder="Email" 
-                             TextMode="Email" AutoCompleteType="Disabled" onkeydown="return focusPasswordOnEnter(event)" />
+        <asp:Panel ID="pnlLogin" runat="server" DefaultButton="btnLogin">
+            <!-- Email -->
+            <asp:TextBox ID="txtEmail" runat="server" CssClass="input" placeholder="Email"
+                         TextMode="Email" AutoCompleteType="Disabled"
+                         onkeydown="return focusPasswordOnEnter(event)" />
 
-                <!-- Password -->
-                <div class="password-wrapper">
-                    <asp:TextBox ID="txtPassword" runat="server" CssClass="input" placeholder="Password"
-                                 TextMode="Password" AutoCompleteType="Disabled" />
-                  
-                </div>
-
-                <!-- CAPTCHA Panel -->
-                <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
-                    <div class="g-recaptcha" data-sitekey="6LcIAqErAAAAAMOUFC5nxRZOWEvWAntTTE6VPRIH"></div>
-                </asp:Panel>
-
-                <!-- Login Button -->
-                <asp:Button ID="btnLogin" runat="server" CssClass="btn-login" Text="Login" 
-                            OnClick="btnLogin_Click" UseSubmitBehavior="false" />
-            </asp:Panel>
-
-            <!-- Forgot Password -->
-            <div class="links">
-                <a href="ForgotPassword.aspx">Forgot Password?</a>
+            <!-- Password with eye toggle -->
+            <div class="password-wrapper">
+                <asp:TextBox ID="txtPassword" runat="server"
+                             CssClass="input"
+                             placeholder="Password"
+                             TextMode="Password"
+                             AutoCompleteType="Disabled" />
+                <!-- The eye toggle appears only when there's input -->
+                <button type="button" id="btnTogglePwd" class="toggle-password hidden" aria-label="Show password">
+                    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                </button>
             </div>
 
-            <!-- Message -->
-            <asp:Label ID="lblMessage" runat="server" CssClass="message"></asp:Label>
+            <!-- CAPTCHA Panel -->
+            <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
+                <div class="g-recaptcha" data-sitekey="6LfmLqwrAAAAAPJCW5wM9QZGllWpdW0g09NYudhb"></div>
+            </asp:Panel>
+
+            <!-- Login Button -->
+            <asp:Button ID="btnLogin" runat="server" CssClass="btn-login" Text="Login"
+                        OnClick="btnLogin_Click" UseSubmitBehavior="false" />
+        </asp:Panel>
+
+        <!-- Forgot Password -->
+        <div class="links">
+            <a href="ForgotPassword.aspx">Forgot Password?</a>
         </div>
 
-        <script>
-            function focusPasswordOnEnter(event) {
-                if (event.key === "Enter") {
-                    event.preventDefault();
-                    document.getElementById('<%= txtPassword.ClientID %>').focus();
-                    return false;
-                }
-                return true;
+        <!-- Message -->
+        <asp:Label ID="lblMessage" runat="server" CssClass="message"></asp:Label>
+    </div>
+
+    <script>
+        // Move focus from Email to Password when pressing Enter in email field
+        function focusPasswordOnEnter(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                document.getElementById('<%= txtPassword.ClientID %>').focus();
+                return false;
             }
+            return true;
+        }
 
-            function togglePassword() {
-                var pwd = document.getElementById('<%= txtPassword.ClientID %>');
-                var icon = document.querySelector(".toggle-password i");
+        document.addEventListener("DOMContentLoaded", function () {
+            const pwdInput = document.getElementById('<%= txtPassword.ClientID %>');
+            const toggleBtn = document.getElementById('btnTogglePwd');
+            const toggleIcon = toggleBtn.querySelector('i');
 
-                if (pwd.type === "password") {
-                    pwd.type = "text";
-                    icon.classList.remove("fa-eye");
-                    icon.classList.add("fa-eye-slash");
+            // Show the eye only when there is any character in the password box
+            function refreshEyeVisibility() {
+                if (pwdInput.value && pwdInput.value.length > 0) {
+                    toggleBtn.classList.remove('hidden');
                 } else {
-                    pwd.type = "password";
-                    icon.classList.remove("fa-eye-slash");
-                    icon.classList.add("fa-eye");
+                    toggleBtn.classList.add('hidden');
+                    // Reset to hidden state when cleared
+                    if (pwdInput.type !== 'password') {
+                        pwdInput.type = 'password';
+                        toggleIcon.classList.remove('fa-eye-slash');
+                        toggleIcon.classList.add('fa-eye');
+                        toggleBtn.setAttribute('aria-label', 'Show password');
+                    }
                 }
             }
-        </script>
-    </form>
+
+            // Initial state (handles autofill too)
+            refreshEyeVisibility();
+
+            // Update on input
+            pwdInput.addEventListener('input', refreshEyeVisibility);
+
+            // Toggle show/hide on click
+            toggleBtn.addEventListener('click', function () {
+                if (pwdInput.type === 'password') {
+                    pwdInput.type = 'text';
+                    toggleIcon.classList.remove('fa-eye');
+                    toggleIcon.classList.add('fa-eye-slash');
+                    toggleBtn.setAttribute('aria-label', 'Hide password');
+                } else {
+                    pwdInput.type = 'password';
+                    toggleIcon.classList.remove('fa-eye-slash');
+                    toggleIcon.classList.add('fa-eye');
+                    toggleBtn.setAttribute('aria-label', 'Show password');
+                }
+                // Keep focus on the input for better UX
+                pwdInput.focus();
+            });
+        });
+    </script>
+</form>
 </body>
 </html>

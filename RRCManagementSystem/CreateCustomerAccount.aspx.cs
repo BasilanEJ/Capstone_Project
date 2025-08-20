@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Net;
 using System.Net.Mail;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-
 
 namespace RRCManagementSystem
 {
@@ -15,16 +15,14 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
+            // require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            string role = Session["Role"].ToString();
-
-            // 🔐 Deny access for SuperAdmin and Inspector only
+            var role = Session["Role"].ToString();
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -32,9 +30,7 @@ namespace RRCManagementSystem
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
-
-            // 🔐 Check CanView permission for CreateCustomerAccount
-            if (!HasPermission(userId, "CreateCustomerAccount"))
+            if (!HasPermission(userId, "CreateCustomerAccount", "CanView"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
@@ -46,8 +42,6 @@ namespace RRCManagementSystem
                 txtCountry.Text = "Philippines";
             }
         }
-
-
 
         protected void btnCreate_Click(object sender, EventArgs e)
         {
@@ -73,7 +67,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            if (IsEmailAlreadyRegistered(email))
+            if (EmailExists(email))
             {
                 ShowSweetAlert("Error", "This email is already registered.", "warning");
                 return;
@@ -82,128 +76,108 @@ namespace RRCManagementSystem
             string token = Guid.NewGuid().ToString();
             DateTime expiry = DateTime.Now.AddHours(1);
 
-            using (SqlConnection con = new SqlConnection(connectionString))
+            int clientId = CreateClientWithReset(
+                lastName, firstName, middleName, email, contact, street, brgy, city, region, country, landmark, token, expiry
+            );
+
+            if (clientId <= 0)
             {
-                con.Open();
-
-                string query = @"
-INSERT INTO Clients
-(LastName, FirstName, MiddleName, Email, ContactNumber, StreetAndUnit, Barangay, City, Region, Country, Landmark,
- Status, CreatedAt, UserRole, PasswordHash, PasswordSalt, TermsAccepted, ResetToken, ResetTokenExpiry)
-VALUES
-(@LastName, @FirstName, @MiddleName, @Email, @ContactNumber, @StreetAndUnit, @Barangay, @City, @Region, @Country, @Landmark,
- 'Approved', GETDATE(), 'Client', '', '', 0, @ResetToken, @ResetTokenExpiry);";
-
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@LastName", lastName);
-                cmd.Parameters.AddWithValue("@FirstName", firstName);
-                cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrEmpty(middleName) ? (object)DBNull.Value : middleName);
-                cmd.Parameters.AddWithValue("@Email", email);
-                cmd.Parameters.AddWithValue("@ContactNumber", contact);
-                cmd.Parameters.AddWithValue("@StreetAndUnit", street);
-                cmd.Parameters.AddWithValue("@Barangay", brgy);
-                cmd.Parameters.AddWithValue("@City", city);
-                cmd.Parameters.AddWithValue("@Region", region);
-                cmd.Parameters.AddWithValue("@Country", country);
-                cmd.Parameters.AddWithValue("@Landmark", landmark);
-                cmd.Parameters.AddWithValue("@ResetToken", token);
-                cmd.Parameters.AddWithValue("@ResetTokenExpiry", expiry);
-                cmd.ExecuteNonQuery();
+                ShowSweetAlert("Error", "Failed to add client.", "error");
+                return;
             }
 
-            if (SendResetEmail(email, token))
-                ShowSweetAlert("Success", "Client added successfully. Email sent for password setup.", "success");
-            else
-                ShowSweetAlert("Error", "Client added but failed to send email.", "error");
+            // NOTE: your ResetPassword page expects type=client (not admin)
+            bool sent = SendResetEmail(email, token);
+            ShowSweetAlert(sent ? "Success" : "Partial Success",
+                sent ? "Client added successfully. Email sent for password setup."
+                     : "Client added but failed to send email.",
+                sent ? "success" : "warning");
         }
 
+        /* ===== DB helpers using stored procedures ===== */
 
-        private bool IsEmailAlreadyRegistered(string email)
+        private bool HasPermission(int userId, string module, string permissionColumn)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
             {
-                string query = "SELECT COUNT(*) FROM Clients WHERE Email = @Email";
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@Email", email);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = module;
+                cmd.Parameters.Add("@Permission", SqlDbType.NVarChar, 10).Value =
+                    (permissionColumn == "CanView" || permissionColumn == "CanAdd" ||
+                     permissionColumn == "CanEdit" || permissionColumn == "CanDelete")
+                    ? permissionColumn : "CanView";
+
                 con.Open();
-                int count = (int)cmd.ExecuteScalar();
-                return count > 0;
+                object val = cmd.ExecuteScalar();
+                return val != null && Convert.ToBoolean(val);
             }
         }
 
+        private bool EmailExists(string email)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClient_EmailExists", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
+                con.Open();
+                return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
+            }
+        }
+
+        private int CreateClientWithReset(
+            string lastName, string firstName, string middleName, string email, string contact,
+            string street, string brgy, string city, string region, string country, string landmark,
+            string token, DateTime expiry)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClient_CreateWithReset", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = lastName;
+                cmd.Parameters.Add("@FirstName", SqlDbType.NVarChar, 100).Value = firstName;
+                cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value = (object)middleName ?? DBNull.Value;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
+                cmd.Parameters.Add("@ContactNumber", SqlDbType.NVarChar, 50).Value = contact;
+                cmd.Parameters.Add("@StreetAndUnit", SqlDbType.NVarChar, 255).Value = street;
+                cmd.Parameters.Add("@Barangay", SqlDbType.NVarChar, 100).Value = brgy;
+                cmd.Parameters.Add("@City", SqlDbType.NVarChar, 100).Value = city;
+                cmd.Parameters.Add("@Region", SqlDbType.NVarChar, 100).Value = region;
+                cmd.Parameters.Add("@Country", SqlDbType.NVarChar, 100).Value = country;
+                cmd.Parameters.Add("@Landmark", SqlDbType.NVarChar, 255).Value = (object)landmark ?? DBNull.Value;
+                cmd.Parameters.Add("@ResetToken", SqlDbType.NVarChar, 200).Value = token;
+                cmd.Parameters.Add("@ResetTokenExpiry", SqlDbType.DateTime).Value = expiry;
+
+                con.Open();
+                object id = cmd.ExecuteScalar();
+                return (id != null && int.TryParse(id.ToString(), out int clientId)) ? clientId : 0;
+            }
+        }
+
+        /* ===== UI helpers (unchanged) ===== */
 
         private bool SendResetEmail(string toEmail, string token)
         {
             try
             {
-                string resetLink = $"https://rrcmanagement-001-site1.ntempurl.com/ResetPassword.aspx?type=admin&token={token}";
+                // for clients, make the link explicit:
+                string resetLink = $"https://rrcmanagement-bcfgfpa5hzaafhdy.eastasia-01.azurewebsites.net/ResetPassword.aspx?type=client&token={token}";
                 string subject = "Set Your Password - RRC Management System";
-                string body = $@"
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset='UTF-8'>
-  <style>
-    body {{
-      background-color: #f9f9f9;
-      font-family: Arial, sans-serif;
-      color: #333;
-      line-height: 1.6;
-      margin: 0;
-      padding: 0;
-    }}
-    .container {{
-      max-width: 600px;
-      margin: 30px auto;
-      background: #ffffff;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      padding: 20px 30px;
-    }}
-    h3 {{
-      color: #2a4fa7; /* Royal blue */
-      margin-bottom: 10px;
-    }}
-    p {{
-      margin: 10px 0;
-    }}
-    .button {{
-      display: inline-block;
-      padding: 12px 20px;
-      background-color: #add8e6; /* Light blue */
-      color: #000000; /* Black text */
-      text-decoration: none;
-      border-radius: 5px;
-      font-weight: bold;
-      margin-top: 15px;
-    }}
-    .footer {{
-      font-size: 12px;
-      color: #777;
-      margin-top: 25px;
-      border-top: 1px solid #eee;
-      padding-top: 10px;
-    }}
-  </style>
-</head>
-<body>
-  <div class='container'>
-    <h3>Welcome to RRC Management System</h3>
-    <p>You have been registered as a <strong>Client</strong>.</p>
-    <p>Click the button below to set your password:</p>
-    <p>
-      <a href='{resetLink}' class='button'>Set Password</a>
-    </p>
-    <p class='footer'>
-      This link will expire in 1 hour. If you did not request this, you can ignore this email.
-    </p>
-  </div>
-</body>
-</html>";
 
+                string body = $@"<!DOCTYPE html><html><head><meta charset='UTF-8'>
+<style>body{{background:#f9f9f9;font-family:Arial}}.container{{max-width:600px;margin:30px auto;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.05);padding:20px 30px}}
+h3{{color:#2a4fa7}}.button{{display:inline-block;padding:12px 20px;background:#add8e6;color:#000;text-decoration:none;border-radius:5px;font-weight:bold}}</style>
+</head><body><div class='container'>
+<h3>Welcome to RRC Management System</h3>
+<p>You have been registered as a <strong>Client</strong>.</p>
+<p>Click the button below to set your password (valid for 1 hour):</p>
+<p><a href='{resetLink}' class='button'>Set Password</a></p>
+</div></body></html>";
 
-
-                using (MailMessage mail = new MailMessage())
+                using (var mail = new MailMessage())
                 {
                     mail.From = new MailAddress("rrctermiteandpestcontrol@gmail.com", "RRC Management System");
                     mail.To.Add(toEmail);
@@ -211,19 +185,17 @@ VALUES
                     mail.Body = body;
                     mail.IsBodyHtml = true;
 
-                    using (SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587))
+                    using (var smtp = new SmtpClient("smtp.gmail.com", 587))
                     {
                         smtp.Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq");
                         smtp.EnableSsl = true;
                         smtp.Send(mail);
                     }
                 }
-
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine("Email Error: " + ex.Message);
                 return false;
             }
         }
@@ -232,19 +204,18 @@ VALUES
         {
             ltScript.Text = $@"
 <script>
-    Swal.fire({{
-        title: '{title}',
-        text: '{message}',
-        icon: '{icon}',
-        confirmButtonText: 'OK'
-    }});
+Swal.fire({{
+  title: '{title}',
+  text: '{message}',
+  icon: '{icon}',
+  confirmButtonText: 'OK'
+}});
 </script>";
         }
 
         protected void ddlRegion_SelectedIndexChanged(object sender, EventArgs e)
         {
-            string selectedRegion = ddlRegion.SelectedValue;
-            LoadCities(selectedRegion);
+            LoadCities(ddlRegion.SelectedValue);
         }
 
         private void LoadRegions()
@@ -262,57 +233,31 @@ VALUES
             ddlRegion.Items.Add(new ListItem("Region VII - Central Visayas", "Region VII"));
         }
 
-
         private void LoadCities(string selectedRegion)
         {
             ddlCity.Items.Clear();
             ddlCity.Items.Add(new ListItem("-- Select City --", ""));
-
-            if (string.IsNullOrEmpty(selectedRegion))
+            if (selectedRegion == "NCR")
+            {
+                ddlCity.Items.Add(new ListItem("Quezon City", "Quezon City"));
+                ddlCity.Items.Add(new ListItem("Manila", "Manila"));
+                ddlCity.Items.Add(new ListItem("Makati", "Makati"));
+                ddlCity.Items.Add(new ListItem("Caloocan", "Caloocan"));
+                ddlCity.Items.Add(new ListItem("Las Piñas", "Las Piñas"));
+                ddlCity.Items.Add(new ListItem("Pasig", "Pasig"));
+                ddlCity.Items.Add(new ListItem("Taguig", "Taguig"));
+                ddlCity.Items.Add(new ListItem("Valenzuela", "Valenzuela"));
+                ddlCity.Items.Add(new ListItem("Pasay", "Pasay"));
+                ddlCity.Items.Add(new ListItem("Marikina", "Marikina"));
+                ddlCity.Items.Add(new ListItem("Muntinlupa", "Muntinlupa"));
+                ddlCity.Items.Add(new ListItem("Navotas", "Navotas"));
+                ddlCity.Items.Add(new ListItem("San Juan", "San Juan"));
+                ddlCity.Items.Add(new ListItem("Pateros", "Pateros"));
+            }
+            else
             {
                 ddlCity.Items.Add(new ListItem("No Cities Available", ""));
-                return;
-            }
-
-            switch (selectedRegion)
-            {
-                case "NCR":
-                    ddlCity.Items.Add(new ListItem("Quezon City", "Quezon City"));
-                    ddlCity.Items.Add(new ListItem("Manila", "Manila"));
-                    ddlCity.Items.Add(new ListItem("Makati", "Makati"));
-                    ddlCity.Items.Add(new ListItem("Caloocan", "Caloocan"));
-                    ddlCity.Items.Add(new ListItem("Las Piñas", "Las Piñas"));
-                    ddlCity.Items.Add(new ListItem("Pasig", "Pasig"));
-                    ddlCity.Items.Add(new ListItem("Taguig", "Taguig"));
-                    ddlCity.Items.Add(new ListItem("Valenzuela", "Valenzuela"));
-                    ddlCity.Items.Add(new ListItem("Pasay", "Pasay"));
-                    ddlCity.Items.Add(new ListItem("Marikina", "Marikina"));
-                    ddlCity.Items.Add(new ListItem("Muntinlupa", "Muntinlupa"));
-                    ddlCity.Items.Add(new ListItem("Navotas", "Navotas"));
-                    ddlCity.Items.Add(new ListItem("San Juan", "San Juan"));
-                    ddlCity.Items.Add(new ListItem("Pateros", "Pateros"));
-                    break;
-                default:
-                    ddlCity.Items.Add(new ListItem("No Cities Available", ""));
-                    break;
             }
         }
-
-        private bool HasPermission(int userId, string moduleName)
-        {
-            using (SqlConnection con = new SqlConnection(connectionString))
-            {
-                string query = "SELECT COUNT(*) FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName AND CanView = 1";
-                using (SqlCommand cmd = new SqlCommand(query, con))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", userId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-                    con.Open();
-                    return (int)cmd.ExecuteScalar() > 0;
-                }
-            }
-        }
-
-
     }
 }

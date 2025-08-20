@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 
 namespace RRCManagementSystem
@@ -18,11 +19,11 @@ namespace RRCManagementSystem
 
                 if (type == "admin")
                 {
-                    HandleAdminTokenReset();
+                    HandleAdminTokenReset();   // uses spResetToken_Validate
                 }
                 else if (type == "client")
                 {
-                    HandleClientOtpReset();
+                    HandleClientOtpReset();    // session-gated, SP used on save
                 }
                 else
                 {
@@ -44,27 +45,28 @@ namespace RRCManagementSystem
                 return;
             }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spResetToken_Validate", conn))
             {
-                conn.Open();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ResetToken", SqlDbType.NVarChar, 100).Value = token;
 
-                string query = "SELECT Email, TokenExpiry FROM Users WHERE ResetToken = @ResetToken AND Status = 'Active';";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                try
                 {
-                    cmd.Parameters.AddWithValue("@ResetToken", token);
-
-                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    conn.Open();
+                    using (var rdr = cmd.ExecuteReader())
                     {
-                        if (reader.Read())
+                        if (rdr.Read())
                         {
-                            DateTime expiry = reader.GetDateTime(1);
+                            string email = rdr["Email"]?.ToString();
+                            DateTime expiry = rdr["TokenExpiry"] != DBNull.Value
+                                                ? Convert.ToDateTime(rdr["TokenExpiry"])
+                                                : DateTime.MinValue;
 
                             if (expiry >= DateTime.Now)
                             {
-                                ViewState["Email"] = reader.GetString(0);
+                                ViewState["Email"] = email;
                                 ViewState["Role"] = "Admin";
-
                                 lblMessage.ForeColor = System.Drawing.Color.Green;
                                 lblMessage.Text = "✅ Token validated. Please enter your new password.";
                             }
@@ -81,6 +83,11 @@ namespace RRCManagementSystem
                         }
                     }
                 }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "⚠ Error validating token: " + ex.Message;
+                    btnResetPassword.Enabled = false;
+                }
             }
         }
 
@@ -94,7 +101,6 @@ namespace RRCManagementSystem
             }
 
             string email = Session["Email"]?.ToString();
-
             if (string.IsNullOrEmpty(email))
             {
                 lblMessage.Text = "❌ Missing client session data.";
@@ -119,7 +125,6 @@ namespace RRCManagementSystem
                 lblMessage.Text = "⚠ Please fill in all password fields.";
                 return;
             }
-
             if (newPassword != confirmPassword)
             {
                 lblMessage.Text = "⚠ Passwords do not match.";
@@ -136,53 +141,60 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Generate Argon2 hash
+            // Hash with your PasswordHelper (Argon2, etc.)
             string hashedPassword = PasswordHelper.HashPassword(newPassword);
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            int rows = 0;
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(
+                role == "Admin" ? "dbo.spPassword_ResetAdmin" : "dbo.spPassword_ResetClient", conn))
             {
-                conn.Open();
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                string query = role == "Admin"
-                    ? @"UPDATE Users
-                        SET PasswordHash = @PasswordHash,
-                            PasswordSalt = NULL,
-                            ResetToken = NULL,
-                            TokenExpiry = NULL
-                        WHERE Email = @Email AND Status = 'Active';"
-                    : @"UPDATE Clients
-                        SET PasswordHash = @PasswordHash,
-                            PasswordSalt = NULL
-                        WHERE Email = @Email AND Status = 'Approved';";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                if (role == "Admin")
                 {
-                    cmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
-                    cmd.Parameters.AddWithValue("@Email", email);
-
-                    int rowsAffected = cmd.ExecuteNonQuery();
-
-                    if (rowsAffected > 0)
-                    {
-                        lblMessage.ForeColor = System.Drawing.Color.Green;
-                        lblMessage.CssClass = "success-message";
-                        lblMessage.Text = "✅ Password reset successful! Redirecting to login...";
-
-                        if (role == "Client")
-                        {
-                            Session["OTP"] = null;
-                            Session["IsOTPVerified"] = null;
-                            Session["Email"] = null;
-                        }
-
-                        Response.AddHeader("REFRESH", "3;URL=Login.aspx");
-                    }
-                    else
-                    {
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                        lblMessage.Text = $"⚠ Failed to reset password. Email={email}, Role={role}. Please try again.";
-                    }
+                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                    cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, -1).Value = hashedPassword; // NVARCHAR(MAX)
                 }
+                else
+                {
+                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
+                    cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, 256).Value = hashedPassword;
+                }
+
+                try
+                {
+                    conn.Open();
+                    object o = cmd.ExecuteScalar();
+                    rows = (o == null || o == DBNull.Value) ? 0 : Convert.ToInt32(o);
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                    lblMessage.Text = "⚠ Error resetting password: " + ex.Message;
+                    return;
+                }
+            }
+
+            if (rows > 0)
+            {
+                lblMessage.ForeColor = System.Drawing.Color.Green;
+                lblMessage.CssClass = "success-message";
+                lblMessage.Text = "✅ Password reset successful! Redirecting to login...";
+
+                if (role == "Client")
+                {
+                    Session["OTP"] = null;
+                    Session["IsOTPVerified"] = null;
+                    Session["Email"] = null;
+                }
+
+                Response.AddHeader("REFRESH", "3;URL=Login.aspx");
+            }
+            else
+            {
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                lblMessage.Text = $"⚠ Failed to reset password. Email={email}, Role={role}.";
             }
         }
     }

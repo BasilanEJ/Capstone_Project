@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Net;
 using System.Web;
@@ -90,7 +91,7 @@ namespace RRCManagementSystem
 
                 if (isValid)
                 {
-                    // ✅ Now finalize real authentication
+                    // ✅ Finalize real authentication
                     Session["UserID"] = userID;
                     Session["Role"] = role;
                     Session["Name"] = name;
@@ -105,12 +106,11 @@ namespace RRCManagementSystem
 
                     AddAuditLog(userID, $"{role} {name} completed 2FA verification.");
 
-                    string redirect = role == "SuperAdmin" ? "SuperAdminDashboard.aspx" :
-                                      role == "Inspector" ? "InspectorDashboard.aspx" :
-                                                             "Dashboard.aspx";
+                    string redirect = role == "SuperAdmin" ? "SuperAdminDashboard.aspx"
+                                     : role == "Inspector" ? "InspectorDashboard.aspx"
+                                     : "Dashboard.aspx";
                     Response.Redirect(redirect, false);
                     Context.ApplicationInstance.CompleteRequest();
-                    return;
                 }
                 else
                 {
@@ -124,6 +124,57 @@ namespace RRCManagementSystem
             }
         }
 
+        /* =========================
+           Stored-proc helpers
+           ========================= */
+
+        private string GetTOTPSecret(string email)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAuth_GetTOTPSecretByEmail", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email ?? string.Empty;
+
+                conn.Open();
+                object result = cmd.ExecuteScalar();
+                return result == null || result == DBNull.Value ? null : result.ToString();
+            }
+        }
+
+        private bool IsLockedOut(int userId)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAuth_GetLockoutUntil", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+
+                conn.Open();
+                object result = cmd.ExecuteScalar();
+                if (result == null || result == DBNull.Value) return false;
+
+                DateTime lockoutUntil = Convert.ToDateTime(result);
+                return lockoutUntil > DateTime.Now;
+            }
+        }
+
+        private void AddAuditLog(int userID, string action)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = userID;
+                cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action ?? "";
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        /* =========================
+           CAPTCHA
+           ========================= */
         private bool IsCaptchaValid()
         {
             string response = Request.Form["g-recaptcha-response"];
@@ -131,66 +182,11 @@ namespace RRCManagementSystem
 
             using (var client = new WebClient())
             {
-                string secret = "6LcIAqErAAAAAD3HQP8r8XkyIp9tJVFGSZSr0ozd"; // TODO: move to config
+                string secret = "6LfmLqwrAAAAALDQW46-uZss3CZStl0xmMyj_GWw"; // move to config
                 string result = client.DownloadString(
                     $"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}"
                 );
                 return result.Contains("\"success\": true");
-            }
-        }
-
-        private string GetTOTPSecret(string email)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                const string query = @"
-SELECT TOTPSecret 
-FROM Users 
-WHERE Email = @Email 
-  AND TwoFactorEnabled = 1 
-  AND Status IN ('Active','Available')";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Email", email);
-                    conn.Open();
-                    object result = cmd.ExecuteScalar();
-                    return result?.ToString();
-                }
-            }
-        }
-
-        private bool IsLockedOut(int userId)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                const string query = "SELECT LockoutUntil FROM Users WHERE UserID = @UserID";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", userId);
-                    conn.Open();
-                    object result = cmd.ExecuteScalar();
-                    if (result != DBNull.Value && result != null)
-                    {
-                        DateTime lockoutTime = Convert.ToDateTime(result);
-                        return lockoutTime > DateTime.Now;
-                    }
-                    return false;
-                }
-            }
-        }
-
-        private void AddAuditLog(int userID, string action)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                const string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@UserID, @Action, GETDATE())";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", userID);
-                    cmd.Parameters.AddWithValue("@Action", action);
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
             }
         }
     }

@@ -8,7 +8,8 @@ namespace RRCManagementSystem
 {
     public partial class AllEmployee : Page
     {
-        private readonly string connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            System.Configuration.ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -40,47 +41,28 @@ namespace RRCManagementSystem
 
         private bool HasViewPermission(int adminId, string moduleName)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdminPermission_CanView", conn))
             {
-                string query = "SELECT CanView FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", adminId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
 
-                    try
-                    {
-                        conn.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
-                }
+                conn.Open();
+                object result = cmd.ExecuteScalar();
+                return result != null && Convert.ToBoolean(result);
             }
         }
 
         private void LoadEmployees()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spEmployees_ListActive", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = @"
-                    SELECT 
-                        EmployeeID, 
-                        LastName, 
-                        FirstName, 
-                        MiddleName, 
-                        Email, 
-                        Position, 
-                        Phone, 
-                        ProfileImage 
-                    FROM Employees
-                    WHERE Status = 'Active'";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter da = new SqlDataAdapter(query, conn);
-                DataTable dt = new DataTable();
+                var dt = new DataTable();
                 da.Fill(dt);
 
                 gvEmployees.DataSource = dt;
@@ -99,24 +81,23 @@ namespace RRCManagementSystem
             if (e.CommandName == "EditEmployee")
             {
                 int id = Convert.ToInt32(e.CommandArgument);
-                Response.Redirect("EditEmployee.aspx?EmployeeID=" + id); // <— changed "id" to "EmployeeID"
+                Response.Redirect("EditEmployee.aspx?EmployeeID=" + id);
             }
         }
 
-
-
+        // Optional: keep this if you still want a pre-check (not required if you call ArchiveIfNoTeam)
         private bool IsEmployeeOnAnyTeam(int employeeId)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(
-                "SELECT COUNT(*) FROM TeamMembers WHERE EmployeeID = @EmployeeID", conn))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spTeamMembers_CountByEmployee", conn))
             {
-                cmd.Parameters.AddWithValue("@EmployeeID", employeeId);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeId;
+
                 conn.Open();
                 return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
             }
         }
-
 
         protected void btnHiddenArchive_Click(object sender, EventArgs e)
         {
@@ -125,40 +106,49 @@ namespace RRCManagementSystem
 
             try
             {
-                if (IsEmployeeOnAnyTeam(id))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spEmployee_ArchiveIfNoTeam", conn))
                 {
-                    ClientScript.RegisterStartupScript(this.GetType(), "archiveBlocked", @"
-                Swal.fire({ icon: 'error', title: 'Cannot Archive',
-                            text: 'This employee is still assigned to a team. Please remove them from the team first.',
-                            confirmButtonText: 'OK' });", true);
-                    return;
-                }
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = id;
 
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                using (SqlCommand cmd = new SqlCommand(
-                    "UPDATE Employees SET Status = 'Inactive' WHERE EmployeeID = @EmployeeID", conn))
-                {
-                    cmd.Parameters.AddWithValue("@EmployeeID", id);
                     conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                    object result = cmd.ExecuteScalar(); // RowsAffected
+                    int rows = Convert.ToInt32(result ?? 0);
 
-                // ✅ Go straight to Archive page so you see the record there
-                Response.Redirect("ArchiveEmployee.aspx?archived=1", false);
-                Context.ApplicationInstance.CompleteRequest();
+                    if (rows > 0)
+                    {
+                        // go to archive list
+                        Response.Redirect("ArchiveEmployee.aspx?archived=1", false);
+                        Context.ApplicationInstance.CompleteRequest();
+                        return;
+                    }
+
+                    // not found or already inactive
+                    ClientScript.RegisterStartupScript(this.GetType(), "archiveWarn",
+                        "Swal.fire({icon:'warning',title:'Not Found',text:'Employee not found or already inactive.'});", true);
+                }
+            }
+            catch (SqlException sqlEx) when (sqlEx.Message.Contains("EMPLOYEE_HAS_TEAM"))
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "archiveBlocked", @"
+Swal.fire({
+  icon: 'error',
+  title: 'Cannot Archive',
+  text: 'This employee is still assigned to a team. Remove them from the team first.',
+  confirmButtonText: 'OK'
+});", true);
             }
             catch (Exception ex)
             {
                 string err = $@"Swal.fire({{
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to archive employee: {ex.Message.Replace("'", "\\'")}',
-            confirmButtonText: 'OK'
-        }});";
+  icon: 'error',
+  title: 'Error',
+  text: 'Failed to archive employee: {ex.Message.Replace("'", "\\'")}',
+  confirmButtonText: 'OK'
+}});";
                 ClientScript.RegisterStartupScript(this.GetType(), "archiveError", err, true);
             }
         }
-
-
     }
 }

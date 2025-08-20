@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Web.UI;
@@ -7,7 +8,9 @@ namespace RRCManagementSystem
 {
     public partial class EditItem : Page
     {
-        private readonly string connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            System.Configuration.ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
         private int itemId;
 
         protected void Page_Load(object sender, EventArgs e)
@@ -30,7 +33,7 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // ✅ Check Edit Permission
+            // ✅ Check Edit Permission (via SP)
             if (!HasEditPermission(userId, "ManageItem"))
             {
                 lblMessage.Text = "❌ You do not have permission to edit items.";
@@ -39,9 +42,9 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Decode the encoded ItemID from query string
+            // ✅ Decode ItemID from query
             string encodedId = Request.QueryString["ItemID"];
-            if (string.IsNullOrEmpty(encodedId))
+            if (string.IsNullOrWhiteSpace(encodedId))
             {
                 lblMessage.Text = "⚠ Missing Item ID.";
                 lblMessage.ForeColor = System.Drawing.Color.Red;
@@ -74,55 +77,48 @@ namespace RRCManagementSystem
                     case 2: padded += "=="; break;
                     case 3: padded += "="; break;
                 }
-
                 byte[] data = Convert.FromBase64String(padded);
                 return System.Text.Encoding.UTF8.GetString(data);
             }
-            catch
-            {
-                return null;
-            }
+            catch { return null; }
         }
 
         private bool HasEditPermission(int adminId, string moduleName)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            try
             {
-                string query = "SELECT CanEdit FROM AdminPermissions WHERE UserID = @AdminID AND ModuleName = @ModuleName";
-
-                using (SqlCommand cmd = new SqlCommand(query, con))
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", adminId);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@UserID", adminId);
                     cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.Parameters.AddWithValue("@Permission", "CanEdit");
 
-                    try
-                    {
-                        con.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = $"❌ Permission check failed: {ex.Message}";
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                        return false;
-                    }
+                    con.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && result != DBNull.Value && Convert.ToBoolean(result);
                 }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = $"❌ Permission check failed: {ex.Message}";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return false;
             }
         }
 
         private void LoadItemDetails()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInventory_GetById", conn))
             {
-                string query = "SELECT * FROM Inventory WHERE ItemID = @ItemID";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ItemID", itemId);
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                conn.Open();
+                using (var reader = cmd.ExecuteReader())
                 {
-                    cmd.Parameters.AddWithValue("@ItemID", itemId);
-                    conn.Open();
-
-                    SqlDataReader reader = cmd.ExecuteReader();
                     if (reader.Read())
                     {
                         txtItemName.Text = reader["Name"].ToString();
@@ -131,8 +127,8 @@ namespace RRCManagementSystem
 
                         if (reader["ExpirationDate"] != DBNull.Value)
                         {
-                            DateTime expDate = Convert.ToDateTime(reader["ExpirationDate"]);
-                            txtExpirationDate.Text = expDate.ToString("yyyy-MM-dd");
+                            DateTime exp = Convert.ToDateTime(reader["ExpirationDate"]);
+                            txtExpirationDate.Text = exp.ToString("yyyy-MM-dd");
                         }
 
                         if (reader["ImagePath"] != DBNull.Value)
@@ -164,106 +160,115 @@ namespace RRCManagementSystem
 
             string itemName = txtItemName.Text.Trim();
             string itemType = ddlType.SelectedValue;
-            int quantity;
-            DateTime? expirationDate = null;
-            string imagePath = imgPreview.ImageUrl;
 
-            if (!int.TryParse(txtQuantity.Text.Trim(), out quantity) || quantity <= 0)
+            if (!int.TryParse(txtQuantity.Text.Trim(), out int quantity) || quantity <= 0)
             {
                 lblMessage.Text = "⚠ Please enter a valid quantity.";
                 lblMessage.ForeColor = System.Drawing.Color.Red;
                 return;
             }
 
-            if (!string.IsNullOrEmpty(txtExpirationDate.Text))
+            DateTime? expirationDate = null;
+            if (!string.IsNullOrWhiteSpace(txtExpirationDate.Text))
             {
-                if (!DateTime.TryParse(txtExpirationDate.Text, out DateTime parsedDate))
+                if (!DateTime.TryParse(txtExpirationDate.Text, out DateTime parsed))
                 {
                     lblMessage.Text = "⚠ Invalid expiration date.";
                     lblMessage.ForeColor = System.Drawing.Color.Red;
                     return;
                 }
-                expirationDate = parsedDate;
+                expirationDate = parsed;
             }
 
-            // ✅ Handle Image Upload
+            // 📷 Image upload (optional)
+            string imagePath = imgPreview.ImageUrl;
             if (fuItemImage.HasFile)
             {
-                string fileExtension = Path.GetExtension(fuItemImage.FileName).ToLower();
-                string[] allowedExtensions = { ".jpg", ".jpeg", ".png" };
-
-                if (!Array.Exists(allowedExtensions, ext => ext == fileExtension))
+                string ext = Path.GetExtension(fuItemImage.FileName).ToLowerInvariant();
+                string[] allowed = { ".jpg", ".jpeg", ".png" };
+                if (Array.IndexOf(allowed, ext) < 0)
                 {
                     lblMessage.Text = "⚠ Only JPG, JPEG, and PNG files are allowed.";
                     lblMessage.ForeColor = System.Drawing.Color.Red;
                     return;
                 }
 
-                string fileName = Guid.NewGuid().ToString() + fileExtension;
-                string folderPath = Server.MapPath("~/ItemImages/");
-                string fullPath = Path.Combine(folderPath, fileName);
-
-                if (!Directory.Exists(folderPath))
-                {
-                    Directory.CreateDirectory(folderPath);
-                }
-
-                fuItemImage.SaveAs(fullPath);
+                string folder = Server.MapPath("~/ItemImages/");
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                string fileName = Guid.NewGuid() + ext;
+                string full = Path.Combine(folder, fileName);
+                fuItemImage.SaveAs(full);
                 imagePath = "~/ItemImages/" + fileName;
             }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = @"
-                    UPDATE Inventory
-                    SET Name = @Name,
-                        Type = @Type,
-                        Quantity = @Quantity,
-                        ExpirationDate = @ExpirationDate,
-                        ImagePath = @ImagePath
-                    WHERE ItemID = @ItemID";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                int affected = 0;
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spInventory_Update", conn))
                 {
-                    cmd.Parameters.AddWithValue("@Name", itemName);
-                    cmd.Parameters.AddWithValue("@Type", itemType);
-                    cmd.Parameters.AddWithValue("@Quantity", quantity);
-                    cmd.Parameters.AddWithValue("@ExpirationDate", (object)expirationDate ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@ImagePath", (object)imagePath ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@ItemID", itemId);
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.Add("@ItemID", SqlDbType.Int).Value = itemId;
+                    cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = itemName;
+                    cmd.Parameters.Add("@Type", SqlDbType.NVarChar, 50).Value = itemType;
+                    cmd.Parameters.Add("@Quantity", SqlDbType.Int).Value = quantity;
+
+                    if (expirationDate.HasValue)
+                        cmd.Parameters.Add("@ExpirationDate", SqlDbType.DateTime).Value = expirationDate.Value;
+                    else
+                        cmd.Parameters.Add("@ExpirationDate", SqlDbType.DateTime).Value = DBNull.Value;
+
+                    if (!string.IsNullOrWhiteSpace(imagePath))
+                        cmd.Parameters.Add("@ImagePath", SqlDbType.NVarChar, 255).Value = imagePath;
+                    else
+                        cmd.Parameters.Add("@ImagePath", SqlDbType.NVarChar, 255).Value = DBNull.Value;
 
                     conn.Open();
-                    cmd.ExecuteNonQuery();
+                    using (var rdr = cmd.ExecuteReader())
+                    {
+                        if (rdr.Read())
+                            affected = Convert.ToInt32(rdr["Affected"]);
+                    }
+                }
 
-                    AddAuditLog(adminId, $"Edited item (ID: {itemId}) - Name: {itemName}, Type: {itemType}, Quantity: {quantity}");
+                if (affected == 1)
+                {
+                    // 🧾 Audit
+                    InsertAudit(adminId, $"Edited item (ID: {itemId}) - Name: {itemName}, Type: {itemType}, Qty: {quantity}");
+                    lblMessage.Text = "✅ Item updated successfully!";
+                    lblMessage.ForeColor = System.Drawing.Color.Green;
+                }
+                else
+                {
+                    lblMessage.Text = "❌ Update failed or item not found.";
+                    lblMessage.ForeColor = System.Drawing.Color.Red;
                 }
             }
-
-            lblMessage.Text = "✅ Item updated successfully!";
-            lblMessage.ForeColor = System.Drawing.Color.Green;
+            catch (Exception ex)
+            {
+                lblMessage.Text = "❌ Update error: " + ex.Message;
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+            }
         }
 
-        private void AddAuditLog(int? userID, string action)
+        private void InsertAudit(int? adminId, string action)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@AdminID", (object)adminId ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Action", action);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // Handle audit log errors silently
-                    }
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
                 }
+            }
+            catch
+            {
+                // swallow or log
             }
         }
     }

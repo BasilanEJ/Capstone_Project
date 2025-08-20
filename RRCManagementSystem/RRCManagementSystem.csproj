@@ -202,6 +202,13 @@
     <Content Include="PayMongoWebhook.ashx" />
     <Content Include="PayPalWebhook.ashx" />
     <Content Include="Anchor.ashx" />
+    <None Include="Properties\PublishProfiles\FolderProfile.pubxml" />
+    <None Include="Properties\PublishProfiles\FolderProfile1.pubxml" />
+    <None Include="Properties\PublishProfiles\FolderProfile2.pubxml" />
+    <None Include="Properties\PublishProfiles\FolderProfile3.pubxml" />
+    <None Include="Properties\PublishProfiles\FolderProfile4.pubxml" />
+    <None Include="Properties\PublishProfiles\FolderProfile5.pubxml" />
+    <None Include="Properties\PublishProfiles\RRCManagement - Web Deploy.pubxml" />
     <None Include="Scripts\jquery-3.7.1.intellisense.js" />
     <Content Include="ManageItem.aspx" />
     <Content Include="ManagePayment.aspx" />
@@ -247,6 +254,7 @@
     <Content Include="Styles\Styles.css" />
     <Content Include="SuperAdminDashboard.aspx" />
     <Content Include="SuperAdminProfile.aspx" />
+    <Content Include="SystemAdmin.aspx" />
     <Content Include="SystemChanges.aspx" />
     <Content Include="SystemSettings.aspx" />
     <Content Include="TotalStocks.aspx" />
@@ -868,6 +876,13 @@
     </Compile>
     <Compile Include="SuperAdminProfile.aspx.designer.cs">
       <DependentUpon>SuperAdminProfile.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="SystemAdmin.aspx.cs">
+      <DependentUpon>SystemAdmin.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="SystemAdmin.aspx.designer.cs">
+      <DependentUpon>SystemAdmin.aspx</DependentUpon>
     </Compile>
     <Compile Include="SystemChanges.aspx.cs">
       <DependentUpon>SystemChanges.aspx</DependentUpon>

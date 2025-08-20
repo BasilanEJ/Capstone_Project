@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Web;
+using System.Web.Security;
 
 namespace RRCManagementSystem
 {
@@ -7,16 +8,20 @@ namespace RRCManagementSystem
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            // ✅ Validate session and role
-            if (!IsPostBack)
+            // ---- Auth/role gate on EVERY request ----
+            var role = Session["Role"] as string;
+            if (Session["UserID"] == null || !string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase))
             {
-                if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
-                {
-                    // 🚫 Not logged in or not SuperAdmin → redirect
-                    Response.Redirect("~/Login.aspx");
-                    return;
-                }
+                SafeRedirect("~/Login.aspx");
+                return;
             }
+
+            // ---- Strong no-cache for all protected views ----
+            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            Response.Cache.SetNoStore();
+            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
+            Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches);
+            Response.Cache.AppendCacheExtension("must-revalidate, proxy-revalidate");
         }
 
         protected string GetActiveClass(string pageName)
@@ -27,7 +32,7 @@ namespace RRCManagementSystem
 
         protected void btnLogout_Click(object sender, EventArgs e)
         {
-            // 1) Remove all authentication & pending 2FA state
+            // ---- Clear app/session state ----
             Session.Remove("IsAuthenticated");
             Session.Remove("UserID");
             Session.Remove("Role");
@@ -38,30 +43,37 @@ namespace RRCManagementSystem
             Session.Remove("Pending2FA_Name");
             Session.Remove("Pending2FA_Role");
 
-            // 2) Clear and abandon session
             Session.Clear();
             Session.RemoveAll();
             Session.Abandon();
 
-            // 3) Expire session cookie
+            // ---- Expire session cookie ----
             if (Request.Cookies["ASP.NET_SessionId"] != null)
             {
                 Response.Cookies["ASP.NET_SessionId"].Value = string.Empty;
                 Response.Cookies["ASP.NET_SessionId"].Expires = DateTime.UtcNow.AddDays(-1);
             }
 
-            // 4) If using FormsAuthentication, sign out
-            // System.Web.Security.FormsAuthentication.SignOut();
+            // ---- Expire FormsAuth cookie (important) ----
+            FormsAuthentication.SignOut();
+            if (Request.Cookies[FormsAuthentication.FormsCookieName] != null)
+            {
+                Response.Cookies[FormsAuthentication.FormsCookieName].Value = string.Empty;
+                Response.Cookies[FormsAuthentication.FormsCookieName].Expires = DateTime.UtcNow.AddDays(-1);
+            }
 
-            // 5) Disable caching so Back/Forward buttons can't show old pages
+            // ---- No-cache on the way out ----
             Response.Cache.SetCacheability(HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
 
-            // 6) Redirect to Login
-            Response.Redirect("~/Login.aspx", false);
-            Context.ApplicationInstance.CompleteRequest();
+            SafeRedirect("~/Login.aspx");
         }
 
+        private void SafeRedirect(string url)
+        {
+            Response.Redirect(url, false);
+            Context.ApplicationInstance.CompleteRequest();
+        }
     }
 }

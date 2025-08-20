@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Configuration;
 using System.Web.UI;
 
 namespace RRCManagementSystem
@@ -12,7 +12,8 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (Session["UserID"] == null || Session["Role"]?.ToString() != "Inspector")
+            // Require inspector session
+            if (Session["UserID"] == null || !string.Equals(Session["Role"]?.ToString(), "Inspector", StringComparison.OrdinalIgnoreCase))
             {
                 Response.Redirect("~/Login.aspx");
                 return;
@@ -20,9 +21,11 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
+                // Optional: handle ?done=123 to mark an inspection as completed (ownership enforced in SP)
                 if (Request.QueryString["done"] != null && int.TryParse(Request.QueryString["done"], out int id))
                 {
-                    MarkInspectionAsDone(id);
+                    int inspectorId = Convert.ToInt32(Session["UserID"]);
+                    MarkInspectionAsDone(id, inspectorId);
                 }
 
                 LoadMyInspections();
@@ -37,34 +40,17 @@ namespace RRCManagementSystem
         private void LoadMyInspections()
         {
             int inspectorId = Convert.ToInt32(Session["UserID"]);
-            string statusFilter = ddlStatusFilter.SelectedValue;
+            string statusFilter = ddlStatusFilter.SelectedValue; // expect values like "All", "Scheduled", "Completed", etc.
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var da = new SqlDataAdapter("dbo.usp_Inspections_ListByInspector", conn))
             {
-                string query = @"
-SELECT i.InspectionID, i.ScheduledDate, i.InspectionStatus, i.Remarks, i.CreatedAt,
-       (q.LastName + ', ' + q.FirstName + ' ' + ISNULL(q.MiddleName, '')) AS FullName,
-       q.StreetAndUnit, q.Barangay, q.City, q.Region, q.Country, q.Landmark
-FROM Inspections i
-INNER JOIN InquirySimple q ON i.InquiryID = q.InquiryID
-WHERE i.InspectorID = @InspectorID";
+                da.SelectCommand.CommandType = CommandType.StoredProcedure;
+                da.SelectCommand.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
+                da.SelectCommand.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value =
+                    string.IsNullOrWhiteSpace(statusFilter) ? "All" : statusFilter;
 
-                if (statusFilter != "All")
-                {
-                    query += " AND i.InspectionStatus = @Status";
-                }
-
-                query += " ORDER BY i.ScheduledDate DESC";
-
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
-                if (statusFilter != "All")
-                {
-                    cmd.Parameters.AddWithValue("@Status", statusFilter);
-                }
-
-                SqlDataAdapter da = new SqlDataAdapter(cmd);
-                DataTable dt = new DataTable();
+                var dt = new DataTable();
                 da.Fill(dt);
 
                 rptInspections.DataSource = dt;
@@ -72,15 +58,23 @@ WHERE i.InspectorID = @InspectorID";
             }
         }
 
-        private void MarkInspectionAsDone(int inspectionId)
+        private void MarkInspectionAsDone(int inspectionId, int inspectorId)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_Inspection_MarkCompleted", conn))
             {
-                string query = "UPDATE Inspections SET InspectionStatus = 'Completed' WHERE InspectionID = @InspectionID";
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@InspectionID", inspectionId);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@InspectionID", SqlDbType.Int).Value = inspectionId;
+                cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId; // enforce ownership
+
+                var affectedParam = cmd.Parameters.Add("@RowsAffected", SqlDbType.Int);
+                affectedParam.Direction = ParameterDirection.Output;
+
                 conn.Open();
                 cmd.ExecuteNonQuery();
+
+                // Optional feedback (no UI elements shown here; add a label or toast if you want)
+                // int rows = (affectedParam.Value == DBNull.Value) ? 0 : (int)affectedParam.Value;
             }
         }
     }

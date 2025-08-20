@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
-using OtpNet; // Install OtpNet via NuGet
-using QRCoder; // Install QRCoder via NuGet
+using OtpNet;          // OtpNet via NuGet
+using QRCoder;        // QRCoder via NuGet
 using System.Drawing;
 using System.IO;
 using System.Web.UI;
-
 
 namespace RRCManagementSystem
 {
@@ -18,7 +18,9 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                if (Session["Pending2FA_Email"] == null)
+                // Must come from the password step
+                if (Session["Pending2FA_Email"] == null ||
+                    Session["Pending2FA_UserID"] == null)
                 {
                     Response.Redirect("Login.aspx");
                     return;
@@ -30,24 +32,25 @@ namespace RRCManagementSystem
 
         private void GenerateQRCode()
         {
+            // 1) Generate a 20-byte secret and keep it only in session until verified
             byte[] secretKey = KeyGeneration.GenerateRandomKey(20);
             string base32Secret = Base32Encoding.ToString(secretKey);
-
             Session["2FA_Secret"] = base32Secret;
 
+            // 2) Build otpauth URI
             string email = Session["Pending2FA_Email"].ToString();
             string issuer = "RRCManagementSystem";
             string otpauthUrl = $"otpauth://totp/{issuer}:{email}?secret={base32Secret}&issuer={issuer}";
 
-            using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
-            using (QRCodeData qrCodeData = qrGenerator.CreateQrCode(otpauthUrl, QRCodeGenerator.ECCLevel.Q))
-            using (QRCode qrCode = new QRCode(qrCodeData))
-            using (Bitmap qrBitmap = qrCode.GetGraphic(20))
-            using (MemoryStream ms = new MemoryStream())
+            // 3) Render QR
+            using (var qrGen = new QRCodeGenerator())
+            using (var data = qrGen.CreateQrCode(otpauthUrl, QRCodeGenerator.ECCLevel.Q))
+            using (var qr = new QRCode(data))
+            using (var bmp = qr.GetGraphic(20))
+            using (var ms = new MemoryStream())
             {
-                qrBitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                string base64Image = Convert.ToBase64String(ms.ToArray());
-                imgQRCode.ImageUrl = "data:image/png;base64," + base64Image;
+                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                imgQRCode.ImageUrl = "data:image/png;base64," + Convert.ToBase64String(ms.ToArray());
             }
         }
 
@@ -58,7 +61,6 @@ namespace RRCManagementSystem
             string email = Session["Pending2FA_Email"]?.ToString();
             string name = Session["Pending2FA_Name"]?.ToString();
             string role = Session["Pending2FA_Role"]?.ToString();
-            int userId = Convert.ToInt32(Session["Pending2FA_UserID"]);
 
             if (string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(email))
             {
@@ -66,56 +68,88 @@ namespace RRCManagementSystem
                 return;
             }
 
+            if (code.Length != 6)
+            {
+                lblMessage.Text = "❌ Enter the 6-digit code.";
+                return;
+            }
+
+            // Verify TOTP
             var totp = new Totp(Base32Encoding.ToBytes(secret));
             bool isValid = totp.VerifyTotp(code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
 
-            if (isValid)
-            {
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                {
-                    string query = @"
-    UPDATE Users
-    SET TOTPSecret = @Secret,
-        TwoFactorEnabled = 1
-    WHERE Email = @Email AND Status IN ('Active', 'Available')";
-
-
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@Secret", secret);
-                        cmd.Parameters.AddWithValue("@Email", email);
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-
-                // ✅ Set session as logged-in
-                Session["UserID"] = userId;
-                Session["Email"] = email;
-                Session["Name"] = name;
-                Session["Role"] = role;
-
-                // ✅ Clean up pending session variables
-                Session.Remove("Pending2FA_Email");
-                Session.Remove("Pending2FA_Name");
-                Session.Remove("Pending2FA_Role");
-                Session.Remove("Pending2FA_UserID");
-                Session.Remove("2FA_Secret");
-
-                // ✅ Redirect to proper dashboard
-                string redirect = "~/Dashboard.aspx";
-                if (role == "SuperAdmin")
-                    redirect = "~/SuperAdminDashboard.aspx";
-                else if (role == "Inspector")
-                    redirect = "~/InspectorDashboard.aspx";
-
-
-                Response.Redirect(redirect);
-            }
-            else
+            if (!isValid)
             {
                 lblMessage.ForeColor = System.Drawing.Color.Red;
                 lblMessage.Text = "❌ Invalid code. Please try again.";
+                return;
+            }
+
+            // Persist the secret & enable flag via stored procedure
+            int userId = Convert.ToInt32(Session["Pending2FA_UserID"]);
+            int rows;
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.sp2FA_Enable", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                cmd.Parameters.Add("@TOTPSecret", SqlDbType.NVarChar, 100).Value = secret;
+                conn.Open();
+
+                // sp returns @@ROWCOUNT AS RowsAffected
+                object o = cmd.ExecuteScalar();
+                rows = (o == null || o == DBNull.Value) ? 0 : Convert.ToInt32(o);
+            }
+
+            if (rows == 0)
+            {
+                lblMessage.Text = "❌ Could not enable 2FA (account not active/available).";
+                return;
+            }
+
+            // Best-effort audit
+            TryAudit(userId, $"{role} {name} enabled 2FA.");
+
+            // Finalize login session now that 2FA is enabled
+            Session["UserID"] = userId;
+            Session["Email"] = email;
+            Session["Name"] = name;
+            Session["Role"] = role;
+            Session["IsAuthenticated"] = true;
+
+            // Cleanup pending state
+            Session.Remove("Pending2FA_Email");
+            Session.Remove("Pending2FA_Name");
+            Session.Remove("Pending2FA_Role");
+            Session.Remove("Pending2FA_UserID");
+            Session.Remove("2FA_Secret");
+
+            // Redirect to appropriate dashboard
+            string redirect = "~/Dashboard.aspx";
+            if (string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase)) redirect = "~/SuperAdminDashboard.aspx";
+            else if (string.Equals(role, "Inspector", StringComparison.OrdinalIgnoreCase)) redirect = "~/InspectorDashboard.aspx";
+
+            Response.Redirect(redirect, false);
+            Context.ApplicationInstance.CompleteRequest();
+        }
+
+        private void TryAudit(int userId, string action)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = userId;
+                    cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action ?? "";
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // swallow — audit is best-effort
             }
         }
     }

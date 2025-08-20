@@ -319,7 +319,7 @@
     </ul>
 </div>
 
-<div class="guide-card section" id="contact"> <h2>4. Contact Information</h2> <p class="footer-note"> For support or inquiries: <b>rrctermiteandpestcontrol@gmail.com</b> </p> </div>
+<div class="guide-card section" id="contact"> <h2>4. Contact Information</h2> <p class="footer-note"> For support or question: <b>edgarjosephbasilan@gmail.com</b> </p> </div>
 
 </div>
 </asp:Content>

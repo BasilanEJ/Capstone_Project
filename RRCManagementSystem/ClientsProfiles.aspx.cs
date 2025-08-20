@@ -22,17 +22,12 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Block SuperAdmin and Inspector
+            // 🔐 Block SuperAdmin and Inspector (kept, as before)
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
-
-            int userId = Convert.ToInt32(Session["UserID"]);
-
-            // 🔐 Check CanView permission for ManageClients
-           
 
             if (!IsPostBack)
             {
@@ -42,23 +37,19 @@ namespace RRCManagementSystem
 
         private void LoadApprovedClients()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClients_ListApproved", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = @"
-            SELECT ClientID, LastName, FirstName, MiddleName, Email, ContactNumber, City, Country
-            FROM Clients
-            WHERE Status = 'Approved'
-            ORDER BY CreatedAt DESC";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter adapter = new SqlDataAdapter(query, conn);
-                DataTable dt = new DataTable();
-                adapter.Fill(dt);
+                var dt = new DataTable();
+                da.Fill(dt);
 
                 gvClients.DataSource = dt;
                 gvClients.DataBind();
             }
         }
-
 
         protected void gvClients_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
@@ -82,44 +73,42 @@ namespace RRCManagementSystem
 
         private void ArchiveClient(int clientId)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClient_UpdateStatus", conn))
             {
-                string updateQuery = "UPDATE Clients SET Status = 'Inactive' WHERE ClientID = @ClientID";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = "Inactive";
 
-                using (SqlCommand cmd = new SqlCommand(updateQuery, conn))
+                try
                 {
-                    cmd.Parameters.AddWithValue("@ClientID", clientId);
+                    conn.Open();
+                    var rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
 
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                        LoadApprovedClients(); // Refresh grid
-                        ShowSweetAlert("Archived", "Client has been archived successfully.", "success");
-                    }
-                    catch (Exception ex)
-                    {
-                        ShowSweetAlert("Error", "Failed to archive client. " + ex.Message, "error");
-                    }
+                    LoadApprovedClients(); // Refresh grid
+                    ShowSweetAlert(rows > 0 ? "Archived" : "Not Found",
+                                   rows > 0 ? "Client has been archived successfully." : "Client not found.",
+                                   rows > 0 ? "success" : "warning");
+                }
+                catch (Exception ex)
+                {
+                    ShowSweetAlert("Error", "Failed to archive client. " + ex.Message, "error");
                 }
             }
-        }   
+        }
 
         private void ShowSweetAlert(string title, string message, string icon)
         {
             string script = $@"
-    <script>
-        Swal.fire({{
-            title: '{title}',
-            text: '{message}',
-            icon: '{icon}',
-            confirmButtonColor: '#007bff'
-        }});
-    </script>";
-
-            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert", script, false);
+<script>
+    Swal.fire({{
+        title: '{title}',
+        text: '{message.Replace("'", "\\'")}',
+        icon: '{icon}',
+        confirmButtonColor: '#007bff'
+    }});
+</script>";
+            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert" + Guid.NewGuid(), script, false);
         }
-
-
     }
 }

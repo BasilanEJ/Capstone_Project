@@ -66,7 +66,7 @@
                             OnClientClick="return confirmUpdate();" OnClick="btnUpdate_Click" />
 
                         <asp:Button ID="btnCancel" runat="server" Text="Cancel" CssClass="btn btn-secondary px-4"
-                            PostBackUrl="~/ADMIN/ViewSupplier.aspx" OnClientClick="return confirmCancel();" />
+                            PostBackUrl="ViewSupplier.aspx" OnClientClick="return confirmCancel();" />
                     </div>
                 </asp:Panel>
             </div>

@@ -19,23 +19,27 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                LoadArchivedAdmins();
+                LoadArchivedAdmins(null);
             }
         }
 
-        private void LoadArchivedAdmins()
+        /* =========================
+           Data binding via SP
+           ========================= */
+        private void LoadArchivedAdmins(string keyword)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdmins_ListArchived", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = @"
-                    SELECT UserID, Name, Email, Role, Status
-                    FROM Users
-                    WHERE Role = 'Admin' AND Status = 'Archived'
-                    ORDER BY UserID;";
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                SqlDataAdapter da = new SqlDataAdapter(query, conn);
-                DataTable dt = new DataTable();
+                if (string.IsNullOrWhiteSpace(keyword))
+                    cmd.Parameters.Add("@Keyword", SqlDbType.NVarChar, 100).Value = DBNull.Value;
+                else
+                    cmd.Parameters.Add("@Keyword", SqlDbType.NVarChar, 100).Value = keyword.Trim();
 
+                var dt = new DataTable();
                 try
                 {
                     da.Fill(dt);
@@ -49,16 +53,32 @@ namespace RRCManagementSystem
             }
         }
 
+        protected void btnSearch_Click(object sender, EventArgs e)
+        {
+            LoadArchivedAdmins(txtSearch.Text);
+        }
+
         protected void gvArchivedAdmins_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (!int.TryParse(e.CommandArgument.ToString(), out int userID))
-                return;
+            // Your JS passes "__doPostBack(gridID, 'RestoreAdmin$<id>')" etc.
+            var parts = (e.CommandArgument ?? "").ToString().Split('$');
+            string cmdName = e.CommandName;
+            string arg = e.CommandArgument?.ToString();
 
-            if (e.CommandName == "RestoreAdmin")
+            // Some setups place both in CommandArgument. Handle both styles safely.
+            if (parts.Length == 2)
+            {
+                cmdName = parts[0];
+                arg = parts[1];
+            }
+
+            if (!int.TryParse(arg, out int userID)) return;
+
+            if (cmdName == "RestoreAdmin")
             {
                 RestoreAdmin(userID);
             }
-            else if (e.CommandName == "DeletePermanently")
+            else if (cmdName == "DeletePermanently")
             {
                 DeleteAdmin(userID);
             }
@@ -66,74 +86,51 @@ namespace RRCManagementSystem
 
         private void RestoreAdmin(int userID)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdmin_Restore", conn))
             {
-                string restoreQuery = @"
-                    UPDATE Users
-                    SET Status = 'Available'
-                    WHERE UserID = @UserID AND Role = 'Admin' AND Status = 'Archived';";
-
-                string reset2FAQuery = @"
-                    UPDATE Users
-                    SET TwoFactorEnabled = 0,
-                        TOTPSecret = NULL
-                    WHERE UserID = @UserID;";
-
-                using (SqlCommand cmdRestore = new SqlCommand(restoreQuery, conn))
-                using (SqlCommand cmdReset2FA = new SqlCommand(reset2FAQuery, conn))
-                {
-                    cmdRestore.Parameters.AddWithValue("@UserID", userID);
-                    cmdReset2FA.Parameters.AddWithValue("@UserID", userID);
-
-                    try
-                    {
-                        conn.Open();
-                        int rows = cmdRestore.ExecuteNonQuery();
-                        if (rows > 0)
-                        {
-                            cmdReset2FA.ExecuteNonQuery(); // 🔐 Force 2FA re-setup
-                            // Go back to ViewAdmin and show success toast there
-                            Response.Redirect("ViewAdmin.aspx?restored=1", false);
-                            Context.ApplicationInstance.CompleteRequest();
-                            return;
-                        }
-                        else
-                        {
-                            lblMessage.Text = "⚠ Admin not found or not in Archived status.";
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = "⚠ Error restoring admin: " + ex.Message;
-                    }
-                }
-            }
-
-            // if we got here, just refresh the list
-            LoadArchivedAdmins();
-        }
-
-        private void DeleteAdmin(int userID)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmdDeletePerms = new SqlCommand("DELETE FROM AdminPermissions WHERE UserID = @UserID;", conn))
-            using (SqlCommand cmdMarkDeleted = new SqlCommand(@"
-                UPDATE Users 
-                SET Status = 'Deleted' 
-                WHERE UserID = @UserID AND Role = 'Admin' AND Status = 'Archived';", conn))
-            {
-                cmdDeletePerms.Parameters.AddWithValue("@UserID", userID);
-                cmdMarkDeleted.Parameters.AddWithValue("@UserID", userID);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userID;
 
                 try
                 {
                     conn.Open();
+                    int rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
 
-                    // Step 1: remove permissions (safe even if none exist)
-                    cmdDeletePerms.ExecuteNonQuery();
+                    if (rows > 0)
+                    {
+                        // Go back to ViewAdmin and show success toast there
+                        Response.Redirect("ViewAdmin.aspx?restored=1", false);
+                        Context.ApplicationInstance.CompleteRequest();
+                        return;
+                    }
+                    else
+                    {
+                        lblMessage.Text = "⚠ Admin not found or not in Archived status.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "⚠ Error restoring admin: " + ex.Message;
+                }
+            }
 
-                    // Step 2: soft-delete user
-                    int rows = cmdMarkDeleted.ExecuteNonQuery();
+            LoadArchivedAdmins(txtSearch.Text);
+        }
+
+        private void DeleteAdmin(int userID)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdmin_DeleteArchived", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userID;
+
+                try
+                {
+                    conn.Open();
+                    int rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+
                     if (rows > 0)
                     {
                         // Go back to ViewAdmin and show success toast there
@@ -152,57 +149,25 @@ namespace RRCManagementSystem
                 }
             }
 
-            // if we got here, just refresh the list
-            LoadArchivedAdmins();
-        }
-
-        protected void btnSearch_Click(object sender, EventArgs e)
-        {
-            string keyword = txtSearch.Text.Trim();
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(@"
-                SELECT UserID, Name, Email, Role, Status
-                FROM Users
-                WHERE Role = 'Admin' AND Status = 'Archived'
-                  AND (Name LIKE @Keyword OR Email LIKE @Keyword)
-                ORDER BY UserID;", conn))
-            {
-                cmd.Parameters.AddWithValue("@Keyword", $"%{keyword}%");
-
-                SqlDataAdapter da = new SqlDataAdapter(cmd);
-                DataTable dt = new DataTable();
-
-                try
-                {
-                    da.Fill(dt);
-                    gvArchivedAdmins.DataSource = dt;
-                    gvArchivedAdmins.DataBind();
-                }
-                catch (Exception ex)
-                {
-                    lblMessage.Text = "⚠ Error during search: " + ex.Message;
-                }
-            }
+            LoadArchivedAdmins(txtSearch.Text);
         }
 
         // Optional: if your GridView uses paging
         protected void gvArchivedAdmins_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
             gvArchivedAdmins.PageIndex = e.NewPageIndex;
-            LoadArchivedAdmins();
+            LoadArchivedAdmins(txtSearch.Text);
         }
 
+        // Keep your event validation registrations
         protected override void Render(System.Web.UI.HtmlTextWriter writer)
         {
-            // Ensure event validation for row commands (Restore/Delete)
             foreach (GridViewRow row in gvArchivedAdmins.Rows)
             {
                 string userId = gvArchivedAdmins.DataKeys[row.RowIndex].Value.ToString();
                 ClientScript.RegisterForEventValidation(gvArchivedAdmins.UniqueID, "RestoreAdmin$" + userId);
                 ClientScript.RegisterForEventValidation(gvArchivedAdmins.UniqueID, "DeletePermanently$" + userId);
             }
-
             base.Render(writer);
         }
     }

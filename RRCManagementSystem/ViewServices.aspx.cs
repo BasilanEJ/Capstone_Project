@@ -9,176 +9,132 @@ namespace RRCManagementSystem
 {
     public partial class ViewServices : Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
             // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
-            {
-                Response.Redirect("~/Login.aspx");
-                return;
-            }
+            { Response.Redirect("~/Login.aspx"); return; }
 
-            string role = Session["Role"].ToString();
-
-            // 🔐 Restrict access
+            string role = Convert.ToString(Session["Role"]);
             if (role == "SuperAdmin" || role == "Inspector")
-            {
-                Response.Redirect("~/Login.aspx");
-                return;
-            }
+            { Response.Redirect("~/Login.aspx"); return; }
 
             int userId = Convert.ToInt32(Session["UserID"]);
-
             if (!HasPermission(userId, "ManageServices", "CanView"))
-            {
-                Response.Redirect("~/Unauthorized.aspx");
-                return;
-            }
+            { Response.Redirect("~/Unauthorized.aspx"); return; }
 
             if (!IsPostBack)
             {
                 ViewState["CanEdit"] = HasPermission(userId, "ManageServices", "CanEdit");
                 ViewState["CanDelete"] = HasPermission(userId, "ManageServices", "CanDelete");
-
                 LoadServices();
             }
         }
 
-        private bool HasPermission(int adminId, string moduleName, string permissionColumn)
+        private bool HasPermission(int adminId, string moduleName, string which)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = $"SELECT {permissionColumn} FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", conn))
                 {
+                    cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@UserID", adminId);
                     cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-
-                    try
-                    {
-                        conn.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && result != DBNull.Value && Convert.ToBoolean(result);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
+                    cmd.Parameters.AddWithValue("@Permission", which);
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && result != DBNull.Value && Convert.ToBoolean(result);
                 }
             }
+            catch { return false; }
         }
 
         private void LoadServices()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                string query = @"
-    SELECT 
-        ServiceID, 
-        Name, 
-        Description
-    FROM Services";
-
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spService_List", conn))
+                using (var da = new SqlDataAdapter(cmd))
                 {
-                    try
-                    {
-                        conn.Open();
-                        SqlDataAdapter da = new SqlDataAdapter(cmd);
-                        DataTable dt = new DataTable();
-                        da.Fill(dt);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    var dt = new DataTable();
+                    da.Fill(dt);
 
-                        // Optional: for display only
+                    // Optional formatted ID
+                    if (!dt.Columns.Contains("FormattedServiceID"))
                         dt.Columns.Add("FormattedServiceID", typeof(string));
-                        foreach (DataRow row in dt.Rows)
-                        {
-                            int id = Convert.ToInt32(row["ServiceID"]);
-                            row["FormattedServiceID"] = "Service" + id.ToString("D3");
-                        }
+                    foreach (DataRow row in dt.Rows)
+                        row["FormattedServiceID"] = "Service" + ((int)row["ServiceID"]).ToString("D3");
 
-                        gvServices.DataSource = dt;
-                        gvServices.DataBind();
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = "⚠ Error loading services: " + ex.Message;
-                        lblMessage.Visible = true;
-                    }
+                    gvServices.DataSource = dt;
+                    gvServices.DataBind();
+
+                    lblMessage.Text = "";
+                    lblMessage.Visible = false;
                 }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "⚠ Error loading services: " + ex.Message;
+                lblMessage.Visible = true;
             }
         }
 
         protected void gvServices_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (e.CommandName == "EditService" || e.CommandName == "DeleteService")
+            // Expect CommandArgument to be ServiceID
+            if (!int.TryParse(Convert.ToString(e.CommandArgument), out int serviceId))
+                return;
+
+            if (e.CommandName == "EditService" && Convert.ToBoolean(ViewState["CanEdit"]))
             {
-                int serviceId;
-                if (!int.TryParse(e.CommandArgument.ToString(), out serviceId))
-                    return;
+                Response.Redirect($"EditServices.aspx?ServiceID={serviceId}");
+                return;
+            }
 
-                if (e.CommandName == "EditService")
+            if (e.CommandName == "DeleteService" && Convert.ToBoolean(ViewState["CanDelete"]))
+            {
+                try
                 {
-                    Response.Redirect($"EditServices.aspx?ServiceID={serviceId}");
-                }
-                else if (e.CommandName == "DeleteService")
-                {
-                    try
+                    int affected = 0;
+                    using (var conn = new SqlConnection(connectionString))
+                    using (var cmd = new SqlCommand("dbo.spService_Delete", conn))
                     {
-                        using (SqlConnection conn = new SqlConnection(connectionString))
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@ServiceID", serviceId);
+                        conn.Open();
+                        using (var rdr = cmd.ExecuteReader())
                         {
-                            conn.Open();
-                            SqlCommand cmd = new SqlCommand("DELETE FROM Services WHERE ServiceID = @ServiceID", conn);
-                            cmd.Parameters.AddWithValue("@ServiceID", serviceId);
-                            int rowsAffected = cmd.ExecuteNonQuery();
-
-                            if (rowsAffected > 0)
-                            {
-                                LoadServices();
-
-                                // ✅ SweetAlert success feedback
-                                string script = @"Swal.fire({
-                                    icon: 'success',
-                                    title: 'Deleted!',
-                                    text: 'Service has been deleted.',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                });";
-
-                                ClientScript.RegisterStartupScript(this.GetType(), "deleteSuccess", script, true);
-                            }
-                            else
-                            {
-                                lblMessage.Text = "⚠ Service not found.";
-                                lblMessage.Visible = true;
-                            }
+                            if (rdr.Read())
+                                affected = Convert.ToInt32(rdr["Affected"]);
                         }
                     }
-                    catch (Exception ex)
+
+                    if (affected > 0)
                     {
-                        lblMessage.Text = "⚠ Error deleting service: " + ex.Message;
+                        LoadServices();
+                        // SweetAlert success
+                        ClientScript.RegisterStartupScript(GetType(), "delok", @"
+Swal.fire({ icon:'success', title:'Deleted!', text:'Service has been deleted.', timer:2000, showConfirmButton:false });
+", true);
+                    }
+                    else
+                    {
+                        lblMessage.Text = "⚠ Service not found.";
                         lblMessage.Visible = true;
                     }
                 }
-            }
-        }
-
-        // ✅ Register each dynamic postback key for SweetAlert
-        protected override void Render(HtmlTextWriter writer)
-        {
-            foreach (GridViewRow row in gvServices.Rows)
-            {
-                if (row.RowType == DataControlRowType.DataRow)
+                catch (Exception ex)
                 {
-                    string serviceId = gvServices.DataKeys[row.RowIndex].Value.ToString();
-                    ClientScript.RegisterForEventValidation(gvServices.UniqueID, "DeleteService$" + serviceId);
+                    lblMessage.Text = "⚠ Error deleting service: " + ex.Message;
+                    lblMessage.Visible = true;
                 }
             }
-
-            base.Render(writer);
         }
     }
 }

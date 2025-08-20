@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 
 namespace RRCManagementSystem
@@ -8,11 +9,11 @@ namespace RRCManagementSystem
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
         private string token;
-        private string email;
 
         protected void Page_Load(object sender, EventArgs e)
         {
             token = Request.QueryString["token"];
+
             if (!IsPostBack)
             {
                 if (string.IsNullOrEmpty(token))
@@ -22,24 +23,38 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                using (SqlConnection con = new SqlConnection(connectionString))
+                // ✅ Validate token via stored procedure
+                string emailFromToken = GetEmailByValidToken(token);
+                if (!string.IsNullOrEmpty(emailFromToken))
                 {
-                    string query = "SELECT Email FROM Clients WHERE ResetToken = @Token AND ResetTokenExpiry > GETDATE()";
-                    SqlCommand cmd = new SqlCommand(query, con);
-                    cmd.Parameters.AddWithValue("@Token", token);
-                    con.Open();
+                    ViewState["ClientEmail"] = emailFromToken;
+                }
+                else
+                {
+                    ShowSweetAlert("Link Expired", "Reset token is invalid or has expired.", "warning", false);
+                    btnResetPassword.Enabled = false;
+                }
+            }
+        }
 
+        private string GetEmailByValidToken(string resetToken)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClient_ResetToken_Validate", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Token", SqlDbType.NVarChar, 200).Value = resetToken;
+
+                try
+                {
+                    con.Open();
                     object result = cmd.ExecuteScalar();
-                    if (result != null)
-                    {
-                        email = result.ToString();
-                        ViewState["ClientEmail"] = email;
-                    }
-                    else
-                    {
-                        ShowSweetAlert("Link Expired", "Reset token is invalid or has expired.", "warning", false);
-                        btnResetPassword.Enabled = false;
-                    }
+                    return result?.ToString();
+                }
+                catch (Exception ex)
+                {
+                    ShowSweetAlert("Server Error", "Error validating token: " + ex.Message, "error", true);
+                    return null;
                 }
             }
         }
@@ -54,7 +69,6 @@ namespace RRCManagementSystem
                 ShowSweetAlert("Missing Fields", "Please enter and confirm your new password.", "info", true);
                 return;
             }
-
             if (newPassword != confirmPassword)
             {
                 ShowSweetAlert("Mismatch", "Passwords do not match.", "error", true);
@@ -68,37 +82,37 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // ✅ Hash password (your existing Argon2 helper)
             string hashedPassword = PasswordHelper.HashPassword(newPassword);
 
-            using (SqlConnection con = new SqlConnection(connectionString))
+            int rows = 0;
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spClient_ResetPassword", con))
             {
-                string query = @"
-UPDATE Clients
-SET PasswordHash = @PasswordHash, ResetToken = NULL, ResetTokenExpiry = NULL, Status = 'Approved'
-WHERE Email = @Email;";
-
-                SqlCommand cmd = new SqlCommand(query, con);
-                cmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
-                cmd.Parameters.AddWithValue("@Email", email);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
+                cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, 256).Value = hashedPassword;
 
                 try
                 {
                     con.Open();
-                    int rowsAffected = cmd.ExecuteNonQuery();
-
-                    if (rowsAffected > 0)
-                    {
-                        ShowSweetAlert("Success", "Password has been set! You may now log in.", "success", true, "Login.aspx");
-                    }
-                    else
-                    {
-                        ShowSweetAlert("Failed", "Could not reset password. Try again later.", "error", true);
-                    }
+                    object o = cmd.ExecuteScalar();
+                    rows = (o == null || o == DBNull.Value) ? 0 : Convert.ToInt32(o);
                 }
                 catch (Exception ex)
                 {
                     ShowSweetAlert("Server Error", "Error: " + ex.Message, "error", true);
+                    return;
                 }
+            }
+
+            if (rows > 0)
+            {
+                ShowSweetAlert("Success", "Password has been set! You may now log in.", "success", true, "Login.aspx");
+            }
+            else
+            {
+                ShowSweetAlert("Failed", "Could not reset password. Try again later.", "error", true);
             }
         }
 

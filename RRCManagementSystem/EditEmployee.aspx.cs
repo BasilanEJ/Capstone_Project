@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Web.UI;
@@ -19,7 +20,6 @@ namespace RRCManagementSystem
             }
 
             string role = Session["Role"].ToString();
-
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -38,7 +38,7 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                if (Request.QueryString["EmployeeID"] != null && int.TryParse(Request.QueryString["EmployeeID"], out int employeeID))
+                if (int.TryParse(Request.QueryString["EmployeeID"], out int employeeID))
                 {
                     LoadEmployeeData(employeeID);
                 }
@@ -50,44 +50,33 @@ namespace RRCManagementSystem
             }
         }
 
-        private bool HasEditPermission(int adminId, string moduleName)
+        private bool HasEditPermission(int userId, string moduleName)
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
             {
-                string query = "SELECT CanEdit FROM AdminPermissions WHERE UserID = @UserID AND ModuleName = @ModuleName";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+                cmd.Parameters.Add("@Permission", SqlDbType.NVarChar, 10).Value = "CanEdit";
 
-                using (SqlCommand cmd = new SqlCommand(query, con))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", adminId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-
-                    try
-                    {
-                        con.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && Convert.ToBoolean(result);
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = $"❌ Permission check failed: {ex.Message}";
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                        return false;
-                    }
-                }
+                con.Open();
+                object result = cmd.ExecuteScalar();
+                return result != null && Convert.ToBoolean(result);
             }
         }
 
         private void LoadEmployeeData(int employeeID)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spEmployee_GetById", conn))
             {
-                string query = "SELECT LastName, FirstName, MiddleName, Email, Phone, Position, Status, ProfileImage FROM Employees WHERE EmployeeID = @EmployeeID";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@EmployeeID", employeeID);
-                    conn.Open();
-                    SqlDataReader reader = cmd.ExecuteReader();
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeID;
 
+                conn.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
                     if (reader.Read())
                     {
                         txtLastName.Text = reader["LastName"].ToString();
@@ -105,7 +94,11 @@ namespace RRCManagementSystem
                             imgProfilePreview.Visible = true;
                         }
                     }
-                    reader.Close();
+                    else
+                    {
+                        lblMessage.Text = "❌ Employee not found.";
+                        lblMessage.ForeColor = System.Drawing.Color.Red;
+                    }
                 }
             }
         }
@@ -113,7 +106,6 @@ namespace RRCManagementSystem
         protected void btnSave_Click(object sender, EventArgs e)
         {
             int adminId = Convert.ToInt32(Session["UserID"]);
-
             if (!HasEditPermission(adminId, "ManageEmployees"))
             {
                 lblMessage.Text = "❌ You do not have permission to edit employees.";
@@ -121,15 +113,14 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string lastName = txtLastName.Text.Trim();
-            string firstName = txtFirstName.Text.Trim();
-            string middleName = txtMiddleName.Text.Trim();
-            string email = txtEmail.Text.Trim();
-            string phone = txtPhone.Text.Trim();
-            string position = ddlPosition.SelectedValue;
-            string status = ddlStatus.SelectedValue;
-            string profileImagePath = imgProfilePreview.ImageUrl;
+            if (!int.TryParse(Request.QueryString["EmployeeID"], out int employeeID))
+            {
+                lblMessage.Text = "❌ Invalid Employee ID.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return;
+            }
 
+            string phone = txtPhone.Text.Trim();
             if (phone.Length != 11 || !System.Text.RegularExpressions.Regex.IsMatch(phone, @"^\d{11}$"))
             {
                 lblMessage.Text = "⚠ Please enter a valid 11-digit phone number.";
@@ -137,87 +128,59 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // upload (optional)
+            string profileImagePath = imgProfilePreview.ImageUrl;
             if (fuProfilePicture.HasFile)
             {
-                string fileExtension = Path.GetExtension(fuProfilePicture.FileName).ToLower();
-                string[] allowedExtensions = { ".jpg", ".jpeg", ".png" };
-
-                if (!Array.Exists(allowedExtensions, ext => ext == fileExtension))
+                string[] allowed = { ".jpg", ".jpeg", ".png" };
+                string ext = Path.GetExtension(fuProfilePicture.FileName)?.ToLowerInvariant();
+                if (Array.IndexOf(allowed, ext) < 0)
                 {
                     lblMessage.Text = "⚠ Only JPG, JPEG, and PNG files are allowed.";
                     lblMessage.ForeColor = System.Drawing.Color.Red;
                     return;
                 }
 
-                string fileName = Guid.NewGuid().ToString() + fileExtension;
-                string folderPath = Server.MapPath("~/uploads/");
-                string fullPath = Path.Combine(folderPath, fileName);
-
-                if (!Directory.Exists(folderPath))
-                {
-                    Directory.CreateDirectory(folderPath);
-                }
-
+                string fileName = Guid.NewGuid() + ext;
+                string folder = Server.MapPath("~/uploads/");
+                Directory.CreateDirectory(folder);
+                string fullPath = Path.Combine(folder, fileName);
                 fuProfilePicture.SaveAs(fullPath);
+
                 profileImagePath = "~/uploads/" + fileName;
             }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spEmployee_Update", conn))
             {
-                string updateQuery = @"
-                    UPDATE Employees 
-                    SET LastName = @LastName, FirstName = @FirstName, MiddleName = @MiddleName,
-                        Email = @Email, Phone = @Phone, 
-                        Position = @Position, Status = @Status, ProfileImage = @ProfileImage
-                    WHERE EmployeeID = @EmployeeID";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeID;
+                cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = txtLastName.Text.Trim();
+                cmd.Parameters.Add("@FirstName", SqlDbType.NVarChar, 100).Value = txtFirstName.Text.Trim();
+                cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(txtMiddleName.Text) ? (object)DBNull.Value : txtMiddleName.Text.Trim();
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = txtEmail.Text.Trim();
+                cmd.Parameters.Add("@Phone", SqlDbType.NVarChar, 15).Value = phone;
+                cmd.Parameters.Add("@Position", SqlDbType.NVarChar, 50).Value = ddlPosition.SelectedValue;
+                cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 20).Value = ddlStatus.SelectedValue;
+                cmd.Parameters.Add("@ProfileImage", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(profileImagePath) ? (object)DBNull.Value : profileImagePath;
 
-                using (SqlCommand cmd = new SqlCommand(updateQuery, conn))
+                conn.Open();
+                int rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+
+                // audit
+                using (var audit = new SqlCommand("dbo.spAudit_Insert", conn))
                 {
-                    string employeeID = Request.QueryString["EmployeeID"];
-
-                    cmd.Parameters.AddWithValue("@EmployeeID", employeeID);
-                    cmd.Parameters.AddWithValue("@LastName", lastName);
-                    cmd.Parameters.AddWithValue("@FirstName", firstName);
-                    cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName);
-                    cmd.Parameters.AddWithValue("@Email", email);
-                    cmd.Parameters.AddWithValue("@Phone", phone);
-                    cmd.Parameters.AddWithValue("@Position", position);
-                    cmd.Parameters.AddWithValue("@Status", status);
-                    cmd.Parameters.AddWithValue("@ProfileImage", profileImagePath);
-
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-
-                    string fullName = $"{lastName}, {firstName}" + (string.IsNullOrWhiteSpace(middleName) ? "" : $" {middleName}");
-                    AddAuditLog(adminId, $"Updated employee (ID: {employeeID}) - Name: {fullName}, Position: {position}, Status: {status}");
+                    audit.CommandType = CommandType.StoredProcedure;
+                    audit.Parameters.Add("@AdminID", SqlDbType.Int).Value = adminId;
+                    string fullName = $"{txtLastName.Text.Trim()}, {txtFirstName.Text.Trim()}" +
+                                      (string.IsNullOrWhiteSpace(txtMiddleName.Text) ? "" : $" {txtMiddleName.Text.Trim()}");
+                    audit.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value =
+                        $"Updated employee (ID: {employeeID}) - Name: {fullName}, Position: {ddlPosition.SelectedValue}, Status: {ddlStatus.SelectedValue}";
+                    audit.ExecuteNonQuery();
                 }
-            }
 
-            lblMessage.Text = "✅ Employee updated successfully!";
-            lblMessage.ForeColor = System.Drawing.Color.Green;
-        }
-
-        private void AddAuditLog(int? userID, string action)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // Silent fail
-                    }
-                }
+                lblMessage.Text = rows > 0 ? "✅ Employee updated successfully!" : "⚠ No changes saved.";
+                lblMessage.ForeColor = rows > 0 ? System.Drawing.Color.Green : System.Drawing.Color.OrangeRed;
             }
         }
     }

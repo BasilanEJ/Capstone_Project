@@ -13,13 +13,11 @@ namespace RRCManagementSystem
 
         protected void Page_Init(object sender, EventArgs e)
         {
-            // Safety: if markup ever uses CommandName="Delete", cancel built-in delete
             gvArchivedEmployees.RowDeleting += gvArchivedEmployees_RowDeleting;
         }
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // prevent stale cache
             Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
@@ -40,18 +38,13 @@ namespace RRCManagementSystem
 
         private void LoadArchivedEmployees()
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spEmployees_ListArchived", con))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                // Show all Inactive (case/space-insensitive)
-                string query = @"
-                    SELECT EmployeeID, LastName, FirstName, MiddleName, Position, Status
-                    FROM Employees
-                    WHERE UPPER(LTRIM(RTRIM(Status))) = 'INACTIVE'
-                    ORDER BY EmployeeID;";
-
-                SqlDataAdapter adapter = new SqlDataAdapter(query, con);
-                DataTable dt = new DataTable();
-                adapter.Fill(dt);
+                cmd.CommandType = CommandType.StoredProcedure;
+                var dt = new DataTable();
+                da.Fill(dt);
 
                 gvArchivedEmployees.DataSource = dt;
                 gvArchivedEmployees.DataBind();
@@ -66,16 +59,13 @@ namespace RRCManagementSystem
             if (e.CommandName == "Restore")
             {
                 RestoreEmployee(employeeID);
-                LoadArchivedEmployees();
-                Toast("success", "Restored!", "Employee has been restored successfully.", 1500);
             }
-            else if (e.CommandName == "DeleteEmp") // hard delete
+            else if (e.CommandName == "DeleteEmp")
             {
                 TryHardDelete(employeeID);
             }
         }
 
-        // If built-in Delete ever fires, cancel and run hard delete
         private void gvArchivedEmployees_RowDeleting(object sender, GridViewDeleteEventArgs e)
         {
             e.Cancel = true;
@@ -87,17 +77,48 @@ namespace RRCManagementSystem
             TryHardDelete(employeeID);
         }
 
+        private void RestoreEmployee(int employeeID)
+        {
+            try
+            {
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spEmployee_Restore", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeID;
+
+                    con.Open();
+                    var rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+                }
+
+                LoadArchivedEmployees();
+                Toast("success", "Restored!", "Employee has been restored successfully.", 1500);
+            }
+            catch (Exception ex)
+            {
+                Toast("error", "Error", $"Restore failed: {ex.Message}", 0);
+            }
+        }
+
         private void TryHardDelete(int employeeID)
         {
             try
             {
-                HardDeleteEmployee(employeeID);
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spEmployee_HardDelete", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeID;
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
                 LoadArchivedEmployees();
                 Toast("success", "Deleted!", "Employee has been permanently removed.", 1500);
             }
             catch (SqlException ex)
             {
-                // FK/constraint issues etc.
                 Toast("error", "Cannot Delete", $"Delete failed: {ex.Message}", 0);
             }
             catch (Exception ex)
@@ -106,65 +127,8 @@ namespace RRCManagementSystem
             }
         }
 
-        private void RestoreEmployee(int employeeID)
-        {
-            using (SqlConnection con = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(
-                "UPDATE Employees SET Status = 'Active' WHERE EmployeeID = @EmployeeID", con))
-            {
-                cmd.Parameters.AddWithValue("@EmployeeID", employeeID);
-                con.Open();
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        // 🔥 HARD DELETE: remove dependents first, then the employee (transactional)
-        private void HardDeleteEmployee(int employeeID)
-        {
-            using (SqlConnection con = new SqlConnection(connectionString))
-            {
-                con.Open();
-                using (SqlTransaction tx = con.BeginTransaction())
-                {
-                    try
-                    {
-                        // 1) Delete child rows referencing Employees.EmployeeID
-                        using (SqlCommand cmd = new SqlCommand(
-                            "DELETE FROM TeamMembers WHERE EmployeeID = @EmployeeID", con, tx))
-                        {
-                            cmd.Parameters.AddWithValue("@EmployeeID", employeeID);
-                            cmd.ExecuteNonQuery();
-                        }
-
-                        // TODO: if other tables reference Employees, delete them here too:
-                        // Example:
-                        // using (SqlCommand cmd = new SqlCommand(
-                        //     "DELETE FROM SomeOtherTable WHERE EmployeeID = @EmployeeID", con, tx)) { ... }
-
-                        // 2) Delete the employee row
-                        using (SqlCommand cmd = new SqlCommand(
-                            "DELETE FROM Employees WHERE EmployeeID = @EmployeeID", con, tx))
-                        {
-                            cmd.Parameters.AddWithValue("@EmployeeID", employeeID);
-                            int rows = cmd.ExecuteNonQuery();
-                            if (rows == 0)
-                                throw new InvalidOperationException("Employee not found.");
-                        }
-
-                        tx.Commit();
-                    }
-                    catch
-                    {
-                        tx.Rollback();
-                        throw;
-                    }
-                }
-            }
-        }
-
         private void Toast(string icon, string title, string text, int timerMs = 2000)
         {
-            // timerMs = 0 -> show confirm button (no auto close)
             string extra = timerMs > 0 ? $"showConfirmButton:false, timer:{timerMs}" : "showConfirmButton:true";
             string script = $@"Swal.fire({{
                 icon: '{icon}',
@@ -175,7 +139,6 @@ namespace RRCManagementSystem
             ClientScript.RegisterStartupScript(this.GetType(), Guid.NewGuid().ToString(), script, true);
         }
 
-        // Allow our custom __doPostBack commands
         protected override void Render(HtmlTextWriter writer)
         {
             foreach (GridViewRow row in gvArchivedEmployees.Rows)
@@ -186,11 +149,9 @@ namespace RRCManagementSystem
 
                     ClientScript.RegisterForEventValidation(gvArchivedEmployees.UniqueID, "Restore$" + employeeId);
                     ClientScript.RegisterForEventValidation(gvArchivedEmployees.UniqueID, "DeleteEmp$" + employeeId);
-                    // In case built-in Delete is ever used again:
                     ClientScript.RegisterForEventValidation(gvArchivedEmployees.UniqueID, "Delete$" + employeeId);
                 }
             }
-
             base.Render(writer);
         }
     }

@@ -1,23 +1,21 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 
 namespace RRCManagementSystem
 {
     public partial class EditSupplier : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString =
+            ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         private int SupplierID
         {
             get
             {
-                int id = 0;
-                if (Request.QueryString["SupplierID"] != null)
-                {
-                    int.TryParse(Request.QueryString["SupplierID"], out id);
-                }
-                return id;
+                int id;
+                return int.TryParse(Request.QueryString["SupplierID"], out id) ? id : 0;
             }
         }
 
@@ -26,22 +24,17 @@ namespace RRCManagementSystem
             // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
-                Response.Redirect("~/Login.aspx");
-                return;
+                Response.Redirect("~/Login.aspx"); return;
             }
 
-            string role = Session["Role"].ToString();
-
-            // 🔐 Deny SuperAdmin and Inspector
+            string role = Convert.ToString(Session["Role"]);
+            // 🔐 Block roles per your rules
             if (role == "SuperAdmin" || role == "Inspector")
             {
-                Response.Redirect("~/Login.aspx");
-                return;
+                Response.Redirect("~/Login.aspx"); return;
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
-
-            // 🔐 Check Edit Permission
             if (!HasEditPermission(userId, "ManageSupplier"))
             {
                 lblMessage.Text = "❌ You do not have permission to edit suppliers.";
@@ -53,14 +46,14 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                ddlStatus.Items.Insert(0, new System.Web.UI.WebControls.ListItem("Select Status", ""));
-                ddlBusinessType.Items.Insert(0, new System.Web.UI.WebControls.ListItem("Select Business Type", ""));
-
+                // Optional default entries
+                if (ddlStatus.Items.Count == 0)
+                    ddlStatus.Items.Insert(0, new System.Web.UI.WebControls.ListItem("Select Status", ""));
+                if (ddlBusinessType.Items.Count == 0)
+                    ddlBusinessType.Items.Insert(0, new System.Web.UI.WebControls.ListItem("Select Business Type", ""));
 
                 if (SupplierID > 0)
-                {
                     LoadSupplierDetails(SupplierID);
-                }
                 else
                 {
                     lblMessage.Text = "⚠ No supplier selected.";
@@ -70,43 +63,54 @@ namespace RRCManagementSystem
             }
         }
 
+        private bool HasEditPermission(int adminId, string moduleName)
+        {
+            try
+            {
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@UserID", adminId);
+                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.Parameters.AddWithValue("@Permission", "CanEdit");
+                    con.Open();
+                    var result = cmd.ExecuteScalar();
+                    return result != null && result != DBNull.Value && Convert.ToBoolean(result);
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         private void LoadSupplierDetails(int supplierID)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spSupplier_GetById", con))
             {
-                string query = @"SELECT Name, CompanyName, BusinessType, Address, ContactNumber, Email, Status
-                                 FROM Supplier WHERE SupplierID = @SupplierID";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@SupplierID", supplierID);
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                con.Open();
+                using (var rdr = cmd.ExecuteReader())
                 {
-                    cmd.Parameters.AddWithValue("@SupplierID", supplierID);
-
-                    try
+                    if (rdr.Read())
                     {
-                        conn.Open();
-                        SqlDataReader reader = cmd.ExecuteReader();
-
-                        if (reader.Read())
-                        {
-                            txtName.Text = reader["Name"].ToString();
-                            txtCompanyName.Text = reader["CompanyName"].ToString();
-                            ddlBusinessType.SelectedValue = reader["BusinessType"].ToString();
-                            txtAddress.Text = reader["Address"].ToString();
-                            txtContactNumber.Text = reader["ContactNumber"].ToString();
-                            txtEmail.Text = reader["Email"].ToString();
-                            ddlStatus.SelectedValue = reader["Status"].ToString();
-                        }
-                        else
-                        {
-                            lblMessage.Text = "⚠ Supplier not found.";
-                            pnlEditSupplier.Visible = false;
-                        }
+                        txtName.Text = Convert.ToString(rdr["Name"]);
+                        txtCompanyName.Text = rdr["CompanyName"] as string ?? "";
+                        ddlBusinessType.SelectedValue = rdr["BusinessType"] as string ?? "";
+                        txtAddress.Text = Convert.ToString(rdr["Address"]);
+                        txtContactNumber.Text = Convert.ToString(rdr["ContactNumber"]);
+                        txtEmail.Text = rdr["Email"] as string ?? "";
+                        ddlStatus.SelectedValue = rdr["Status"] as string ?? "";
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        lblMessage.Text = "⚠ Error loading supplier: " + ex.Message;
+                        lblMessage.Text = "⚠ Supplier not found.";
                         lblMessage.ForeColor = System.Drawing.Color.Red;
+                        pnlEditSupplier.Visible = false;
                     }
                 }
             }
@@ -114,138 +118,72 @@ namespace RRCManagementSystem
 
         protected void btnUpdate_Click(object sender, EventArgs e)
         {
-            if (Session["UserID"] == null)
+            if (SupplierID <= 0)
             {
-                Response.Redirect("~/Login.aspx");
+                lblMessage.Text = "⚠ Invalid Supplier ID.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
                 return;
             }
 
             int adminId = Convert.ToInt32(Session["UserID"]);
 
-            if (!HasEditPermission(adminId, "ManageSupplier"))
-            {
-                lblMessage.Text = "❌ You do not have permission to update suppliers.";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
-                btnUpdate.Enabled = false;
-                return;
-            }
-
             string name = txtName.Text.Trim();
             string companyName = txtCompanyName.Text.Trim();
             string businessType = ddlBusinessType.SelectedValue;
             string address = txtAddress.Text.Trim();
-            string contactNumber = txtContactNumber.Text.Trim();
+            string contact = txtContactNumber.Text.Trim();
             string email = txtEmail.Text.Trim();
             string status = ddlStatus.SelectedValue;
 
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(address) || string.IsNullOrEmpty(contactNumber))
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(address) || string.IsNullOrEmpty(contact))
             {
                 lblMessage.Text = "⚠ Please fill in all required fields (marked with *).";
                 lblMessage.ForeColor = System.Drawing.Color.Red;
                 return;
             }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            int affected = 0;
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spSupplier_Update", con))
             {
-                string query = @"
-                UPDATE Supplier
-                SET Name = @Name,
-                    CompanyName = @CompanyName,
-                    BusinessType = @BusinessType,
-                    Address = @Address,
-                    ContactNumber = @ContactNumber,
-                    Email = @Email,
-                    Status = @Status
-                WHERE SupplierID = @SupplierID";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@SupplierID", SupplierID);
+                cmd.Parameters.AddWithValue("@Name", name);
+                cmd.Parameters.AddWithValue("@CompanyName", (object)companyName ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@BusinessType", (object)businessType ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Address", address);
+                cmd.Parameters.AddWithValue("@ContactNumber", contact);
+                cmd.Parameters.AddWithValue("@Email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email);
+                cmd.Parameters.AddWithValue("@Status", string.IsNullOrWhiteSpace(status) ? (object)DBNull.Value : status);
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                con.Open();
+                using (var rdr = cmd.ExecuteReader())
                 {
-                    cmd.Parameters.AddWithValue("@SupplierID", SupplierID);
-                    cmd.Parameters.AddWithValue("@Name", name);
-                    cmd.Parameters.AddWithValue("@CompanyName", string.IsNullOrEmpty(companyName) ? (object)DBNull.Value : companyName);
-                    cmd.Parameters.AddWithValue("@BusinessType", string.IsNullOrEmpty(businessType) ? (object)DBNull.Value : businessType);
-                    cmd.Parameters.AddWithValue("@Address", address);
-                    cmd.Parameters.AddWithValue("@ContactNumber", contactNumber);
-                    cmd.Parameters.AddWithValue("@Email", string.IsNullOrEmpty(email) ? (object)DBNull.Value : email);
-                    cmd.Parameters.AddWithValue("@Status", string.IsNullOrEmpty(status) ? (object)DBNull.Value : status);
-
-                    try
-                    {
-                        conn.Open();
-                        int rowsAffected = cmd.ExecuteNonQuery();
-
-                        lblMessage.Text = rowsAffected > 0
-                            ? "✅ Supplier updated successfully!"
-                            : "⚠ No changes were made or supplier not found.";
-
-                        lblMessage.ForeColor = rowsAffected > 0
-                            ? System.Drawing.Color.Green
-                            : System.Drawing.Color.Red;
-
-                        // ✅ Audit Log
-                        if (rowsAffected > 0)
-                        {
-                            AddAuditLog(adminId, $"Edited supplier (ID: {SupplierID}) - Name: {name}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = "⚠ Error updating supplier: " + ex.Message;
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                    }
+                    if (rdr.Read())
+                        affected = Convert.ToInt32(rdr["Affected"]);
                 }
             }
-        }
 
-        private bool HasEditPermission(int adminId, string moduleName)
-        {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            if (affected == 1)
             {
-                string query = "SELECT CanEdit FROM AdminPermissions WHERE UserID = @AdminID AND ModuleName = @ModuleName";
-
-                using (SqlCommand cmd = new SqlCommand(query, con))
+                // Audit
+                using (var con = new SqlConnection(connectionString))
+                using (var a = new SqlCommand("dbo.spAudit_Insert", con))
                 {
-                    cmd.Parameters.AddWithValue("@AdminID", adminId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-
-                    try
-                    {
-                        con.Open();
-                        object result = cmd.ExecuteScalar();
-                        return result != null && Convert.ToBoolean(result);
-                    }
-                    catch (Exception ex)
-                    {
-                        lblMessage.Text = $"❌ Error checking permissions: {ex.Message}";
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                        return false;
-                    }
+                    a.CommandType = CommandType.StoredProcedure;
+                    a.Parameters.AddWithValue("@AdminID", (object)adminId ?? DBNull.Value);
+                    a.Parameters.AddWithValue("@Action", $"Edited supplier (ID: {SupplierID}) - Name: {name}");
+                    con.Open();
+                    a.ExecuteNonQuery();
                 }
+
+                lblMessage.Text = "✅ Supplier updated successfully!";
+                lblMessage.ForeColor = System.Drawing.Color.Green;
             }
-        }
-
-        // ✅ Audit Log Method
-        private void AddAuditLog(int? userID, string action)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            else
             {
-                string query = "INSERT INTO AuditLogs (AdminID, Action, Timestamp) VALUES (@AdminID, @Action, GETDATE())";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@AdminID", (object)userID ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Action", action);
-
-                    try
-                    {
-                        conn.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                    catch
-                    {
-                        // Optional: log error or ignore silently
-                    }
-                }
+                lblMessage.Text = "⚠ No changes were made or supplier not found.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
             }
         }
     }

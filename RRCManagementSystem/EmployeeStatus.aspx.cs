@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Data.SqlClient;
 using System.Data;
-using System.Linq;
-using System.Web;
+using System.Data.SqlClient;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
-	public partial class EmployeeStatus : System.Web.UI.Page
-	{
+    public partial class EmployeeStatus : System.Web.UI.Page
+    {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
@@ -32,75 +29,51 @@ namespace RRCManagementSystem
                 return;
             }
 
-            int userId = Convert.ToInt32(Session["UserID"]);
-
-            // 🔐 Check CanView permission for ManageEmployees
-         
             if (!IsPostBack)
             {
-                    // Populate status filter dropdown
-                    ddlStatus.Items.Clear();
-                    ddlStatus.Items.Add(new ListItem("-- Select Status --", ""));
-                    ddlStatus.Items.Add(new ListItem("Active", "Active"));
-                    ddlStatus.Items.Add(new ListItem("Inactive", "Inactive"));
+                // status filter
+                ddlStatus.Items.Clear();
+                ddlStatus.Items.Add(new ListItem("-- Select Status --", ""));
+                ddlStatus.Items.Add(new ListItem("Active", "Active"));
+                ddlStatus.Items.Add(new ListItem("Inactive", "Inactive"));
 
-                    // Optionally call data load
-                    LoadEmployees();
-                }
+                LoadEmployees(); // all
             }
+        }
 
-        // Load Employees based on Status
+        // Load Employees (via SP)
         private void LoadEmployees(string status = "")
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spEmployees_ListByStatus", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                string query = @"
-            SELECT 
-                EmployeeID,
-                (LastName + ', ' + FirstName + ' ' + ISNULL(MiddleName, '')) AS FullName,
-                Email,
-                Phone,
-                Position,
-                Status
-            FROM Employees";
+                cmd.CommandType = CommandType.StoredProcedure;
+                // pass NULL to return all
+                if (string.IsNullOrWhiteSpace(status))
+                    cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 20).Value = DBNull.Value;
+                else
+                    cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 20).Value = status;
 
-                if (!string.IsNullOrEmpty(status))
-                {
-                    query += " WHERE Status = @Status";
-                }
+                var dt = new DataTable();
+                da.Fill(dt);
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    if (!string.IsNullOrEmpty(status))
-                    {
-                        cmd.Parameters.AddWithValue("@Status", status);
-                    }
-
-                    using (SqlDataAdapter sda = new SqlDataAdapter(cmd))
-                    {
-                        DataTable dt = new DataTable();
-                        sda.Fill(dt);
-
-                        gvEmployees.DataSource = dt;
-                        gvEmployees.DataBind();
-                    }
-                }
+                gvEmployees.DataSource = dt;
+                gvEmployees.DataBind();
             }
         }
 
-
-        // Filter Employees when Status is changed
+        // Filter Employees when Status changes
         protected void ddlStatus_SelectedIndexChanged(object sender, EventArgs e)
         {
-            string selectedStatus = ddlStatus.SelectedValue;
-            LoadEmployees(selectedStatus);
+            LoadEmployees(ddlStatus.SelectedValue);
         }
 
-        // Handle Pagination
+        // Pagination (keep current filter)
         protected void gvEmployees_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
             gvEmployees.PageIndex = e.NewPageIndex;
-            LoadEmployees(ddlStatus.SelectedValue); // Maintain current filter
+            LoadEmployees(ddlStatus.SelectedValue);
         }
     }
 }

@@ -5,12 +5,11 @@ using System.Data.SqlClient;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
-
 namespace RRCManagementSystem
 {
     public partial class AllRescheduleBooking : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -32,91 +31,127 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 Check CanView permission for ManageBooking
-         
+            // 🔐 CanView permission for ManageBooking
+            if (!HasViewPermission(userId, "ManageBooking"))
+            {
+                lblMessage.Text = "❌ You do not have permission to view reschedules.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                gvReschedules.Visible = false;
+                return;
+            }
+
             if (!IsPostBack)
             {
                 LoadRescheduleBookings();
             }
         }
 
-
-
-
-        protected void gvReschedules_RowDataBound(object sender, GridViewRowEventArgs e)
+        private bool HasViewPermission(int adminId, string moduleName)
         {
-            if (e.Row.RowType == DataControlRowType.DataRow)
+            try
             {
-                // Get the status from the current data item (i.e., the value from the DB)
-                string status = DataBinder.Eval(e.Row.DataItem, "Status").ToString();
-
-                // Find the dropdown in this row
-                DropDownList ddlStatus = (DropDownList)e.Row.FindControl("ddlStatus");
-
-                if (ddlStatus != null && !string.IsNullOrEmpty(status))
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
                 {
-                    ListItem selectedItem = ddlStatus.Items.FindByValue(status);
-                    if (selectedItem != null)
-                    {
-                        ddlStatus.ClearSelection();
-                        selectedItem.Selected = true;
-                    }
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+                    cmd.Parameters.Add("@Permission", SqlDbType.NVarChar, 10).Value = "CanView";
+                    con.Open();
+                    object allowed = cmd.ExecuteScalar();
+                    return allowed != null && allowed != DBNull.Value && Convert.ToBoolean(allowed);
                 }
             }
+            catch { return false; }
         }
 
         private void LoadRescheduleBookings()
         {
-            using (SqlConnection con = new SqlConnection(connectionString))
+            try
             {
-                string query = @"
-            SELECT 
-                ss.ScheduleID,
-                b.BookingID,
-                (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName, '')) AS ClientName,
-                b.ServiceNames AS ServiceName,
-                ss.OperationNumber,
-                ss.ScheduledDate,
-                ss.Status
-            FROM ServiceSchedule ss
-            INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-            INNER JOIN Clients c ON b.ClientID = c.ClientID
-            ORDER BY ss.ScheduledDate DESC";
-
-                SqlDataAdapter da = new SqlDataAdapter(query, con);
-                DataTable dt = new DataTable();
-                da.Fill(dt);
-
-                gvReschedules.DataSource = dt;
-                gvReschedules.DataBind();
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spServiceSchedule_ListAll", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    using (var da = new SqlDataAdapter(cmd))
+                    {
+                        var dt = new DataTable();
+                        da.Fill(dt);
+                        gvReschedules.DataSource = dt;
+                        gvReschedules.DataBind();
+                    }
+                }
+                lblMessage.Text = "";
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "⚠️ Error loading schedules: " + ex.Message;
+                lblMessage.ForeColor = System.Drawing.Color.Red;
             }
         }
 
+        protected void gvReschedules_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+            string status = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
+            var ddlStatus = (DropDownList)e.Row.FindControl("ddlStatus");
+            if (ddlStatus != null && !string.IsNullOrEmpty(status))
+            {
+                var li = ddlStatus.Items.FindByValue(status);
+                if (li != null)
+                {
+                    ddlStatus.ClearSelection();
+                    li.Selected = true;
+                }
+            }
+        }
 
         protected void gvReschedules_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (e.CommandName == "UpdateStatus")
+            if (e.CommandName != "UpdateStatus") return;
+
+            var row = (GridViewRow)((Control)e.CommandSource).NamingContainer;
+            var ddl = (DropDownList)row.FindControl("ddlStatus");
+            if (ddl == null) return;
+
+            if (!int.TryParse(e.CommandArgument.ToString(), out int scheduleId))
             {
-                GridViewRow row = (GridViewRow)((Control)e.CommandSource).NamingContainer;
-                string scheduleId = e.CommandArgument.ToString();
-                DropDownList ddlStatus = (DropDownList)row.FindControl("ddlStatus");
+                lblMessage.Text = "⚠️ Invalid Schedule ID.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return;
+            }
 
-                if (!string.IsNullOrEmpty(scheduleId) && ddlStatus != null)
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spServiceSchedule_UpdateStatus", con))
                 {
-                    using (SqlConnection con = new SqlConnection(connectionString))
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleId;
+                    cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = ddl.SelectedValue;
+                    con.Open();
+                    int rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+                    if (rows > 0)
                     {
-                        con.Open();
-                        SqlCommand cmd = new SqlCommand("UPDATE ServiceSchedule SET Status = @Status WHERE ScheduleID = @ScheduleID", con);
-                        cmd.Parameters.AddWithValue("@Status", ddlStatus.SelectedValue);
-                        cmd.Parameters.AddWithValue("@ScheduleID", scheduleId);
-                        cmd.ExecuteNonQuery();
-
                         lblMessage.Text = "✅ Status updated successfully.";
+                        lblMessage.ForeColor = System.Drawing.Color.Green;
                     }
-
-                    LoadRescheduleBookings();
+                    else
+                    {
+                        lblMessage.Text = "⚠️ No changes were made.";
+                        lblMessage.ForeColor = System.Drawing.Color.DarkOrange;
+                    }
                 }
+
+                LoadRescheduleBookings();
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "❌ Update failed: " + ex.Message;
+                lblMessage.ForeColor = System.Drawing.Color.Red;
             }
         }
     }
 }
+    

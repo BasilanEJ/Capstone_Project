@@ -28,30 +28,28 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                BindInspectors();   // populate hidden ddl (ddlInspectorSource)
+                BindInspectors();
                 LoadInquiries();
             }
         }
 
         private void BindInspectors()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(
-                "SELECT UserID, Name FROM Users WHERE Role = 'Inspector' AND Status = 'Active' ORDER BY Name", conn))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInspectors_ListActive", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                var dt = new DataTable();
                 conn.Open();
-                using (SqlDataReader rd = cmd.ExecuteReader())
+                da.Fill(dt);
+
+                ddlInspectorSource.Items.Clear();
+                ddlInspectorSource.Items.Add(new ListItem("-- Select Inspector --", ""));
+                foreach (DataRow r in dt.Rows)
                 {
-                    ddlInspectorSource.Items.Clear();
-                    ddlInspectorSource.Items.Add(new ListItem("-- Select Inspector --", ""));
-                    while (rd.Read())
-                    {
-                        // Explicitly uses WebControls.ListItem (avoid iTextSharp ambiguity)
-                        ddlInspectorSource.Items.Add(new ListItem(
-                            rd["Name"].ToString(),
-                            rd["UserID"].ToString()
-                        ));
-                    }
+                    ddlInspectorSource.Items.Add(new ListItem(r["Name"].ToString(), r["UserID"].ToString()));
                 }
             }
         }
@@ -62,8 +60,7 @@ namespace RRCManagementSystem
             if (parts.Length >= 12)
             {
                 int inspectorId = int.Parse(parts[0]);
-                // schedule is local from browser (PHT)
-                DateTime scheduleLocal = DateTime.Parse(parts[1]);
+                DateTime scheduleLocal = DateTime.Parse(parts[1]); // browser local (PHT)
                 string remarks = parts[2];
                 string firstName = parts[3];
                 string middleName = parts[4];
@@ -88,7 +85,6 @@ namespace RRCManagementSystem
                 UpdateInquiryInfo(inquiryId, firstName, middleName, lastName, street, barangay, city, region, country, landmark);
                 AssignInspector(inquiryId, inspectorId, scheduleLocal, remarks);
 
-                // refresh grid and hidden ddl (in case of changes)
                 BindInspectors();
                 LoadInquiries();
 
@@ -99,33 +95,16 @@ namespace RRCManagementSystem
 
         private void LoadInquiries()
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlDataAdapter da = new SqlDataAdapter(@"
-                SELECT
-                    InquiryID,
-                    Email,
-                    ContactNumber,
-                    Message,
-                    SubmittedAt,
-                    PhotoPath,
-                    -- extra fields for autofill
-                    FirstName,
-                    MiddleName,
-                    LastName,
-                    StreetAndUnit,
-                    Barangay,
-                    City,
-                    Region,
-                    Country,
-                    Landmark
-                FROM InquirySimple
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM Inspections WHERE Inspections.InquiryID = InquirySimple.InquiryID
-                )
-                ORDER BY SubmittedAt DESC;", conn))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInquiries_Unassigned_List", conn))
+            using (var da = new SqlDataAdapter(cmd))
             {
-                DataTable dt = new DataTable();
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                var dt = new DataTable();
+                conn.Open();
                 da.Fill(dt);
+
                 gvInquiries.DataSource = dt;
                 gvInquiries.DataBind();
             }
@@ -133,25 +112,27 @@ namespace RRCManagementSystem
 
         private int GetSystemSettingInt(string settingName)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(
-                "SELECT SettingValue FROM SystemSettings WHERE SettingName = @SettingName", conn))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spSystemSetting_Get", conn))
             {
-                cmd.Parameters.AddWithValue("@SettingName", settingName);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@SettingName", SqlDbType.NVarChar, 100).Value = settingName;
+
                 conn.Open();
-                object result = cmd.ExecuteScalar();
-                return result != null && int.TryParse(result.ToString(), out int value) ? value : 6;
+                object val = cmd.ExecuteScalar();
+                return (val != null && int.TryParse(val.ToString(), out int n)) ? n : 6;
             }
         }
 
         private int GetInspectionsCount(int inspectorId, DateTime date)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(
-                "SELECT COUNT(*) FROM Inspections WHERE InspectorID = @InspectorID AND CAST(ScheduledDate AS DATE) = @Date", conn))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInspections_CountForInspectorOnDate", conn))
             {
-                cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
-                cmd.Parameters.AddWithValue("@Date", date);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
+                cmd.Parameters.Add("@Date", SqlDbType.Date).Value = date;
+
                 conn.Open();
                 return Convert.ToInt32(cmd.ExecuteScalar());
             }
@@ -160,30 +141,21 @@ namespace RRCManagementSystem
         private void UpdateInquiryInfo(int inquiryId, string firstName, string middleName, string lastName,
                                       string street, string barangay, string city, string region, string country, string landmark)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(@"
-                UPDATE InquirySimple
-                   SET FirstName    = @FirstName,
-                       MiddleName   = @MiddleName,
-                       LastName     = @LastName,
-                       StreetAndUnit= @Street,
-                       Barangay     = @Barangay,
-                       City         = @City,
-                       Region       = @Region,
-                       Country      = @Country,
-                       Landmark     = @Landmark
-                 WHERE InquiryID    = @InquiryID;", conn))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInquiry_UpdateAddress", conn))
             {
-                cmd.Parameters.AddWithValue("@FirstName", firstName);
-                cmd.Parameters.AddWithValue("@MiddleName", string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName);
-                cmd.Parameters.AddWithValue("@LastName", lastName);
-                cmd.Parameters.AddWithValue("@Street", string.IsNullOrWhiteSpace(street) ? (object)DBNull.Value : street);
-                cmd.Parameters.AddWithValue("@Barangay", string.IsNullOrWhiteSpace(barangay) ? (object)DBNull.Value : barangay);
-                cmd.Parameters.AddWithValue("@City", string.IsNullOrWhiteSpace(city) ? (object)DBNull.Value : city);
-                cmd.Parameters.AddWithValue("@Region", string.IsNullOrWhiteSpace(region) ? (object)DBNull.Value : region);
-                cmd.Parameters.AddWithValue("@Country", string.IsNullOrWhiteSpace(country) ? (object)DBNull.Value : country);
-                cmd.Parameters.AddWithValue("@Landmark", string.IsNullOrWhiteSpace(landmark) ? (object)DBNull.Value : landmark);
-                cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
+                cmd.Parameters.Add("@FirstName", SqlDbType.NVarChar, 100).Value = firstName ?? "";
+                cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName;
+                cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = lastName ?? "";
+                cmd.Parameters.Add("@StreetAndUnit", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(street) ? (object)DBNull.Value : street;
+                cmd.Parameters.Add("@Barangay", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(barangay) ? (object)DBNull.Value : barangay;
+                cmd.Parameters.Add("@City", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(city) ? (object)DBNull.Value : city;
+                cmd.Parameters.Add("@Region", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(region) ? (object)DBNull.Value : region;
+                cmd.Parameters.Add("@Country", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(country) ? (object)DBNull.Value : country;
+                cmd.Parameters.Add("@Landmark", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(landmark) ? (object)DBNull.Value : landmark;
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
@@ -192,33 +164,18 @@ namespace RRCManagementSystem
 
         private void AssignInspector(int inquiryId, int inspectorUserId, DateTime scheduleLocalPHT, string remarks)
         {
-            if (!InquiryExists(inquiryId)) return;
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand(@"
-                INSERT INTO Inspections
-                    (InquiryID, InspectorID, ScheduledDate, InspectionStatus, Remarks, CreatedAt)
-                VALUES
-                    (@InquiryID, @InspectorID, @ScheduledDate, 'Pending', @Remarks, DATEADD(HOUR, 8, GETUTCDATE()));", conn))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInspection_Assign", conn))
             {
-                cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
-                cmd.Parameters.AddWithValue("@InspectorID", inspectorUserId);
-                cmd.Parameters.AddWithValue("@ScheduledDate", scheduleLocalPHT); // store as datetime (assumed local/PHT)
-                cmd.Parameters.AddWithValue("@Remarks", string.IsNullOrWhiteSpace(remarks) ? (object)DBNull.Value : remarks);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
+                cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorUserId;
+                cmd.Parameters.Add("@ScheduledDate", SqlDbType.DateTime).Value = scheduleLocalPHT;
+                cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(remarks) ? (object)DBNull.Value : remarks;
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
-            }
-        }
-
-        private bool InquiryExists(int inquiryId)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM InquirySimple WHERE InquiryID = @InquiryID", conn))
-            {
-                cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
-                conn.Open();
-                return (int)cmd.ExecuteScalar() > 0;
             }
         }
 
@@ -244,12 +201,14 @@ namespace RRCManagementSystem
 
         private void DeleteInquiry(int inquiryId)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand("DELETE FROM InquirySimple WHERE InquiryID = @InquiryID", conn))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInquiry_Delete", conn))
             {
-                cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
+
                 conn.Open();
-                int rows = cmd.ExecuteNonQuery();
+                int rows = Convert.ToInt32(cmd.ExecuteScalar()); // proc SELECTs @@ROWCOUNT
                 if (rows == 0)
                     throw new InvalidOperationException("Inquiry not found.");
             }
@@ -264,7 +223,6 @@ namespace RRCManagementSystem
                 Button btnAssign = (Button)e.Row.FindControl("btnAssign");
                 string inquiryId = drv["InquiryID"].ToString();
 
-                // Put inquiry details as data-* attributes for autofill in the modal
                 btnAssign.Attributes["data-fn"] = SafeAttr(drv["FirstName"]);
                 btnAssign.Attributes["data-mn"] = SafeAttr(drv["MiddleName"]);
                 btnAssign.Attributes["data-ln"] = SafeAttr(drv["LastName"]);
@@ -275,7 +233,6 @@ namespace RRCManagementSystem
                 btnAssign.Attributes["data-ctry"] = SafeAttr(drv["Country"]);
                 btnAssign.Attributes["data-lmk"] = SafeAttr(drv["Landmark"]);
 
-                // Pass the button element so JS can read el.dataset.*
                 btnAssign.OnClientClick = $"showAssignModal(this, {inquiryId}); return false;";
             }
         }

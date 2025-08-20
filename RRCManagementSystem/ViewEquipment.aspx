@@ -189,10 +189,10 @@
        <asp:TemplateField HeaderText="Actions">
   <ItemTemplate>
     <div class="d-flex justify-content-center gap-2">
-      <a class="btn btn-success btn-sm"
-         href='<%# "EditEquipment.aspx?EquipmentID=" + EncodeID(Eval("EquipmentID").ToString()) %>'>
-        <i class="bi bi-pencil-square me-1"></i> Edit
-      </a>
+<a class="btn btn-success btn-sm"
+   href='<%# "EditEquipment.aspx?id=" + EncodeID(Eval("EquipmentID").ToString()) %>'>
+  <i class="bi bi-pencil-square me-1"></i> Edit
+</a>
 
    
       <asp:Button ID="btnDelete" runat="server"

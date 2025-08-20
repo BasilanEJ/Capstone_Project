@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
 
@@ -25,142 +26,159 @@ namespace RRCManagementSystem
         {
             int clientId = Convert.ToInt32(Session["ClientID"]);
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_PendingQuotation_GetLatestByClient", conn))
             {
-                string query = @"
-    SELECT TOP 1 
-        pq.QuotationID, 
-        pq.ServiceNames, 
-        pq.ServiceID, 
-        pq.SQM, 
-        pq.Price, 
-        pq.IsContract,
-        ISNULL(u.Name, 'N/A') AS InspectorName
-    FROM PendingQuotations pq
-    LEFT JOIN Users u ON pq.InspectorID = u.UserID
-    WHERE pq.ClientID = @ClientID 
-    ORDER BY pq.CreatedAt DESC";
-    
-
-                SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@ClientID", clientId);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
                 conn.Open();
-                SqlDataReader reader = cmd.ExecuteReader();
-                if (reader.Read())
+                using (var reader = cmd.ExecuteReader())
                 {
-                    lblServices.Text = reader["ServiceNames"].ToString();
-                    lblSQM.Text = reader["SQM"].ToString();
-                    lblPrice.Text = $"\u20B1{Convert.ToDecimal(reader["Price"]):N2}";
-                    hfIsContract.Value = reader["IsContract"] != DBNull.Value ? reader["IsContract"].ToString() : "False";
-                    hfQuotationID.Value = reader["QuotationID"].ToString();
-                    ViewState["ServiceIDs"] = reader["ServiceID"].ToString();
-                    lblInspector.Text = reader["InspectorName"].ToString();
-                }
-                else
-                {
-                    ScriptManager.RegisterStartupScript(this, GetType(), "noQuote", @"
-                        Swal.fire('No Quotation', 
-                                  'Please wait for the inspector to create a quotation.', 
-                                  'info');", true);
-                    btnBook.Enabled = false;
+                    if (reader.Read())
+                    {
+                        lblServices.Text = reader["ServiceNames"].ToString();
+                        lblSQM.Text = reader["SQM"] == DBNull.Value ? "0" : reader["SQM"].ToString();
+
+                        decimal price = reader["Price"] == DBNull.Value ? 0m : Convert.ToDecimal(reader["Price"]);
+                        lblPrice.Text = $"\u20B1{price:N2}";
+
+                        hfIsContract.Value = reader["IsContract"] != DBNull.Value && (bool)reader["IsContract"] ? "True" : "False";
+                        hfQuotationID.Value = reader["QuotationID"].ToString();
+
+                        // We keep this for your UI logic, but booking will read ServiceIDs from the quotation inside SQL.
+                        ViewState["ServiceIDs"] = reader["ServiceID"]?.ToString() ?? string.Empty;
+
+                        lblInspector.Text = reader["InspectorName"]?.ToString() ?? "N/A";
+                    }
+                    else
+                    {
+                        ScriptManager.RegisterStartupScript(this, GetType(), "noQuote", @"
+                            Swal.fire('No Quotation', 
+                                      'Please wait for the inspector to create a quotation.', 
+                                      'info');", true);
+                        btnBook.Enabled = false;
+                    }
                 }
             }
         }
 
         protected void btnBook_Click(object sender, EventArgs e)
         {
+            // Basic validation
             if (string.IsNullOrWhiteSpace(txtDate.Text) || string.IsNullOrWhiteSpace(txtTime.Text))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "missing", "Swal.fire('Missing Info', 'Please select a preferred date and time.', 'warning');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "missing",
+                    "Swal.fire('Missing Info', 'Please select a preferred date and time.', 'warning');", true);
                 return;
             }
 
-            if (!DateTime.TryParse($"{txtDate.Text} {txtTime.Text}", out DateTime selectedDateTime))
+            DateTime selectedDateTime;
+            if (!DateTime.TryParse(txtDate.Text + " " + txtTime.Text, out selectedDateTime))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "invalid", "Swal.fire('Invalid Input', 'Invalid date or time format.', 'error');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "invalid",
+                    "Swal.fire('Invalid Input', 'Invalid date or time format.', 'error');", true);
                 return;
             }
 
             if (selectedDateTime < DateTime.Now)
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "pastDate", "Swal.fire('Invalid Schedule', 'Please choose a future date and time.', 'error');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "pastDate",
+                    "Swal.fire('Invalid Schedule', 'Please choose a future date and time.', 'error');", true);
+                return;
+            }
+
+            int quotationId;
+            if (!int.TryParse(hfQuotationID.Value, out quotationId) || quotationId <= 0)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "noQuoteId",
+                    "Swal.fire('Error', 'Missing quotation reference.', 'error');", true);
                 return;
             }
 
             int clientId = Convert.ToInt32(Session["ClientID"]);
-            string serviceNames = lblServices.Text;
-            string serviceIDsRaw = ViewState["ServiceIDs"]?.ToString();
-            int sqm = int.TryParse(lblSQM.Text, out int parsedSQM) ? parsedSQM : 0;
-            decimal price = decimal.TryParse(lblPrice.Text.Replace("\u20B1", ""), out decimal parsedPrice) ? parsedPrice : 0;
-            string notes = txtNotes.Text.Trim();
-            bool isContract = hfIsContract.Value == "True";
-            int quotationId = int.TryParse(hfQuotationID.Value, out int id) ? id : 0;
+            string notes = (txtNotes.Text == null) ? null : txtNotes.Text.Trim();
 
-            if (string.IsNullOrEmpty(serviceIDsRaw))
+            // Call single, atomic stored procedure that:
+            // - Validates the quotation belongs to this client
+            // - Creates Bookings row
+            // - Inserts BookingServices from the quotation's ServiceID CSV
+            // - Deletes the quotation
+            int newBookingId = 0;
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_BookService_ConfirmFromQuotation", conn))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "noServices", "Swal.fire('Error', 'Missing service details.', 'error');", true);
-                return;
-            }
+                cmd.CommandType = CommandType.StoredProcedure;
 
-            int bookingId = 0;
+                cmd.Parameters.Add("@QuotationID", SqlDbType.Int).Value = quotationId;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                cmd.Parameters.Add("@ScheduledDate", SqlDbType.Date).Value = selectedDateTime.Date;
+                cmd.Parameters.Add("@StartTime", SqlDbType.Time).Value = selectedDateTime.TimeOfDay;
+                cmd.Parameters.Add("@Notes", SqlDbType.NVarChar, 500).Value = (object)notes ?? DBNull.Value;
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                conn.Open();
+                var pOut = cmd.Parameters.Add("@BookingID", SqlDbType.Int);
+                pOut.Direction = ParameterDirection.Output;
 
-                // Insert booking
-                string insertBooking = @"
-                    INSERT INTO Bookings 
-                        (ClientID, ServiceNames, SQM, Price, ScheduledDate, StartTime, Notes, Status, CreatedAt, IsContract)
-                    OUTPUT INSERTED.BookingID
-                    VALUES 
-                        (@ClientID, @ServiceNames, @SQM, @Price, @ScheduledDate, @StartTime, @Notes, 'Pending', GETDATE(), @IsContract);";
-
-                SqlCommand bookingCmd = new SqlCommand(insertBooking, conn);
-                bookingCmd.Parameters.AddWithValue("@ClientID", clientId);
-                bookingCmd.Parameters.AddWithValue("@ServiceNames", serviceNames);
-                bookingCmd.Parameters.AddWithValue("@SQM", sqm);
-                bookingCmd.Parameters.AddWithValue("@Price", parsedPrice);
-                bookingCmd.Parameters.AddWithValue("@ScheduledDate", selectedDateTime.Date);
-                bookingCmd.Parameters.AddWithValue("@StartTime", selectedDateTime.TimeOfDay);
-                bookingCmd.Parameters.AddWithValue("@Notes", notes);
-                bookingCmd.Parameters.AddWithValue("@IsContract", isContract);
-
-                object result = bookingCmd.ExecuteScalar();
-                if (result != null)
+                try
                 {
-                    bookingId = Convert.ToInt32(result);
-                }
-
-                // Insert selected services into BookingServices
-                foreach (string sid in serviceIDsRaw.Split(','))
-                {
-                    if (int.TryParse(sid.Trim(), out int serviceId))
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                    if (pOut.Value != DBNull.Value)
                     {
-                        string insertService = @"INSERT INTO BookingServices (BookingID, ServiceID) VALUES (@BookingID, @ServiceID)";
-                        SqlCommand serviceCmd = new SqlCommand(insertService, conn);
-                        serviceCmd.Parameters.AddWithValue("@BookingID", bookingId);
-                        serviceCmd.Parameters.AddWithValue("@ServiceID", serviceId);
-                        serviceCmd.ExecuteNonQuery();
+                        newBookingId = Convert.ToInt32(pOut.Value);
                     }
                 }
-
-                // Delete the quotation to avoid reuse
-                if (quotationId > 0)
+                catch (SqlException ex)
                 {
-                    string deleteQuote = "DELETE FROM PendingQuotations WHERE QuotationID = @QuotationID";
-                    SqlCommand deleteCmd = new SqlCommand(deleteQuote, conn);
-                    deleteCmd.Parameters.AddWithValue("@QuotationID", quotationId);
-                    deleteCmd.ExecuteNonQuery();
+                    // Show a friendly error
+                    ScriptManager.RegisterStartupScript(this, GetType(), "sqlErr",
+                        "Swal.fire('Error', 'Failed to create booking: " + ex.Message.Replace("'", "\\'") + "', 'error');", true);
+                    return;
                 }
             }
 
-            // Success alert
-            ScriptManager.RegisterStartupScript(this, GetType(), "booked", "Swal.fire('Success', 'Your service has been booked!', 'success');", true);
-            txtDate.Text = "";
-            txtTime.Text = "";
-            txtNotes.Text = "";
+            if (newBookingId > 0)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "booked",
+                    "Swal.fire('Success', 'Your service has been booked!', 'success');", true);
+
+                // 🔔 Insert notification (non-blocking)
+                try
+                {
+                    using (var con = new SqlConnection(connectionString))
+                    using (var cmd = new SqlCommand("dbo.usp_Notifications_Add", con))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@ClientID", clientId);
+                        cmd.Parameters.AddWithValue("@Type", "booking");
+                        cmd.Parameters.AddWithValue("@Title", "Booking Submitted");
+                        cmd.Parameters.AddWithValue("@Body", "We’ve received your booking request.");
+                        cmd.Parameters.AddWithValue("@Url", "MyBookings.aspx");
+                        cmd.Parameters.AddWithValue("@DedupKey", "BOOK-" + newBookingId + "-SUBMITTED");
+                        con.Open();
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                catch
+                {
+                    // Swallow errors so a notification failure doesn't affect booking UX
+                }
+
+                // Reset form
+                txtDate.Text = "";
+                txtTime.Text = "";
+                txtNotes.Text = "";
+
+                // Optional: redirect so user immediately sees the new booking
+                // Response.Redirect("~/MyBookings.aspx");
+            }
+            else
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "fail",
+                    "Swal.fire('Error', 'No booking was created. Please try again.', 'error');", true);
+            }
         }
+    
     }
 }
