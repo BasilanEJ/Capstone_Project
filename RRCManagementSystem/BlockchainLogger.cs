@@ -1,112 +1,124 @@
 ﻿using System;
-using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Globalization;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace RRCManagementSystem.Helpers
 {
     public static class BlockchainLogger
     {
-        /// <summary>
-        /// Serialize with stable key order and no whitespace so hashes are consistent.
-        /// </summary>
-        public static string ToDeterministicJson(object obj)
+        // Canonical Json.NET settings (stable, compact, include nulls, UTC dates if any)
+        private static readonly JsonSerializerSettings CanonJsonSettings = new JsonSerializerSettings
         {
-            var j = JObject.FromObject(obj);
-            var ordered = new JObject(j.Properties().OrderBy(p => p.Name));
-            return ordered.ToString(Newtonsoft.Json.Formatting.None);
+            Formatting = Formatting.None,
+            NullValueHandling = NullValueHandling.Include,
+            StringEscapeHandling = StringEscapeHandling.Default,
+            Culture = System.Globalization.CultureInfo.InvariantCulture,
+            DateFormatHandling = DateFormatHandling.IsoDateFormat,
+            DateTimeZoneHandling = DateTimeZoneHandling.Utc
+            // PropertyNamingPolicy equivalent NOT used: Json.NET preserves your property names by default
+        };
+
+        private static string Canonicalize(object payload)
+        {
+            // NOTE: Json.NET preserves property order from the object graph.
+            // Anonymous object member order is deterministic based on compile order.
+            return JsonConvert.SerializeObject(payload, CanonJsonSettings);
         }
 
-        /// <summary>
-        /// SHA-256 hex (lowercase).
-        /// </summary>
-        public static string Sha256(string text)
+        private static string ToLowerHex(byte[] data)
         {
+            var sb = new StringBuilder(data.Length * 2);
+            for (int i = 0; i < data.Length; i++)
+                sb.Append(data[i].ToString("x2")); // lower hex
+            return sb.ToString();
+        }
+
+        private static string Sha256Utf8(string s)
+        {
+            if (s == null) s = string.Empty;
+            var bytes = Encoding.UTF8.GetBytes(s);
             using (var sha = SHA256.Create())
             {
-                var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(text ?? ""));
-                var sb = new StringBuilder(bytes.Length * 2);
-                foreach (var b in bytes) sb.Append(b.ToString("x2"));
-                return sb.ToString();
+                var hash = sha.ComputeHash(bytes);
+                return ToLowerHex(hash);
             }
         }
 
         /// <summary>
-        /// HMAC-SHA256 over provided material using key from Web.config appSetting "BlockchainHmacKey".
-        /// Returns 32-byte tag.
+        /// Append a sale log entry and maintain PrevHash/ChainHash linking.
+        /// Tables:
+        ///   dbo.BlockchainSalesLog(LogID PK, TransactionID, SaleDataJson, SaleHash, PrevHash, ChainHash, Timestamp)
+        ///   dbo.BlockchainAnchors(AnchorDate PK, LastLogID, ChainHash, CreatedAt)
         /// </summary>
-        public static byte[] ComputeAuthTag(string material)
+        public static void AppendSaleLog(string cs, int transactionId, object payload)
         {
-            var base64 = ConfigurationManager.AppSettings["BlockchainHmacKey"];
-            if (string.IsNullOrWhiteSpace(base64))
-                throw new InvalidOperationException("BlockchainHmacKey appSetting is missing.");
-            byte[] key = Convert.FromBase64String(base64);
-            using (var h = new HMACSHA256(key))
-                return h.ComputeHash(Encoding.UTF8.GetBytes(material ?? ""));
-        }
+            // 0) Canonical JSON + sale hash (UTF-8 -> SHA256 -> lowercase hex)
+            string json = Canonicalize(payload);
+            string saleHash = Sha256Utf8(json);
 
-        /// <summary>
-        /// Append a blockchain log entry for a finalized transaction.
-        /// Writes: TransactionID, SaleHash, Timestamp(UTC), SaleDataJson, PrevHash, ChainHash, AuthTag.
-        /// Uses a short SERIALIZABLE transaction + UPDLOCK/HOLDLOCK to avoid prev-hash races.
-        /// </summary>
-        public static void AppendSaleLog(string connectionString, int transactionId, object saleDataObject, DateTime? timestampUtc = null)
-        {
-            // 1) Stable JSON & SaleHash
-            string json = ToDeterministicJson(saleDataObject);
-            string saleHash = Sha256(json);
-            DateTime tsUtc = timestampUtc ?? DateTime.UtcNow;
-
-            // 2) HMAC over content+identity+time (prevents forged recomputation)
-            string paidAtIso = tsUtc.ToString("o", CultureInfo.InvariantCulture);
-            string macMaterial = $"{json}|{transactionId}|{paidAtIso}";
-            byte[] authTagBytes = ComputeAuthTag(macMaterial);
-
-            // 3) Chain: (PrevHash from last row) -> ChainHash
-            string prevHash;
-            string chainHash;
-
-            using (var conn = new SqlConnection(connectionString))
+            using (var con = new SqlConnection(cs))
             {
-                conn.Open();
-                using (var tx = conn.BeginTransaction(IsolationLevel.Serializable))
-                using (var cmd = conn.CreateCommand())
+                con.Open();
+
+                // 1) Get previous chain hash (last row)
+                string prevHash = null;
+                using (var getPrev = new SqlCommand(
+                    "SELECT TOP 1 ChainHash FROM dbo.BlockchainSalesLog ORDER BY LogID DESC", con))
+                using (var r = getPrev.ExecuteReader())
                 {
-                    cmd.Transaction = tx;
+                    if (r.Read())
+                        prevHash = r.IsDBNull(0) ? null : r.GetString(0);
+                }
 
-                    // Lock the tail row so two writers can't take the same prev
-                    cmd.CommandText = "SELECT TOP 1 ChainHash FROM dbo.BlockchainSalesLog WITH (UPDLOCK, HOLDLOCK) ORDER BY LogID DESC;";
-                    var prevObj = cmd.ExecuteScalar();
-                    prevHash = (prevObj == null || prevObj == DBNull.Value) ? new string('0', 64) : (string)prevObj;
+                // 2) Chain = SHA256( (prevChain ?? saleHash) + "." + saleHash )
+                string material = (string.IsNullOrEmpty(prevHash) ? saleHash : (prevHash + "." + saleHash));
+                string chainHash = Sha256Utf8(material);
 
-                    string chainMaterial = $"{prevHash}|{saleHash}|{transactionId}|{tsUtc:O}";
-                    chainHash = Sha256(chainMaterial);
+                // IMPORTANT: keep PrevHash non-NULL on first row to satisfy CHECK constraint
+                string prevToStore = string.IsNullOrEmpty(prevHash) ? saleHash : prevHash;
 
-                    // Insert row
-                    cmd.Parameters.Clear();
-                    cmd.CommandText = @"
+                // 3) Insert new row
+                int newLogId;
+                using (var cmd = new SqlCommand(@"
 INSERT INTO dbo.BlockchainSalesLog
- (TransactionID, SaleHash, Timestamp, SaleDataJson, PrevHash, ChainHash, AuthTag)
+    (TransactionID, SaleDataJson, SaleHash, PrevHash, ChainHash, Timestamp)
+OUTPUT INSERTED.LogID
 VALUES
- (@tx, @saleHash, @ts, @json, @prev, @chain, @authTag);";
-
+    (@tx, @json, @saleHash, @prev, @chain, SYSUTCDATETIME());", con))
+                {
                     cmd.Parameters.Add("@tx", SqlDbType.Int).Value = transactionId;
-                    cmd.Parameters.Add("@saleHash", SqlDbType.Char, 64).Value = saleHash;
-                    cmd.Parameters.Add("@ts", SqlDbType.DateTime2).Value = tsUtc;           // store UTC
-                    cmd.Parameters.Add("@json", SqlDbType.NVarChar).Value = json;           // ensure column is NVARCHAR(MAX)
-                    cmd.Parameters.Add("@prev", SqlDbType.Char, 64).Value = prevHash;
-                    cmd.Parameters.Add("@chain", SqlDbType.Char, 64).Value = chainHash;
-                    cmd.Parameters.Add("@authTag", SqlDbType.VarBinary, 32).Value = authTagBytes;
 
-                    cmd.ExecuteNonQuery();
-                    tx.Commit();
+                    // Use NVARCHAR(MAX) for JSON to avoid truncation
+                    var pJson = cmd.Parameters.Add("@json", SqlDbType.NVarChar, -1);
+                    pJson.Value = json;
+
+                    cmd.Parameters.Add("@saleHash", SqlDbType.Char, 64).Value = saleHash;
+                    cmd.Parameters.Add("@prev", SqlDbType.Char, 64).Value = prevToStore;  // never NULL
+                    cmd.Parameters.Add("@chain", SqlDbType.Char, 64).Value = chainHash;
+
+                    newLogId = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // 4) Upsert today’s anchor with latest chain hash
+                using (var anchor = new SqlCommand(@"
+MERGE dbo.BlockchainAnchors AS t
+USING (SELECT CONVERT(date, SYSUTCDATETIME()) AS AnchorDate) AS s
+ON (t.AnchorDate = s.AnchorDate)
+WHEN MATCHED THEN
+  UPDATE SET LastLogID = @logId, ChainHash = @chain, CreatedAt = SYSUTCDATETIME()
+WHEN NOT MATCHED THEN
+  INSERT(AnchorDate, LastLogID, ChainHash, CreatedAt)
+  VALUES(s.AnchorDate, @logId, @chain, SYSUTCDATETIME());", con))
+                {
+                    anchor.Parameters.Add("@logId", SqlDbType.Int).Value = newLogId;
+                    anchor.Parameters.Add("@chain", SqlDbType.Char, 64).Value = chainHash;
+                    anchor.ExecuteNonQuery();
                 }
             }
         }
+
     }
 }

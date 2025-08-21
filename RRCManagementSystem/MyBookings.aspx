@@ -1,88 +1,46 @@
 ﻿<%@ Page Title="My Bookings" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="MyBookings.aspx.cs" Inherits="RRCManagementSystem.MyBookings" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Bootstrap 5 bundle (includes Modal JS). If already included in Client.master, you can remove this line. -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.bundle.min.js"></script>
+
     <style>
-        .page-title{
-            color:#0d6efd;
-            font-weight:700;
-            font-size:clamp(1.25rem,3.2vw,1.75rem);
-            line-height:1.2;
-        }
-        .page-wrap{
-            padding-top:clamp(.75rem,2vw,1.25rem);
-            padding-bottom:calc(110px + env(safe-area-inset-bottom)); /* room for chat FAB */
-        }
-        .card-shell{
-            border:none;border-radius:1rem;box-shadow:0 8px 20px rgba(0,0,0,.06);
-        }
-        .btn{min-height:44px}
+        .page-title{ color:#0d6efd; font-weight:700; font-size:clamp(1.25rem,3.2vw,1.75rem); line-height:1.2; }
+        .page-wrap{ padding-top:clamp(.75rem,2vw,1.25rem); padding-bottom:calc(110px + env(safe-area-inset-bottom)); }
+        .card-shell{ border:none;border-radius:1rem;box-shadow:0 8px 20px rgba(0,0,0,.06); }
+        .btn{ min-height:44px }
 
-        /* Smooth horizontal scroll on phones */
-        .table-responsive{
-            overflow-x:auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
-        }
+        .table-responsive{ overflow-x:auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+        .fixed-grid > table{ min-width:980px; table-layout:fixed; border-collapse:separate; border-spacing:0; }
+        .fixed-grid > table th, .fixed-grid > table td{ vertical-align:middle; white-space:nowrap; word-break:normal; }
 
-        /* Keep the table the same “desktop” width so it slides on mobile */
-        .fixed-grid > table{
-            min-width: 980px;            /* ← adjust if you add/remove columns */
-            table-layout: fixed;         /* stable column widths */
-            border-collapse: separate;   /* cleaner cell borders while fixed */
-            border-spacing: 0;
-        }
+        .fixed-grid > table thead th:nth-child(1), .fixed-grid > table tbody td:nth-child(1){ min-width:110px; }
+        .fixed-grid > table thead th:nth-child(2), .fixed-grid > table tbody td:nth-child(2){ min-width:140px; }
+        .fixed-grid > table thead th:nth-child(3), .fixed-grid > table tbody td:nth-child(3){ min-width:140px; }
+        .fixed-grid > table thead th:nth-child(4), .fixed-grid > table tbody td:nth-child(4){ min-width:120px; }
+        .fixed-grid > table thead th:nth-child(5), .fixed-grid > table tbody td:nth-child(5){ min-width:120px; }
+        .fixed-grid > table thead th:nth-child(6), .fixed-grid > table tbody td:nth-child(6){ min-width:120px; }
+        .fixed-grid > table thead th:last-child, .fixed-grid > table tbody td:last-child{ min-width:140px; }
 
-        /* Prevent per-character wrapping so cells don’t become vertical */
-        .fixed-grid > table th,
-        .fixed-grid > table td{
-            vertical-align: middle;
-            white-space: nowrap;  /* keep each cell on one line */
-            word-break: normal;
-        }
-
-        /* Column-specific widths (tweak as needed) */
-        /* MyBookings + AllOps share many columns; min-width keeps them readable */
-        .fixed-grid > table thead th:nth-child(1),
-        .fixed-grid > table tbody td:nth-child(1){ min-width:110px; } /* Booking ID / (Upcoming: hidden ID ok) */
-        .fixed-grid > table thead th:nth-child(2),
-        .fixed-grid > table tbody td:nth-child(2){ min-width:140px; } /* Service / Operation # */
-        .fixed-grid > table thead th:nth-child(3),
-        .fixed-grid > table tbody td:nth-child(3){ min-width:140px; } /* Initial/Scheduled Date */
-        .fixed-grid > table thead th:nth-child(4),
-        .fixed-grid > table tbody td:nth-child(4){ min-width:120px; } /* Start Time / Status */
-        .fixed-grid > table thead th:nth-child(5),
-        .fixed-grid > table tbody td:nth-child(5){ min-width:120px; } /* Status / Action */
-        .fixed-grid > table thead th:nth-child(6),
-        .fixed-grid > table tbody td:nth-child(6){ min-width:120px; } /* Notes / Progress */
-        .fixed-grid > table thead th:last-child,
-        .fixed-grid > table tbody td:last-child{ min-width:140px; } /* Actions */
-
-        /* Let ONLY the Notes column wrap & grow vertically (usually col 6 in MyBookings) */
         .fixed-grid#wrap-gvMyBookings > table tbody td:nth-child(6),
-        .fixed-grid#wrap-gvMyBookings > table thead th:nth-child(6){
-            white-space: normal;         /* allow wrapping */
-            overflow-wrap: anywhere;     /* break long refs */
-        }
+        .fixed-grid#wrap-gvMyBookings > table thead th:nth-child(6){ white-space:normal; overflow-wrap:anywhere; }
 
-        /* For “Upcoming” table, allow Action button column to stay single-line */
-        .fixed-grid#wrap-gvUpcoming > table tbody td:last-child{
-            white-space: nowrap;
-        }
+        .fixed-grid#wrap-gvUpcoming > table tbody td:last-child{ white-space:nowrap; }
 
-        /* A little breathing room so the slider’s last column isn’t hidden under the FAB */
         @media (max-width: 576px) {
             .chat-fab { bottom: calc(88px + env(safe-area-inset-bottom)); }
-            .fixed-grid{ padding-bottom: .5rem; }
+            .fixed-grid{ padding-bottom:.5rem; }
         }
-
-        @media (prefers-reduced-motion: reduce){
-            .modal,.swal2-popup{transition:none!important}
-        }
+        @media (prefers-reduced-motion: reduce){ .modal,.swal2-popup{transition:none!important} }
     </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
+    <!-- REQUIRED because code-behind uses ScriptManager.RegisterStartupScript -->
+    <asp:ScriptManager ID="sm1" runat="server" />
+
     <div class="container page-wrap">
         <div class="card card-shell p-3 p-sm-4">
             <h3 class="page-title mb-3">My Bookings</h3>
@@ -107,15 +65,16 @@
                         <asp:BoundField DataField="CreatedAt" HeaderText="Date Booked" DataFormatString="{0:yyyy-MM-dd}" />
                         <asp:TemplateField HeaderText="Actions">
                             <ItemTemplate>
-                                <asp:Button
-                                    ID="btnCancel"
+                                <asp:LinkButton ID="btnCancel"
                                     runat="server"
                                     Text="Cancel"
                                     CommandName="CancelBooking"
                                     CommandArgument='<%# Eval("BookingID") %>'
                                     CssClass="btn btn-danger btn-sm"
-                                    Visible='<%# Eval("Status").ToString() == "Pending" %>'
-                                    OnClientClick="return confirm(&#39;Are you sure you want to cancel this booking?&#39;);" />
+                                    CausesValidation="false"
+                                    UseSubmitBehavior="false"
+                                    OnClientClick="return confirm('Are you sure you want to cancel this booking?');"
+                                    Visible='<%# Eval("Status").ToString() == "Pending" %>' />
                             </ItemTemplate>
                         </asp:TemplateField>
                     </Columns>
@@ -139,10 +98,14 @@
                             <asp:BoundField DataField="Status" HeaderText="Status" />
                             <asp:TemplateField HeaderText="Action">
                                 <ItemTemplate>
-                                    <asp:Button ID="btnSetSchedule" runat="server" Text="Set Schedule"
+                                    <asp:LinkButton ID="btnSetSchedule"
+                                        runat="server"
+                                        Text="Set Schedule"
                                         CommandName="SetSchedule"
                                         CommandArgument='<%# Eval("ScheduleID") + "|" + Eval("ScheduledDate", "{0:yyyy-MM-ddTHH:mm}") %>'
                                         CssClass="btn btn-primary btn-sm"
+                                        CausesValidation="false"
+                                        UseSubmitBehavior="false"
                                         Visible='<%# Eval("Status").ToString() != "Completed" %>' />
                                 </ItemTemplate>
                             </asp:TemplateField>
@@ -167,9 +130,14 @@
                             <asp:BoundField DataField="Status" HeaderText="Status" />
                             <asp:TemplateField HeaderText="Action">
                                 <ItemTemplate>
-                                    <asp:Button ID="btnReschedule" runat="server" CommandName="Reschedule" Text="Set New Schedule"
+                                    <asp:LinkButton ID="btnReschedule"
+                                        runat="server"
+                                        CommandName="Reschedule"
+                                        Text="Set New Schedule"
                                         CommandArgument='<%# Eval("ScheduleID") + "|" + Eval("ScheduledDate", "{0:yyyy-MM-ddTHH:mm}") %>'
                                         CssClass="btn btn-warning btn-sm"
+                                        CausesValidation="false"
+                                        UseSubmitBehavior="false"
                                         Visible='<%# 
                                             Eval("ScheduledDate") != DBNull.Value &&
                                             Convert.ToDateTime(Eval("ScheduledDate")) < DateTime.Now &&
@@ -214,8 +182,9 @@
                     <div class="form-text">Choose any date/time within your contract window.</div>
                 </div>
                 <div class="modal-footer">
+                    <!-- Server button exists (for postback target) but click is triggered via JS confirm -->
                     <asp:Button ID="btnConfirmSchedule" runat="server" Text="Save" CssClass="btn btn-success"
-                        OnClientClick="confirmSchedule(); return false;" />
+                        OnClientClick="confirmSchedule(); return false;" OnClick="btnConfirmSchedule_Click" />
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </div>
@@ -223,8 +192,6 @@
     </div>
 
     <script>
-        // Success toast if lblMessage has content (from server)
-
         let setScheduleBsModal = null;
         function ensureModal() {
             const el = document.getElementById('setScheduleModal');
@@ -234,11 +201,9 @@
             return setScheduleBsModal;
         }
 
-        // Show modal and prefill date/time
         function showModal(scheduleId, currentDateTime) {
             document.getElementById('<%= hfSelectedScheduleID.ClientID %>').value = scheduleId;
 
-            // currentDateTime: "YYYY-MM-DDTHH:mm"
             const dt = currentDateTime ? new Date(currentDateTime) : new Date();
             const yyyy = dt.getFullYear();
             const mm = String(dt.getMonth() + 1).padStart(2, '0');
@@ -252,12 +217,10 @@
             ensureModal().show();
         }
 
-        // Hide modal
         function hideModal() {
             if (setScheduleBsModal) setScheduleBsModal.hide();
         }
 
-        // Confirm via SweetAlert then post back using your server button
         function confirmSchedule() {
             Swal.fire({
                 title: 'Confirm New Schedule?',

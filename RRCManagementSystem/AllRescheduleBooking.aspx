@@ -7,8 +7,48 @@
     <div class="container py-5">
         <h3 class="text-center text-primary fw-bold mb-4">🔁 All Rescheduled Operations</h3>
 
+        <!-- 🔎 Filters -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Search (ID / Client / Service)</label>
+                        <asp:TextBox ID="txtSearch" runat="server" CssClass="form-control" placeholder="e.g. 1024 or Juan Dela Cruz or Termite"></asp:TextBox>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <asp:DropDownList ID="ddlFilterStatus" runat="server" CssClass="form-select">
+                            <asp:ListItem Text="All" Value="" />
+                            <asp:ListItem Text="Pending" Value="Pending" />
+                            <asp:ListItem Text="Rejected" Value="Rejected" />
+                            <asp:ListItem Text="Approved" Value="Approved" />
+                            <asp:ListItem Text="In Progress" Value="InProgress" />
+                            <asp:ListItem Text="Completed" Value="Completed" />
+                            <asp:ListItem Text="Cancelled" Value="Cancelled" />
+                        </asp:DropDownList>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">From</label>
+                        <asp:TextBox ID="txtFrom" runat="server" CssClass="form-control" TextMode="Date"></asp:TextBox>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">To</label>
+                        <asp:TextBox ID="txtTo" runat="server" CssClass="form-control" TextMode="Date"></asp:TextBox>
+                    </div>
+                    <div class="col-md-1 d-grid">
+                        <asp:Button ID="btnFilter" runat="server" CssClass="btn btn-primary" Text="Filter" OnClick="btnFilter_Click" />
+                    </div>
+                </div>
+                <div class="mt-2 text-end">
+                    <asp:Button ID="btnReset" runat="server" CssClass="btn btn-outline-secondary btn-sm" Text="Reset" OnClick="btnReset_Click" />
+                </div>
+            </div>
+        </div>
+
         <asp:GridView ID="gvReschedules" runat="server" AutoGenerateColumns="False"
                       CssClass="table table-bordered table-hover table-striped"
+                      AllowPaging="True" PageSize="10"
+                      OnPageIndexChanging="gvReschedules_PageIndexChanging"
                       OnRowCommand="gvReschedules_RowCommand"
                       OnRowDataBound="gvReschedules_RowDataBound">
 

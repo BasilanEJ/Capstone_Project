@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -54,6 +55,9 @@ namespace RRCManagementSystem
         {
             try
             {
+                ddlClients.Items.Clear();
+                ddlClients.Items.Add(new WebListItem("-- Select Client --", ""));
+
                 using (var con = new SqlConnection(cs))
                 using (var cmd = new SqlCommand("dbo.spClients_ListApproved", con))
                 {
@@ -61,11 +65,19 @@ namespace RRCManagementSystem
                     con.Open();
                     using (var r = cmd.ExecuteReader())
                     {
-                        ddlClients.DataSource = r;
-                        ddlClients.DataTextField = "Name";
-                        ddlClients.DataValueField = "ClientID";
-                        ddlClients.DataBind();
-                        ddlClients.Items.Insert(0, new WebListItem("-- Select Client --", ""));
+                        while (r.Read())
+                        {
+                            int id = Convert.ToInt32(r["ClientID"]);
+                            string ln = r["LastName"] as string ?? "";
+                            string fn = r["FirstName"] as string ?? "";
+                            string mn = r["MiddleName"] as string ?? "";
+
+                            string display = string.IsNullOrWhiteSpace(mn)
+                                ? $"{ln}, {fn}"
+                                : $"{ln}, {fn} {mn}";
+
+                            ddlClients.Items.Add(new WebListItem(display, id.ToString()));
+                        }
                     }
                 }
             }
@@ -75,10 +87,25 @@ namespace RRCManagementSystem
             }
         }
 
+
         private void LoadPaymentMethods()
         {
             try
             {
+                ddlPaymentMethod.Items.Clear();
+
+                // Always-available basics first
+                var basics = new[] { "-- Select Payment Method --", "Cash", "Bank Transfer" };
+                var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var label in basics)
+                {
+                    string val = label == "-- Select Payment Method --" ? "" : label;
+                    ddlPaymentMethod.Items.Add(new WebListItem(label, val));
+                    values.Add(val);
+                }
+
+                // Add methods seen in transaction history (e.g., PayMongo, PayPal, GCash, Card)
                 using (var con = new SqlConnection(cs))
                 using (var cmd = new SqlCommand("dbo.spTransactionHistory_PaymentMethods", con))
                 {
@@ -86,28 +113,32 @@ namespace RRCManagementSystem
                     con.Open();
                     using (var r = cmd.ExecuteReader())
                     {
-                        ddlPaymentMethod.Items.Clear();
-                        ddlPaymentMethod.Items.Add(new WebListItem("-- Select Payment Method --", ""));
                         while (r.Read())
                         {
-                            var pm = r["PaymentMethod"]?.ToString();
-                            if (!string.IsNullOrWhiteSpace(pm))
-                                ddlPaymentMethod.Items.Add(pm);
+                            var pm = (r["PaymentMethod"] ?? "").ToString().Trim();
+                            if (pm.Length == 0) continue;
+
+                            // Normalize label (optional)
+                            var label = pm; // or: CultureInfo.CurrentCulture.TextInfo.ToTitleCase(pm.ToLowerInvariant())
+
+                            if (values.Add(pm)) // only add if not already present
+                                ddlPaymentMethod.Items.Add(new WebListItem(label, pm));
                         }
                     }
                 }
             }
             catch
             {
-                // Fallback defaults (optional)
+                // Fallback if the SP fails
                 ddlPaymentMethod.Items.Clear();
                 ddlPaymentMethod.Items.Add(new WebListItem("-- Select Payment Method --", ""));
                 ddlPaymentMethod.Items.Add(new WebListItem("Cash", "Cash"));
-                ddlPaymentMethod.Items.Add(new WebListItem("Gcash", "Gcash"));
                 ddlPaymentMethod.Items.Add(new WebListItem("Bank Transfer", "Bank Transfer"));
-                ddlPaymentMethod.Items.Add(new WebListItem("Card", "Card"));
+                ddlPaymentMethod.Items.Add(new WebListItem("PayMongo", "PayMongo"));
+                ddlPaymentMethod.Items.Add(new WebListItem("PayPal", "PayPal"));
             }
         }
+
 
         protected void ddlClients_SelectedIndexChanged(object sender, EventArgs e)
         {

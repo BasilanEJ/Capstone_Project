@@ -144,9 +144,15 @@
                         <asp:Button ID="btnFilterBlockchain" runat="server" Text="📅 Filter"
                                     CssClass="btn-sales" OnClick="btnFilterBlockchain_Click"
                                     CausesValidation="false" UseSubmitBehavior="false" />
-                        <asp:Button ID="btnVerifyBlockchain" runat="server" Text="🔍 Verify Blockchain"
+                   <asp:Button ID="btnVerifyBlockchain" runat="server" Text="🔍 Verify Blockchain"
                                     CssClass="btn-sales" OnClick="btnVerifyBlockchain_Click"
                                     CausesValidation="false" UseSubmitBehavior="false" />
+                          <!--   <asp:Button ID="btnRecomputeChain"  
+            runat="server" 
+            Text="🔧 Recompute Chain (Maintenance)" 
+            CssClass="btn btn-warning" 
+            OnClick="btnRecomputeChain_Click" /> -->
+
                     </div>
 
                     <div style="text-align:center;margin-bottom:30px;">
