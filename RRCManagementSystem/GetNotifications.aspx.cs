@@ -89,62 +89,66 @@ namespace RRCManagementSystem
         private string BuildListHtml(int clientId, ref int unread)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("dbo.usp_Notifications_ListForClient", con))
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
-                cmd.Parameters.Add("@TopN", SqlDbType.Int).Value = 30;
-
                 con.Open();
 
-                using (var r = cmd.ExecuteReader())
+                // 1) Unread count
+                using (var cmdCount = new SqlCommand(@"
+            SELECT COUNT(*) 
+            FROM dbo.Notifications 
+            WHERE ClientID = @ClientID AND (IsRead = 0 OR IsRead IS NULL);", con))
                 {
-                    // Result set 1: unread count
-                    if (r.Read())
-                        unread = Convert.ToInt32(r["UnreadCount"]);
+                    cmdCount.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                    object o = cmdCount.ExecuteScalar();
+                    unread = (o == null || o == DBNull.Value) ? 0 : Convert.ToInt32(o);
+                }
 
-                    // Result set 2: rows
-                    if (!r.NextResult() || !r.HasRows)
-                        return "<div class='text-muted small p-2'>No notifications.</div>";
+                // 2) Latest 10 notifications
+                using (var cmd = new SqlCommand(@"
+            SELECT TOP 10 Message, CreatedAt, 
+                   CASE WHEN IsRead IS NULL THEN 0 ELSE IsRead END AS IsRead
+            FROM dbo.Notifications
+            WHERE ClientID = @ClientID
+            ORDER BY CreatedAt DESC;", con))
+                {
+                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
-                    var sb = new StringBuilder();
-
-                    while (r.Read())
+                    using (var r = cmd.ExecuteReader())
                     {
-                        string type = (r["Type"] as string ?? "").ToLowerInvariant();
-                        string title = HttpUtility.HtmlEncode(r["Title"] as string ?? "");
-                        string body = HttpUtility.HtmlEncode(r["Body"] as string ?? "");
-                        string url = r["Url"] as string ?? "";
-                        bool isRead = r["IsRead"] != DBNull.Value && (bool)r["IsRead"];
-                        DateTime created = (DateTime)r["CreatedAt"];
+                        if (!r.HasRows)
+                            return "<div class='text-muted small p-2'>No notifications.</div>";
 
-                        string icon = "fa-circle-info";
-                        if (type == "chat") icon = "fa-message";
-                        else if (type == "quotation") icon = "fa-file-invoice";
-                        else if (type == "booking") icon = "fa-calendar-check";
-                        else if (type == "payment") icon = "fa-peso-sign";
+                        var sb = new StringBuilder();
+                        while (r.Read())
+                        {
+                            string message = HttpUtility.HtmlEncode(r["Message"] as string ?? "");
+                            bool isRead = r["IsRead"] != DBNull.Value && Convert.ToBoolean(r["IsRead"]);
+                            DateTime created = (DateTime)r["CreatedAt"];
 
-                        string readCls = isRead ? "opacity-75" : "fw-semibold";
-                        string when = created.ToLocalTime().ToString("MMM dd, yyyy hh:mm tt", CultureInfo.InvariantCulture);
+                            // Simple icon + styling (no Type/Url/Body here)
+                            string icon = "fa-circle-info";
+                            string readCls = isRead ? "opacity-75" : "fw-semibold";
+                            string when = created.ToLocalTime().ToString("MMM dd, yyyy hh:mm tt", CultureInfo.InvariantCulture);
 
-                        sb.Append(
-                            "<a href='" + (string.IsNullOrWhiteSpace(url) ? "#" : url) + "' class='text-decoration-none d-block'>" +
-                            "  <div class='d-flex gap-2 p-2 border-bottom'>" +
-                            "    <i class='fa-solid " + icon + " mt-1'></i>" +
-                            "    <div class='flex-grow-1'>" +
-                            "      <div class='" + readCls + "'>" + title + "</div>" +
-                            (string.IsNullOrWhiteSpace(body) ? "" : "<div class='small text-muted'>" + body + "</div>") +
-                            "      <div class='small text-muted'>" + when + "</div>" +
-                            "    </div>" +
-                            "  </div>" +
-                            "</a>"
-                        );
+                            sb.Append(
+                                "<a href='#' class='text-decoration-none d-block'>" +
+                                "  <div class='d-flex gap-2 p-2 border-bottom'>" +
+                                "    <i class='fa-solid " + icon + " mt-1'></i>" +
+                                "    <div class='flex-grow-1'>" +
+                                "      <div class='" + readCls + "'>" + message + "</div>" +
+                                "      <div class='small text-muted'>" + when + "</div>" +
+                                "    </div>" +
+                                "  </div>" +
+                                "</a>"
+                            );
+                        }
+
+                        return sb.ToString();
                     }
-
-                    return sb.ToString();
                 }
             }
         }
+
 
         // 🔎 Count unread Admin→Client messages to show a chat badge/row
         private int GetUnreadChatCount(int clientId)
@@ -153,7 +157,7 @@ namespace RRCManagementSystem
             using (var cmd = new SqlCommand(@"
                 SELECT COUNT(*) 
                 FROM dbo.Messages
-                WHERE ReceiverType='Client' AND ReceiverID=@ClientID
+                WHERE ReceiverType='Client' AND ReceiverID=@ClientID    
                   AND SenderType='Admin'
                   AND (Status IS NULL OR Status <> 'Read');", con))
             {

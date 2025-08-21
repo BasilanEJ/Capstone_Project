@@ -147,10 +147,16 @@
             <asp:TextBox ID="txtName" runat="server" CssClass="form-control" placeholder="Enter full name" />
         </div>
 
-        <div class="form-group">
-            <label for="txtEmail">Email</label>
-            <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" placeholder="Enter email address" />
-        </div>
+       <div class="form-group">
+    <label for="txtEmail">Email</label>
+    <asp:TextBox 
+        ID="txtEmail" 
+        runat="server" 
+        CssClass="form-control" 
+        placeholder="Enter email address" 
+        ReadOnly="true" />
+</div>
+
 
         <h3>Module Permissions</h3>
         <asp:Repeater ID="rptPermissions" runat="server">

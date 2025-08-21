@@ -1,43 +1,37 @@
 ﻿using System;
-using System.Web;
-using System.Data.SqlClient;
 using System.Configuration;
+using System.Data.SqlClient;
+using System.Web;
 
-public class MarkAsRead : IHttpHandler, System.Web.SessionState.IRequiresSessionState
+public class MarkAsRead : IHttpHandler
 {
+    private static readonly string Cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
     public void ProcessRequest(HttpContext context)
     {
-        context.Response.ContentType = "text/plain";
+        context.Response.ContentType = "application/json";
 
-        // Ensure inspector session is valid
-        if (context.Session["UserID"] == null || context.Session["Role"]?.ToString() != "Inspector")
+        var uidObj = context.Session?["UserID"];
+        var role = context.Session?["Role"] as string;
+        if (uidObj == null || !string.Equals(role, "Inspector", StringComparison.OrdinalIgnoreCase))
         {
-            context.Response.Write("unauthorized");
+            context.Response.Write("{\"ok\":false}");
             return;
         }
 
-        int inspectorId = Convert.ToInt32(context.Session["UserID"]);
-
-        try
+        int userId = Convert.ToInt32(uidObj);
+        using (var conn = new SqlConnection(Cs))
+        using (var cmd = new SqlCommand(@"
+            UPDATE dbo.Notifications
+            SET IsRead = 1, Status = 'Read'
+            WHERE UserID = @UserID AND IsRead = 0;", conn))
         {
-            using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString))
-            {
-                string query = "UPDATE Inspections SET IsRead = 1 WHERE InspectorID = @InspectorID AND IsRead = 0";
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
-            }
-
-            context.Response.Write("success");
-        }
-        catch (Exception)
-        {
-            context.Response.Write("error");
+            cmd.Parameters.AddWithValue("@UserID", userId);
+            conn.Open();
+            cmd.ExecuteNonQuery();
         }
 
+        context.Response.Write("{\"ok\":true}");
     }
 
     public bool IsReusable => false;

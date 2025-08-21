@@ -164,20 +164,81 @@ namespace RRCManagementSystem
 
         private void AssignInspector(int inquiryId, int inspectorUserId, DateTime scheduleLocalPHT, string remarks)
         {
+            int? createdInspectionId = null;
+
             using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.spInspection_Assign", conn))
+            {
+                conn.Open();
+                using (var tx = conn.BeginTransaction())
+                {
+                    // 1) Assign
+                    using (var cmd = new SqlCommand("dbo.spInspection_Assign", conn, tx))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
+                        cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorUserId;
+                        cmd.Parameters.Add("@ScheduledDate", SqlDbType.DateTime).Value = scheduleLocalPHT;
+                        cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(remarks) ? (object)DBNull.Value : remarks;
+
+                        // Optional: capture output if your proc supports it
+                        var pOut = new SqlParameter("@InspectionID", SqlDbType.Int) { Direction = ParameterDirection.Output };
+                        cmd.Parameters.Add(pOut);
+
+                        cmd.ExecuteNonQuery();
+
+                        if (pOut.Value != DBNull.Value) createdInspectionId = Convert.ToInt32(pOut.Value);
+                    }
+
+                    // 2) Build notification payload
+                    string title = "New Inspection Assigned";
+                    string when = scheduleLocalPHT.ToString("yyyy-MM-dd HH:mm");
+                    string body = $"You have a new inspection scheduled on {when} for Inquiry #{inquiryId}.";
+                    string url = createdInspectionId.HasValue
+                                   ? $"~/MyInspections.aspx?InspectionID={createdInspectionId.Value}"
+                                   : "~/MyInspections.aspx";
+
+                    // Use a dedup key to avoid double inserts if user double-clicks
+                    string dedup = $"assign:{inspectorUserId}:{inquiryId}:{when}";
+
+                    // 3) Insert notification for the inspector
+                    using (var cmdN = new SqlCommand("dbo.spNotification_Add", conn, tx))
+                    {
+                        cmdN.CommandType = CommandType.StoredProcedure;
+                        cmdN.Parameters.AddWithValue("@UserID", inspectorUserId);
+                        cmdN.Parameters.AddWithValue("@ClientID", DBNull.Value);
+                        cmdN.Parameters.AddWithValue("@Type", "Inspection");
+                        cmdN.Parameters.AddWithValue("@Title", title);
+                        cmdN.Parameters.AddWithValue("@Body", body);
+                        cmdN.Parameters.AddWithValue("@Url", url);
+                        cmdN.Parameters.AddWithValue("@DedupKey", dedup);
+                        cmdN.ExecuteNonQuery();
+                    }
+
+                    tx.Commit();
+                }
+            }
+        }
+
+        private void CreateNotification(int userId, int? clientId, string type, string title, string body, string url, string dedupKey = null)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spNotification_Add", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-
-                cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
-                cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorUserId;
-                cmd.Parameters.Add("@ScheduledDate", SqlDbType.DateTime).Value = scheduleLocalPHT;
-                cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(remarks) ? (object)DBNull.Value : remarks;
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                cmd.Parameters.AddWithValue("@ClientID", (object)clientId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Type", type ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Title", title ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Body", (object)body ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Url", (object)url ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@DedupKey", (object)dedupKey ?? DBNull.Value);
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
             }
         }
+
+
 
         protected void btnDeleteHidden_Click(object sender, EventArgs e)
         {

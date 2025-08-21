@@ -8,31 +8,62 @@ namespace RRCManagementSystem
     public partial class ResetAdminPassword : System.Web.UI.Page
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-
         protected void Page_Load(object sender, EventArgs e)
         {
             if (!IsPostBack)
             {
                 lblMessage.Text = "";
 
-                string type = Request.QueryString["type"]?.ToLower();
+                // 🔑 1) Prefer TOKEN path (direct email link after VerifyOTP issues token)
+                var token = Request.QueryString["token"];
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    HandleAdminTokenReset();   // validates token and sets ViewState["Email"]/["Role"]
+                    return;
+                }
 
-                if (type == "admin")
-                {
-                    HandleAdminTokenReset();   // uses spResetToken_Validate
-                }
-                else if (type == "client")
-                {
-                    HandleClientOtpReset();    // session-gated, SP used on save
-                }
-                else
+                // 🔐 2) Fallback: OTP/session path (when you choose not to use token)
+                if (!(Session["IsOTPVerified"] is bool ok && ok) || Session["Email"] == null)
                 {
                     lblMessage.ForeColor = System.Drawing.Color.Red;
-                    lblMessage.Text = "❌ Invalid reset request. Missing or incorrect type.";
+                    lblMessage.Text = "❌ Invalid or expired link. Please request a new reset.";
                     btnResetPassword.Enabled = false;
+                    return;
                 }
+
+                // Extra guard: confirm that email exists in Users table
+                if (!IsEmailInUsers(Session["Email"].ToString()))
+                {
+                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                    lblMessage.Text = "❌ Account not found in Users.";
+                    btnResetPassword.Enabled = false;
+                    return;
+                }
+
+                // If you really want to support OTP-without-token for admins:
+                ViewState["Email"] = Session["Email"].ToString();
+                ViewState["Role"] = "Admin";
+                lblMessage.ForeColor = System.Drawing.Color.Green;
+                lblMessage.Text = "✅ Verified. Please enter your new password.";
             }
         }
+
+
+        /// <summary>
+        /// Checks if the given email exists in the Users table.
+        /// </summary>
+        private bool IsEmailInUsers(string email)
+        {
+            using (var con = new SqlConnection(
+                ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString))
+            using (var cmd = new SqlCommand("SELECT COUNT(1) FROM dbo.Users WHERE Email = @Email", con))
+            {
+                cmd.Parameters.AddWithValue("@Email", email);
+                con.Open();
+                return (int)cmd.ExecuteScalar() > 0;
+            }
+        }
+
 
         private void HandleAdminTokenReset()
         {
@@ -91,29 +122,7 @@ namespace RRCManagementSystem
             }
         }
 
-        private void HandleClientOtpReset()
-        {
-            if (Session["IsOTPVerified"] == null || !(bool)Session["IsOTPVerified"])
-            {
-                lblMessage.Text = "❌ OTP not verified. Please try again.";
-                Response.Redirect("ForgotPassword.aspx");
-                return;
-            }
-
-            string email = Session["Email"]?.ToString();
-            if (string.IsNullOrEmpty(email))
-            {
-                lblMessage.Text = "❌ Missing client session data.";
-                Response.Redirect("ForgotPassword.aspx");
-                return;
-            }
-
-            ViewState["Email"] = email;
-            ViewState["Role"] = "Client";
-
-            lblMessage.ForeColor = System.Drawing.Color.Green;
-            lblMessage.Text = "✅ OTP validated. Please enter your new password.";
-        }
+     
 
         protected void btnResetPassword_Click(object sender, EventArgs e)
         {

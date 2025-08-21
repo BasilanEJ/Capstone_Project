@@ -1,55 +1,61 @@
 ﻿using System;
-using System.Web;
+using System.Data;
 using System.Data.SqlClient;
 using System.Configuration;
-using System.Collections.Generic;
+using System.Text;
+using System.Web;
 using System.Web.Script.Serialization;
-using System.Web.SessionState;
+using System.Collections.Generic;
 
-public class GetNotifications : IHttpHandler, IRequiresSessionState
+public class GetNotifications : IHttpHandler
 {
+    private static readonly string Cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
     public void ProcessRequest(HttpContext context)
     {
         context.Response.ContentType = "application/json";
 
-        if (context.Session["UserID"] == null || context.Session["Role"]?.ToString() != "Inspector")
+        var uidObj = context.Session?["UserID"];
+        var role = context.Session?["Role"] as string;
+        if (uidObj == null || !string.Equals(role, "Inspector", StringComparison.OrdinalIgnoreCase))
         {
-            context.Response.Write("{\"count\":0,\"items\":[]}");
+            context.Response.Write("[]");
             return;
         }
 
-        int inspectorId = Convert.ToInt32(context.Session["UserID"]);
-        var notifications = new List<object>();
+        int userId = Convert.ToInt32(uidObj);
+        var list = new List<object>();
 
-        using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString))
+        using (var conn = new SqlConnection(Cs))
+        using (var cmd = new SqlCommand(@"
+            SELECT TOP (20)
+                NotificationID, Title, Body, Url, CreatedAt, IsRead
+            FROM dbo.Notifications
+            WHERE UserID = @UserID
+            ORDER BY IsRead ASC, CreatedAt DESC;", conn))
         {
-            string query = @"
-        SELECT InspectionID, ScheduledDate
-        FROM Inspections
-        WHERE InspectorID = @InspectorID AND IsRead = 0 AND InspectionStatus = 'Pending'
-        ORDER BY ScheduledDate DESC";
-
-            SqlCommand cmd = new SqlCommand(query, conn);
-            cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
+            cmd.Parameters.AddWithValue("@UserID", userId);
             conn.Open();
-
-            SqlDataReader reader = cmd.ExecuteReader();
-            while (reader.Read())
+            using (var r = cmd.ExecuteReader())
             {
-                notifications.Add(new
+                while (r.Read())
                 {
-                    id = reader["InspectionID"].ToString(),
-                    date = Convert.ToDateTime(reader["ScheduledDate"]).ToString("MMM dd yyyy hh:mm tt")
-                });
+                    var created = r.GetDateTime(r.GetOrdinal("CreatedAt"));
+                    list.Add(new
+                    {
+                        id = r.GetInt32(r.GetOrdinal("NotificationID")),
+                        title = r["Title"] as string ?? "",
+                        body = r["Body"] as string ?? "",
+                        url = r["Url"] as string ?? "",
+                        date = created.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
+                        isRead = r.GetBoolean(r.GetOrdinal("IsRead"))
+                    });
+                }
             }
         }
 
-
-        context.Response.Write(new JavaScriptSerializer().Serialize(new
-        {
-            count = notifications.Count,
-            items = notifications
-        }));
+        var json = new JavaScriptSerializer().Serialize(list);
+        context.Response.Write(json);
     }
 
     public bool IsReusable => false;

@@ -1,172 +1,85 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ViewServices.aspx.cs" Inherits="RRCManagementSystem.ViewServices" %>
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master"
+    AutoEventWireup="true" CodeBehind="ViewServices.aspx.cs"
+    Inherits="RRCManagementSystem.ViewServices" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- Include SweetAlert -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    .table { width:100%; border-collapse:collapse; }
+    .table th, .table td { border:1px solid #dee2e6; padding:12px 15px; text-align:left; }
+    .table th { background:#0b3f7a; color:#fff; }
+    .action-btn { color:#0b3f7a; text-decoration:none; padding:4px 6px; cursor:pointer; }
+    .action-btn:hover { text-decoration:underline; }
+  </style>
 
-    <style>
-        .main-content {
-            padding: 20px;
-            background-color: #f4f4f4;
-            min-height: calc(100vh - 100px);
-        }
+  <asp:GridView ID="gvServices" runat="server"
+      AutoGenerateColumns="False"
+      CssClass="table"
+      DataKeyNames="ServiceID"
+      OnRowCommand="gvServices_RowCommand"
+      OnRowDataBound="gvServices_RowDataBound"
+      EmptyDataText="No services found.">
 
-        .card {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            margin-bottom: 30px;
-        }
+    <Columns>
+      <asp:BoundField DataField="ServiceID" HeaderText="Service ID" ReadOnly="True" />
+      <asp:BoundField DataField="Name" HeaderText="Service Name" />
+      <asp:BoundField DataField="Description" HeaderText="Description" />
+      <asp:BoundField DataField="ServiceType" HeaderText="Service Type" />
+  
 
-        .card-header {
-            background-color: #004085;
-            color: #fff;
-            padding: 15px 20px;
-            font-size: 18px;
-            font-weight: bold;
-        }
+      <asp:TemplateField HeaderText="Actions">
+        <ItemTemplate>
+          <asp:LinkButton ID="btnEdit" runat="server"
+              CommandName="EditService"
+              CommandArgument='<%# Eval("ServiceID") %>'
+              CssClass="action-btn" Text="Edit" />
 
-        .card-body {
-            padding: 20px;
-        }
+          &nbsp;|&nbsp;
 
-        .alert-message {
-            display: block;
-            margin-bottom: 15px;
-            padding: 10px 15px;
-            background-color: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-            border-radius: 5px;
-            font-size: 14px;
-        }
+    
+          <asp:LinkButton ID="btnDelete" runat="server"
+              CommandName="DisableService"
+              CommandArgument='<%# Eval("ServiceID") %>'
+              CssClass="action-btn"
+              CausesValidation="false"
+              UseSubmitBehavior="false"
+              OnClientClick="return confirmDelete(this, event);"
+              Text="Delete" />
+        </ItemTemplate>
+      </asp:TemplateField>
+    </Columns>
+  </asp:GridView>
 
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="text/javascript">
+      // Important: DO NOT call __doPostBack manually for LinkButton inside GridView.
+      // It won't include the internal argument that RowCommand expects.
+      // Instead, programmatically click the same LinkButton after confirm.
+      function confirmDelete(btn, evt) {
+          // If we already confirmed once, allow normal postback
+          if (btn.dataset.confirmed === '1') return true;
 
-        .table th,
-        .table td {
-            border: 1px solid #dee2e6;
-            padding: 12px 15px;
-            text-align: left;
-        }
+          if (evt) evt.preventDefault();
 
-        .table th {
-            background-color: #004085;
-            color: #fff;
-            font-size: 14px;
-        }
+          Swal.fire({
+              title: 'Delete this service?',
+              text: 'This will service will be deleted.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#0b3f7a',
+              cancelButtonColor: '#d33',
+              confirmButtonText: 'Yes, delete it'
+          }).then((result) => {
+              if (result.isConfirmed) {
+                  // Mark as confirmed to skip re-prompt and trigger the same control click
+                  btn.dataset.confirmed = '1';
+                  btn.click();
+              }
+          });
 
-        .table td {
-            background-color: #f8f9fa;
-            font-size: 14px;
-        }
+          return false; // always prevent the initial postback
+      }
+  </script>
 
-        .action-btn {
-            color: #004085;
-            text-decoration: none;
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 13px;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        .action-btn:hover {
-            background-color: #004085;
-            color: #fff;
-        }
-
-        @media (max-width: 768px) {
-            .table th,
-            .table td {
-                padding: 8px 10px;
-                font-size: 12px;
-            }
-
-            .card-header {
-                font-size: 16px;
-            }
-
-            .action-btn {
-                font-size: 12px;
-                padding: 5px 8px;
-            }
-        }
-    </style>
-
-    <div class="main-content">
-        <div class="card">
-            <div class="card-header">
-                Services List
-            </div>
-            <div class="card-body">
-
-
-                <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" Visible="false"></asp:Label>
-
-                <asp:GridView ID="gvServices" runat="server" AutoGenerateColumns="False"
-    CssClass="table"
-    OnRowCommand="gvServices_RowCommand"
-    DataKeyNames="ServiceID"
-    EmptyDataText="No services found.">
-
-                    <Columns>
-                        <asp:TemplateField HeaderText="Service ID">
-                            <ItemTemplate>
-                                <%# "Service" + Convert.ToInt32(Eval("ServiceID")).ToString("D3") %>
-                            </ItemTemplate>
-                        </asp:TemplateField>
-
-                        <asp:BoundField DataField="Name" HeaderText="Service Name" />
-                        <asp:BoundField DataField="Description" HeaderText="Description" />
-                    
-
-                        <asp:TemplateField HeaderText="Actions">
-                            <ItemTemplate>
-                                <asp:LinkButton ID="btnEdit" runat="server"
-                                    CommandName="EditService"
-                                    CommandArgument='<%# Eval("ServiceID") %>'
-                                    CssClass="action-btn" Text="Edit" />
-                                &nbsp;|&nbsp;
-                                <asp:LinkButton ID="btnDelete" runat="server"
-                                    CommandName="DeleteService"
-                                    CommandArgument='<%# Eval("ServiceID") %>'
-                                    CssClass="action-btn"
-                                    OnClientClick='<%# $"return confirmDeleteService({Eval("ServiceID")});" %>'
-                                    Text="Delete" />
-
-                            </ItemTemplate>
-                        </asp:TemplateField>
-                    </Columns>
-                </asp:GridView>
-
-              <script type="text/javascript">
-                  function confirmDeleteService(serviceId) {
-                      Swal.fire({
-                          title: 'Are you sure?',
-                          text: 'This will permanently delete the service.',
-                          icon: 'warning',
-                          showCancelButton: true,
-                          confirmButtonColor: '#d33',
-                          cancelButtonColor: '#6c757d',
-                          confirmButtonText: 'Yes, delete it!',
-                          cancelButtonText: 'Cancel'
-                      }).then((result) => {
-                          if (result.isConfirmed) {
-                              __doPostBack('<%= gvServices.UniqueID %>', 'DeleteService$' + serviceId);
-            }
-        });
-                      return false;
-                  }
-              </script>
-
-
-            </div>
-        </div>
-    </div>
 </asp:Content>

@@ -43,13 +43,15 @@ namespace RRCManagementSystem
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
             // ✅ must be logged in AND Inspector
-            if (Session["UserID"] == null || Session["Role"] == null || !string.Equals(Session["Role"].ToString(), "Inspector", StringComparison.OrdinalIgnoreCase))
+            if (Session["UserID"] == null || Session["Role"] == null ||
+                !string.Equals(Session["Role"].ToString(), "Inspector", StringComparison.OrdinalIgnoreCase))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "noInspector",
                     "Swal.fire('Unauthorized', 'You must be logged in as an Inspector.', 'error');", true);
                 return;
             }
 
+            // ✅ Client must be selected
             if (string.IsNullOrWhiteSpace(hfClientID.Value) || !int.TryParse(hfClientID.Value, out int clientId))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "selectClient",
@@ -57,6 +59,7 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // ✅ SQM validation
             if (!int.TryParse(txtSQM.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int sqm))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "invalidSQM",
@@ -64,6 +67,7 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // ✅ Total Price validation
             if (!decimal.TryParse(txtTotalPrice.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal total) || total <= 0)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "invalidPrice",
@@ -71,6 +75,7 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // ✅ Must select at least one service
             var selectedItems = cblServices.Items.Cast<ListItem>().Where(i => i.Selected).ToList();
             if (!selectedItems.Any())
             {
@@ -96,6 +101,26 @@ namespace RRCManagementSystem
                 isContract: isContract
             );
 
+            // 🔔 Add notification for the client
+            try
+            {
+                // Shorten services for notification text
+                string svc = selectedServiceNames;
+                if (svc.Length > 60) svc = svc.Substring(0, 57) + "...";
+
+                var ph = new System.Globalization.CultureInfo("en-PH");
+                string priceText = string.Format(ph, "{0:C}", total); // ₱1,000.00 style
+
+                string deepLink = "BookService.aspx?tab=quotes"; // adjust if you have a different review page
+                string msg = $"New quotation ready: {svc} — {priceText} for {sqm} sqm. Tap to review.";
+
+                AddNotification(clientId, msg, "Quotation", deepLink);
+            }
+            catch
+            {
+                // Notification failed is non-critical; ignore silently
+            }
+
             // ✅ Success UI
             ScriptManager.RegisterStartupScript(this, GetType(), "success",
                 "Swal.fire('Success', 'Quotation submitted for client!', 'success');", true);
@@ -106,6 +131,22 @@ namespace RRCManagementSystem
             cblServices.ClearSelection();
             txtSQM.Text = "";
             txtTotalPrice.Text = "";
+        }
+
+
+        private void AddNotification(int clientId, string message, string type = "Quotation", string url = null)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_Notifications_Add", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                cmd.Parameters.Add("@Message", SqlDbType.NVarChar, 400).Value = message ?? "";
+                cmd.Parameters.Add("@Type", SqlDbType.NVarChar, 50).Value = (object)type ?? DBNull.Value;
+                cmd.Parameters.Add("@Url", SqlDbType.NVarChar, 400).Value = (object)url ?? DBNull.Value;
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
         }
 
         private bool GetIsAnyContract(string serviceIdCsv)

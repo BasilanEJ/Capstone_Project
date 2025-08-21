@@ -14,11 +14,12 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
+            // Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             { Response.Redirect("~/Login.aspx"); return; }
 
             string role = Convert.ToString(Session["Role"]);
+            // Keep your original role rule (update if needed)
             if (role == "SuperAdmin" || role == "Inspector")
             { Response.Redirect("~/Login.aspx"); return; }
 
@@ -29,12 +30,12 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 ViewState["CanEdit"] = HasPermission(userId, "ManageServices", "CanEdit");
-                ViewState["CanDelete"] = HasPermission(userId, "ManageServices", "CanDelete");
+                ViewState["CanDisable"] = HasPermission(userId, "ManageServices", "CanDelete"); // reuse delete perm
                 LoadServices();
             }
         }
 
-        private bool HasPermission(int adminId, string moduleName, string which)
+        private bool HasPermission(int userId, string module, string which)
         {
             try
             {
@@ -42,15 +43,19 @@ namespace RRCManagementSystem
                 using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", conn))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@UserID", adminId);
-                    cmd.Parameters.AddWithValue("@ModuleName", moduleName);
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+                    cmd.Parameters.AddWithValue("@ModuleName", module);
                     cmd.Parameters.AddWithValue("@Permission", which);
                     conn.Open();
                     object result = cmd.ExecuteScalar();
                     return result != null && result != DBNull.Value && Convert.ToBoolean(result);
                 }
             }
-            catch { return false; }
+            catch
+            {
+                // If permission check fails, treat as no permission
+                return false;
+            }
         }
 
         private void LoadServices()
@@ -65,31 +70,20 @@ namespace RRCManagementSystem
                     var dt = new DataTable();
                     da.Fill(dt);
 
-                    // Optional formatted ID
-                    if (!dt.Columns.Contains("FormattedServiceID"))
-                        dt.Columns.Add("FormattedServiceID", typeof(string));
-                    foreach (DataRow row in dt.Rows)
-                        row["FormattedServiceID"] = "Service" + ((int)row["ServiceID"]).ToString("D3");
-
                     gvServices.DataSource = dt;
                     gvServices.DataBind();
-
-                    lblMessage.Text = "";
-                    lblMessage.Visible = false;
                 }
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "⚠ Error loading services: " + ex.Message;
-                lblMessage.Visible = true;
+                AlertError($"Error loading services: {ex.Message}");
             }
         }
 
         protected void gvServices_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            // Expect CommandArgument to be ServiceID
-            if (!int.TryParse(Convert.ToString(e.CommandArgument), out int serviceId))
-                return;
+            // Expecting CommandArgument to be a numeric ServiceID
+            if (!int.TryParse(Convert.ToString(e.CommandArgument), out int serviceId)) return;
 
             if (e.CommandName == "EditService" && Convert.ToBoolean(ViewState["CanEdit"]))
             {
@@ -97,13 +91,13 @@ namespace RRCManagementSystem
                 return;
             }
 
-            if (e.CommandName == "DeleteService" && Convert.ToBoolean(ViewState["CanDelete"]))
+            if (e.CommandName == "DisableService" && Convert.ToBoolean(ViewState["CanDisable"]))
             {
                 try
                 {
                     int affected = 0;
                     using (var conn = new SqlConnection(connectionString))
-                    using (var cmd = new SqlCommand("dbo.spService_Delete", conn))
+                    using (var cmd = new SqlCommand("dbo.spService_MarkUnavailable", conn))
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@ServiceID", serviceId);
@@ -117,24 +111,60 @@ namespace RRCManagementSystem
 
                     if (affected > 0)
                     {
-                        LoadServices();
-                        // SweetAlert success
-                        ClientScript.RegisterStartupScript(GetType(), "delok", @"
-Swal.fire({ icon:'success', title:'Deleted!', text:'Service has been deleted.', timer:2000, showConfirmButton:false });
-", true);
+                        LoadServices(); // refresh grid
+                        // UI text says Delete, but we only marked UNAVAILABLE
+                        AlertSuccess("Service deleted.");
                     }
                     else
                     {
-                        lblMessage.Text = "⚠ Service not found.";
-                        lblMessage.Visible = true;
+                        AlertInfo("Service not found.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    lblMessage.Text = "⚠ Error deleting service: " + ex.Message;
-                    lblMessage.Visible = true;
+                    AlertError($"Error updating service: {ex.Message}");
                 }
             }
+        }
+
+        protected void gvServices_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+            bool canEdit = Convert.ToBoolean(ViewState["CanEdit"]);
+            bool canDisable = Convert.ToBoolean(ViewState["CanDisable"]);
+
+            var btnEdit = e.Row.FindControl("btnEdit") as LinkButton;
+            var btnDelete = e.Row.FindControl("btnDelete") as LinkButton;
+
+            if (btnEdit != null) btnEdit.Visible = canEdit;
+            if (btnDelete != null) btnDelete.Visible = canDisable;
+        }
+
+        // ---------- SweetAlert helpers ----------
+        private void AlertSuccess(string msg) =>
+            ClientScript.RegisterStartupScript(
+                this.GetType(), Guid.NewGuid().ToString("N"),
+                $"Swal.fire('Success','{Js(msg)}','success');", true);
+
+        private void AlertInfo(string msg) =>
+            ClientScript.RegisterStartupScript(
+                this.GetType(), Guid.NewGuid().ToString("N"),
+                $"Swal.fire('Notice','{Js(msg)}','info');", true);
+
+        private void AlertError(string msg) =>
+            ClientScript.RegisterStartupScript(
+                this.GetType(), Guid.NewGuid().ToString("N"),
+                $"Swal.fire('Error','{Js(msg)}','error');", true);
+
+        private static string Js(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace(@"\", @"\\")
+                    .Replace("'", @"\'")
+                    .Replace("\"", "\\\"")
+                    .Replace("\r", "\\r")
+                    .Replace("\n", "\\n");
         }
     }
 }

@@ -27,57 +27,128 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Check if the email exists (Clients – Approved) via SP
-            bool emailExists = CheckClientEmailExists(email);
-            if (!emailExists)
+            try
             {
-                lblMessage.Text = "⚠ Email not found or not approved.";
-                return;
+                // 1) USERS first (Admins/Staff) — allow only Active/Available
+                if (TryGetEligibleUser(email, out int userId, out string userName, out string userRole))
+                {
+                    string otp = GenerateOTP();
+
+                    // Save OTP context (2 minutes)
+                    Session["OTP"] = otp;
+                    Session["OTP_Expiry"] = DateTime.Now.AddMinutes(2);
+                    Session["OTP_Email"] = email;
+                    Session["OTP_AccountType"] = "User";
+                    Session["OTP_UserID"] = userId;
+                    Session.Remove("OTP_ClientID");
+
+                    TryAudit($"Password reset OTP requested for USER {userRole} ({userName}) email {email}.");
+
+                    string emailBody = GenerateOtpEmailBody(otp);
+                    if (SendOtpEmail(email, emailBody))
+                    {
+                        Response.Redirect("VerifyOTP.aspx");
+                        return;
+                    }
+                    lblMessage.Text = "⚠ Failed to send OTP email. Please try again later.";
+                    return;
+                }
+
+                // 2) CLIENTS next — allow only Approved
+                if (TryGetApprovedClient(email, out int clientId, out string clientName))
+                {
+                    string otp = GenerateOTP();
+
+                    Session["OTP"] = otp;
+                    Session["OTP_Expiry"] = DateTime.Now.AddMinutes(2);
+                    Session["OTP_Email"] = email;
+                    Session["OTP_AccountType"] = "Client";
+                    Session["OTP_ClientID"] = clientId;
+                    Session.Remove("OTP_UserID");
+
+                    TryAudit($"Password reset OTP requested for CLIENT ({clientName}) email {email}.");
+
+                    string emailBody = GenerateOtpEmailBody(otp);
+                    if (SendOtpEmail(email, emailBody))
+                    {
+                        Response.Redirect("VerifyOTP.aspx");
+                        return;
+                    }
+                    lblMessage.Text = "⚠ Failed to send OTP email. Please try again later.";
+                    return;
+                }
+
+                // 3) Not eligible
+                lblMessage.Text = "⚠ Email not found or not approved/active.";
             }
-
-            // ✅ Generate OTP
-            string otp = GenerateOTP();
-
-            // ✅ Store OTP and email in session (2 minutes expiry)
-            Session["OTP"] = otp;
-            Session["OTP_Expiry"] = DateTime.Now.AddMinutes(2);
-            Session["OTP_Email"] = email;
-
-            // (Optional) audit trail
-            TryAudit($"Password reset OTP requested for client email {email}");
-
-            // ✅ Send OTP via email
-            string emailBody = GenerateOtpEmailBody(otp);
-            bool emailSent = SendOtpEmail(email, emailBody);
-
-            if (emailSent)
+            catch (Exception ex)
             {
-                Response.Redirect("VerifyOTP.aspx");
-            }
-            else
-            {
-                lblMessage.Text = "⚠ Failed to send OTP email. Please try again later.";
+                lblMessage.Text = "⚠ Error: " + ex.Message;
             }
         }
 
-        private bool CheckClientEmailExists(string email)
+        /// <summary>
+        /// Query Users via spAuth_GetUserByEmail; allow only Status = Active or Available.
+        /// Expects columns: UserID, Name, Role, Status.
+        /// </summary>
+        private bool TryGetEligibleUser(string email, out int userId, out string name, out string role)
         {
+            userId = 0; name = ""; role = "";
+
             using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.spClient_EmailExistsApproved", conn))
+            using (var cmd = new SqlCommand("dbo.spAuth_GetUserByEmail", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+
+                conn.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (!reader.Read())
+                        return false;
+
+                    string status = reader["Status"]?.ToString() ?? "";
+                    if (!status.Equals("Active", StringComparison.OrdinalIgnoreCase) &&
+                        !status.Equals("Available", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+
+                    userId = Convert.ToInt32(reader["UserID"]);
+                    name = reader["Name"]?.ToString() ?? "";
+                    role = reader["Role"]?.ToString() ?? "";
+                    return true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Query Clients via spAuth_GetClientByEmail; allow only Status = Approved.
+        /// Expects columns: ClientID, Name, Status.
+        /// </summary>
+        private bool TryGetApprovedClient(string email, out int clientId, out string name)
+        {
+            clientId = 0; name = "";
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAuth_GetClientByEmail", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
 
-                try
+                conn.Open();
+                using (var reader = cmd.ExecuteReader())
                 {
-                    conn.Open();
-                    object o = cmd.ExecuteScalar();        // 1 or 0
-                    return (o != null && Convert.ToInt32(o) == 1);
-                }
-                catch (Exception ex)
-                {
-                    lblMessage.Text = "⚠ Error checking email: " + ex.Message;
-                    return false;
+                    if (!reader.Read())
+                        return false;
+
+                    string status = reader["Status"]?.ToString() ?? "";
+                    if (!status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                        return false;
+
+                    clientId = Convert.ToInt32(reader["ClientID"]);
+                    name = reader["Name"]?.ToString() ?? "";
+                    return true;
                 }
             }
         }
@@ -141,7 +212,7 @@ namespace RRCManagementSystem
                 var smtp = new SmtpClient("smtp.gmail.com", 587)
                 {
                     UseDefaultCredentials = false,
-                    Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq"), // app password; move to config
+                    Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq"), // move to web.config
                     EnableSsl = true
                 };
 
@@ -157,20 +228,19 @@ namespace RRCManagementSystem
 
         private void TryAudit(string action)
         {
-            // best-effort; ignore failures
             try
             {
                 using (var conn = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = 0; // 0 or NULL since it's a client-side event
+                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = 0; // public action
                     cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action ?? "";
                     conn.Open();
                     cmd.ExecuteNonQuery();
                 }
             }
-            catch { /* swallow */ }
+            catch { /* ignore */ }
         }
     }
 }

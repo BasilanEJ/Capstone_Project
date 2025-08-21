@@ -44,14 +44,14 @@
         </div>
     </div>
 
-    <!-- Bootstrap 5 JS Bundle (Popper included) -->
+    <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
     <script type="text/javascript">
         function confirmUpload() {
-            event.preventDefault(); // prevent postback
+            event.preventDefault(); // prevent immediate postback
             Swal.fire({
                 title: 'Are you sure?',
                 text: "Do you want to upload this contract?",
@@ -64,7 +64,7 @@
                     __doPostBack('<%= btnUpload.UniqueID %>', '');
                 }
             });
-            return false; // always prevent default as __doPostBack will handle it
+            return false;
         }
     </script>
 </asp:Content>

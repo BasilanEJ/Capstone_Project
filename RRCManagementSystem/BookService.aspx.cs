@@ -99,10 +99,10 @@ namespace RRCManagementSystem
             int clientId = Convert.ToInt32(Session["ClientID"]);
             string notes = (txtNotes.Text == null) ? null : txtNotes.Text.Trim();
 
-            // Call single, atomic stored procedure that:
+            // Single, atomic stored procedure:
             // - Validates the quotation belongs to this client
             // - Creates Bookings row
-            // - Inserts BookingServices from the quotation's ServiceID CSV
+            // - Inserts BookingServices from quotation's ServiceID CSV
             // - Deletes the quotation
             int newBookingId = 0;
 
@@ -131,7 +131,7 @@ namespace RRCManagementSystem
                 }
                 catch (SqlException ex)
                 {
-                    // Show a friendly error
+                    // Friendly error
                     ScriptManager.RegisterStartupScript(this, GetType(), "sqlErr",
                         "Swal.fire('Error', 'Failed to create booking: " + ex.Message.Replace("'", "\\'") + "', 'error');", true);
                     return;
@@ -143,34 +143,12 @@ namespace RRCManagementSystem
                 ScriptManager.RegisterStartupScript(this, GetType(), "booked",
                     "Swal.fire('Success', 'Your service has been booked!', 'success');", true);
 
-                // 🔔 Insert notification (non-blocking)
-                try
-                {
-                    using (var con = new SqlConnection(connectionString))
-                    using (var cmd = new SqlCommand("dbo.usp_Notifications_Add", con))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.AddWithValue("@ClientID", clientId);
-                        cmd.Parameters.AddWithValue("@Type", "booking");
-                        cmd.Parameters.AddWithValue("@Title", "Booking Submitted");
-                        cmd.Parameters.AddWithValue("@Body", "We’ve received your booking request.");
-                        cmd.Parameters.AddWithValue("@Url", "MyBookings.aspx");
-                        cmd.Parameters.AddWithValue("@DedupKey", "BOOK-" + newBookingId + "-SUBMITTED");
-                        con.Open();
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-                catch
-                {
-                    // Swallow errors so a notification failure doesn't affect booking UX
-                }
-
-                // Reset form
+                // Reset form (no notifications here)
                 txtDate.Text = "";
                 txtTime.Text = "";
                 txtNotes.Text = "";
 
-                // Optional: redirect so user immediately sees the new booking
+                // Optional: redirect to show the new booking immediately
                 // Response.Redirect("~/MyBookings.aspx");
             }
             else
@@ -179,6 +157,7 @@ namespace RRCManagementSystem
                     "Swal.fire('Error', 'No booking was created. Please try again.', 'error');", true);
             }
         }
-    
+
+
     }
 }

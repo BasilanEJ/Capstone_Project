@@ -116,13 +116,14 @@ Swal.fire({
                     cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description);
                     cmd.Parameters.AddWithValue("@IsContract", isContract);
 
-                    // If you later add a Price textbox, map it here:
-                    // cmd.Parameters.AddWithValue("@Price", (object)priceOrNull ?? DBNull.Value);
+                    // 👇 Optional, if proc handles it you don’t need this
+                    // cmd.Parameters.AddWithValue("@Status", "Available");
 
                     conn.Open();
-                    var result = cmd.ExecuteScalar(); // returns new ServiceID
+                    var result = cmd.ExecuteScalar();
                     if (result != null && result != DBNull.Value) newId = Convert.ToInt32(result);
                 }
+
 
                 // Audit
                 using (var conn = new SqlConnection(connectionString))

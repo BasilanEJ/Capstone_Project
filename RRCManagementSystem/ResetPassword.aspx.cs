@@ -23,11 +23,12 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                // ✅ Validate token via stored procedure
+                // ✅ Validate token via stored procedure (returns email if token is valid & not expired)
                 string emailFromToken = GetEmailByValidToken(token);
                 if (!string.IsNullOrEmpty(emailFromToken))
                 {
                     ViewState["ClientEmail"] = emailFromToken;
+                    // keep button enabled
                 }
                 else
                 {

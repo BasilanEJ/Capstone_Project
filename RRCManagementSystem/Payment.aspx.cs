@@ -234,34 +234,114 @@ namespace RRCManagementSystem
                     hfPayPalAmount.Value = nextAmount.ToString("0.00", CultureInfo.InvariantCulture);
                     hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
 
-                    // Optional: enqueue a payment reminder (best-effort)
-                    if (nextAmount > 0m)
-                    {
-                        try
-                        {
-                            using (var con2 = new SqlConnection(connectionString))
-                            using (var cmd2 = new SqlCommand("dbo.usp_Notifications_Add", con2))
-                            {
-                                cmd2.CommandType = CommandType.StoredProcedure;
-                                cmd2.Parameters.AddWithValue("@ClientID", clientId);
-                                cmd2.Parameters.AddWithValue("@Type", "payment");
-                                cmd2.Parameters.AddWithValue("@Title", "Payment Due");
-                                cmd2.Parameters.AddWithValue("@Body",
-                                    "Next installment: " + _kpiNext + ". Remaining: " + _kpiRemain + ".");
-                                cmd2.Parameters.AddWithValue("@Url", "Payment.aspx");
-                                cmd2.Parameters.AddWithValue("@DedupKey", "PAY-" + bookingId + "-" + effectivePlan);
-                                con2.Open();
-                                cmd2.ExecuteNonQuery();
-                            }
-                        }
-                        catch { /* swallow non-blocking notification errors */ }
-                    }
+                    // ✅ Stage-aware, once-per-stage / once-only reminder (idempotent via DedupKey)
+                    EnqueuePaymentDueNotification(
+                        clientId: clientId,
+                        bookingId: bookingId,
+                        isContract: isContract,
+                        plan: effectivePlan,
+                        fullPrice: fullPrice,
+                        totalPaid: totalPaid,
+                        nextAmount: nextAmount
+                    );
 
                     // Generate/refresh PayMongo Checkout URL (async fire-and-forget)
                     GenerateCheckoutURL(clientId, bookingId, isContract, fullPrice, totalPaid, effectivePlan);
                 }
             }
         }
+
+
+
+        private void EnqueuePaymentDueNotification(
+    int clientId, int bookingId,
+    bool isContract, string plan,
+    decimal fullPrice, decimal totalPaid, decimal nextAmount)
+        {
+            // Nothing to notify if nothing is due.
+            if (nextAmount <= 0m) return;
+
+            // Determine which "stage" is currently due and build a dedup key.
+            // This ensures ONE notification per stage.
+            string stageKey;
+            string stageLabel;
+
+            if (!isContract || plan == "100")
+            {
+                stageKey = $"BOOK-{bookingId}-ONE-TIME";
+                stageLabel = "Payment Due";
+            }
+            else if (string.Equals(plan, "50-25-25", StringComparison.OrdinalIgnoreCase))
+            {
+                var fifty = Math.Round(fullPrice * 0.50m, 2, MidpointRounding.AwayFromZero);
+                var seventyFive = Math.Round(fullPrice * 0.75m, 2, MidpointRounding.AwayFromZero);
+
+                if (totalPaid <= 0m)
+                {
+                    stageKey = $"BOOK-{bookingId}-STAGE-1-50";
+                    stageLabel = "1st Installment (50%) Due";
+                }
+                else if (totalPaid < seventyFive)
+                {
+                    stageKey = $"BOOK-{bookingId}-STAGE-2-25";
+                    stageLabel = "2nd Installment (25%) Due";
+                }
+                else
+                {
+                    stageKey = $"BOOK-{bookingId}-STAGE-3-25";
+                    stageLabel = "Final Installment (25%) Due";
+                }
+            }
+            else if (string.Equals(plan, "70-30", StringComparison.OrdinalIgnoreCase))
+            {
+                var seventy = Math.Round(fullPrice * 0.70m, 2, MidpointRounding.AwayFromZero);
+
+                if (totalPaid <= 0m)
+                {
+                    stageKey = $"BOOK-{bookingId}-STAGE-1-70";
+                    stageLabel = "1st Installment (70%) Due";
+                }
+                else
+                {
+                    stageKey = $"BOOK-{bookingId}-STAGE-2-30";
+                    stageLabel = "Final Installment (30%) Due";
+                }
+            }
+            else
+            {
+                // Fallback – treat as one-time
+                stageKey = $"BOOK-{bookingId}-ONE-TIME";
+                stageLabel = "Payment Due";
+            }
+
+            // Format amounts for PH pesos
+            var ph = new CultureInfo("en-PH");
+            string nextTxt = string.Format(ph, "{0:C}", nextAmount);
+            decimal remaining = Math.Max(0m, fullPrice - totalPaid);
+            string remainTxt = string.Format(ph, "{0:C}", remaining);
+
+            try
+            {
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.usp_Notifications_Add", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@ClientID", clientId);
+                    cmd.Parameters.AddWithValue("@Type", "payment");
+                    cmd.Parameters.AddWithValue("@Title", stageLabel);
+                    cmd.Parameters.AddWithValue("@Body", $"Next installment: {nextTxt}. Remaining: {remainTxt}.");
+                    cmd.Parameters.AddWithValue("@Url", "Payment.aspx");
+                    cmd.Parameters.AddWithValue("@DedupKey", stageKey);
+                    con.Open();
+                    cmd.ExecuteNonQuery(); // idempotent because of @DedupKey + index
+                }
+            }
+            catch
+            {
+                // best-effort; ignore failures
+            }
+        }
+
 
         private decimal GetTotalPaid(int bookingId)
         {

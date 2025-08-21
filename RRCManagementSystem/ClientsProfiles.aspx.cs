@@ -48,8 +48,17 @@ namespace RRCManagementSystem
 
                 gvClients.DataSource = dt;
                 gvClients.DataBind();
+
+                // Optional: show a hint if nothing returned
+                if (dt.Rows.Count == 0)
+                {
+                    // You can replace with a label on the page if you prefer
+                    // lblEmpty.Text = "No approved clients found.";
+                    System.Diagnostics.Debug.WriteLine("No approved clients found.");
+                }
             }
         }
+
 
         protected void gvClients_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {

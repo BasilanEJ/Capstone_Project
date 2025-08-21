@@ -15,7 +15,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
+            // Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -24,7 +24,7 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Deny SuperAdmin and Inspector (kept from your version)
+            // Keep your original restriction
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -44,21 +44,22 @@ namespace RRCManagementSystem
             using (var da = new SqlDataAdapter(cmd))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-
                 var dt = new DataTable();
                 da.Fill(dt);
 
                 ddlClients.DataSource = dt;
-                ddlClients.DataTextField = "Name";
+                ddlClients.DataTextField = "FullName";   // <— bind to FullName
                 ddlClients.DataValueField = "ClientID";
                 ddlClients.DataBind();
+
+                // friendly first item
                 ddlClients.Items.Insert(0, new ListItem("-- Select Client --", ""));
             }
         }
 
         protected void btnUpload_Click(object sender, EventArgs e)
         {
-            lblMessage.CssClass = "message";
+            lblMessage.CssClass = "form-text text-center mb-3";
             lblMessage.Text = "";
 
             // session re-check
@@ -106,7 +107,8 @@ namespace RRCManagementSystem
                 string physicalPath = Server.MapPath(relativePath);           // where we store the file
 
                 // ensure folder exists
-                Directory.CreateDirectory(Path.GetDirectoryName(physicalPath) ?? Server.MapPath("~/"));
+                string dir = Path.GetDirectoryName(physicalPath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
                 // encrypt and save
                 using (var ms = new MemoryStream())
@@ -120,7 +122,7 @@ namespace RRCManagementSystem
                 using (var conn = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand("dbo.spClientContract_Insert", conn))
                 {
-                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
                     cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
                     cmd.Parameters.Add("@FilePath", SqlDbType.NVarChar, 260).Value = relativePath;
                     cmd.Parameters.Add("@StartDate", SqlDbType.DateTime).Value = startDate;
@@ -129,11 +131,11 @@ namespace RRCManagementSystem
                     cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar).Value = (object)remarks ?? DBNull.Value;
 
                     conn.Open();
-                    object newId = cmd.ExecuteScalar(); // ContractID if you want it
+                    cmd.ExecuteScalar(); // (Optionally returns ContractID)
                 }
 
                 lblMessage.Text = "✅ Contract uploaded and encrypted successfully!";
-                lblMessage.CssClass = "message";
+                lblMessage.CssClass = "form-text text-center mb-3 text-success";
                 ClearForm();
             }
             catch (Exception ex)
@@ -153,7 +155,7 @@ namespace RRCManagementSystem
         private void Fail(string msg)
         {
             lblMessage.Text = msg;
-            lblMessage.CssClass = "message error";
+            lblMessage.CssClass = "form-text text-center mb-3 text-danger";
         }
     }
 }
