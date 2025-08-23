@@ -121,6 +121,7 @@
     <Content Include="AddEmployees.aspx" />
     <Content Include="AddEquipment.aspx" />
     <Content Include="AddItem.aspx" />
+    <Content Include="AddReceipt.aspx" />
     <Content Include="AddRole.aspx" />
     <Content Include="AddServices.aspx" />
     <Content Include="AddStocks.aspx" />
@@ -219,6 +220,7 @@
     <Content Include="OurContract.aspx" />
     <Content Include="Payment.aspx" />
     <Content Include="PaymentConfirmation.aspx" />
+    <Content Include="PrivacyPolicy.aspx" />
     <Content Include="Profile.aspx" />
     <Content Include="Receipt.aspx" />
     <Content Include="Reports.aspx" />
@@ -303,6 +305,13 @@
     </Compile>
     <Compile Include="AddItem.aspx.designer.cs">
       <DependentUpon>AddItem.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="AddReceipt.aspx.cs">
+      <DependentUpon>AddReceipt.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AddReceipt.aspx.designer.cs">
+      <DependentUpon>AddReceipt.aspx</DependentUpon>
     </Compile>
     <Compile Include="AddRole.aspx.cs">
       <DependentUpon>AddRole.aspx</DependentUpon>
@@ -807,6 +816,13 @@
       <DependentUpon>PayPalWebhook.ashx</DependentUpon>
     </Compile>
     <Compile Include="PdfWatermark.cs" />
+    <Compile Include="PrivacyPolicy.aspx.cs">
+      <DependentUpon>PrivacyPolicy.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="PrivacyPolicy.aspx.designer.cs">
+      <DependentUpon>PrivacyPolicy.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Profile.aspx.cs">
       <DependentUpon>Profile.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>

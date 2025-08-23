@@ -7,7 +7,6 @@ using System.IO;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using RRCManagementSystem.Helpers; // AESHelper, BlockchainLogger
-using WebListItem = System.Web.UI.WebControls.ListItem;
 
 namespace RRCManagementSystem
 {
@@ -18,14 +17,11 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
-
-            // Optional: block roles that shouldn't access
             var role = Session["Role"].ToString();
             if (role == "SuperAdmin" || role == "Inspector")
             {
@@ -35,63 +31,285 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                BindClients();
-                BindPaymentMethods();
+                BindPaymentDDL(ddlMethod1);
+                BindPaymentDDL(ddlMethod2);
                 txtRemainingBalance.Text = "0.00";
+                //txtProjectedBalance.Text = "0.00";
+                //.Text = "-";
             }
         }
 
-        // =============== Data Binders ===================================================
-
-        private void BindClients()
+        // -------- Search / pick client ----------
+        protected void btnSearchClient_Click(object sender, EventArgs e)
         {
-            ddlClients.Items.Clear();
-            ddlClients.Items.Add(new WebListItem("-- Select Client --", ""));
+            pnlChosen.Visible = false;
+            hfClientID.Value = "";
+            rpResults.DataSource = SearchClients(txtClientSearch.Text.Trim());
+            rpResults.DataBind();
+            pnlResults.Visible = true;
+            lblMessage.Text = "";
+        }
 
-            const string sql = @"
-        SELECT c.ClientID,
-               LTRIM(RTRIM(c.LastName)) AS LastName,
-               LTRIM(RTRIM(c.FirstName)) AS FirstName,
-               LTRIM(RTRIM(ISNULL(c.MiddleName, ''))) AS MiddleName
-        FROM dbo.Clients c
-        WHERE EXISTS (SELECT 1 FROM dbo.Bookings b WHERE b.ClientID = c.ClientID)
-        ORDER BY c.LastName, c.FirstName;";
+        protected void btnClearClient_Click(object sender, EventArgs e)
+        {
+            txtClientSearch.Text = "";
+            pnlResults.Visible = false;
+            pnlChosen.Visible = false;
+            hfClientID.Value = "";
+            txtRemainingBalance.Text = "0.00";
+           // txtProjectedBalance.Text = "0.00";
+           // txtLatestBooking.Text = "-";
+            hfBookingId.Value = "";
+        }
+
+        protected void rpResults_ItemCommand(object source, RepeaterCommandEventArgs e)
+        {
+            if (e.CommandName != "Pick") return;
+
+            int clientId = int.Parse(e.CommandArgument.ToString());
+            hfClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
+
+            // show chosen label
+            var (display, bookingId, remaining) = LoadClientSummary(clientId);
+            lblChosen.Text = display;
+            pnlChosen.Visible = true;
+            pnlResults.Visible = false;
+
+            hfBookingId.Value = bookingId > 0 ? bookingId.ToString() : "";
+           // txtLatestBooking.Text = bookingId > 0 ? $"Booking #{bookingId}" : "—";
+            txtRemainingBalance.Text = remaining.ToString("N2", new CultureInfo("en-PH"));
+           // txtProjectedBalance.Text = remaining.ToString("N2", new CultureInfo("en-PH"));
+        }
+
+        private DataTable SearchClients(string query)
+        {
+            var dt = new DataTable();
+            string sql = @"
+                SELECT TOP 30 c.ClientID,
+                       CASE WHEN ISNULL(LTRIM(RTRIM(c.MiddleName)),'')=''
+                            THEN CONCAT(c.LastName, ', ', c.FirstName)
+                            ELSE CONCAT(c.LastName, ', ', c.FirstName, ' ', c.MiddleName) END AS DisplayName
+                FROM dbo.Clients c
+                WHERE (@qInt IS NOT NULL AND c.ClientID=@qInt)
+                   OR (c.FirstName + ' ' + ISNULL(c.MiddleName,'') + ' ' + c.LastName LIKE '%' + @q + '%')
+                   OR (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName,'') LIKE '%' + @q + '%')
+                ORDER BY c.LastName, c.FirstName;";
+
+            int qInt;
+            int? asInt = int.TryParse(query, out qInt) ? qInt : (int?)null;
+
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand(sql, con))
+            {
+                cmd.Parameters.Add("@q", SqlDbType.NVarChar, 100).Value = (object)query ?? DBNull.Value;
+                cmd.Parameters.Add("@qInt", SqlDbType.Int).Value = (object)asInt ?? DBNull.Value;
+                using (var da = new SqlDataAdapter(cmd))
+                    da.Fill(dt);
+            }
+            return dt;
+        }
+
+        private (string display, int bookingId, decimal remaining) LoadClientSummary(int clientId)
+        {
+            // chosen display name
+            string display = "";
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand(@"SELECT TOP 1 
+                    CASE WHEN ISNULL(LTRIM(RTRIM(MiddleName)),'')=''
+                         THEN CONCAT(LastName, ', ', FirstName)
+                         ELSE CONCAT(LastName, ', ', FirstName, ' ', MiddleName) END
+                FROM dbo.Clients WHERE ClientID=@id", con))
+            {
+                cmd.Parameters.Add("@id", SqlDbType.Int).Value = clientId;
+                con.Open();
+                display = (cmd.ExecuteScalar() ?? "").ToString();
+            }
+
+            // latest payable booking
+            var (bookingId, _) = GetLatestPayableBooking(clientId);
+
+            // ensure sale & remaining
+            decimal remaining = 0m;
+            if (bookingId > 0)
+            {
+                int saleId = EnsureSaleForBooking(bookingId);
+                remaining = GetRemainingBySale(saleId);
+                if (remaining < 0) remaining = 0;
+            }
+            return (display, bookingId, remaining);
+        }
+
+        // -------- Enable/disable Payment 2 UI ----------
+        protected void chkUseSecond_CheckedChanged(object sender, EventArgs e)
+        {
+            bool on = chkUseSecond.Checked;
+            ddlMethod2.Enabled = on;
+            txtAmount2.Enabled = on;
+            fuReceipt2.Enabled = on;
+            txtRemarks2.Enabled = on;
+        }
+
+        // -------- Save ----------
+        protected void btnSave_Click(object sender, EventArgs e)
+        {
+            lblMessage.Text = "";
+
+            if (string.IsNullOrWhiteSpace(hfClientID.Value))
+            {
+                ShowError("Please search and select a client.");
+                return;
+            }
+            int clientId = int.Parse(hfClientID.Value, CultureInfo.InvariantCulture);
+
+            // payment 1 validations
+            if (string.IsNullOrEmpty(ddlMethod1.SelectedValue))
+            {
+                ShowError("Select Payment Method 1.");
+                return;
+            }
+            if (!decimal.TryParse(txtAmount1.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal amount1) || amount1 <= 0)
+            {
+                ShowError("Enter a valid amount for Payment 1.");
+                return;
+            }
+            if (!fuReceipt1.HasFile)
+            {
+                ShowError("Upload Receipt for Payment 1.");
+                return;
+            }
+            if (!IsJpgOrPng(fuReceipt1.FileName))
+            {
+                ShowError("Receipt 1 must be JPG or PNG.");
+                return;
+            }
+
+            // payment 2 validations (optional)
+            bool use2 = chkUseSecond.Checked;
+            decimal amount2 = 0m;
+            if (use2)
+            {
+                if (string.IsNullOrEmpty(ddlMethod2.SelectedValue))
+                {
+                    ShowError("Select Payment Method 2.");
+                    return;
+                }
+                if (!decimal.TryParse(txtAmount2.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out amount2) || amount2 <= 0)
+                {
+                    ShowError("Enter a valid amount for Payment 2.");
+                    return;
+                }
+                if (!fuReceipt2.HasFile)
+                {
+                    ShowError("Upload Receipt for Payment 2.");
+                    return;
+                }
+                if (!IsJpgOrPng(fuReceipt2.FileName))
+                {
+                    ShowError("Receipt 2 must be JPG or PNG.");
+                    return;
+                }
+            }
+
+            // remaining & booking
+            var (bookingId, _) = GetLatestPayableBooking(clientId);
+            if (bookingId <= 0)
+            {
+                ShowError("No payable booking found for this client.");
+                return;
+            }
+            hfBookingId.Value = bookingId.ToString();
+            int saleId = EnsureSaleForBooking(bookingId);
+            decimal remaining = GetRemainingBySale(saleId);
+
+            decimal total = amount1 + amount2;
+            if (total > remaining)
+            {
+                ShowError($"Total payment (₱{total:N2}) exceeds remaining (₱{remaining:N2}).");
+                return;
+            }
 
             try
             {
-                using (var con = new SqlConnection(cs))
-                using (var cmd = new SqlCommand(sql, con))
-                {
-                    con.Open();
-                    using (var r = cmd.ExecuteReader())
-                    {
-                        while (r.Read())
-                        {
-                            var id = r.GetInt32(0);
-                            var ln = r["LastName"]?.ToString() ?? "";
-                            var fn = r["FirstName"]?.ToString() ?? "";
-                            var mn = r["MiddleName"]?.ToString() ?? "";
+                string performedBy = Session["AdminName"]?.ToString() ?? "Admin";
 
-                            var display = string.IsNullOrWhiteSpace(mn) ? $"{ln}, {fn}" : $"{ln}, {fn} {mn}";
-                            ddlClients.Items.Add(new WebListItem(display, id.ToString(CultureInfo.InvariantCulture)));
-                        }
-                    }
+                // --- Payment 1 ---
+                string receipt1 = SaveEncryptedReceiptFile(bookingId, fuReceipt1, "p1");
+                int tx1 = InsertTransaction(
+                    saleId, amount1, ddlMethod1.SelectedValue, "Completed",
+                    (txtRemarks1.Text ?? "").Trim(), MakeManualReference(bookingId), receipt1);
+
+                BlockchainLogger.AppendSaleLog(cs, tx1, new
+                {
+                    TransactionID = tx1,
+                    ClientID = clientId,
+                    BookingID = bookingId,
+                    SaleID = saleId,
+                    Amount = amount1,
+                    Currency = "PHP",
+                    Method = ddlMethod1.SelectedValue,
+                    Status = "Completed",
+                    PaidAtUtc = DateTime.UtcNow
+                });
+
+                // generate a printable for the last one (tx2 will overwrite path if present)
+                lastGeneratedEncryptedPDF = GenerateReceiptPDF(tx1, clientId, bookingId, amount1, ddlMethod1.SelectedValue, txtRemarks1.Text ?? "", performedBy);
+
+                // --- Payment 2 (optional) ---
+                if (use2)
+                {
+                    string receipt2 = SaveEncryptedReceiptFile(bookingId, fuReceipt2, "p2");
+                    int tx2 = InsertTransaction(
+                        saleId, amount2, ddlMethod2.SelectedValue, "Completed",
+                        (txtRemarks2.Text ?? "").Trim(), MakeManualReference(bookingId), receipt2);
+
+                    BlockchainLogger.AppendSaleLog(cs, tx2, new
+                    {
+                        TransactionID = tx2,
+                        ClientID = clientId,
+                        BookingID = bookingId,
+                        SaleID = saleId,
+                        Amount = amount2,
+                        Currency = "PHP",
+                        Method = ddlMethod2.SelectedValue,
+                        Status = "Completed",
+                        PaidAtUtc = DateTime.UtcNow
+                    });
+
+                    lastGeneratedEncryptedPDF = GenerateReceiptPDF(tx2, clientId, bookingId, amount2, ddlMethod2.SelectedValue, txtRemarks2.Text ?? "", performedBy);
                 }
+
+                // recompute balances
+                decimal newRemaining = GetRemainingBySale(saleId);
+                txtRemainingBalance.Text = newRemaining.ToString("N2", new CultureInfo("en-PH"));
+               // txtProjectedBalance.Text = newRemaining.ToString("N2", new CultureInfo("en-PH"));
+                //txtLatestBooking.Text = $"Booking #{bookingId}";
+
+                lblMessage.Text = "✅ Payment(s) recorded and balance updated.";
+                lblMessage.CssClass = "message success";
+                btnPrintReceipt.Visible = true;
+                btnDownloadReceipt.Visible = true;
+
+                // clear amounts (keep client locked)
+                txtAmount1.Text = "";
+                txtRemarks1.Text = "";
+                txtAmount2.Text = "";
+                txtRemarks2.Text = "";
             }
             catch (Exception ex)
             {
-                ShowError("❌ Failed to load clients: " + ex.Message);
+                ShowError("Error saving payment: " + ex.Message);
             }
         }
 
-        private void BindPaymentMethods()
+        // -------- Helpers (DB & files) ----------
+        private void BindPaymentDDL(DropDownList ddl)
         {
-            ddlPaymentMethod.Items.Clear();
-            ddlPaymentMethod.Items.Add(new WebListItem("-- Select Method --", ""));
-            ddlPaymentMethod.Items.Add(new WebListItem("Cash", "Cash"));
-            ddlPaymentMethod.Items.Add(new WebListItem("Bank Transfer", "Bank Transfer"));
-            ddlPaymentMethod.Items.Add(new WebListItem("Online Payment", "Online Payment"));
-            // Optional: reflect historical methods (PayPal/PayMongo) if you want
+            ddl.Items.Clear();
+            ddl.Items.Add(new ListItem("-- Select Method --", ""));
+            ddl.Items.Add(new ListItem("Cash", "Cash"));
+            ddl.Items.Add(new ListItem("Bank Transfer", "Bank Transfer"));
+            ddl.Items.Add(new ListItem("Online Payment", "Online Payment"));
+
             try
             {
                 using (var con = new SqlConnection(cs))
@@ -104,8 +322,8 @@ namespace RRCManagementSystem
                         while (r.Read())
                         {
                             var pm = r["PaymentMethod"]?.ToString();
-                            if (!string.IsNullOrWhiteSpace(pm) && ddlPaymentMethod.Items.FindByValue(pm) == null)
-                                ddlPaymentMethod.Items.Add(new WebListItem(pm, pm));
+                            if (!string.IsNullOrWhiteSpace(pm) && ddl.Items.FindByValue(pm) == null)
+                                ddl.Items.Add(new ListItem(pm, pm));
                         }
                     }
                 }
@@ -113,171 +331,13 @@ namespace RRCManagementSystem
             catch { /* non-blocking */ }
         }
 
-        // =============== Events =========================================================
-
-        protected void ddlClients_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            lblMessage.Text = "";
-            txtRemainingBalance.Text = "0.00";
-            hfBookingId.Value = "";
-
-            if (string.IsNullOrEmpty(ddlClients.SelectedValue))
-                return;
-
-            try
-            {
-                RefreshRemainingForSelectedClient();
-            }
-            catch (Exception ex)
-            {
-                ShowError("Failed to compute remaining: " + ex.Message);
-            }
-        }
-
-        protected void btnSave_Click(object sender, EventArgs e)
-        {
-            lblMessage.Text = "";
-
-            // Basic validations
-            if (string.IsNullOrEmpty(ddlClients.SelectedValue))
-            {
-                ShowError("Please select a client.");
-                return;
-            }
-            if (string.IsNullOrEmpty(ddlPaymentMethod.SelectedValue))
-            {
-                ShowError("Please select a payment method.");
-                return;
-            }
-            if (!decimal.TryParse(txtNewBalance.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal amount) || amount <= 0)
-            {
-                ShowError("Enter a valid amount.");
-                return;
-            }
-            if (!decimal.TryParse(txtRemainingBalance.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal remaining))
-            {
-                ShowError("Remaining balance is invalid.");
-                return;
-            }
-            if (amount > remaining)
-            {
-                ShowError("Amount exceeds remaining balance.");
-                return;
-            }
-            if (!fuReceipt.HasFile)
-            {
-                ShowError("Please upload a receipt image (JPG/PNG).");
-                return;
-            }
-            var ext = (Path.GetExtension(fuReceipt.FileName) ?? "").ToLowerInvariant();
-            if (ext != ".jpg" && ext != ".jpeg" && ext != ".png")
-            {
-                ShowError("Only JPG and PNG are allowed.");
-                return;
-            }
-
-            try
-            {
-                var performedBy = Session["AdminName"]?.ToString() ?? "Admin";
-
-                // 1) Locate latest payable booking + price
-                int clientId = int.Parse(ddlClients.SelectedValue, CultureInfo.InvariantCulture);
-                var (bookingId, price) = GetLatestPayableBooking(clientId);
-                if (bookingId <= 0)
-                {
-                    ShowError("No payable booking found for this client.");
-                    return;
-                }
-                hfBookingId.Value = bookingId.ToString(CultureInfo.InvariantCulture);
-
-                // 2) Ensure/return SaleID for that booking
-                int saleId = EnsureSaleForBooking(bookingId);
-
-                // 3) Save receipt file (encrypted bytes)
-                string receiptDbPath = SaveEncryptedReceiptFile(bookingId);
-
-                // 4) Insert transaction via stored procedure
-                //    NOTE: We pass Status="Manual Adjustment" (the SP will normalize to 'Completed')
-                int txId = InsertTransaction(saleId, amount,
-                                             ddlPaymentMethod.SelectedValue,
-                                             "Manual Adjustment",
-                                             (txtRemarks.Text ?? "").Trim(),
-                                             MakeManualReference(bookingId),
-                                             receiptDbPath);
-
-                // 5) Log to blockchain
-                BlockchainLogger.AppendSaleLog(cs, txId, new
-                {
-                    TransactionID = txId,
-                    ClientID = clientId,
-                    BookingID = bookingId,
-                    SaleID = saleId,
-                    Amount = amount,
-                    Currency = "PHP",
-                    Method = ddlPaymentMethod.SelectedValue,
-                    Status = "Completed",
-                    PaidAtUtc = DateTime.UtcNow
-                });
-
-                // 6) Recompute & display remaining
-                var newRemaining = GetRemainingBySale(saleId);
-                txtRemainingBalance.Text = newRemaining.ToString("N2", new CultureInfo("en-PH"));
-
-                // 7) Generate printable receipt PDF (encrypted on disk)
-                lastGeneratedEncryptedPDF = GenerateReceiptPDF(txId, clientId, bookingId, amount, ddlPaymentMethod.SelectedValue, txtRemarks.Text ?? "", performedBy);
-
-                // 8) UX
-                lblMessage.Text = "✅ Payment recorded and balance updated.";
-                lblMessage.CssClass = "message success";
-                btnPrintReceipt.Visible = true;
-                btnDownloadReceipt.Visible = true;
-
-                // Optional: clear amount entry
-                txtNewBalance.Text = "";
-            }
-            catch (Exception ex)
-            {
-                ShowError("Error saving payment: " + ex.Message);
-            }
-        }
-
-        protected void btnPrintReceipt_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(lastGeneratedEncryptedPDF)) return;
-
-            Response.Clear();
-            Response.ContentType = "application/pdf";
-            Response.AddHeader("content-disposition", "inline; filename=Receipt.pdf");
-            byte[] enc = File.ReadAllBytes(lastGeneratedEncryptedPDF);
-            byte[] dec = AESHelper.Decrypt(enc);
-            Response.BinaryWrite(dec);
-            Response.End();
-        }
-
-        protected void btnDownloadReceipt_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(lastGeneratedEncryptedPDF)) return;
-
-            Response.Clear();
-            Response.ContentType = "application/pdf";
-            Response.AddHeader("content-disposition", "attachment; filename=Receipt.pdf");
-            byte[] enc = File.ReadAllBytes(lastGeneratedEncryptedPDF);
-            byte[] dec = AESHelper.Decrypt(enc);
-            Response.BinaryWrite(dec);
-            Response.End();
-        }
-
-        // =============== Core helpers ===================================================
-
         private (int bookingId, decimal price) GetLatestPayableBooking(int clientId)
         {
-            // Your rule: latest booking with status Assigned/Confirmed/Approved
             const string sql = @"
                 SELECT TOP(1) b.BookingID, ISNULL(b.Price,0) AS Price
                 FROM dbo.Bookings b
                 WHERE b.ClientID=@ClientID AND b.Status IN ('Assigned','Confirmed','Approved')
                 ORDER BY b.BookingID DESC;";
-
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand(sql, con))
             {
@@ -299,52 +359,20 @@ namespace RRCManagementSystem
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
-
                 var pOut = cmd.Parameters.Add("@SaleID", SqlDbType.Int);
                 pOut.Direction = ParameterDirection.Output;
-
                 con.Open();
                 cmd.ExecuteNonQuery();
-
                 return Convert.ToInt32(pOut.Value, CultureInfo.InvariantCulture);
             }
         }
 
-        private string SaveEncryptedReceiptFile(int bookingId)
-        {
-            string folder = Server.MapPath("~/Receipts/");
-            Directory.CreateDirectory(folder);
-            string fileName = $"receipt_{bookingId}_{DateTime.UtcNow.Ticks}{Path.GetExtension(fuReceipt.FileName)}";
-            string fullPath = Path.Combine(folder, fileName);
-
-            using (var ms = new MemoryStream())
-            {
-                fuReceipt.PostedFile.InputStream.CopyTo(ms);
-                byte[] original = ms.ToArray();
-                byte[] encrypted = AESHelper.Encrypt(original);
-                File.WriteAllBytes(fullPath, encrypted);
-            }
-
-            // store relative path in DB, keep on disk encrypted
-            return "~/Receipts/" + fileName;
-        }
-
-        private static string MakeManualReference(int bookingId) =>
-            $"MANUAL:{bookingId}:{Guid.NewGuid():N}";
-
-        private int InsertTransaction(int saleId,
-                                      decimal amount,
-                                      string method,
-                                      string status,
-                                      string remarks,
-                                      string reference,
-                                      string receiptPathOrNull)
+        private int InsertTransaction(int saleId, decimal amount, string method, string status, string remarks, string reference, string receiptPath)
         {
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("dbo.usp_Transactions_Insert", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-
                 cmd.Parameters.Add("@SaleID", SqlDbType.Int).Value = saleId;
 
                 var pAmt = cmd.Parameters.Add("@Amount", SqlDbType.Decimal);
@@ -354,11 +382,8 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = status ?? "Completed";
                 cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar, 255).Value = (remarks ?? "").Trim();
                 cmd.Parameters.Add("@Reference", SqlDbType.NVarChar, 200).Value = (object)reference ?? DBNull.Value;
-
-                // Optional parameter in SP (backward-compatible). If your SP doesn't have it,
-                // either add @Receipt NVARCHAR(255)=NULL, or remove the next line.
                 cmd.Parameters.Add("@Receipt", SqlDbType.NVarChar, 255).Value =
-                    string.IsNullOrWhiteSpace(receiptPathOrNull) ? (object)DBNull.Value : receiptPathOrNull;
+                    string.IsNullOrWhiteSpace(receiptPath) ? (object)DBNull.Value : receiptPath;
 
                 var pTx = cmd.Parameters.Add("@TransactionID", SqlDbType.Int);
                 pTx.Direction = ParameterDirection.Output;
@@ -367,6 +392,30 @@ namespace RRCManagementSystem
                 cmd.ExecuteNonQuery();
                 return Convert.ToInt32(pTx.Value, CultureInfo.InvariantCulture);
             }
+        }
+
+        private string SaveEncryptedReceiptFile(int bookingId, FileUpload fu, string suffix)
+        {
+            string folder = Server.MapPath("~/Receipts/");
+            Directory.CreateDirectory(folder);
+            string ext = Path.GetExtension(fu.FileName) ?? ".jpg";
+            string fileName = $"receipt_{bookingId}_{suffix}_{DateTime.UtcNow.Ticks}{ext}";
+            string fullPath = Path.Combine(folder, fileName);
+
+            using (var ms = new MemoryStream())
+            {
+                fu.PostedFile.InputStream.CopyTo(ms);
+                byte[] original = ms.ToArray();
+                byte[] encrypted = AESHelper.Encrypt(original);
+                File.WriteAllBytes(fullPath, encrypted);
+            }
+            return "~/Receipts/" + fileName; // stored encrypted on disk; path saved in DB
+        }
+
+        private bool IsJpgOrPng(string name)
+        {
+            string ext = (Path.GetExtension(name) ?? "").ToLowerInvariant();
+            return ext == ".jpg" || ext == ".jpeg" || ext == ".png";
         }
 
         private decimal GetRemainingBySale(int saleId)
@@ -388,12 +437,10 @@ namespace RRCManagementSystem
             Directory.CreateDirectory(folderPath);
 
             string plainPDF = Path.Combine(folderPath, $"Receipt_{transactionId}.pdf");
-
             using (var fs = new FileStream(plainPDF, FileMode.Create, FileAccess.Write))
             {
                 var doc = new iTextSharp.text.Document();
                 iTextSharp.text.pdf.PdfWriter.GetInstance(doc, fs);
-
                 doc.Open();
                 doc.Add(new iTextSharp.text.Paragraph($"Receipt #{transactionId}"));
                 doc.Add(new iTextSharp.text.Paragraph($"Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}"));
@@ -407,38 +454,39 @@ namespace RRCManagementSystem
                 doc.Close();
             }
 
-            // Encrypt PDF bytes on disk using your AESHelper
             byte[] pdfBytes = File.ReadAllBytes(plainPDF);
             byte[] encrypted = AESHelper.Encrypt(pdfBytes);
             string encryptedPath = Path.Combine(folderPath, $"Receipt_{transactionId}_encrypted.pdf");
             File.WriteAllBytes(encryptedPath, encrypted);
-
             return encryptedPath;
         }
 
-
-        // =============== UI helpers =====================================================
-
-        private void RefreshRemainingForSelectedClient()
+        protected void btnPrintReceipt_Click(object sender, EventArgs e)
         {
-            int clientId = int.Parse(ddlClients.SelectedValue, CultureInfo.InvariantCulture);
-
-            var (bookingId, price) = GetLatestPayableBooking(clientId);
-            if (bookingId <= 0)
-            {
-                txtRemainingBalance.Text = "0.00";
-                hfBookingId.Value = "";
-                return;
-            }
-
-            hfBookingId.Value = bookingId.ToString(CultureInfo.InvariantCulture);
-
-            int saleId = EnsureSaleForBooking(bookingId);
-            decimal remaining = GetRemainingBySale(saleId);
-            if (remaining < 0) remaining = 0;
-
-            txtRemainingBalance.Text = remaining.ToString("N2", new CultureInfo("en-PH"));
+            if (string.IsNullOrEmpty(lastGeneratedEncryptedPDF)) return;
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "inline; filename=Receipt.pdf");
+            byte[] enc = File.ReadAllBytes(lastGeneratedEncryptedPDF);
+            byte[] dec = AESHelper.Decrypt(enc);
+            Response.BinaryWrite(dec);
+            Response.End();
         }
+
+        protected void btnDownloadReceipt_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(lastGeneratedEncryptedPDF)) return;
+            Response.Clear();
+            Response.ContentType = "application/pdf";
+            Response.AddHeader("content-disposition", "attachment; filename=Receipt.pdf");
+            byte[] enc = File.ReadAllBytes(lastGeneratedEncryptedPDF);
+            byte[] dec = AESHelper.Decrypt(enc);
+            Response.BinaryWrite(dec);
+            Response.End();
+        }
+
+        private static string MakeManualReference(int bookingId) =>
+            $"MANUAL:{bookingId}:{Guid.NewGuid():N}";
 
         private void ShowError(string message)
         {

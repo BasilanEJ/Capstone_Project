@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
@@ -50,21 +51,21 @@ namespace RRCManagementSystem
                     using (var r = cmd.ExecuteReader())
                     {
                         ddlPaymentMethod.Items.Clear();
-                        ddlPaymentMethod.Items.Add(new System.Web.UI.WebControls.ListItem("All Payment Methods", ""));
+                        ddlPaymentMethod.Items.Add(new ListItem("All Payment Methods", "")); // value = empty
+
                         while (r.Read())
                         {
-                            string pm = r["PaymentMethod"]?.ToString();
+                            var pm = r["PaymentMethod"]?.ToString();
                             if (!string.IsNullOrWhiteSpace(pm))
-                                ddlPaymentMethod.Items.Add(pm);
+                                ddlPaymentMethod.Items.Add(new ListItem(pm, pm));
                         }
                     }
                 }
             }
             catch
             {
-                // If loading fails, still show an "All" option
                 ddlPaymentMethod.Items.Clear();
-                ddlPaymentMethod.Items.Add("All Payment Methods");
+                ddlPaymentMethod.Items.Add(new ListItem("All Payment Methods", ""));
             }
         }
 
@@ -86,6 +87,7 @@ namespace RRCManagementSystem
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
+                    // inclusive to-date (SP uses < DATEADD(DAY,1,@ToDate))
                     cmd.Parameters.Add("@FromDate", SqlDbType.Date).Value = from.Date;
                     cmd.Parameters.Add("@ToDate", SqlDbType.Date).Value = to.Date;
 
@@ -110,5 +112,17 @@ namespace RRCManagementSystem
                 lblMessage.Text = "❌ Error loading transactions: " + ex.Message;
             }
         }
+
+        protected string GetReceiptLink(object receiptObj)
+        {
+            var v = (receiptObj == null || receiptObj == DBNull.Value) ? "" : receiptObj.ToString();
+            if (string.IsNullOrWhiteSpace(v)) return ""; // handled by lnkAdd
+
+            // safety: use only the file name
+            var file = System.IO.Path.GetFileName(v);
+            var url = "DecryptReceipt.aspx?file=" + Server.UrlEncode(file);
+            return $"<a class='pill pill-view' href='{url}' target='_blank' rel='noopener'>View Receipt</a>";
+        }
+
     }
 }

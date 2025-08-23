@@ -24,6 +24,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblMessage;
 
         /// <summary>
+        /// hfClientID control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfClientID;
+
+        /// <summary>
         /// hfBookingId control.
         /// </summary>
         /// <remarks>
@@ -33,22 +42,67 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.HiddenField hfBookingId;
 
         /// <summary>
-        /// ddlClients control.
+        /// txtClientSearch control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.DropDownList ddlClients;
+        protected global::System.Web.UI.WebControls.TextBox txtClientSearch;
 
         /// <summary>
-        /// rfvClient control.
+        /// btnSearchClient control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.RequiredFieldValidator rfvClient;
+        protected global::System.Web.UI.WebControls.Button btnSearchClient;
+
+        /// <summary>
+        /// btnClearClient control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnClearClient;
+
+        /// <summary>
+        /// pnlResults control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlResults;
+
+        /// <summary>
+        /// rpResults control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Repeater rpResults;
+
+        /// <summary>
+        /// pnlChosen control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlChosen;
+
+        /// <summary>
+        /// lblChosen control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblChosen;
 
         /// <summary>
         /// txtRemainingBalance control.
@@ -60,49 +114,112 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.TextBox txtRemainingBalance;
 
         /// <summary>
-        /// ddlPaymentMethod control.
+        /// ddlMethod1 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.DropDownList ddlPaymentMethod;
+        protected global::System.Web.UI.WebControls.DropDownList ddlMethod1;
 
         /// <summary>
-        /// rfvMethod control.
+        /// txtAmount1 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.RequiredFieldValidator rfvMethod;
+        protected global::System.Web.UI.WebControls.TextBox txtAmount1;
 
         /// <summary>
-        /// txtNewBalance control.
+        /// rvAmount1 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtNewBalance;
+        protected global::System.Web.UI.WebControls.RangeValidator rvAmount1;
 
         /// <summary>
-        /// txtRemarks control.
+        /// fuReceipt1 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtRemarks;
+        protected global::System.Web.UI.WebControls.FileUpload fuReceipt1;
 
         /// <summary>
-        /// fuReceipt control.
+        /// txtRemarks1 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.FileUpload fuReceipt;
+        protected global::System.Web.UI.WebControls.TextBox txtRemarks1;
+
+        /// <summary>
+        /// chkUseSecond control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.CheckBox chkUseSecond;
+
+        /// <summary>
+        /// ddlMethod2 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.DropDownList ddlMethod2;
+
+        /// <summary>
+        /// txtAmount2 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtAmount2;
+
+        /// <summary>
+        /// rvAmount2 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RangeValidator rvAmount2;
+
+        /// <summary>
+        /// fuReceipt2 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.FileUpload fuReceipt2;
+
+        /// <summary>
+        /// txtRemarks2 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtRemarks2;
+
+        /// <summary>
+        /// txtTotalPayment control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtTotalPayment;
 
         /// <summary>
         /// btnSaveReal control.
