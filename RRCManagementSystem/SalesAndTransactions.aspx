@@ -61,19 +61,27 @@
 
     <h2 class="page-title">💰 Sales & Transactions</h2>
 
-    <div class="sales-links-container">
-      <!--  <a href="ViewSales.aspx" class="sales-card">
-            <i class="fas fa-chart-line"></i>
-            <div class="sales-card-title">View Sales Summary</div>
-        </a> -->
-        <a href="TransactionHistory.aspx" class="sales-card">
-            <i class="fas fa-receipt"></i>
-            <div class="sales-card-title">Transaction History</div>
-        </a>
+   <div class="sales-links-container">
+   <!--  <a href="ViewSales.aspx" class="sales-card">
+         <i class="fas fa-chart-line"></i>
+         <div class="sales-card-title">View Sales Summary</div>
+     </a> -->
 
-        <a href="ManagePayment.aspx" class="sales-card">
-            <i class="fas fa-credit-card"></i>
-            <div class="sales-card-title">Manage Payment</div>
-        </a>
-    </div>
+   <a href="TransactionHistory.aspx" class="sales-card">
+       <i class="fas fa-receipt"></i>
+       <div class="sales-card-title">Transaction History</div>
+   </a>
+
+   <a href="ManagePayment.aspx" class="sales-card">
+       <i class="fas fa-credit-card"></i>
+       <div class="sales-card-title">Manage Payment</div>
+   </a>
+
+   <!-- ✅ New link -->
+   <a href="ViewPaymentBalance.aspx" class="sales-card">
+       <i class="fas fa-wallet"></i>
+       <div class="sales-card-title">View Payment Balances</div>
+   </a>
+</div>
+
 </asp:Content>

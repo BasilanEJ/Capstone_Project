@@ -244,17 +244,26 @@
 <!-- 📅 Bookings -->
 <div class="section-header">
   <h3>📅 Booking Details</h3>
-  <asp:Button ID="btnExportBookings" runat="server" Text="Export Bookings to PDF" CssClass="btn-sales" OnClick="btnExportBookings_Click" />
+  <asp:Button ID="btnExportBookings" runat="server"
+              Text="Export Bookings to PDF"
+              CssClass="btn-sales"
+              OnClick="btnExportBookings_Click" />
 </div>
-<asp:GridView ID="gvBookings" runat="server" AutoGenerateColumns="False" CssClass="custom-table">
+
+<asp:GridView ID="gvBookings" runat="server"
+              AutoGenerateColumns="False"
+              CssClass="custom-table">
     <Columns>
-        <asp:TemplateField HeaderText="Booking ID">
-            <ItemTemplate><%# "Booking" + String.Format("{0:D4}", Eval("BookingID")) %></ItemTemplate>
-        </asp:TemplateField>
+  
+        <asp:BoundField DataField="BookingID" HeaderText="Booking ID" Visible="false" />
+
+     
+        <asp:BoundField DataField="BookingCode" HeaderText="Booking Code" />
+
         <asp:BoundField DataField="ClientName" HeaderText="Client" />
         <asp:BoundField DataField="Services" HeaderText="Service" />
         <asp:BoundField DataField="TeamName" HeaderText="Assigned Team" />
-        <asp:BoundField DataField="ScheduledDate" HeaderText="Schedule" />
+        <asp:BoundField DataField="ScheduledDate" HeaderText="Schedule" DataFormatString="{0:yyyy-MM-dd}" />
         <asp:BoundField DataField="Status" HeaderText="Status" />
     </Columns>
 </asp:GridView>

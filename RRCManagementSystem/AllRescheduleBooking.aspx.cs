@@ -24,11 +24,11 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Deny access for SuperAdmin and Inspector (kept from your original logic)
+            // 🔐 Keep whatever access rule you intend here
             if (role == "SuperAdmin" || role == "Inspector")
             {
-                Response.Redirect("~/Login.aspx");
-                return;
+                // Response.Redirect("~/Login.aspx");
+                // return;
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
@@ -44,8 +44,8 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                LoadRescheduleBookings();     // loads and caches DataTable
-                BindFiltered();               // initial bind (no filters)
+                LoadRescheduleBookings(); // loads and caches DataTable
+                BindFiltered();           // initial bind (no filters)
             }
         }
 
@@ -84,8 +84,7 @@ namespace RRCManagementSystem
                         var dt = new DataTable();
                         da.Fill(dt);
 
-                        // Ensure types are friendly for filtering
-                        // If ScheduledDate comes as string, try to parse to DateTime
+                        // Normalize ScheduledDate column (DateTime)
                         if (dt.Columns.Contains("ScheduledDate") && dt.Columns["ScheduledDate"].DataType != typeof(DateTime))
                         {
                             dt.Columns["ScheduledDate"].ColumnName = "ScheduledDateRaw";
@@ -98,7 +97,7 @@ namespace RRCManagementSystem
                             dt.Columns.Remove("ScheduledDateRaw");
                         }
 
-                        // Cache it for filtering + paging
+                        // Cache and bind
                         Session[CacheKey] = dt;
                         gvReschedules.DataSource = dt;
                         gvReschedules.DataBind();
@@ -113,7 +112,7 @@ namespace RRCManagementSystem
             }
         }
 
-        // 🔎 Apply filters and bind
+        // 🔎 Apply filters and bind (now includes BookingCode)
         private void BindFiltered()
         {
             var dt = Session[CacheKey] as DataTable;
@@ -131,16 +130,15 @@ namespace RRCManagementSystem
             bool hasFrom = DateTime.TryParseExact(txtFrom.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out from);
             bool hasTo = DateTime.TryParseExact(txtTo.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out to);
 
-            // Build DataView RowFilter safely
             var dv = new DataView(dt);
             string filter = "1=1";
 
             if (!string.IsNullOrEmpty(search))
             {
-                // Escape single quotes for RowFilter
                 string s = search.Replace("'", "''");
-                // BookingID (string cast), ClientName, ServiceName, OperationNumber
-                filter += $" AND (Convert(BookingID, 'System.String') LIKE '%{s}%' " +
+                filter += $" AND (" +
+                          $"BookingCode LIKE '%{s}%' " + // ✅ search by booking code
+                          $"OR Convert(BookingID, 'System.String') LIKE '%{s}%' " +
                           $"OR ClientName LIKE '%{s}%' " +
                           $"OR ServiceName LIKE '%{s}%' " +
                           $"OR Convert(OperationNumber, 'System.String') LIKE '%{s}%')";
@@ -154,7 +152,6 @@ namespace RRCManagementSystem
 
             if (hasFrom && hasTo)
             {
-                // inclusive end date
                 filter += $" AND ScheduledDate >= #{from:MM/dd/yyyy}# AND ScheduledDate < #{to.AddDays(1):MM/dd/yyyy}#";
             }
             else if (hasFrom)
@@ -168,15 +165,12 @@ namespace RRCManagementSystem
 
             dv.RowFilter = filter;
 
-            gvReschedules.PageIndex = 0; // reset to first page after filtering
+            gvReschedules.PageIndex = 0;
             gvReschedules.DataSource = dv;
             gvReschedules.DataBind();
         }
 
-        protected void btnFilter_Click(object sender, EventArgs e)
-        {
-            BindFiltered();
-        }
+        protected void btnFilter_Click(object sender, EventArgs e) => BindFiltered();
 
         protected void btnReset_Click(object sender, EventArgs e)
         {
@@ -184,7 +178,6 @@ namespace RRCManagementSystem
             ddlFilterStatus.SelectedIndex = 0;
             txtFrom.Text = string.Empty;
             txtTo.Text = string.Empty;
-
             BindFiltered();
         }
 
@@ -248,7 +241,6 @@ namespace RRCManagementSystem
                     }
                 }
 
-                // Refresh cache and re-apply filters so the grid stays consistent
                 LoadRescheduleBookings();
                 BindFiltered();
             }

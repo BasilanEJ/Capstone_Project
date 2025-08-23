@@ -165,26 +165,63 @@ namespace RRCManagementSystem
                         hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
                         hiddenCheckoutURL.Value = string.Empty;
                         hiddenReference.Value = string.Empty;
+
+                        // Hide plan UI if nothing to show
+                        paymentPlanContainer.Visible = false;
+                        ddlPlanChoice.Enabled = true;
                         return;
                     }
 
                     string serviceName = reader["ServiceName"]?.ToString() ?? string.Empty;
                     decimal fullPrice = reader["Price"] == DBNull.Value ? 0m : Convert.ToDecimal(reader["Price"], CultureInfo.InvariantCulture);
-                    string dbPlan = reader["PaymentPlan"] == DBNull.Value ? "" : reader["PaymentPlan"].ToString();
+                    string dbPlanRaw = reader["PaymentPlan"] == DBNull.Value ? "" : reader["PaymentPlan"].ToString();
                     int bookingId = Convert.ToInt32(reader["BookingID"], CultureInfo.InvariantCulture);
-                    bool isContract = reader["IsContract"] != DBNull.Value && Convert.ToBoolean(reader["IsContract"], CultureInfo.InvariantCulture);
+
+                    // Raw flag from DB (may be unreliable in your current SP)
+                    bool isContractDb = reader["IsContract"] != DBNull.Value &&
+                                        Convert.ToBoolean(reader["IsContract"], CultureInfo.InvariantCulture);
+
+                    // Normalize plan values: treat "100%" as "100"
+                    string NormalizePlan(string p)
+                    {
+                        if (string.IsNullOrWhiteSpace(p)) return "";
+                        p = p.Trim();
+                        if (string.Equals(p, "100%", StringComparison.OrdinalIgnoreCase)) return "100";
+                        return p;
+                    }
+
+                    string dbPlan = NormalizePlan(dbPlanRaw);
+                    string uiPlan = NormalizePlan(selectedPlan);
 
                     lblServiceName.Text = serviceName;
 
                     // Decide effective plan (UI-selected > DB-stored > default)
-                    string effectivePlan = !string.IsNullOrWhiteSpace(selectedPlan) ? selectedPlan : dbPlan;
+                    string effectivePlan = !string.IsNullOrWhiteSpace(uiPlan) ? uiPlan : dbPlan;
                     if (string.IsNullOrWhiteSpace(effectivePlan))
-                        effectivePlan = isContract ? "50-25-25" : "100";
+                        effectivePlan = isContractDb ? "50-25-25" : "100";
 
-                    if (ddlPlanChoice.Items.FindByValue(effectivePlan) != null)
-                        ddlPlanChoice.SelectedValue = effectivePlan;
+                    // Final contract decision: DB flag OR plan != '100'
+                    bool isContract = isContractDb || !string.Equals(effectivePlan, "100", StringComparison.OrdinalIgnoreCase);
 
-                    decimal totalPaid = GetTotalPaid(bookingId);
+                    // Persist default if DB had none yet (so it shows correctly elsewhere)
+                    if (string.IsNullOrWhiteSpace(dbPlan))
+                        SaveSelectedPlanToDb(bookingId, effectivePlan);
+
+                    // Sync dropdown to effective plan (if item exists)
+                    var item = ddlPlanChoice.Items.FindByValue(effectivePlan);
+                    if (item != null) ddlPlanChoice.SelectedValue = effectivePlan;
+                    hfSelectedPlan.Value = effectivePlan;
+
+                    // Show plan selector ONLY for contract services
+                    paymentPlanContainer.Visible = isContract;
+
+                    // === Canonical: compute totals via SaleID so it matches Admin ===
+                    int saleId = GetSaleIdByBooking(bookingId);
+                    decimal totalPaid = (saleId > 0) ? GetTotalPaidBySaleId(saleId) : 0m;
+
+                    // 🔒 Lock the dropdown after the first payment
+                    ddlPlanChoice.Enabled = (totalPaid == 0m);
+
                     decimal nextAmount = CalculateNextInstallment(isContract, fullPrice, totalPaid, effectivePlan);
                     decimal remaining = Math.Max(0m, fullPrice - totalPaid);
 
@@ -219,6 +256,10 @@ namespace RRCManagementSystem
                         _kpiNext = _kpiRemain = "₱0.00";
                         lblNextInstallment.Text = _kpiNext;
                         lblRemaining.Text = _kpiRemain;
+
+                        // Also lock (belt & suspenders)
+                        ddlPlanChoice.Enabled = false;
+
                         return;
                     }
 
@@ -234,7 +275,7 @@ namespace RRCManagementSystem
                     hfPayPalAmount.Value = nextAmount.ToString("0.00", CultureInfo.InvariantCulture);
                     hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
 
-                    // ✅ Stage-aware, once-per-stage / once-only reminder (idempotent via DedupKey)
+                    // Once-per-stage notification
                     EnqueuePaymentDueNotification(
                         clientId: clientId,
                         bookingId: bookingId,
@@ -252,11 +293,49 @@ namespace RRCManagementSystem
         }
 
 
+        // ======= Canonical total via SaleID =============================================
+        private int GetSaleIdByBooking(int bookingId)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(
+                "SELECT TOP (1) SaleID FROM dbo.Sales WHERE BookingID=@B", con))
+            {
+                cmd.Parameters.Add("@B", SqlDbType.Int).Value = bookingId;
+                con.Open();
+                var o = cmd.ExecuteScalar();
+                return (o == null || o == DBNull.Value) ? 0 : Convert.ToInt32(o, CultureInfo.InvariantCulture);
+            }
+        }
+
+        private decimal GetTotalPaidBySaleId(int saleId)
+        {
+            // Canonical SP: dbo.usp_TotalPaidBySale
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_TotalPaidBySale", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@SaleID", SqlDbType.Int).Value = saleId;
+                con.Open();
+                var o = cmd.ExecuteScalar();
+                return (o == null || o == DBNull.Value) ? 0m :
+                       Convert.ToDecimal(o, CultureInfo.InvariantCulture);
+            }
+        }
+
+        /*
+        // If other pages still call GetTotalPaid(bookingId), you can keep this
+        // wrapper and delegate to the SaleID path so everything stays consistent.
+        private decimal GetTotalPaid(int bookingId)
+        {
+            int saleId = GetSaleIdByBooking(bookingId);
+            return (saleId > 0) ? GetTotalPaidBySaleId(saleId) : 0m;
+        }
+        */
 
         private void EnqueuePaymentDueNotification(
-    int clientId, int bookingId,
-    bool isContract, string plan,
-    decimal fullPrice, decimal totalPaid, decimal nextAmount)
+            int clientId, int bookingId,
+            bool isContract, string plan,
+            decimal fullPrice, decimal totalPaid, decimal nextAmount)
         {
             // Nothing to notify if nothing is due.
             if (nextAmount <= 0m) return;
@@ -342,17 +421,32 @@ namespace RRCManagementSystem
             }
         }
 
-
-        private decimal GetTotalPaid(int bookingId)
+        // ===== History ================================================================
+        private void LoadPaymentHistory(int clientId)
         {
-            using (var con = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.usp_Transactions_TotalPaidByBooking", con))
+            try
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
-                con.Open();
-                object o = cmd.ExecuteScalar();
-                return (o == null || o == DBNull.Value) ? 0m : Convert.ToDecimal(o, CultureInfo.InvariantCulture);
+                using (var con = new SqlConnection(connectionString))
+                using (var da = new SqlDataAdapter("dbo.usp_Transactions_ListByClient", con))
+                {
+                    da.SelectCommand.CommandType = CommandType.StoredProcedure;
+                    da.SelectCommand.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+
+                    var dt = new DataTable();
+                    da.Fill(dt);
+
+                    // 🔒 Defensive: ensure the column exists so the GridView template won’t crash
+                    if (!dt.Columns.Contains("Receipt"))
+                        dt.Columns.Add("Receipt", typeof(string));
+
+                    gvPaymentHistory.DataSource = dt;
+                    gvPaymentHistory.DataBind();
+                }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.CssClass = "text-danger fw-semibold d-block mt-2";
+                lblMessage.Text = "Payment history error: " + ex.Message;
             }
         }
 
@@ -373,40 +467,8 @@ namespace RRCManagementSystem
         protected void gvPaymentHistory_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
-
-            // If the bound date arrived as string and not DateTime, format it
-            // (Only needed if you still see unformatted dates)
-            // Example:
-            // var dateText = DataBinder.Eval(e.Row.DataItem, "TransactionDate") as string;
-            // if (!string.IsNullOrEmpty(dateText) && DateTime.TryParse(dateText, out var dt))
-            //     e.Row.Cells[0].Text = dt.ToString("yyyy-MM-dd");
+            // If needed, format string dates here
         }
-
-        private void LoadPaymentHistory(int clientId)
-        {
-            try
-            {
-                using (var con = new SqlConnection(connectionString))
-                using (var da = new SqlDataAdapter("dbo.usp_Transactions_ListByClient", con))
-                {
-                    da.SelectCommand.CommandType = CommandType.StoredProcedure;
-                    da.SelectCommand.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
-
-                    var dt = new DataTable();
-                    da.Fill(dt);
-
-                    gvPaymentHistory.DataSource = dt;
-                    gvPaymentHistory.DataBind();
-                }
-            }
-            catch (Exception ex)
-            {
-                // Show the error visibly on the page so it doesn't fail silently
-                lblMessage.CssClass = "text-danger fw-semibold d-block mt-2";
-                lblMessage.Text = "Payment history error: " + ex.Message;
-            }
-        }
-
 
         // ===== Business Logic ===========================================================
         private decimal CalculateNextInstallment(bool isContract, decimal fullPrice, decimal totalPaid, string selectedPlan)

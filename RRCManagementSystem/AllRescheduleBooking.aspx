@@ -7,13 +7,14 @@
     <div class="container py-5">
         <h3 class="text-center text-primary fw-bold mb-4">🔁 All Rescheduled Operations</h3>
 
-        <!-- 🔎 Filters -->
+    
         <div class="card shadow-sm mb-3">
             <div class="card-body">
                 <div class="row g-2 align-items-end">
                     <div class="col-md-4">
-                        <label class="form-label">Search (ID / Client / Service)</label>
-                        <asp:TextBox ID="txtSearch" runat="server" CssClass="form-control" placeholder="e.g. 1024 or Juan Dela Cruz or Termite"></asp:TextBox>
+                        <label class="form-label">Search (Code / Client / Service)</label>
+                        <asp:TextBox ID="txtSearch" runat="server" CssClass="form-control"
+                                     placeholder="e.g. TD0003or Juan Dela Cruz or Termite"></asp:TextBox>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Status</label>
@@ -53,7 +54,11 @@
                       OnRowDataBound="gvReschedules_RowDataBound">
 
             <Columns>
-                <asp:BoundField DataField="BookingID" HeaderText="Booking ID" />
+              
+                <asp:BoundField DataField="BookingID" HeaderText="Booking ID" Visible="false" />
+              
+                <asp:BoundField DataField="BookingCode" HeaderText="Booking Code" />
+
                 <asp:BoundField DataField="ClientName" HeaderText="Client Name" />
                 <asp:BoundField DataField="ServiceName" HeaderText="Service" />
                 <asp:BoundField DataField="OperationNumber" HeaderText="Operation #" />

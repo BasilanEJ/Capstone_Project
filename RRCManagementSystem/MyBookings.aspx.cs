@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -29,9 +30,7 @@ namespace RRCManagementSystem
                 CheckUpcomingContractualOperation(clientId);
                 CheckForMissedOperations(clientId);
 
-                // 🔔 Seed notifications for any bookings that are already confirmed/assigned
-                // (DedupKey prevents duplicates if this runs again)
-                try { SeedConfirmedBookingNotifications(clientId); } catch { /* non-blocking */ }
+                try { SeedConfirmedBookingNotifications(clientId); } catch { }
             }
         }
 
@@ -49,7 +48,6 @@ namespace RRCManagementSystem
                 gvMyBookings.DataSource = dt;
                 gvMyBookings.DataBind();
 
-                // ✅ Plain label update (no SweetAlert)
                 if (dt.Rows.Count > 0)
                 {
                     lblMessage.Text = $"✅ You have {dt.Rows.Count} booking(s).";
@@ -129,11 +127,11 @@ namespace RRCManagementSystem
             if (e.Row.RowType == DataControlRowType.DataRow)
             {
                 string status = DataBinder.Eval(e.Row.DataItem, "Status").ToString();
-                Label lbl = e.Row.FindControl("ltProgress") as Label;
+                var lt = e.Row.FindControl("ltProgress") as Literal;
 
-                if (lbl != null)
+                if (lt != null)
                 {
-                    lbl.Text = status == "Completed"
+                    lt.Text = status == "Completed"
                         ? "<span class='badge bg-success'>Done</span>"
                         : "<span class='badge bg-secondary'>Pending</span>";
                 }
@@ -222,13 +220,15 @@ namespace RRCManagementSystem
         {
             if (e.Row.RowType == DataControlRowType.DataRow)
             {
+                // Column index may shift because BookingCode was added
                 string status = DataBinder.Eval(e.Row.DataItem, "Status").ToString();
+                int statusCol = 5; // BookingCode(1), Service(2), InitialDate(3), StartTime(4), Status(5)
                 if (status == "Assigned")
-                    e.Row.Cells[4].CssClass = "status-assigned";
+                    e.Row.Cells[statusCol].CssClass = "status-assigned";
                 else if (status == "Pending")
-                    e.Row.Cells[4].CssClass = "status-pending";
+                    e.Row.Cells[statusCol].CssClass = "status-pending";
                 else if (status == "Cancelled")
-                    e.Row.Cells[4].CssClass = "status-cancelled";
+                    e.Row.Cells[statusCol].CssClass = "status-cancelled";
             }
         }
 
@@ -250,32 +250,51 @@ namespace RRCManagementSystem
 
         protected void btnConfirmSchedule_Click(object sender, EventArgs e)
         {
-            if (!string.IsNullOrEmpty(hfSelectedScheduleID.Value))
+            // If the designer did not regenerate, this handler will fail to compile.
+            // Ensure the three controls exist in MyBookings.aspx with runat="server".
+            if (string.IsNullOrWhiteSpace(hfSelectedScheduleID.Value))
             {
-                int scheduleId = Convert.ToInt32(hfSelectedScheduleID.Value);
-                int clientId = Convert.ToInt32(Session["ClientID"]);
-
-                DateTime newDate = DateTime.Parse(txtNewScheduleDate.Text);
-                TimeSpan newTime = TimeSpan.Parse(txtNewScheduleTime.Text);
-                DateTime combinedDate = newDate.Add(newTime);
-
-                using (var con = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.usp_ServiceSchedule_ClientReschedule", con))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleId;
-                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
-                    cmd.Parameters.Add("@NewDateTime", SqlDbType.DateTime).Value = combinedDate;
-
-                    con.Open();
-                    cmd.ExecuteNonQuery();
-                }
-
-                ScriptManager.RegisterStartupScript(this, GetType(), "ScheduleSuccess", "Swal.fire('Saved!', 'Schedule updated successfully.', 'success');", true);
-                hfSelectedScheduleID.Value = "";
-                LoadUpcomingOperations(clientId);
-                ScriptManager.RegisterStartupScript(this, GetType(), "HideModal", "hideModal();", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "NoSched", "Swal.fire('Oops', 'No schedule selected.', 'warning');", true);
+                return;
             }
+
+            int scheduleId = Convert.ToInt32(hfSelectedScheduleID.Value);
+            int clientId = Convert.ToInt32(Session["ClientID"]);
+
+            if (string.IsNullOrWhiteSpace(txtNewScheduleDate.Text) || string.IsNullOrWhiteSpace(txtNewScheduleTime.Text))
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "MissingDT", "Swal.fire('Missing', 'Please pick date and time.', 'warning');", true);
+                return;
+            }
+
+            DateTime newDate;
+            TimeSpan newTime;
+            if (!DateTime.TryParse(txtNewScheduleDate.Text, out newDate) ||
+                !TimeSpan.TryParse(txtNewScheduleTime.Text, out newTime))
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "BadDT", "Swal.fire('Invalid', 'Invalid date or time.', 'error');", true);
+                return;
+            }
+
+            DateTime newScheduledDate = newDate.Date.Add(newTime);
+
+            // Create a Reschedule Request (Pending)
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_RescheduleRequest_Create", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleId;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                cmd.Parameters.Add("@NewScheduledDate", SqlDbType.DateTime).Value = newScheduledDate;
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
+
+            ScriptManager.RegisterStartupScript(this, GetType(), "ReqSent", "Swal.fire('Sent!', 'Your reschedule request has been submitted for approval.', 'success');", true);
+            hfSelectedScheduleID.Value = "";
+            LoadUpcomingOperations(clientId);
+            ScriptManager.RegisterStartupScript(this, GetType(), "HideModal", "hideModal();", true);
         }
 
         protected void gvMyBookings_RowCommand(object sender, GridViewCommandEventArgs e)
@@ -302,18 +321,11 @@ namespace RRCManagementSystem
             }
         }
 
-        /// <summary>
-        /// Creates a "Booking Confirmed" notification for any booking that is assigned/approved/confirmed
-        /// and has a scheduled date/time. DedupKey prevents duplicates across page visits.
-        /// </summary>
         private void SeedConfirmedBookingNotifications(int clientId)
         {
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand(@"
-                SELECT TOP 50 b.BookingID,
-                       b.ScheduledDate,      -- DATE
-                       b.StartTime,          -- TIME
-                       b.Status
+                SELECT TOP 50 b.BookingID, b.ScheduledDate, b.StartTime, b.Status
                 FROM dbo.Bookings b
                 WHERE b.ClientID = @ClientID
                   AND b.Status IN ('Assigned','Approved','Confirmed')
@@ -330,12 +342,10 @@ namespace RRCManagementSystem
                     {
                         int bookingId = Convert.ToInt32(r["BookingID"]);
                         DateTime scheduledDate = Convert.ToDateTime(r["ScheduledDate"]);
-                        // StartTime from SQL TIME → read as TimeSpan
                         TimeSpan startTime = (r["StartTime"] is TimeSpan)
                             ? (TimeSpan)r["StartTime"]
                             : TimeSpan.Parse(r["StartTime"].ToString());
 
-                        // 🔔 Insert via SP (dedup ensures this is only added once)
                         try
                         {
                             using (var con2 = new SqlConnection(connectionString))
@@ -355,10 +365,7 @@ namespace RRCManagementSystem
                                 cmd2.ExecuteNonQuery();
                             }
                         }
-                        catch
-                        {
-                            // Ignore dup/other errors so the page keeps working
-                        }
+                        catch { }
                     }
                 }
             }

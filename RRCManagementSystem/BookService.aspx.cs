@@ -2,7 +2,9 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Web.UI;
+using System.Web.UI.WebControls; // RadioButtonList
 
 namespace RRCManagementSystem
 {
@@ -37,27 +39,62 @@ namespace RRCManagementSystem
                 {
                     if (reader.Read())
                     {
-                        lblServices.Text = reader["ServiceNames"].ToString();
-                        lblSQM.Text = reader["SQM"] == DBNull.Value ? "0" : reader["SQM"].ToString();
+                        lblServices.Text = SafeGetString(reader, "ServiceNames", "N/A");
+                        lblSQM.Text = SafeGetString(reader, "SQM", "0");
 
-                        decimal price = reader["Price"] == DBNull.Value ? 0m : Convert.ToDecimal(reader["Price"]);
+                        decimal price = 0m;
+                        int priceIdx = SafeOrdinal(reader, "Price");
+                        if (priceIdx >= 0 && !reader.IsDBNull(priceIdx))
+                            price = Convert.ToDecimal(reader["Price"]);
                         lblPrice.Text = $"\u20B1{price:N2}";
 
-                        hfIsContract.Value = reader["IsContract"] != DBNull.Value && (bool)reader["IsContract"] ? "True" : "False";
-                        hfQuotationID.Value = reader["QuotationID"].ToString();
+                        // contract detection from either PQ.IsContract or ServiceType == 'Termite Control'
+                        bool isContractCol = SafeGetBool(reader, "IsContract", false);
+                        string serviceType = SafeGetString(reader, "ServiceType", null);
+                        bool isTermiteType = string.Equals(serviceType, "Termite Control", StringComparison.OrdinalIgnoreCase);
+                        bool isContractFinal = isTermiteType || isContractCol;
 
-                        // We keep this for your UI logic, but booking will read ServiceIDs from the quotation inside SQL.
-                        ViewState["ServiceIDs"] = reader["ServiceID"]?.ToString() ?? string.Empty;
+                        hfIsContract.Value = isContractFinal ? "True" : "False";
+                        hfQuotationID.Value = SafeGetString(reader, "QuotationID", null);
 
-                        lblInspector.Text = reader["InspectorName"]?.ToString() ?? "N/A";
+                        // For UI only
+                        ViewState["ServiceIDs"] = SafeGetString(reader, "ServiceID", string.Empty);
+
+                        lblInspector.Text = SafeGetString(reader, "InspectorName", "N/A");
+                        btnBook.Enabled = true;
+
+                        // Show/hide plan selector; preselect default for contracts
+                        var rblPlan = FindControl("rblPlan") as RadioButtonList;
+                        var planPanel = FindControl("pnlPlan"); // optional wrapper
+                        if (rblPlan != null)
+                        {
+                            if (isContractFinal)
+                            {
+                                rblPlan.Visible = true;
+                                if (planPanel != null) planPanel.Visible = true;
+
+                                // Preselect 50-25-25 by default if nothing selected yet
+                                if (rblPlan.SelectedIndex < 0)
+                                {
+                                    var item = rblPlan.Items.FindByValue("50-25-25");
+                                    if (item != null) item.Selected = true;
+                                }
+                            }
+                            else
+                            {
+                                rblPlan.ClearSelection();
+                                rblPlan.Visible = false;
+                                if (planPanel != null) planPanel.Visible = false;
+                            }
+                        }
                     }
                     else
                     {
+                        btnBook.Enabled = false;
                         ScriptManager.RegisterStartupScript(this, GetType(), "noQuote", @"
                             Swal.fire('No Quotation', 
                                       'Please wait for the inspector to create a quotation.', 
                                       'info');", true);
-                        btnBook.Enabled = false;
                     }
                 }
             }
@@ -73,8 +110,10 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // Parse date/time flexibly
             DateTime selectedDateTime;
-            if (!DateTime.TryParse(txtDate.Text + " " + txtTime.Text, out selectedDateTime))
+            if (!DateTime.TryParse($"{txtDate.Text} {txtTime.Text}", CultureInfo.CurrentCulture, DateTimeStyles.None, out selectedDateTime) &&
+                !DateTime.TryParse($"{txtDate.Text} {txtTime.Text}", CultureInfo.GetCultureInfo("en-PH"), DateTimeStyles.None, out selectedDateTime))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "invalid",
                     "Swal.fire('Invalid Input', 'Invalid date or time format.', 'error');", true);
@@ -96,15 +135,38 @@ namespace RRCManagementSystem
                 return;
             }
 
-            int clientId = Convert.ToInt32(Session["ClientID"]);
-            string notes = (txtNotes.Text == null) ? null : txtNotes.Text.Trim();
+            if (Session["ClientID"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
 
-            // Single, atomic stored procedure:
-            // - Validates the quotation belongs to this client
-            // - Creates Bookings row
-            // - Inserts BookingServices from quotation's ServiceID CSV
-            // - Deletes the quotation
+            int clientId = Convert.ToInt32(Session["ClientID"]);
+            string notes = string.IsNullOrWhiteSpace(txtNotes.Text) ? null : txtNotes.Text.Trim();
+
+            bool isContract = string.Equals(hfIsContract.Value, "True", StringComparison.OrdinalIgnoreCase);
+
+            // Determine plan to send
+            string planToSend = null;
+            var rblPlan = FindControl("rblPlan") as RadioButtonList;
+
+            if (isContract)
+            {
+                if (rblPlan != null && rblPlan.Visible)
+                {
+                    // Use selection; if none, fall back to default 50-25-25
+                    planToSend = string.IsNullOrWhiteSpace(rblPlan.SelectedValue) ? "50-25-25" : rblPlan.SelectedValue;
+                }
+                else
+                {
+                    // Control not on the page → default to 50-25-25 as requested
+                    planToSend = "50-25-25";
+                }
+            }
+            // else: non-contract → planToSend remains null (proc will set 100%)
+
             int newBookingId = 0;
+            string newBookingCode = null;
 
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.usp_BookService_ConfirmFromQuotation", conn))
@@ -117,21 +179,29 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@StartTime", SqlDbType.Time).Value = selectedDateTime.TimeOfDay;
                 cmd.Parameters.Add("@Notes", SqlDbType.NVarChar, 500).Value = (object)notes ?? DBNull.Value;
 
-                var pOut = cmd.Parameters.Add("@BookingID", SqlDbType.Int);
-                pOut.Direction = ParameterDirection.Output;
+                // Pass plan only for contract services; proc validates/forces 100% for non-contract
+                var pPlan = cmd.Parameters.Add("@PaymentPlan", SqlDbType.NVarChar, 20);
+                if (isContract)
+                    pPlan.Value = planToSend;
+                else
+                    pPlan.Value = DBNull.Value;
+
+                var pIdOut = cmd.Parameters.Add("@BookingID", SqlDbType.Int);
+                pIdOut.Direction = ParameterDirection.Output;
+
+                var pCodeOut = cmd.Parameters.Add("@OutBookingCode", SqlDbType.NVarChar, 16); // align with proc/DB
+                pCodeOut.Direction = ParameterDirection.Output;
 
                 try
                 {
                     conn.Open();
                     cmd.ExecuteNonQuery();
-                    if (pOut.Value != DBNull.Value)
-                    {
-                        newBookingId = Convert.ToInt32(pOut.Value);
-                    }
+
+                    if (pIdOut.Value != DBNull.Value) newBookingId = Convert.ToInt32(pIdOut.Value);
+                    if (pCodeOut.Value != DBNull.Value) newBookingCode = pCodeOut.Value as string;
                 }
                 catch (SqlException ex)
                 {
-                    // Friendly error
                     ScriptManager.RegisterStartupScript(this, GetType(), "sqlErr",
                         "Swal.fire('Error', 'Failed to create booking: " + ex.Message.Replace("'", "\\'") + "', 'error');", true);
                     return;
@@ -140,16 +210,17 @@ namespace RRCManagementSystem
 
             if (newBookingId > 0)
             {
+                string safeCode = string.IsNullOrWhiteSpace(newBookingCode) ? "" : $" (Code: {newBookingCode})";
                 ScriptManager.RegisterStartupScript(this, GetType(), "booked",
-                    "Swal.fire('Success', 'Your service has been booked!', 'success');", true);
+                    $"Swal.fire('Success', 'Your service has been booked!{safeCode}', 'success');", true);
 
-                // Reset form (no notifications here)
+                // Reset form
                 txtDate.Text = "";
                 txtTime.Text = "";
                 txtNotes.Text = "";
 
-                // Optional: redirect to show the new booking immediately
-                // Response.Redirect("~/MyBookings.aspx");
+                // Optional: redirect to bookings
+                // Response.Redirect(\"~/MyBookings.aspx\");
             }
             else
             {
@@ -158,6 +229,28 @@ namespace RRCManagementSystem
             }
         }
 
+        // ---------- Safe readers ----------
+        private static int SafeOrdinal(IDataRecord r, string column)
+        {
+            try { return r.GetOrdinal(column); } catch { return -1; }
+        }
 
+        private static string SafeGetString(IDataRecord r, string column, string fallback)
+        {
+            int i = SafeOrdinal(r, column);
+            if (i < 0 || r.IsDBNull(i)) return fallback;
+            return Convert.ToString(r[i]);
+        }
+
+        private static bool SafeGetBool(IDataRecord r, string column, bool fallback)
+        {
+            int i = SafeOrdinal(r, column);
+            if (i < 0 || r.IsDBNull(i)) return fallback;
+            object v = r[i];
+            if (v is bool b) return b;
+            if (v is int ii) return ii != 0;
+            if (bool.TryParse(Convert.ToString(v), out bool parsed)) return parsed;
+            return fallback;
+        }
     }
 }

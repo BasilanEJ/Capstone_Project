@@ -247,14 +247,17 @@
 
 
         private void LoadBookings(DateTime from, DateTime to)
-            {
-                gvBookings.DataSource = ExecToTable("dbo.spReports_Bookings",
-                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
-                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
-                gvBookings.DataBind();
-            }
+        {
+            gvBookings.DataSource = ExecToTable(
+                "dbo.spReports_Bookings",
+                new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
+                new SqlParameter("@ToDate", SqlDbType.Date) { Value = to }
+            );
+            gvBookings.DataBind();
+        }
 
-            private void LoadInspections(DateTime from, DateTime to)
+
+        private void LoadInspections(DateTime from, DateTime to)
             {
                 gvInspections.DataSource = ExecToTable("dbo.spReports_Inspections",
                     new SqlParameter("@FromDate", SqlDbType.Date){Value = from},

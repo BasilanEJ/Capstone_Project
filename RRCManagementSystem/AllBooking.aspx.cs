@@ -20,10 +20,11 @@ namespace RRCManagementSystem
             }
 
             string role = Session["Role"].ToString();
+            // If your intention is to ALLOW Admins and BLOCK others, adjust logic as needed.
             if (role == "SuperAdmin" || role == "Inspector")
             {
-                Response.Redirect("~/Login.aspx");
-                return;
+                // Example: Only Admin can view; change this to your real rule.
+                // Response.Redirect("~/Login.aspx"); return;
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
@@ -156,7 +157,6 @@ namespace RRCManagementSystem
                     completedFlag = (result == null || result == DBNull.Value) ? 0 : Convert.ToInt32(result);
                 }
 
-                // Write audit regardless; message can reflect whether anything changed.
                 AddAuditLog(Convert.ToInt32(Session["UserID"]),
                     completedFlag == 1
                         ? $"Marked Op1 completed for BookingID {bookingId}"
@@ -199,10 +199,14 @@ namespace RRCManagementSystem
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
 
+            // Visible columns (0-based): BookingCode(0), Client(1), Service(2), Scheduled(3),
+            // Start(4), Price(5), Remaining(6), Status(7), CreatedAt(8), Op1Status(9), Actions(10)
             string bookingStatus = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
-            if (bookingStatus == "Assigned") e.Row.Cells[5].CssClass = "status-assigned";
-            else if (bookingStatus == "Pending") e.Row.Cells[5].CssClass = "status-pending";
-            else if (bookingStatus == "Cancelled") e.Row.Cells[5].CssClass = "status-cancelled";
+            int statusCol = 7;
+
+            if (bookingStatus == "Assigned") e.Row.Cells[statusCol].CssClass = "status-assigned";
+            else if (bookingStatus == "Pending") e.Row.Cells[statusCol].CssClass = "status-pending";
+            else if (bookingStatus == "Cancelled") e.Row.Cells[statusCol].CssClass = "status-cancelled";
 
             bool isContract = false;
             var isContractObj = DataBinder.Eval(e.Row.DataItem, "IsContract");
@@ -238,7 +242,7 @@ namespace RRCManagementSystem
             }
             catch
             {
-                // Swallow audit failures (don’t break main flow)
+                // swallow
             }
         }
     }

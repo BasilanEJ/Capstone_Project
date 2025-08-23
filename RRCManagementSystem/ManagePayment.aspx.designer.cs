@@ -51,6 +51,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.RequiredFieldValidator rfvClient;
 
         /// <summary>
+        /// txtRemainingBalance control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtRemainingBalance;
+
+        /// <summary>
         /// ddlPaymentMethod control.
         /// </summary>
         /// <remarks>
@@ -67,15 +76,6 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.RequiredFieldValidator rfvMethod;
-
-        /// <summary>
-        /// txtRemainingBalance control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtRemainingBalance;
 
         /// <summary>
         /// txtNewBalance control.

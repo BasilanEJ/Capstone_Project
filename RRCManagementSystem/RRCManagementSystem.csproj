@@ -266,6 +266,7 @@
     <Content Include="ViewClientProfile.aspx" />
     <Content Include="ViewEquipment.aspx" />
     <Content Include="ViewItem.aspx" />
+    <Content Include="ViewPaymentBalance.aspx" />
     <Content Include="ViewRole.aspx" />
     <Content Include="ViewSales.aspx" />
     <Content Include="ViewServices.aspx" />
@@ -961,6 +962,13 @@
     </Compile>
     <Compile Include="ViewItem.aspx.designer.cs">
       <DependentUpon>ViewItem.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ViewPaymentBalance.aspx.cs">
+      <DependentUpon>ViewPaymentBalance.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ViewPaymentBalance.aspx.designer.cs">
+      <DependentUpon>ViewPaymentBalance.aspx</DependentUpon>
     </Compile>
     <Compile Include="ViewRole.aspx.cs">
       <DependentUpon>ViewRole.aspx</DependentUpon>
