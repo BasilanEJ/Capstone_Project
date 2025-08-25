@@ -252,7 +252,7 @@
         <div id="paymongo-area">
           <div class="d-flex flex-wrap align-items-center gap-2">
             <button id="btnPayMongo" class="btn btn-success px-4" onclick="return openPayMongoCheckout();" disabled>
-              Pay via PayMongo
+              Pay Here
             </button>
             <span id="paymongo-note" class="text-secondary">
              

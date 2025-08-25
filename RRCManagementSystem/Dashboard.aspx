@@ -204,7 +204,7 @@
     <div id="jsonModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; align-items:center; justify-content:center;">
         <div style="background:#fff; width:min(800px,92vw); max-height:80vh; overflow:auto; padding:16px; border-radius:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
-                <h4 style="margin:0;">Transaction JSON</h4>
+                <h4 style="margin:0;">Transaction</h4>
                 <button onclick="closeModal()" class="btn btn-sm btn-secondary">Close</button>
             </div>
             <pre id="jsonModalBody" style="white-space:pre-wrap; word-break:break-word; margin:0;"></pre>

@@ -90,15 +90,25 @@ namespace RRCManagementSystem
                 {
                     while (reader.Read())
                     {
-                        DateTime sched = Convert.ToDateTime(reader["ScheduledDate"]);
-                        DayOfWeek day = sched.DayOfWeek;
+                        // Date part
+                        DateTime schedDate = Convert.ToDateTime(reader["ScheduledDate"]);
+
+                        // Time part (SQL time -> .NET TimeSpan)
+                        TimeSpan startTime = reader.IsDBNull(reader.GetOrdinal("StartTime"))
+                            ? TimeSpan.Zero
+                            : reader.GetTimeSpan(reader.GetOrdinal("StartTime"));
+
+                        // For display (12-hour with AM/PM)
+                        string time = DateTime.Today.Add(startTime).ToString("h:mm tt");
+
+                        DayOfWeek day = schedDate.DayOfWeek;
 
                         string client = $"{reader["LastName"]}, {reader["FirstName"]}";
                         string address = $"{reader["StreetAndUnit"]}, {reader["Barangay"]}, {reader["City"]}";
-                        string time = sched.ToString("hh:mm tt");
                         string groupName = reader["GroupName"] == DBNull.Value ? "Unassigned" : reader["GroupName"].ToString();
 
-                        string modalContent = $"{client}<br/>{time}<br/>{address}<br/><strong>Team:</strong> {groupName}".Replace("'", "\\'");
+                        string modalContent = $"{client}<br/>{time}<br/>{address}<br/><strong>Team:</strong> {groupName}"
+                            .Replace("'", "\\'");
                         string clickableDiv = $@"
 <div onclick=""showBookingDetails('{modalContent}')""
      style='cursor:pointer; padding:6px; border-radius:6px; transition:0.2s;'
@@ -112,6 +122,7 @@ namespace RRCManagementSystem
 
                         calendarData[day].Add(clickableDiv);
                     }
+
                 }
             }
 
