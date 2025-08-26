@@ -257,7 +257,7 @@
             <span id="paymongo-note" class="text-secondary">
              
             </span>
-            <span class="badge text-bg-light">GCash · Card · Maya</span>
+            <span class="badge text-bg-light">Card · GCash · GrabPay · Maya</span>
           </div>
         </div>
 

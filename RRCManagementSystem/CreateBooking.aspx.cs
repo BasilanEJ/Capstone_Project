@@ -101,20 +101,26 @@ namespace RRCManagementSystem
                 isContract: isContract
             );
 
-            // 🔔 Add notification for the client
+            // 🔔 Add notification for the client (Quotation Submitted)
             try
             {
-                // Shorten services for notification text
                 string svc = selectedServiceNames;
                 if (svc.Length > 60) svc = svc.Substring(0, 57) + "...";
 
-                var ph = new System.Globalization.CultureInfo("en-PH");
+                var ph = new CultureInfo("en-PH");
                 string priceText = string.Format(ph, "{0:C}", total); // ₱1,000.00 style
 
-                string deepLink = "BookService.aspx?tab=quotes"; // adjust if you have a different review page
-                string msg = $"New quotation ready: {svc} — {priceText} for {sqm} sqm. Tap to review.";
+                string deepLink = "BookService.aspx?tab=quotes"; // page where client can review quotations
 
-                AddNotification(clientId, msg, "Quotation", deepLink);
+                // Use Title + Body (so it renders in your bell dropdown)
+                AddNotification(
+                    clientId: clientId,
+                    type: "quotation",
+                    title: "Quotation Submitted",
+                    body: $"New quotation ready: {svc} — {priceText} for {sqm} sqm.",
+                    url: deepLink,
+                    dedupKey: $"QUOTE-{clientId}-{newId}" // optional
+                );
             }
             catch
             {
@@ -134,20 +140,30 @@ namespace RRCManagementSystem
         }
 
 
-        private void AddNotification(int clientId, string message, string type = "Quotation", string url = null)
+
+        private void AddNotification(
+    int clientId,
+    string type,              // e.g. "quotation"
+    string title,             // short line, e.g. "Quotation Submitted"
+    string body,              // details, e.g. "New quotation ready …"
+    string url = null,        // deep-link, e.g. "BookService.aspx?tab=quotes"
+    string dedupKey = null)   // optional, for de-dup logic if you have it
         {
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.usp_Notifications_Add", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
-                cmd.Parameters.Add("@Message", SqlDbType.NVarChar, 400).Value = message ?? "";
                 cmd.Parameters.Add("@Type", SqlDbType.NVarChar, 50).Value = (object)type ?? DBNull.Value;
+                cmd.Parameters.Add("@Title", SqlDbType.NVarChar, 200).Value = (object)title ?? DBNull.Value;
+                cmd.Parameters.Add("@Body", SqlDbType.NVarChar, 1000).Value = (object)body ?? DBNull.Value;
                 cmd.Parameters.Add("@Url", SqlDbType.NVarChar, 400).Value = (object)url ?? DBNull.Value;
+                cmd.Parameters.Add("@DedupKey", SqlDbType.NVarChar, 100).Value = (object)dedupKey ?? DBNull.Value;
                 con.Open();
                 cmd.ExecuteNonQuery();
             }
         }
+
 
         private bool GetIsAnyContract(string serviceIdCsv)
         {

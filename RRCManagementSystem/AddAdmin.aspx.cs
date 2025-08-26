@@ -198,9 +198,9 @@ namespace RRCManagementSystem
                 bool emailSent = SendResetEmail(email, resetToken, role);
 
                 if (emailSent)
-                    ShowSuccess("Admin account created and email sent successfully!", true);
+                    ShowSuccess("User account created and email sent successfully!", true);
                 else
-                    ShowWarning("Admin account created, but failed to send email.");
+                    ShowWarning("User account created, but failed to send email.");
             }
             catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
             {
@@ -208,7 +208,7 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
-                ShowError("⚠ Error creating admin: " + ex.Message);
+                ShowError("⚠ Error creating user: " + ex.Message);
             }
         }
 

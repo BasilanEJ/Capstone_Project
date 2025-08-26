@@ -94,7 +94,7 @@ namespace RRCManagementSystem
             int txId = InsertTransaction(
                 saleId,
                 remaining,
-                method: "PayMongo",
+                method: "Bank Transfer",
                 status: "Completed",
                 remarks: "PayMongo Manual Ref: " + reference,
                 reference: reference
@@ -110,7 +110,7 @@ namespace RRCManagementSystem
                 SaleID = saleId,
                 Amount = remaining,
                 Currency = "PHP",
-                Method = "PayMongo",
+                Method = "Bank Transfer",
                 Status = "Completed",
                 PaidAtUtc = DateTime.UtcNow
             });
@@ -168,7 +168,7 @@ namespace RRCManagementSystem
                 string method =
                     root.SelectToken("data.attributes.data.attributes.payments[0].data.attributes.payment_method.type")?.ToString() ??
                     root.SelectToken("data.attributes.payments[0].payment_method.type")?.ToString() ??
-                    "PayMongo";
+                    "Bank Transfer";
 
                 if (string.IsNullOrWhiteSpace(reference) || !amountCents.HasValue || amountCents.Value <= 0)
                 {
@@ -198,8 +198,8 @@ namespace RRCManagementSystem
                 int txId = InsertTransaction(
                     saleId,
                     amount,
-                    method ?? "PayMongo",
-                    "Completed",
+                    method ?? "Bank Transfer",
+                    "Completed",    
                     "PayMongo Webhook Ref: " + reference,
                     reference
                 );
@@ -214,7 +214,7 @@ namespace RRCManagementSystem
                     SaleID = saleId,
                     Amount = amount,
                     Currency = "PHP",
-                    Method = method ?? "PayMongo",
+                    Method = method ?? "Bank Transfer",
                     Status = "Completed",
                     PaidAtUtc = DateTime.UtcNow
                 });
@@ -260,7 +260,7 @@ namespace RRCManagementSystem
                 var pAmt = cmd.Parameters.Add("@Amount", SqlDbType.Decimal);
                 pAmt.Precision = 18; pAmt.Scale = 2; pAmt.Value = amount;
 
-                cmd.Parameters.Add("@PaymentMethod", SqlDbType.NVarChar, 50).Value = method ?? "PayMongo";
+                cmd.Parameters.Add("@PaymentMethod", SqlDbType.NVarChar, 50).Value = method ?? "Bank Transfer";
                 cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = status ?? "Completed";
                 cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar, 255).Value = remarks ?? "";
                 cmd.Parameters.Add("@Reference", SqlDbType.NVarChar, 200).Value = (object)reference ?? DBNull.Value;

@@ -29,10 +29,8 @@ namespace RRCManagementSystem
         protected override void OnInit(EventArgs e)
         {
             base.OnInit(e);
-
             if (Session["ClientID"] == null)
             {
-                // Safe redirect (avoid ThreadAbortException)
                 Response.Redirect("~/Login.aspx", false);
                 Context.ApplicationInstance.CompleteRequest();
             }
@@ -45,7 +43,7 @@ namespace RRCManagementSystem
             // Keep hidden field synced with dropdown
             hfSelectedPlan.Value = ddlPlanChoice.SelectedValue;
 
-            // Non-blocking: make sure webhook exists (if key present)
+            // Non-blocking: ensure webhook exists (if key present)
             await EnsurePayMongoWebhookAsync();
 
             if (!IsPostBack)
@@ -55,7 +53,7 @@ namespace RRCManagementSystem
                 LoadClientInfo(clientId, hfSelectedPlan.Value);
                 LoadPaymentHistory(clientId);
 
-                // Handle PayMongo redirect messages
+                // Handle PayMongo redirect messages (from success_url/cancel_url)
                 var qs = Request.QueryString;
                 if (qs["success"] == "1")
                 {
@@ -104,7 +102,6 @@ namespace RRCManagementSystem
             LoadClientInfo(clientId, selectedPlan);
             LoadPaymentHistory(clientId);
 
-            // Re-render PayPal + re-check PayMongo link after partial update
             ScriptManager.RegisterStartupScript(this, GetType(), "rerenderPP",
                 "renderPayPalButtons(); updatePayMongoButton();", true);
         }
@@ -166,7 +163,6 @@ namespace RRCManagementSystem
                         hiddenCheckoutURL.Value = string.Empty;
                         hiddenReference.Value = string.Empty;
 
-                        // Hide plan UI if nothing to show
                         paymentPlanContainer.Visible = false;
                         ddlPlanChoice.Enabled = true;
                         return;
@@ -177,11 +173,9 @@ namespace RRCManagementSystem
                     string dbPlanRaw = reader["PaymentPlan"] == DBNull.Value ? "" : reader["PaymentPlan"].ToString();
                     int bookingId = Convert.ToInt32(reader["BookingID"], CultureInfo.InvariantCulture);
 
-                    // Raw flag from DB (may be unreliable in your current SP)
                     bool isContractDb = reader["IsContract"] != DBNull.Value &&
                                         Convert.ToBoolean(reader["IsContract"], CultureInfo.InvariantCulture);
 
-                    // Normalize plan values: treat "100%" as "100"
                     string NormalizePlan(string p)
                     {
                         if (string.IsNullOrWhiteSpace(p)) return "";
@@ -195,31 +189,24 @@ namespace RRCManagementSystem
 
                     lblServiceName.Text = serviceName;
 
-                    // Decide effective plan (UI-selected > DB-stored > default)
                     string effectivePlan = !string.IsNullOrWhiteSpace(uiPlan) ? uiPlan : dbPlan;
                     if (string.IsNullOrWhiteSpace(effectivePlan))
                         effectivePlan = isContractDb ? "50-25-25" : "100";
 
-                    // Final contract decision: DB flag OR plan != '100'
                     bool isContract = isContractDb || !string.Equals(effectivePlan, "100", StringComparison.OrdinalIgnoreCase);
 
-                    // Persist default if DB had none yet (so it shows correctly elsewhere)
                     if (string.IsNullOrWhiteSpace(dbPlan))
                         SaveSelectedPlanToDb(bookingId, effectivePlan);
 
-                    // Sync dropdown to effective plan (if item exists)
                     var item = ddlPlanChoice.Items.FindByValue(effectivePlan);
                     if (item != null) ddlPlanChoice.SelectedValue = effectivePlan;
                     hfSelectedPlan.Value = effectivePlan;
 
-                    // Show plan selector ONLY for contract services
                     paymentPlanContainer.Visible = isContract;
 
-                    // === Canonical: compute totals via SaleID so it matches Admin ===
                     int saleId = GetSaleIdByBooking(bookingId);
                     decimal totalPaid = (saleId > 0) ? GetTotalPaidBySaleId(saleId) : 0m;
 
-                    // 🔒 Lock the dropdown after the first payment
                     ddlPlanChoice.Enabled = (totalPaid == 0m);
 
                     decimal nextAmount = CalculateNextInstallment(isContract, fullPrice, totalPaid, effectivePlan);
@@ -229,7 +216,6 @@ namespace RRCManagementSystem
                         ? "Installment Plan (" + effectivePlan.Replace("-", "/") + ")"
                         : "One-time Pay (100%)";
 
-                    // --- Update KPI fields + labels ---
                     _kpiNext = "₱" + nextAmount.ToString("N2");
                     _kpiTotal = "₱" + fullPrice.ToString("N2");
                     _kpiPaid = "₱" + totalPaid.ToString("N2");
@@ -242,40 +228,32 @@ namespace RRCManagementSystem
 
                     if (remaining <= 0m)
                     {
-                        // Fully paid state
                         lblPrice.Text = "Fully Paid";
                         hfPayPalAmount.Value = "0.00";
                         hfPayPalBookingID.Value = bookingId.ToString(CultureInfo.InvariantCulture);
                         hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
 
-                        // Clear PayMongo link/refs so button disables
                         hiddenCheckoutURL.Value = string.Empty;
                         hiddenReference.Value = string.Empty;
 
-                        // KPIs for fully-paid
                         _kpiNext = _kpiRemain = "₱0.00";
                         lblNextInstallment.Text = _kpiNext;
                         lblRemaining.Text = _kpiRemain;
 
-                        // Also lock (belt & suspenders)
                         ddlPlanChoice.Enabled = false;
-
                         return;
                     }
 
-                    // Legacy combined label (renders with line breaks via .preline CSS)
                     lblPrice.Text =
                         "₱" + nextAmount.ToString("N2") + " (Next installment)\n" +
                         "Total Price: ₱" + fullPrice.ToString("N2") + "\n" +
                         "Already Paid: ₱" + totalPaid.ToString("N2") + "\n" +
                         "Remaining Balance: ₱" + remaining.ToString("N2");
 
-                    // Hidden fields for PayPal & JS
                     hfPayPalBookingID.Value = bookingId.ToString(CultureInfo.InvariantCulture);
                     hfPayPalAmount.Value = nextAmount.ToString("0.00", CultureInfo.InvariantCulture);
                     hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
 
-                    // Once-per-stage notification
                     EnqueuePaymentDueNotification(
                         clientId: clientId,
                         bookingId: bookingId,
@@ -286,12 +264,11 @@ namespace RRCManagementSystem
                         nextAmount: nextAmount
                     );
 
-                    // Generate/refresh PayMongo Checkout URL (async fire-and-forget)
+                    // Create/refresh PayMongo Checkout URL (fire & forget)
                     GenerateCheckoutURL(clientId, bookingId, isContract, fullPrice, totalPaid, effectivePlan);
                 }
             }
         }
-
 
         // ======= Canonical total via SaleID =============================================
         private int GetSaleIdByBooking(int bookingId)
@@ -309,7 +286,6 @@ namespace RRCManagementSystem
 
         private decimal GetTotalPaidBySaleId(int saleId)
         {
-            // Canonical SP: dbo.usp_TotalPaidBySale
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.usp_TotalPaidBySale", con))
             {
@@ -322,26 +298,13 @@ namespace RRCManagementSystem
             }
         }
 
-        /*
-        // If other pages still call GetTotalPaid(bookingId), you can keep this
-        // wrapper and delegate to the SaleID path so everything stays consistent.
-        private decimal GetTotalPaid(int bookingId)
-        {
-            int saleId = GetSaleIdByBooking(bookingId);
-            return (saleId > 0) ? GetTotalPaidBySaleId(saleId) : 0m;
-        }
-        */
-
         private void EnqueuePaymentDueNotification(
             int clientId, int bookingId,
             bool isContract, string plan,
             decimal fullPrice, decimal totalPaid, decimal nextAmount)
         {
-            // Nothing to notify if nothing is due.
             if (nextAmount <= 0m) return;
 
-            // Determine which "stage" is currently due and build a dedup key.
-            // This ensures ONE notification per stage.
             string stageKey;
             string stageLabel;
 
@@ -352,7 +315,6 @@ namespace RRCManagementSystem
             }
             else if (string.Equals(plan, "50-25-25", StringComparison.OrdinalIgnoreCase))
             {
-                var fifty = Math.Round(fullPrice * 0.50m, 2, MidpointRounding.AwayFromZero);
                 var seventyFive = Math.Round(fullPrice * 0.75m, 2, MidpointRounding.AwayFromZero);
 
                 if (totalPaid <= 0m)
@@ -373,8 +335,6 @@ namespace RRCManagementSystem
             }
             else if (string.Equals(plan, "70-30", StringComparison.OrdinalIgnoreCase))
             {
-                var seventy = Math.Round(fullPrice * 0.70m, 2, MidpointRounding.AwayFromZero);
-
                 if (totalPaid <= 0m)
                 {
                     stageKey = $"BOOK-{bookingId}-STAGE-1-70";
@@ -388,12 +348,10 @@ namespace RRCManagementSystem
             }
             else
             {
-                // Fallback – treat as one-time
                 stageKey = $"BOOK-{bookingId}-ONE-TIME";
                 stageLabel = "Payment Due";
             }
 
-            // Format amounts for PH pesos
             var ph = new CultureInfo("en-PH");
             string nextTxt = string.Format(ph, "{0:C}", nextAmount);
             decimal remaining = Math.Max(0m, fullPrice - totalPaid);
@@ -412,16 +370,13 @@ namespace RRCManagementSystem
                     cmd.Parameters.AddWithValue("@Url", "Payment.aspx");
                     cmd.Parameters.AddWithValue("@DedupKey", stageKey);
                     con.Open();
-                    cmd.ExecuteNonQuery(); // idempotent because of @DedupKey + index
+                    cmd.ExecuteNonQuery();
                 }
             }
-            catch
-            {
-                // best-effort; ignore failures
-            }
+            catch { /* best-effort */ }
         }
 
-        // ===== History ================================================================
+        // ===== History =================================================================
         private void LoadPaymentHistory(int clientId)
         {
             try
@@ -435,7 +390,6 @@ namespace RRCManagementSystem
                     var dt = new DataTable();
                     da.Fill(dt);
 
-                    // 🔒 Defensive: ensure the column exists so the GridView template won’t crash
                     if (!dt.Columns.Contains("Receipt"))
                         dt.Columns.Add("Receipt", typeof(string));
 
@@ -453,21 +407,16 @@ namespace RRCManagementSystem
         // Helper used by the Receipt TemplateField
         protected string GetReceiptLink(object receiptObj)
         {
-            // Accepts NULL/DBNull/""
             var v = (receiptObj == null || receiptObj == DBNull.Value) ? "" : receiptObj.ToString();
             if (string.IsNullOrWhiteSpace(v)) return "No Receipt";
-
-            // Only pass the file name to your decrypt page
             var file = System.IO.Path.GetFileName(v);
             var url = "DecryptReceipt.aspx?file=" + HttpUtility.UrlEncode(file);
             return $"<a href='{url}' target='_blank' rel='noopener'>View</a>";
         }
 
-        // Optional: if your proc sometimes returns date as string, normalize here
         protected void gvPaymentHistory_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
-            // If needed, format string dates here
         }
 
         // ===== Business Logic ===========================================================
@@ -500,8 +449,8 @@ namespace RRCManagementSystem
         {
             try
             {
-                decimal amount = CalculateNextInstallment(isContract, fullPrice, totalPaid, selectedPlan);
-                if (amount <= 0m)
+                decimal amountPhp = CalculateNextInstallment(isContract, fullPrice, totalPaid, selectedPlan);
+                if (amountPhp <= 0m)
                 {
                     hiddenCheckoutURL.Value = string.Empty;
                     hiddenReference.Value = string.Empty;
@@ -509,39 +458,49 @@ namespace RRCManagementSystem
                 }
 
                 string serviceName = GetServiceNameForBooking(bookingId) ?? "RRC Service Payment";
-                string referenceNumber = "RRC-" + clientId + "-" + DateTime.UtcNow.Ticks;
 
-                // Save RAW reference (no prefix) so webhook can find it 1:1
+                // RAW reference for webhook mapping
+                string referenceNumber = "RRC-" + clientId + "-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
                 SavePayMongoReference(bookingId, referenceNumber);
                 hiddenReference.Value = referenceNumber;
 
+                // Redirect back to THIS PAGE
+                string baseUrl = GetHttpsBaseUrl().TrimEnd('/');
+                string successUrl = $"{baseUrl}/Payment.aspx?success=1&ref={HttpUtility.UrlEncode(referenceNumber)}";
+                string cancelUrl = $"{baseUrl}/Payment.aspx?failed=1";
+
+                long amountCentavos = (long)Math.Round(amountPhp * 100m, MidpointRounding.AwayFromZero);
+
+                // ✅ Checkout Session payload using line_items (required by your PayMongo setup)
                 var payload = new
                 {
                     data = new
                     {
                         attributes = new
                         {
+                            currency = "PHP",
                             description = serviceName,
-                            billing = new { name = "Client #" + clientId },
-                            line_items = new[] {
-                                new {
-                                    amount = (int)Math.Round(amount * 100m, 0, MidpointRounding.AwayFromZero),
-                                    currency = "PHP",
-                                    description = serviceName,
-                                    name = "RRC Service",
-                                    quantity = 1
-                                }
-                            },
-                            payment_method_types = new[] { "gcash", "card", "paymaya" },
+                            payment_method_types = new[] { "gcash", "card", "grab_pay", "paymaya" },
                             reference_number = referenceNumber,
-                            send_email_receipt = false,
-                            show_description = true,
-                            show_line_items = true,
-                            redirect = new
+                            success_url = successUrl,
+                            cancel_url = cancelUrl,
+
+                            // <-- IMPORTANT: Use line_items instead of top-level amount
+                            line_items = new[]
                             {
-                                success = GetHttpsBaseUrl() + "/Payment.aspx?success=1&ref=" + HttpUtility.UrlEncode(referenceNumber),
-                                failed = GetHttpsBaseUrl() + "/Payment.aspx?failed=1"
-                            }
+                        new {
+                            name = "RRC Service",
+                            description = serviceName,
+                            amount = amountCentavos,   // in centavos
+                            currency = "PHP",
+                            quantity = 1
+                        }
+                    },
+
+                            // optional but nice:
+                            send_email_receipt = false,
+                            show_line_items = true,
+                            show_description = true
                         }
                     }
                 };
@@ -551,7 +510,7 @@ namespace RRCManagementSystem
                 using (var client = new HttpClient())
                 {
                     var authValue = Convert.ToBase64String(Encoding.ASCII.GetBytes(payMongoSecretKey + ":"));
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authValue);
+                    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authValue);
 
                     using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
                     {
@@ -572,7 +531,6 @@ namespace RRCManagementSystem
                     }
                 }
 
-                // after creating link, update UI buttons
                 ScriptManager.RegisterStartupScript(this, GetType(), "pmUpdateBtn", "updatePayMongoButton();", true);
             }
             catch (Exception ex)
@@ -581,6 +539,7 @@ namespace RRCManagementSystem
                 lblMessage.Text = "❌ Exception: " + ex.Message;
             }
         }
+
 
         private string GetServiceNameForBooking(int bookingId)
         {
@@ -602,8 +561,7 @@ namespace RRCManagementSystem
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
-                // Save RAW reference only
-                cmd.Parameters.Add("@Reference", SqlDbType.NVarChar, 200).Value = referenceNumber;
+                cmd.Parameters.Add("@Reference", SqlDbType.NVarChar, 200).Value = referenceNumber; // RAW, no prefixes
                 con.Open();
                 cmd.ExecuteNonQuery();
             }
@@ -611,6 +569,7 @@ namespace RRCManagementSystem
 
         private string GetHttpsBaseUrl()
         {
+            // e.g., https://rrcmanagement-bcfgfpa5hzaafhdy.eastasia-01.azurewebsites.net
             string left = Request.Url.GetLeftPart(UriPartial.Authority);
             if (left.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
                 left = "https://" + left.Substring("http://".Length);
