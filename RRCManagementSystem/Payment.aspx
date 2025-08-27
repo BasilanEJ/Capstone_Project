@@ -193,11 +193,12 @@
 
             <!-- KPI cards -->
             <div class="kpis mb-3">
-              <div class="kpi">
-                <h4>Next Installment</h4>
-                <div class="value"><asp:Literal ID="lblNextInstallment" runat="server" /></div>
-                <div class="sub">Due now</div>
-              </div>
+             <div class="kpi">
+  <h4>Next Installment</h4>
+  <div class="value"><asp:Literal ID="lblNextInstallment" runat="server" /></div>
+  <div class="sub"><asp:Literal ID="litNextDue" runat="server" /></div>
+</div>
+
               <div class="kpi">
                 <h4>Total Price</h4>
                 <div class="value"><asp:Literal ID="lblTotalPrice" runat="server" /></div>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -86,6 +87,89 @@ namespace RRCManagementSystem
             lblRemaining.Text = _kpiRemain;
         }
 
+
+        // --- DUE DATE HELPERS --------------------------------------------------------
+        private DateTime GetBookingApprovalDate(int bookingId)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("SELECT CreatedAt FROM Bookings WHERE BookingID=@B", con))
+            {
+                cmd.Parameters.Add("@B", SqlDbType.Int).Value = bookingId;
+                con.Open();
+                var o = cmd.ExecuteScalar();
+                if (o != null && o != DBNull.Value)
+                {
+                    var dt = Convert.ToDateTime(o, CultureInfo.InvariantCulture);
+                    return dt.Date;
+                }
+            }
+            return DateTime.UtcNow.Date; // fallback if no date
+        }
+
+
+        private List<DateTime> GetSuccessfulTransactionDatesBySale(int saleId)
+        {
+            var list = new List<DateTime>();
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(
+                "SELECT TransactionDate FROM Transactions WHERE SaleID=@S AND Status='Completed' ORDER BY TransactionDate ASC", con))
+            {
+                cmd.Parameters.Add("@S", SqlDbType.Int).Value = saleId;
+                con.Open();
+                using (var r = cmd.ExecuteReader())
+                {
+                    while (r.Read())
+                    {
+                        if (r["TransactionDate"] != DBNull.Value)
+                            list.Add(Convert.ToDateTime(r["TransactionDate"], CultureInfo.InvariantCulture).Date);
+                    }
+                }
+            }
+            return list;
+        }
+
+        private DateTime ComputeNextDueDate(string plan, DateTime approvalDate, List<DateTime> paidDates)
+        {
+            // Rule:
+            //  - 50-25-25: 50% due +3 days from approval; 2nd 25% due +1 month from 1st txn; last 25% due +1 month from 2nd txn
+            //  - 70-30   : 70% due +3 days from approval; 30% due +1 month from 1st txn
+            //  - 100     : one-time due +3 days from approval
+            plan = (plan ?? "").Trim();
+            if (string.Equals(plan, "70-30", StringComparison.OrdinalIgnoreCase))
+            {
+                if (paidDates.Count == 0) return approvalDate.AddDays(3);
+                if (paidDates.Count == 1) return paidDates[0].AddMonths(1);
+                return DateTime.MaxValue; // all done
+            }
+            if (string.Equals(plan, "50-25-25", StringComparison.OrdinalIgnoreCase))
+            {
+                if (paidDates.Count == 0) return approvalDate.AddDays(3);
+                if (paidDates.Count == 1) return paidDates[0].AddMonths(1);
+                if (paidDates.Count == 2) return paidDates[1].AddMonths(1);
+                return DateTime.MaxValue; // all done
+            }
+            // default (100%):
+            return approvalDate.AddDays(3);
+        }
+
+        private string FormatDueLabel(DateTime dueDateUtcOrLocal)
+        {
+            if (dueDateUtcOrLocal == DateTime.MaxValue) return "All installments paid";
+
+            // Use local (PH) calendar feel; compare by date
+            var today = DateTime.UtcNow.Date;
+            var dd = (dueDateUtcOrLocal.Date - today).Days;
+
+            if (dd <= 0)
+            {
+                // If it’s past due
+                if (dd < 0) return $"Overdue by {Math.Abs(dd)} day(s)";
+                return "Due now";
+            }
+            if (dd == 1) return "Due tomorrow";
+            return $"Due in {dd} days";
+        }
+
         // ===== Events ==================================================================
         protected void ddlPlanChoice_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -131,7 +215,44 @@ namespace RRCManagementSystem
                 con.Open();
                 cmd.ExecuteNonQuery();
             }
+
+            // 🔔 After saving plan, also generate installments
+            GenerateInstallments(bookingId, plan);
         }
+
+        private void GenerateInstallments(int bookingId, string plan)
+        {
+            int clientId = Convert.ToInt32(Session["ClientID"], CultureInfo.InvariantCulture);
+            decimal fullPrice = 0m;
+
+            // get full price from DB
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("SELECT Price FROM Bookings WHERE BookingID=@B", con))
+            {
+                cmd.Parameters.Add("@B", SqlDbType.Int).Value = bookingId;
+                con.Open();
+                object o = cmd.ExecuteScalar();
+                if (o != null && o != DBNull.Value)
+                    fullPrice = Convert.ToDecimal(o, CultureInfo.InvariantCulture);
+            }
+
+            // get booking approval date (or use today if not tracked)
+            DateTime startDate = DateTime.UtcNow;
+
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_GenerateInstallments", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                cmd.Parameters.Add("@FullPrice", SqlDbType.Decimal).Value = fullPrice;
+                cmd.Parameters.Add("@Plan", SqlDbType.NVarChar, 20).Value = plan;
+                cmd.Parameters.Add("@StartDate", SqlDbType.Date).Value = startDate.Date;
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
 
         private void LoadClientInfo(int clientId, string selectedPlan)
         {
@@ -141,6 +262,7 @@ namespace RRCManagementSystem
             lblPrice.Text = "";
             hiddenCheckoutURL.Value = "";
             hiddenReference.Value = "";
+            litNextDue.Text = "—";
 
             _kpiNext = _kpiTotal = _kpiPaid = _kpiRemain = "₱0.00";
             lblNextInstallment.Text = lblTotalPrice.Text = lblAlreadyPaid.Text = lblRemaining.Text = "₱0.00";
@@ -169,7 +291,9 @@ namespace RRCManagementSystem
                     }
 
                     string serviceName = reader["ServiceName"]?.ToString() ?? string.Empty;
-                    decimal fullPrice = reader["Price"] == DBNull.Value ? 0m : Convert.ToDecimal(reader["Price"], CultureInfo.InvariantCulture);
+                    decimal fullPrice = reader["Price"] == DBNull.Value
+                        ? 0m
+                        : Convert.ToDecimal(reader["Price"], CultureInfo.InvariantCulture);
                     string dbPlanRaw = reader["PaymentPlan"] == DBNull.Value ? "" : reader["PaymentPlan"].ToString();
                     int bookingId = Convert.ToInt32(reader["BookingID"], CultureInfo.InvariantCulture);
 
@@ -189,26 +313,33 @@ namespace RRCManagementSystem
 
                     lblServiceName.Text = serviceName;
 
+                    // Decide effective plan (UI wins, else DB, else default by contract flag)
                     string effectivePlan = !string.IsNullOrWhiteSpace(uiPlan) ? uiPlan : dbPlan;
                     if (string.IsNullOrWhiteSpace(effectivePlan))
                         effectivePlan = isContractDb ? "50-25-25" : "100";
 
                     bool isContract = isContractDb || !string.Equals(effectivePlan, "100", StringComparison.OrdinalIgnoreCase);
 
+                    // Persist plan to DB if none stored yet
                     if (string.IsNullOrWhiteSpace(dbPlan))
                         SaveSelectedPlanToDb(bookingId, effectivePlan);
 
+                    // Sync dropdown + hidden field
                     var item = ddlPlanChoice.Items.FindByValue(effectivePlan);
                     if (item != null) ddlPlanChoice.SelectedValue = effectivePlan;
                     hfSelectedPlan.Value = effectivePlan;
 
+                    // Show/hide plan selector for one-time payments
                     paymentPlanContainer.Visible = isContract;
 
+                    // Canonical totals
                     int saleId = GetSaleIdByBooking(bookingId);
                     decimal totalPaid = (saleId > 0) ? GetTotalPaidBySaleId(saleId) : 0m;
 
+                    // Lock plan after first payment
                     ddlPlanChoice.Enabled = (totalPaid == 0m);
 
+                    // Amounts
                     decimal nextAmount = CalculateNextInstallment(isContract, fullPrice, totalPaid, effectivePlan);
                     decimal remaining = Math.Max(0m, fullPrice - totalPaid);
 
@@ -226,9 +357,16 @@ namespace RRCManagementSystem
                     lblAlreadyPaid.Text = _kpiPaid;
                     lblRemaining.Text = _kpiRemain;
 
+                    // Compute dynamic due label (based on approval date and successful payments)
+                    var paidDates = (saleId > 0) ? GetSuccessfulTransactionDatesBySale(saleId) : new List<DateTime>();
+                    var approvalDate = GetBookingApprovalDate(bookingId);
+                    var nextDue = ComputeNextDueDate(effectivePlan, approvalDate, paidDates);
+
                     if (remaining <= 0m)
                     {
                         lblPrice.Text = "Fully Paid";
+                        litNextDue.Text = "All installments paid";
+
                         hfPayPalAmount.Value = "0.00";
                         hfPayPalBookingID.Value = bookingId.ToString(CultureInfo.InvariantCulture);
                         hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
@@ -243,17 +381,24 @@ namespace RRCManagementSystem
                         ddlPlanChoice.Enabled = false;
                         return;
                     }
+                    else
+                    {
+                        litNextDue.Text = FormatDueLabel(nextDue);
+                    }
 
+                    // Legacy block with preline label
                     lblPrice.Text =
                         "₱" + nextAmount.ToString("N2") + " (Next installment)\n" +
                         "Total Price: ₱" + fullPrice.ToString("N2") + "\n" +
                         "Already Paid: ₱" + totalPaid.ToString("N2") + "\n" +
                         "Remaining Balance: ₱" + remaining.ToString("N2");
 
+                    // Hidden fields for PayPal
                     hfPayPalBookingID.Value = bookingId.ToString(CultureInfo.InvariantCulture);
                     hfPayPalAmount.Value = nextAmount.ToString("0.00", CultureInfo.InvariantCulture);
                     hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
 
+                    // Notification (deduped by stage)
                     EnqueuePaymentDueNotification(
                         clientId: clientId,
                         bookingId: bookingId,
@@ -264,11 +409,12 @@ namespace RRCManagementSystem
                         nextAmount: nextAmount
                     );
 
-                    // Create/refresh PayMongo Checkout URL (fire & forget)
+                    // Fire & forget: refresh PayMongo checkout URL
                     GenerateCheckoutURL(clientId, bookingId, isContract, fullPrice, totalPaid, effectivePlan);
                 }
             }
         }
+
 
         // ======= Canonical total via SaleID =============================================
         private int GetSaleIdByBooking(int bookingId)
