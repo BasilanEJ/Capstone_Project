@@ -210,6 +210,7 @@
     <None Include="Properties\PublishProfiles\FolderProfile4.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile5.pubxml" />
     <None Include="Properties\PublishProfiles\RRCManagement - Web Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\rrcmngmnt.com - Web Deploy.pubxml" />
     <None Include="Scripts\jquery-3.7.1.intellisense.js" />
     <Content Include="ManageItem.aspx" />
     <Content Include="ManagePayment.aspx" />

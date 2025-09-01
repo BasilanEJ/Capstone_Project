@@ -278,7 +278,7 @@ namespace RRCManagementSystem
             {
                 TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
                 string formattedRole = textInfo.ToTitleCase((role ?? "").ToLower());
-                string resetLink = $"https://rrcmanagement-bcfgfpa5hzaafhdy.eastasia-01.azurewebsites.net/ResetAdminPassword.aspx?type=admin&token={token}";
+                string resetLink = $"https://rrcmngmnt.com/ResetAdminPassword.aspx?type=admin&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
                 string body = $@"

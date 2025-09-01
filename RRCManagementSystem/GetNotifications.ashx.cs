@@ -17,8 +17,10 @@ public class GetNotifications : IHttpHandler
 
         var uidObj = context.Session?["UserID"];
         var role = context.Session?["Role"] as string;
+
         if (uidObj == null || !string.Equals(role, "Inspector", StringComparison.OrdinalIgnoreCase))
         {
+            context.Response.StatusCode = 200;
             context.Response.Write("[]");
             return;
         }
@@ -28,11 +30,11 @@ public class GetNotifications : IHttpHandler
 
         using (var conn = new SqlConnection(Cs))
         using (var cmd = new SqlCommand(@"
-            SELECT TOP (20)
-                NotificationID, Title, Body, Url, CreatedAt, IsRead
-            FROM dbo.Notifications
-            WHERE UserID = @UserID
-            ORDER BY IsRead ASC, CreatedAt DESC;", conn))
+                SELECT TOP (20)
+                       NotificationID, Title, Body, Url, CreatedAt, IsRead
+                  FROM dbo.Notifications
+                 WHERE UserID = @UserID
+                 ORDER BY IsRead ASC, CreatedAt DESC;", conn))
         {
             cmd.Parameters.AddWithValue("@UserID", userId);
             conn.Open();
@@ -40,15 +42,15 @@ public class GetNotifications : IHttpHandler
             {
                 while (r.Read())
                 {
-                    var created = r.GetDateTime(r.GetOrdinal("CreatedAt"));
+                    var created = (DateTime)r["CreatedAt"];
                     list.Add(new
                     {
-                        id = r.GetInt32(r.GetOrdinal("NotificationID")),
+                        id = (int)r["NotificationID"],
                         title = r["Title"] as string ?? "",
                         body = r["Body"] as string ?? "",
                         url = r["Url"] as string ?? "",
-                        date = created.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
-                        isRead = r.GetBoolean(r.GetOrdinal("IsRead"))
+                        isRead = (bool)r["IsRead"],
+                        date = created.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                     });
                 }
             }

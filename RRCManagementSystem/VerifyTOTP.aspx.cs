@@ -182,7 +182,7 @@ namespace RRCManagementSystem
 
             using (var client = new WebClient())
             {
-                string secret = "6LfmLqwrAAAAALDQW46-uZss3CZStl0xmMyj_GWw"; // move to config
+                string secret = "6Ld6VrcrAAAAANJi4Djjr9vN7N5KIWoIoL_CCi_z"; // move to config
                 string result = client.DownloadString(
                     $"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}"
                 );

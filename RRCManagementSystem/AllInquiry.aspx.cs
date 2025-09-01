@@ -13,6 +13,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Require login + block roles
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -40,7 +41,6 @@ namespace RRCManagementSystem
             using (var da = new SqlDataAdapter(cmd))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-
                 var dt = new DataTable();
                 conn.Open();
                 da.Fill(dt);
@@ -48,17 +48,18 @@ namespace RRCManagementSystem
                 ddlInspectorSource.Items.Clear();
                 ddlInspectorSource.Items.Add(new ListItem("-- Select Inspector --", ""));
                 foreach (DataRow r in dt.Rows)
-                {
                     ddlInspectorSource.Items.Add(new ListItem(r["Name"].ToString(), r["UserID"].ToString()));
-                }
             }
         }
 
         protected void btnAssignHidden_Click(object sender, EventArgs e)
         {
-            string[] parts = hfAssignData.Value.Split('|');
-            if (parts.Length >= 12)
+            try
             {
+                string[] parts = hfAssignData.Value.Split('|');
+                if (parts.Length < 12)
+                    throw new InvalidOperationException("Missing form data.");
+
                 int inspectorId = int.Parse(parts[0]);
                 DateTime scheduleLocal = DateTime.Parse(parts[1]); // browser local (PHT)
                 string remarks = parts[2];
@@ -78,7 +79,7 @@ namespace RRCManagementSystem
                 if (GetInspectionsCount(inspectorId, scheduleLocal.Date) >= maxPerDay)
                 {
                     ScriptManager.RegisterStartupScript(this, GetType(), "LimitReached",
-                        "Swal.fire('Max Limit Reached', 'Inspector already has the maximum inspections on this day.', 'error');", true);
+                        "Swal.fire('Max Limit Reached','Inspector already has the maximum inspections on this day.','error');", true);
                     return;
                 }
 
@@ -89,7 +90,12 @@ namespace RRCManagementSystem
                 LoadInquiries();
 
                 ScriptManager.RegisterStartupScript(this, GetType(), "Success",
-                    "Swal.fire('Success', 'Inspector assigned successfully.', 'success');", true);
+                    "Swal.fire('Success','Inspector assigned successfully.','success');", true);
+            }
+            catch (Exception ex)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "AssignErr",
+                    $"Swal.fire('Error','{ex.Message.Replace("'", "\\'")}','error');", true);
             }
         }
 
@@ -100,7 +106,6 @@ namespace RRCManagementSystem
             using (var da = new SqlDataAdapter(cmd))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-
                 var dt = new DataTable();
                 conn.Open();
                 da.Fill(dt);
@@ -115,7 +120,7 @@ namespace RRCManagementSystem
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spSystemSetting_Get", conn))
             {
-                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
                 cmd.Parameters.Add("@SettingName", SqlDbType.NVarChar, 100).Value = settingName;
 
                 conn.Open();
@@ -138,8 +143,9 @@ namespace RRCManagementSystem
             }
         }
 
-        private void UpdateInquiryInfo(int inquiryId, string firstName, string middleName, string lastName,
-                                      string street, string barangay, string city, string region, string country, string landmark)
+        private void UpdateInquiryInfo(
+            int inquiryId, string firstName, string middleName, string lastName,
+            string street, string barangay, string city, string region, string country, string landmark)
         {
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spInquiry_UpdateAddress", conn))
@@ -148,20 +154,28 @@ namespace RRCManagementSystem
 
                 cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
                 cmd.Parameters.Add("@FirstName", SqlDbType.NVarChar, 100).Value = firstName ?? "";
-                cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName;
+                cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value =
+                    string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName;
                 cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = lastName ?? "";
-                cmd.Parameters.Add("@StreetAndUnit", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(street) ? (object)DBNull.Value : street;
-                cmd.Parameters.Add("@Barangay", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(barangay) ? (object)DBNull.Value : barangay;
-                cmd.Parameters.Add("@City", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(city) ? (object)DBNull.Value : city;
-                cmd.Parameters.Add("@Region", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(region) ? (object)DBNull.Value : region;
-                cmd.Parameters.Add("@Country", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(country) ? (object)DBNull.Value : country;
-                cmd.Parameters.Add("@Landmark", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(landmark) ? (object)DBNull.Value : landmark;
+                cmd.Parameters.Add("@StreetAndUnit", SqlDbType.NVarChar, 255).Value =
+                    string.IsNullOrWhiteSpace(street) ? (object)DBNull.Value : street;
+                cmd.Parameters.Add("@Barangay", SqlDbType.NVarChar, 100).Value =
+                    string.IsNullOrWhiteSpace(barangay) ? (object)DBNull.Value : barangay;
+                cmd.Parameters.Add("@City", SqlDbType.NVarChar, 100).Value =
+                    string.IsNullOrWhiteSpace(city) ? (object)DBNull.Value : city;
+                cmd.Parameters.Add("@Region", SqlDbType.NVarChar, 100).Value =
+                    string.IsNullOrWhiteSpace(region) ? (object)DBNull.Value : region;
+                cmd.Parameters.Add("@Country", SqlDbType.NVarChar, 100).Value =
+                    string.IsNullOrWhiteSpace(country) ? (object)DBNull.Value : country;
+                cmd.Parameters.Add("@Landmark", SqlDbType.NVarChar, 255).Value =
+                    string.IsNullOrWhiteSpace(landmark) ? (object)DBNull.Value : landmark;
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
             }
         }
 
+        // INSPECTOR-ONLY VERSION
         private void AssignInspector(int inquiryId, int inspectorUserId, DateTime scheduleLocalPHT, string remarks)
         {
             int? createdInspectionId = null;
@@ -171,46 +185,43 @@ namespace RRCManagementSystem
                 conn.Open();
                 using (var tx = conn.BeginTransaction())
                 {
-                    // 1) Assign
+                    // 1) create/assign inspection
                     using (var cmd = new SqlCommand("dbo.spInspection_Assign", conn, tx))
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
                         cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorUserId;
                         cmd.Parameters.Add("@ScheduledDate", SqlDbType.DateTime).Value = scheduleLocalPHT;
-                        cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(remarks) ? (object)DBNull.Value : remarks;
+                        cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar, -1).Value =
+                            string.IsNullOrWhiteSpace(remarks) ? (object)DBNull.Value : remarks;
 
-                        // Optional: capture output if your proc supports it
                         var pOut = new SqlParameter("@InspectionID", SqlDbType.Int) { Direction = ParameterDirection.Output };
                         cmd.Parameters.Add(pOut);
-
                         cmd.ExecuteNonQuery();
 
-                        if (pOut.Value != DBNull.Value) createdInspectionId = Convert.ToInt32(pOut.Value);
+                        if (pOut.Value != DBNull.Value)
+                            createdInspectionId = Convert.ToInt32(pOut.Value);
                     }
 
-                    // 2) Build notification payload
-                    string title = "New Inspection Assigned";
+                    // 2) inspector notification ONLY
                     string when = scheduleLocalPHT.ToString("yyyy-MM-dd HH:mm");
+                    string title = "New Inspection Assigned";
                     string body = $"You have a new inspection scheduled on {when} for Inquiry #{inquiryId}.";
                     string url = createdInspectionId.HasValue
-                                   ? $"~/MyInspections.aspx?InspectionID={createdInspectionId.Value}"
-                                   : "~/MyInspections.aspx";
+                                     ? $"~/MyInspections.aspx?InspectionID={createdInspectionId.Value}"
+                                     : "~/MyInspections.aspx";
+                    string dedupInspector = $"assign:{inspectorUserId}:{inquiryId}:{when}";
 
-                    // Use a dedup key to avoid double inserts if user double-clicks
-                    string dedup = $"assign:{inspectorUserId}:{inquiryId}:{when}";
-
-                    // 3) Insert notification for the inspector
                     using (var cmdN = new SqlCommand("dbo.spNotification_Add", conn, tx))
                     {
                         cmdN.CommandType = CommandType.StoredProcedure;
                         cmdN.Parameters.AddWithValue("@UserID", inspectorUserId);
-                        cmdN.Parameters.AddWithValue("@ClientID", DBNull.Value);
+                        cmdN.Parameters.AddWithValue("@ClientID", DBNull.Value); // inspector-only
                         cmdN.Parameters.AddWithValue("@Type", "Inspection");
                         cmdN.Parameters.AddWithValue("@Title", title);
                         cmdN.Parameters.AddWithValue("@Body", body);
                         cmdN.Parameters.AddWithValue("@Url", url);
-                        cmdN.Parameters.AddWithValue("@DedupKey", dedup);
+                        cmdN.Parameters.AddWithValue("@DedupKey", dedupInspector);
                         cmdN.ExecuteNonQuery();
                     }
 
@@ -219,6 +230,7 @@ namespace RRCManagementSystem
             }
         }
 
+        // (generic helper; not used for client here but kept for reuse)
         private void CreateNotification(int userId, int? clientId, string type, string title, string body, string url, string dedupKey = null)
         {
             using (var conn = new SqlConnection(connectionString))
@@ -227,8 +239,8 @@ namespace RRCManagementSystem
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@UserID", userId);
                 cmd.Parameters.AddWithValue("@ClientID", (object)clientId ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Type", type ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Title", title ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@Type", (object)type ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Title", (object)title ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@Body", (object)body ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@Url", (object)url ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@DedupKey", (object)dedupKey ?? DBNull.Value);
@@ -237,8 +249,6 @@ namespace RRCManagementSystem
                 cmd.ExecuteNonQuery();
             }
         }
-
-
 
         protected void btnDeleteHidden_Click(object sender, EventArgs e)
         {
@@ -251,12 +261,12 @@ namespace RRCManagementSystem
                 LoadInquiries();
 
                 ScriptManager.RegisterStartupScript(this, GetType(), "DeletedOK",
-                    "Swal.fire('Deleted', 'Inquiry has been removed.', 'success');", true);
+                    "Swal.fire('Deleted','Inquiry has been removed.','success');", true);
             }
             catch (Exception ex)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "DeletedErr",
-                    $"Swal.fire('Error', 'Failed to delete inquiry: {ex.Message.Replace("'", "\\'")}', 'error');", true);
+                    $"Swal.fire('Error','Failed to delete inquiry: {ex.Message.Replace("'", "\\'")}','error');", true);
             }
         }
 

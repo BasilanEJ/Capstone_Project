@@ -164,7 +164,7 @@ namespace RRCManagementSystem
             try
             {
                 // for clients, make the link explicit:
-                string resetLink = $"https://rrcmanagement-bcfgfpa5hzaafhdy.eastasia-01.azurewebsites.net/ResetPassword.aspx?type=client&token={token}";
+                string resetLink = $"https://rrcmngmnt.com/ResetPassword.aspx?type=client&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
                 string body = $@"<!DOCTYPE html><html><head><meta charset='UTF-8'>

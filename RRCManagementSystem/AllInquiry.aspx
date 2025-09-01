@@ -20,7 +20,12 @@
 
     <asp:HiddenField ID="hfSelectedInquiryID" runat="server" />
     <asp:HiddenField ID="hfAssignData" runat="server" />
-    <asp:Button ID="btnAssignHidden" runat="server" OnClick="btnAssignHidden_Click" Style="display:none;" />
+   <asp:Button ID="btnAssignHidden"
+            runat="server"
+            OnClick="btnAssignHidden_Click"
+            Style="display:none;"
+            UseSubmitBehavior="false" />
+
 
     <!-- Hidden controls for deletion -->
     <asp:HiddenField ID="hfDeleteInquiryID" runat="server" />
@@ -168,16 +173,16 @@
           preConfirm: () => {
               const firstName = document.getElementById('swalFirstName').value.trim();
               const middleName = document.getElementById('swalMiddleName').value.trim();
-              const lastName  = document.getElementById('swalLastName').value.trim();
-              const street    = document.getElementById('swalStreet').value.trim();
-              const barangay  = document.getElementById('swalBarangay').value.trim();
-              const city      = document.getElementById('swalCity').value.trim();
-              const region    = document.getElementById('swalRegion').value.trim();
-              const country   = document.getElementById('swalCountry').value.trim();
-              const landmark  = document.getElementById('swalLandmark').value.trim();
+              const lastName = document.getElementById('swalLastName').value.trim();
+              const street = document.getElementById('swalStreet').value.trim();
+              const barangay = document.getElementById('swalBarangay').value.trim();
+              const city = document.getElementById('swalCity').value.trim();
+              const region = document.getElementById('swalRegion').value.trim();
+              const country = document.getElementById('swalCountry').value.trim();
+              const landmark = document.getElementById('swalLandmark').value.trim();
               const inspector = document.getElementById('swalInspector').value;
-              const schedule  = document.getElementById('swalSchedule').value;
-              const remarks   = document.getElementById('swalRemarks').value;
+              const schedule = document.getElementById('swalSchedule').value;
+              const remarks = document.getElementById('swalRemarks').value;
 
               if (!firstName || !lastName || !street || !barangay || !city || !region || !country || !inspector || !schedule) {
                   Swal.showValidationMessage("All fields are required except middle name, landmark, and remarks");
@@ -185,9 +190,14 @@
               }
 
               document.getElementById('<%= hfAssignData.ClientID %>').value =
-                  `${inspector}|${schedule}|${remarks}|${firstName}|${middleName}|${lastName}|${street}|${barangay}|${city}|${region}|${country}|${landmark}`;
-              document.getElementById('<%= btnAssignHidden.ClientID %>').click();
+    `${inspector}|${schedule}|${remarks}|${firstName}|${middleName}|${lastName}|${street}|${barangay}|${city}|${region}|${country}|${landmark}`;
+
+  // 🔑 Trigger the server-side handler reliably
+              __doPostBack('<%= btnAssignHidden.UniqueID %>', '');
+
+              return true; // let SweetAlert close
           }
+
       });
   }
 
