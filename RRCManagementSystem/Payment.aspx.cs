@@ -278,6 +278,7 @@ namespace RRCManagementSystem
                 {
                     if (!reader.Read())
                     {
+                        // No booking found
                         lblPrice.Text = "No approved booking found.";
                         hfPayPalAmount.Value = "0.00";
                         hfPayPalBookingID.Value = "0";
@@ -290,22 +291,20 @@ namespace RRCManagementSystem
                         return;
                     }
 
-                    string serviceName = reader["ServiceName"]?.ToString() ?? string.Empty;
-                    decimal fullPrice = reader["Price"] == DBNull.Value
-                        ? 0m
-                        : Convert.ToDecimal(reader["Price"], CultureInfo.InvariantCulture);
-                    string dbPlanRaw = reader["PaymentPlan"] == DBNull.Value ? "" : reader["PaymentPlan"].ToString();
+                    // Read booking info
+                    string serviceName = reader["ServiceName"]?.ToString() ?? "";
+                    decimal fullPrice = reader["Price"] == DBNull.Value ? 0m : Convert.ToDecimal(reader["Price"], CultureInfo.InvariantCulture);
+                    string dbPlanRaw = reader["PaymentPlan"]?.ToString() ?? "";
                     int bookingId = Convert.ToInt32(reader["BookingID"], CultureInfo.InvariantCulture);
-
                     bool isContractDb = reader["IsContract"] != DBNull.Value &&
                                         Convert.ToBoolean(reader["IsContract"], CultureInfo.InvariantCulture);
 
+                    // Normalize plan
                     string NormalizePlan(string p)
                     {
                         if (string.IsNullOrWhiteSpace(p)) return "";
                         p = p.Trim();
-                        if (string.Equals(p, "100%", StringComparison.OrdinalIgnoreCase)) return "100";
-                        return p;
+                        return string.Equals(p, "100%", StringComparison.OrdinalIgnoreCase) ? "100" : p;
                     }
 
                     string dbPlan = NormalizePlan(dbPlanRaw);
@@ -313,14 +312,14 @@ namespace RRCManagementSystem
 
                     lblServiceName.Text = serviceName;
 
-                    // Decide effective plan (UI wins, else DB, else default by contract flag)
+                    // Determine effective plan (UI > DB > default)
                     string effectivePlan = !string.IsNullOrWhiteSpace(uiPlan) ? uiPlan : dbPlan;
                     if (string.IsNullOrWhiteSpace(effectivePlan))
                         effectivePlan = isContractDb ? "50-25-25" : "100";
 
                     bool isContract = isContractDb || !string.Equals(effectivePlan, "100", StringComparison.OrdinalIgnoreCase);
 
-                    // Persist plan to DB if none stored yet
+                    // Persist plan to DB if missing
                     if (string.IsNullOrWhiteSpace(dbPlan))
                         SaveSelectedPlanToDb(bookingId, effectivePlan);
 
@@ -329,12 +328,12 @@ namespace RRCManagementSystem
                     if (item != null) ddlPlanChoice.SelectedValue = effectivePlan;
                     hfSelectedPlan.Value = effectivePlan;
 
-                    // Show/hide plan selector for one-time payments
+                    // Show/hide plan selector for contract
                     paymentPlanContainer.Visible = isContract;
 
-                    // Canonical totals
+                    // Compute totals
                     int saleId = GetSaleIdByBooking(bookingId);
-                    decimal totalPaid = (saleId > 0) ? GetTotalPaidBySaleId(saleId) : 0m;
+                    decimal totalPaid = saleId > 0 ? GetTotalPaidBySaleId(saleId) : 0m;
 
                     // Lock plan after first payment
                     ddlPlanChoice.Enabled = (totalPaid == 0m);
@@ -357,8 +356,8 @@ namespace RRCManagementSystem
                     lblAlreadyPaid.Text = _kpiPaid;
                     lblRemaining.Text = _kpiRemain;
 
-                    // Compute dynamic due label (based on approval date and successful payments)
-                    var paidDates = (saleId > 0) ? GetSuccessfulTransactionDatesBySale(saleId) : new List<DateTime>();
+                    // Compute next due date
+                    var paidDates = saleId > 0 ? GetSuccessfulTransactionDatesBySale(saleId) : new List<DateTime>();
                     var approvalDate = GetBookingApprovalDate(bookingId);
                     var nextDue = ComputeNextDueDate(effectivePlan, approvalDate, paidDates);
 
@@ -386,7 +385,7 @@ namespace RRCManagementSystem
                         litNextDue.Text = FormatDueLabel(nextDue);
                     }
 
-                    // Legacy block with preline label
+                    // Display next installment summary
                     lblPrice.Text =
                         "₱" + nextAmount.ToString("N2") + " (Next installment)\n" +
                         "Total Price: ₱" + fullPrice.ToString("N2") + "\n" +
@@ -398,7 +397,7 @@ namespace RRCManagementSystem
                     hfPayPalAmount.Value = nextAmount.ToString("0.00", CultureInfo.InvariantCulture);
                     hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
 
-                    // Notification (deduped by stage)
+                    // Notification
                     EnqueuePaymentDueNotification(
                         clientId: clientId,
                         bookingId: bookingId,
@@ -409,7 +408,7 @@ namespace RRCManagementSystem
                         nextAmount: nextAmount
                     );
 
-                    // Fire & forget: refresh PayMongo checkout URL
+                    // Refresh PayMongo checkout URL asynchronously
                     GenerateCheckoutURL(clientId, bookingId, isContract, fullPrice, totalPaid, effectivePlan);
                 }
             }

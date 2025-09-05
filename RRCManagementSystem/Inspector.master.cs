@@ -8,35 +8,39 @@ namespace RRCManagementSystem
 {
     public partial class Inspector : System.Web.UI.MasterPage
     {
+        // Connection string
         private static readonly string Cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // ---- 1) Auth/role gate on EVERY request ----
-            var role = Session["Role"] as string;
+            // --- Authorization / Role Check ---
+            string role = Session["Role"] as string;
             if (Session["UserID"] == null || !string.Equals(role, "Inspector", StringComparison.OrdinalIgnoreCase))
             {
                 SafeRedirect("~/Login.aspx");
                 return;
             }
 
-            // ---- 2) Strong no-cache for protected views ----
-            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            // --- Disable caching ---
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
-            Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches);
+            Response.Cache.SetRevalidation(System.Web.HttpCacheRevalidation.AllCaches);
             Response.Cache.AppendCacheExtension("must-revalidate, proxy-revalidate");
 
-            // ---- 3) First-load UI init ----
             if (!IsPostBack)
             {
                 LoadInspectorName();
+                LoadNotificationCount();
             }
         }
 
+        /// <summary>
+        /// Loads the inspector's name into the header label
+        /// </summary>
         private void LoadInspectorName()
         {
-            if (!int.TryParse(Session["UserID"]?.ToString(), out var inspectorId))
+            if (!int.TryParse(Session["UserID"]?.ToString(), out int inspectorId))
             {
                 SafeRedirect("~/Login.aspx");
                 return;
@@ -45,13 +49,12 @@ namespace RRCManagementSystem
             try
             {
                 using (var conn = new SqlConnection(Cs))
-                using (var cmd = new SqlCommand(
-                    "SELECT Name FROM Users WHERE UserID = @UserID AND Status = 'Active'", conn))
+                using (var cmd = new SqlCommand("SELECT Name FROM Users WHERE UserID=@UserID AND Status='Active'", conn))
                 {
                     cmd.Parameters.AddWithValue("@UserID", inspectorId);
                     conn.Open();
-                    var result = cmd.ExecuteScalar() as string;
-                    lblInspectorName.Text = "👷 " + (string.IsNullOrWhiteSpace(result) ? "Inspector" : result.Trim());
+                    string name = cmd.ExecuteScalar() as string;
+                    lblInspectorName.Text = "👷 " + (!string.IsNullOrWhiteSpace(name) ? name.Trim() : "Inspector");
                 }
             }
             catch
@@ -60,27 +63,62 @@ namespace RRCManagementSystem
             }
         }
 
+        /// <summary>
+        /// Loads unread notification count for the inspector
+        /// </summary>
+        private void LoadNotificationCount()
+        {
+            if (!int.TryParse(Session["UserID"]?.ToString(), out int userId))
+                return;
+
+            try
+            {
+                using (var conn = new SqlConnection(Cs))
+                using (var cmd = new SqlCommand(
+                    @"SELECT COUNT(*) FROM Notifications 
+                      WHERE UserID=@UserID AND (IsRead=0 OR IsRead IS NULL)", conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+                    conn.Open();
+                    int unread = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+
+                    // Update badge
+                    notificationCount.InnerText = unread.ToString();
+                    notificationCount.Style["display"] = unread > 0 ? "inline-block" : "none";
+                }
+            }
+            catch
+            {
+                notificationCount.InnerText = "0";
+                notificationCount.Style["display"] = "none";
+            }
+        }
+
+        /// <summary>
+        /// Allows refreshing notifications manually (used after assigning)
+        /// </summary>
+        public void RefreshNotifications()
+        {
+            LoadNotificationCount();
+        }
+
+        /// <summary>
+        /// Logout button click handler
+        /// </summary>
         protected void btnLogout_Click(object sender, EventArgs e)
         {
-            // ---- Clear app/session state ----
-            Session.Remove("IsAuthenticated");
-            Session.Remove("UserID");
-            Session.Remove("Role");
-            Session.Remove("Name");
-            Session.Remove("Email");
-
+            // Clear session
             Session.Clear();
-            Session.RemoveAll();
             Session.Abandon();
 
-            // ---- Expire session cookie ----
+            // Expire session cookie
             if (Request.Cookies["ASP.NET_SessionId"] != null)
             {
                 Response.Cookies["ASP.NET_SessionId"].Value = string.Empty;
                 Response.Cookies["ASP.NET_SessionId"].Expires = DateTime.UtcNow.AddDays(-1);
             }
 
-            // ---- Expire FormsAuth cookie ----
+            // Sign out of FormsAuthentication
             FormsAuthentication.SignOut();
             if (Request.Cookies[FormsAuthentication.FormsCookieName] != null)
             {
@@ -88,14 +126,12 @@ namespace RRCManagementSystem
                 Response.Cookies[FormsAuthentication.FormsCookieName].Expires = DateTime.UtcNow.AddDays(-1);
             }
 
-            // ---- No-cache on the way out ----
-            Response.Cache.SetCacheability(HttpCacheability.NoCache);
-            Response.Cache.SetNoStore();
-            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
-
             SafeRedirect("~/Login.aspx");
         }
 
+        /// <summary>
+        /// Redirects safely without ThreadAbortException
+        /// </summary>
         private void SafeRedirect(string url)
         {
             Response.Redirect(url, false);

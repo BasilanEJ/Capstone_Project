@@ -170,4 +170,25 @@
         }
     </script>
 
+  <script type="text/javascript">
+      // Check if the status is 'Assigned' in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const status = urlParams.get('status');
+
+      if (status === 'Assigned') {
+          // Show SweetAlert confirming assignment
+          Swal.fire({
+              icon: 'success',
+              title: 'Assigned!',
+              text: 'The booking was successfully assigned.',
+              showConfirmButton: false,
+              timer: 2000 // Optional: show confirmation for 2 seconds
+          }).then(() => {
+              // Redirect to AllBooking.aspx after the confirmation
+              window.location.href = 'AllBooking.aspx'; // Redirect to AllBooking.aspx
+          });
+      }
+  </script>
+
+
     </asp:Content>

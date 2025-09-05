@@ -26,19 +26,36 @@ namespace RRCManagementSystem
         private void LoadServices()
         {
             using (var con = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.usp_Services_List", con))
+            using (var cmd = new SqlCommand("sp_GetAvailableServices", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 con.Open();
+
                 using (var rdr = cmd.ExecuteReader())
                 {
-                    cblServices.DataSource = rdr;
-                    cblServices.DataTextField = "Name";
-                    cblServices.DataValueField = "ServiceID";
-                    cblServices.DataBind();
+                    var dt = new System.Data.DataTable();
+                    dt.Load(rdr);
+
+                    // Split data by ServiceType
+                    var termiteRows = dt.Select("ServiceType = 'Termite Control'");
+                    var generalRows = dt.Select("ServiceType = 'General Pest Control'");
+
+                    if (termiteRows.Length > 0)
+                    {
+                        cblTermite.DataSource = termiteRows.CopyToDataTable();
+                        cblTermite.DataBind();
+                    }
+
+                    if (generalRows.Length > 0)
+                    {
+                        cblGeneral.DataSource = generalRows.CopyToDataTable();
+                        cblGeneral.DataBind();
+                    }
                 }
             }
         }
+
+
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
@@ -76,7 +93,10 @@ namespace RRCManagementSystem
             }
 
             // ✅ Must select at least one service
-            var selectedItems = cblServices.Items.Cast<ListItem>().Where(i => i.Selected).ToList();
+            var selectedItems = cblTermite.Items.Cast<ListItem>().Where(i => i.Selected)
+      .Concat(cblGeneral.Items.Cast<ListItem>().Where(i => i.Selected))
+      .ToList();
+
             if (!selectedItems.Any())
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "noServices",
@@ -134,7 +154,9 @@ namespace RRCManagementSystem
             // ✅ Reset fields
             txtClientSearch.Text = "";
             hfClientID.Value = "";
-            cblServices.ClearSelection();
+            cblTermite.ClearSelection();
+            cblGeneral.ClearSelection();
+
             txtSQM.Text = "";
             txtTotalPrice.Text = "";
         }

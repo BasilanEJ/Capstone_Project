@@ -76,5 +76,13 @@
             <i class="fas fa-plus-circle"></i>
             <div class="dash-card-title">Create Inquiry</div>
         </a>
+
+        <a href="ViewQuotation.aspx" class="dash-card">
+  <i class="fas fa-file-invoice"></i>
+  <div class="dash-card-title">View Quotations</div>
+</a>
+
+
+
     </div>
 </asp:Content>

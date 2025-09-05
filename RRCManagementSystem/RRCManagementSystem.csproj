@@ -1,5 +1,5 @@
 ﻿<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props" Condition="Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props')" />
+  <Import Project="..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props" Condition="Exists('..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -67,8 +67,8 @@
     <Reference Include="Microsoft.AspNet.FriendlyUrls, Version=1.0.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.FriendlyUrls.Core.1.0.2\lib\net45\Microsoft.AspNet.FriendlyUrls.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform, Version=2.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\lib\net45\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll</HintPath>
+    <Reference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform, Version=4.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\lib\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.ScriptManager.MSAjax, Version=5.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -152,6 +152,7 @@
     <Content Include="DecryptReceipt.aspx" />
     <Content Include="DecrypytReceipt.aspx" />
     <Content Include="Default.aspx" />
+    <Content Include="DIY.aspx" />
     <Content Include="DownloadAttachment.aspx" />
     <Content Include="EditAdmin.aspx" />
     <Content Include="EditBooking.aspx" />
@@ -162,9 +163,11 @@
     <Content Include="EditSupplier.aspx" />
     <Content Include="EmployeeStatus.aspx" />
     <Content Include="Enable2FA.aspx" />
+    <Content Include="Eskwela.aspx" />
     <Content Include="ForgotPassword.aspx" />
     <Content Include="GenerateHmacKey.aspx" />
     <Content Include="GenerateSuperAdminPassword.aspx" />
+    <Content Include="GetNotificationInspector.aspx" />
     <Content Include="GetNotifications.aspx" />
     <Content Include="GroupEmployees.aspx" />
     <Content Include="Home.aspx" />
@@ -172,7 +175,10 @@
     <Content Include="Images\banner tv.jpg" />
     <Content Include="Images\banner-1-01.jpg" />
     <Content Include="Images\bg.jpg" />
+    <Content Include="Images\blog2.jpg" />
+    <Content Include="Images\blog3.jpg" />
     <Content Include="Images\c&amp;o.png" />
+    <Content Include="Images\DIY.jpg" />
     <Content Include="Images\logo.jpg" />
     <Content Include="Images\logorrc.png" />
     <Content Include="Images\pestbg.jpg" />
@@ -199,7 +205,6 @@
     <Content Include="GetInspectionDetails.ashx" />
     <Content Include="GetNotifications.ashx" />
     <Content Include="LoadInspections.ashx" />
-    <Content Include="MarkAsRead.ashx" />
     <Content Include="PayMongoWebhook.ashx" />
     <Content Include="PayPalWebhook.ashx" />
     <Content Include="Anchor.ashx" />
@@ -209,6 +214,8 @@
     <None Include="Properties\PublishProfiles\FolderProfile3.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile4.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile5.pubxml" />
+    <None Include="Properties\PublishProfiles\rrc.com - Web Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\rrc.pubxml" />
     <None Include="Properties\PublishProfiles\RRCManagement - Web Deploy.pubxml" />
     <None Include="Properties\PublishProfiles\rrcmngmnt.com - Web Deploy.pubxml" />
     <None Include="Scripts\jquery-3.7.1.intellisense.js" />
@@ -260,6 +267,7 @@
     <Content Include="SystemAdmin.aspx" />
     <Content Include="SystemChanges.aspx" />
     <Content Include="SystemSettings.aspx" />
+    <Content Include="Termite.aspx" />
     <Content Include="TotalStocks.aspx" />
     <Content Include="TransactionHistory.aspx" />
     <Content Include="Unauthorized.aspx" />
@@ -270,6 +278,7 @@
     <Content Include="ViewEquipment.aspx" />
     <Content Include="ViewItem.aspx" />
     <Content Include="ViewPaymentBalance.aspx" />
+    <Content Include="ViewQuotation.aspx" />
     <Content Include="ViewRole.aspx" />
     <Content Include="ViewSales.aspx" />
     <Content Include="ViewServices.aspx" />
@@ -545,6 +554,13 @@
     <Compile Include="Default.aspx.designer.cs">
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
+    <Compile Include="DIY.aspx.cs">
+      <DependentUpon>DIY.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="DIY.aspx.designer.cs">
+      <DependentUpon>DIY.aspx</DependentUpon>
+    </Compile>
     <Compile Include="DownloadAttachment.aspx.cs">
       <DependentUpon>DownloadAttachment.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -615,6 +631,13 @@
     <Compile Include="Enable2FA.aspx.designer.cs">
       <DependentUpon>Enable2FA.aspx</DependentUpon>
     </Compile>
+    <Compile Include="Eskwela.aspx.cs">
+      <DependentUpon>Eskwela.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Eskwela.aspx.designer.cs">
+      <DependentUpon>Eskwela.aspx</DependentUpon>
+    </Compile>
     <Compile Include="ForgotPassword.aspx.cs">
       <DependentUpon>ForgotPassword.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -638,6 +661,13 @@
     </Compile>
     <Compile Include="GetInspectionDetails.ashx.cs">
       <DependentUpon>GetInspectionDetails.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="GetNotificationInspector.aspx.cs">
+      <DependentUpon>GetNotificationInspector.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="GetNotificationInspector.aspx.designer.cs">
+      <DependentUpon>GetNotificationInspector.aspx</DependentUpon>
     </Compile>
     <Compile Include="GetNotifications.ashx.cs">
       <DependentUpon>GetNotifications.ashx</DependentUpon>
@@ -770,9 +800,6 @@
     </Compile>
     <Compile Include="ManageSupplier.aspx.designer.cs">
       <DependentUpon>ManageSupplier.aspx</DependentUpon>
-    </Compile>
-    <Compile Include="MarkAsRead.ashx.cs">
-      <DependentUpon>MarkAsRead.ashx</DependentUpon>
     </Compile>
     <Compile Include="MyBookings.aspx.cs">
       <DependentUpon>MyBookings.aspx</DependentUpon>
@@ -916,6 +943,13 @@
     <Compile Include="SystemSettings.aspx.designer.cs">
       <DependentUpon>SystemSettings.aspx</DependentUpon>
     </Compile>
+    <Compile Include="Termite.aspx.cs">
+      <DependentUpon>Termite.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Termite.aspx.designer.cs">
+      <DependentUpon>Termite.aspx</DependentUpon>
+    </Compile>
     <Compile Include="TotalStocks.aspx.cs">
       <DependentUpon>TotalStocks.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -986,6 +1020,13 @@
     </Compile>
     <Compile Include="ViewPaymentBalance.aspx.designer.cs">
       <DependentUpon>ViewPaymentBalance.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ViewQuotation.aspx.cs">
+      <DependentUpon>ViewQuotation.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ViewQuotation.aspx.designer.cs">
+      <DependentUpon>ViewQuotation.aspx</DependentUpon>
     </Compile>
     <Compile Include="ViewRole.aspx.cs">
       <DependentUpon>ViewRole.aspx</DependentUpon>
@@ -1071,11 +1112,13 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
+  <Import Project="..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets" Condition="Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.2.0.1\build\net46\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.props'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

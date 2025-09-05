@@ -32,42 +32,38 @@
             <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-semibold mb-3 d-block" />
 
       
-            <div class="table-responsive fixed-grid" id="wrap-gvMyBookings">
-                <asp:GridView ID="gvMyBookings" runat="server"
-                    AutoGenerateColumns="False"
-                    CssClass="table table-bordered table-striped text-center align-middle"
-                    AllowPaging="True" PageSize="10"
-                    OnPageIndexChanging="gvMyBookings_PageIndexChanging"
-                    OnRowDataBound="gvMyBookings_RowDataBound"
-                    OnRowCommand="gvMyBookings_RowCommand">
-                    <Columns>
-                  
-                        <asp:BoundField DataField="BookingID" HeaderText="BookingID" Visible="false" />
-                       
-                        <asp:BoundField DataField="BookingCode" HeaderText="Booking Code" />
-                        <asp:BoundField DataField="ServiceNames" HeaderText="Service" />
-                        <asp:BoundField DataField="ScheduledDate" HeaderText="Initial Date" DataFormatString="{0:yyyy-MM-dd}" />
-                        <asp:BoundField DataField="StartTime" HeaderText="Start Time" />
-                        <asp:BoundField DataField="Status" HeaderText="Status" />
-                        <asp:BoundField DataField="Notes" HeaderText="Notes" />
-                        <asp:BoundField DataField="CreatedAt" HeaderText="Date Booked" DataFormatString="{0:yyyy-MM-dd}" />
-                        <asp:TemplateField HeaderText="Actions">
-                            <ItemTemplate>
-                                <asp:LinkButton ID="btnCancel"
-                                    runat="server"
-                                    Text="Cancel"
-                                    CommandName="CancelBooking"
-                                    CommandArgument='<%# Eval("BookingID") %>'
-                                    CssClass="btn btn-danger btn-sm"
-                                    CausesValidation="false"
-                                    UseSubmitBehavior="false"
-                                    OnClientClick="return confirm('Are you sure you want to cancel this booking?');"
-                                    Visible='<%# Eval("Status").ToString() == "Pending" %>' />
-                            </ItemTemplate>
-                        </asp:TemplateField>
-                    </Columns>
-                </asp:GridView>
-            </div>
+         <div class="table-responsive fixed-grid" id="wrap-gvMyBookings">
+    <asp:GridView ID="gvMyBookings" runat="server"
+        AutoGenerateColumns="False"
+        CssClass="table table-bordered table-striped text-center align-middle"
+        AllowPaging="True" PageSize="10"
+        OnPageIndexChanging="gvMyBookings_PageIndexChanging"
+        OnRowDataBound="gvMyBookings_RowDataBound">
+        <Columns>
+            <asp:BoundField DataField="BookingID" HeaderText="BookingID" Visible="false" />
+            <asp:BoundField DataField="BookingCode" HeaderText="Booking Code" />
+            <asp:BoundField DataField="ServiceNames" HeaderText="Service" />
+            <asp:BoundField DataField="ScheduledDate" HeaderText="Initial Date" DataFormatString="{0:yyyy-MM-dd}" />
+            <asp:BoundField DataField="StartTime" HeaderText="Start Time" />
+            <asp:BoundField DataField="Status" HeaderText="Status" />
+            <asp:BoundField DataField="Notes" HeaderText="Notes" />
+            <asp:BoundField DataField="CreatedAt" HeaderText="Date Booked" DataFormatString="{0:yyyy-MM-dd}" />
+            <asp:TemplateField HeaderText="Actions">
+                <ItemTemplate>
+                    <asp:LinkButton ID="btnCancel"
+                        runat="server"
+                        Text="Cancel"
+                        CssClass="btn btn-danger btn-sm cancel-btn"
+                        CausesValidation="false"
+                        UseSubmitBehavior="false"
+                        data-bookingid='<%# Eval("BookingID") %>'
+                        Visible='<%# Eval("Status").ToString() == "Pending" %>' />
+                </ItemTemplate>
+            </asp:TemplateField>
+        </Columns>
+    </asp:GridView>
+    <asp:HiddenField ID="hdnCancelBooking" runat="server" />
+</div>
 
         
             <asp:Label ID="lblNextOperationNotice" runat="server" CssClass="alert alert-success fw-semibold mt-3 d-block" Visible="false" />
@@ -181,6 +177,8 @@
         </div>
     </div>
 
+
+
     <script>
         let setScheduleBsModal = null;
         function ensureModal() {
@@ -224,5 +222,30 @@
                 }
             });
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.cancel-btn').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+
+                    var bookingId = btn.getAttribute('data-bookingid');
+
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "You won't be able to revert this action!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, cancel it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            document.getElementById('<%= hdnCancelBooking.ClientID %>').value = bookingId;
+                        __doPostBack('CancelBooking', '');
+                    }
+                });
+            });
+        });
+        });
     </script>
 </asp:Content>

@@ -86,12 +86,14 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // NOTE: your ResetPassword page expects type=client (not admin)
             bool sent = SendResetEmail(email, token);
             ShowSweetAlert(sent ? "Success" : "Partial Success",
                 sent ? "Client added successfully. Email sent for password setup."
                      : "Client added but failed to send email.",
                 sent ? "success" : "warning");
+
+            // Clear form fields after successful submission
+            ClearForm();
         }
 
         /* ===== DB helpers using stored procedures ===== */
@@ -163,7 +165,6 @@ namespace RRCManagementSystem
         {
             try
             {
-                // for clients, make the link explicit:
                 string resetLink = $"https://rrcmngmnt.com/ResetPassword.aspx?type=client&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
@@ -254,10 +255,67 @@ Swal.fire({{
                 ddlCity.Items.Add(new ListItem("San Juan", "San Juan"));
                 ddlCity.Items.Add(new ListItem("Pateros", "Pateros"));
             }
+            else if (selectedRegion == "Region I")
+            {
+                ddlCity.Items.Add(new ListItem("Vigan", "Vigan"));
+                ddlCity.Items.Add(new ListItem("San Fernando", "San Fernando"));
+                ddlCity.Items.Add(new ListItem("Dagupan", "Dagupan"));
+            }
+            else if (selectedRegion == "Region II")
+            {
+                ddlCity.Items.Add(new ListItem("Tuguegarao", "Tuguegarao"));
+                ddlCity.Items.Add(new ListItem("Ilagan", "Ilagan"));
+            }
+            else if (selectedRegion == "Region III")
+            {
+                ddlCity.Items.Add(new ListItem("San Fernando", "San Fernando"));
+                ddlCity.Items.Add(new ListItem("Angeles", "Angeles"));
+            }
+            else if (selectedRegion == "Region IV-A")
+            {
+                ddlCity.Items.Add(new ListItem("Cavite", "Cavite"));
+                ddlCity.Items.Add(new ListItem("Batangas", "Batangas"));
+            }
+            else if (selectedRegion == "Region IV-B")
+            {
+                ddlCity.Items.Add(new ListItem("Puerto Princesa", "Puerto Princesa"));
+                ddlCity.Items.Add(new ListItem("Calapan", "Calapan"));
+            }
+            else if (selectedRegion == "Region V")
+            {
+                ddlCity.Items.Add(new ListItem("Legazpi", "Legazpi"));
+                ddlCity.Items.Add(new ListItem("Naga", "Naga"));
+            }
+            else if (selectedRegion == "Region VI")
+            {
+                ddlCity.Items.Add(new ListItem("Iloilo City", "Iloilo City"));
+                ddlCity.Items.Add(new ListItem("Bacolod", "Bacolod"));
+            }
+            else if (selectedRegion == "Region VII")
+            {
+                ddlCity.Items.Add(new ListItem("Cebu City", "Cebu City"));
+                ddlCity.Items.Add(new ListItem("Dumaguete", "Dumaguete"));
+            }
             else
             {
                 ddlCity.Items.Add(new ListItem("No Cities Available", ""));
             }
+        }
+
+        // Method to clear the form fields
+        private void ClearForm()
+        {
+            txtLastName.Text = "";
+            txtFirstName.Text = "";
+            txtMiddleName.Text = "";
+            txtEmail.Text = "";
+            txtContact.Text = "";
+            txtStreet.Text = "";
+            txtBarangay.Text = "";
+            ddlCity.SelectedIndex = 0;
+            ddlRegion.SelectedIndex = 0;
+            txtCountry.Text = "Philippines";
+            txtLandmark.Text = "";
         }
     }
 }

@@ -207,6 +207,8 @@ namespace RRCManagementSystem
             if (bookingStatus == "Assigned") e.Row.Cells[statusCol].CssClass = "status-assigned";
             else if (bookingStatus == "Pending") e.Row.Cells[statusCol].CssClass = "status-pending";
             else if (bookingStatus == "Cancelled") e.Row.Cells[statusCol].CssClass = "status-cancelled";
+            else if (bookingStatus == "Completed") e.Row.Cells[statusCol].CssClass = "status-completed";
+            else if (bookingStatus == "Rejected") e.Row.Cells[statusCol].CssClass = "status-rejected";
 
             bool isContract = false;
             var isContractObj = DataBinder.Eval(e.Row.DataItem, "IsContract");

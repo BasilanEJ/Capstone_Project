@@ -229,6 +229,39 @@
         </div>
     </section>
 
+    <!-- ====== Blog Section ====== -->
+<section style="text-align:center; padding: 40px 12px;">
+    <h2 style="font-size: 24px; font-weight: bold; color: #121481;">Read our Blogs</h2>
+    <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:20px; margin-top:30px;">
+        
+        <!-- Blog Card 1 -->
+        <a href="/blog/diy-vs-professional" style="text-decoration:none; color:inherit; width:300px; border:1px solid #ddd; border-radius:10px; overflow:hidden; transition: transform 0.3s;">
+            <img src="/Images/DIY.jpg" alt="DIY vs Professional Pest Control" style="width:100%; height:200px; object-fit:cover;">
+            <div style="padding:15px; text-align:left;">
+                <h3 style="font-size:18px; font-weight:bold; margin-bottom:10px;">DIY pest control vs. hiring a pest control company: What’s the difference?</h3>
+            </div>
+        </a>
+
+        <!-- Blog Card 2 -->
+        <a href="/blog/brigada-eskela" style="text-decoration:none; color:inherit; width:300px; border:1px solid #ddd; border-radius:10px; overflow:hidden; transition: transform 0.3s;">
+            <img src="/Images/blog2.jpg" alt="Brigada Eskela Anti-Dengue" style="width:100%; height:200px; object-fit:cover;">
+            <div style="padding:15px; text-align:left;">
+                <h3 style="font-size:18px; font-weight:bold; margin-bottom:10px;">Brigada Eskela Anti-Dengue Campaign: Ensuring a Safe and Healthy Learning Environment</h3>
+            </div>
+        </a>
+
+        <!-- Blog Card 3 -->
+        <a href="/blog/termite-home" style="text-decoration:none; color:inherit; width:300px; border:1px solid #ddd; border-radius:10px; overflow:hidden; transition: transform 0.3s;">
+            <img src="/Images/blog3.jpg" alt="Termite Swarms" style="width:100%; height:200px; object-fit:cover;">
+            <div style="padding:15px; text-align:left;">
+                <h3 style="font-size:18px; font-weight:bold; margin-bottom:10px;">Don’t Let Termite Swarms Take Over Your Home!</h3>
+            </div>
+        </a>
+
+    </div>
+</section>
+
+
     <!-- ====== C&O ====== -->
     <section style="text-align: center; padding: 40px 12px;">
         <h2 style="color: #0B2A63; font-size: 2rem; font-weight: bold;">Certifications & Organizations</h2>

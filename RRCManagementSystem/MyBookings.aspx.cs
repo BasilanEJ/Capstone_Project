@@ -20,7 +20,19 @@ namespace RRCManagementSystem
                 return;
             }
 
-            if (!IsPostBack)
+            if (IsPostBack)
+            {
+                string eventTarget = Request["__EVENTTARGET"];
+                if (eventTarget == "CancelBooking")
+                {
+                    string bookingIdStr = hdnCancelBooking.Value;
+                    if (int.TryParse(bookingIdStr, out int bookingId))
+                    {
+                        CancelBooking(bookingId);
+                    }
+                }
+            }
+            else
             {
                 int clientId = Convert.ToInt32(Session["ClientID"]);
                 LoadMyBookings(clientId);
@@ -33,6 +45,7 @@ namespace RRCManagementSystem
                 try { SeedConfirmedBookingNotifications(clientId); } catch { }
             }
         }
+
 
         private void LoadMyBookings(int clientId)
         {
@@ -93,9 +106,21 @@ namespace RRCManagementSystem
         private void LoadAllOperations(int clientId)
         {
             using (var con = new SqlConnection(connectionString))
-            using (var da = new SqlDataAdapter("dbo.usp_ClientAllOps_AfterFirstCompleted", con))
+            using (var da = new SqlDataAdapter(@"
+    SELECT 
+        ss.ScheduleID,
+        ss.BookingID,
+        b.BookingCode,
+        ss.OperationNumber,
+        ss.ScheduledDate,
+        ss.Status,
+        b.CreatedAt
+    FROM ServiceSchedule ss
+    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+    WHERE b.ClientID = @ClientID
+    ORDER BY ss.OperationNumber;", con))
+
             {
-                da.SelectCommand.CommandType = CommandType.StoredProcedure;
                 da.SelectCommand.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
                 var dt = new DataTable();
@@ -106,6 +131,8 @@ namespace RRCManagementSystem
                 pnlAllOps.Visible = dt.Rows.Count > 0;
             }
         }
+
+
 
         protected void gvAllOps_RowCommand(object sender, GridViewCommandEventArgs e)
         {
@@ -297,29 +324,34 @@ namespace RRCManagementSystem
             ScriptManager.RegisterStartupScript(this, GetType(), "HideModal", "hideModal();", true);
         }
 
-        protected void gvMyBookings_RowCommand(object sender, GridViewCommandEventArgs e)
+
+        private void CancelBooking(int bookingId)
         {
-            if (e.CommandName == "CancelBooking")
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_Booking_CancelIfPending", con))
             {
-                int bookingId = Convert.ToInt32(e.CommandArgument);
-                using (var con = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.usp_Booking_CancelIfPending", con))
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
+
+                con.Open();
+                int rows = cmd.ExecuteNonQuery();
+
+                if (rows > 0)
                 {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
-
-                    con.Open();
-                    int rows = cmd.ExecuteNonQuery();
-
-                    if (rows > 0)
-                        ScriptManager.RegisterStartupScript(this, GetType(), "CancelSuccess", "Swal.fire('Cancelled!', 'Booking cancelled successfully.', 'success');", true);
-                    else
-                        ScriptManager.RegisterStartupScript(this, GetType(), "CancelFail", "Swal.fire('Oops!', 'Unable to cancel. Booking may already be processed.', 'warning');", true);
+                    ScriptManager.RegisterStartupScript(this, GetType(), "CancelSuccess",
+                        "Swal.fire('Cancelled!', 'Booking cancelled successfully.', 'success');", true);
                 }
-
-                LoadMyBookings(Convert.ToInt32(Session["ClientID"]));
+                else
+                {
+                    ScriptManager.RegisterStartupScript(this, GetType(), "CancelFail",
+                        "Swal.fire('Oops!', 'Unable to cancel. Booking may already be processed. BookingID: " + bookingId + "', 'warning');", true);
+                }
             }
+
+            LoadMyBookings(Convert.ToInt32(Session["ClientID"]));
         }
+
+
 
         private void SeedConfirmedBookingNotifications(int clientId)
         {

@@ -49,19 +49,17 @@
                 </div>
 
                 <!-- Status Dropdown -->
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Status:</label>
-                    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-select">
-                        <asp:ListItem Text="Pending" Value="Pending" />
-                        <asp:ListItem Text="Rejected" Value="Rejected" />
-                        <asp:ListItem Text="Approved" Value="Approved" />
-                        <asp:ListItem Text="In Progress" Value="InProgress" />
-                        <asp:ListItem Text="Completed" Value="Completed" />
-                        <asp:ListItem Text="Cancelled" Value="Cancelled" />
-                    </asp:DropDownList>
-                </div>
+             <div class="mb-3">
+    <label class="form-label fw-semibold">Status:</label>
+    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-select">
+        <asp:ListItem Text="Pending" Value="Pending" />
+        <asp:ListItem Text="Rejected" Value="Rejected" />
+        <asp:ListItem Text="Approved" Value="Approved" />
+        <asp:ListItem Text="Assigned" Value="Assigned" />
+        <asp:ListItem Text="Completed" Value="Completed" />
+    </asp:DropDownList>
+</div>
 
-                <!-- Notes -->
                 <div class="mb-4">
                     <label class="form-label fw-semibold">Notes:</label>
                     <asp:TextBox ID="txtNotes" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" ReadOnly="true" />

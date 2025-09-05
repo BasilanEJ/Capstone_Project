@@ -46,6 +46,20 @@
   user-select: none;
 }
 
+.form-check-list table { width: 100%; }
+.form-check-list td {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    padding: .5rem 0;
+    border-bottom: 1px solid #eee;
+}
+.form-check-list td:last-child { border-bottom: none; }
+
+h5.fw-bold {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+}
 
     /* AjaxControlToolkit autocomplete dropdown */
     .ajax__autocomplete_container{z-index:2000 !important; max-width:100%}
@@ -85,14 +99,31 @@
         </div>
 
         <!-- Services -->
-        <div class="mb-3">
-          <label class="form-label">Select Services</label>
-          <asp:CheckBoxList
-            ID="cblServices" runat="server"
-            RepeatLayout="Table" CssClass="form-check-list"
-            DataTextField="Name" DataValueField="ServiceID">
-          </asp:CheckBoxList>
-        </div>
+      <!-- Services -->
+<div class="mb-3">
+  <label class="form-label">Select Services</label>
+
+  <!-- Termite Control -->
+  <div class="mb-4 p-3 border rounded bg-light">
+    <h5 class="fw-bold text-primary mb-3">🪲 Termite Control</h5>
+    <asp:CheckBoxList
+      ID="cblTermite" runat="server"
+      RepeatLayout="Table" CssClass="form-check-list"
+      DataTextField="Name" DataValueField="ServiceID">
+    </asp:CheckBoxList>
+  </div>
+
+  <!-- General Pest Control -->
+  <div class="p-3 border rounded bg-light">
+    <h5 class="fw-bold text-success mb-3">🐜 General Pest Control</h5>
+    <asp:CheckBoxList
+      ID="cblGeneral" runat="server"
+      RepeatLayout="Table" CssClass="form-check-list"
+      DataTextField="Name" DataValueField="ServiceID">
+    </asp:CheckBoxList>
+  </div>
+</div>
+
 
         <!-- SQM -->
         <div class="mb-3">

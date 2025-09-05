@@ -255,9 +255,6 @@
               CssClass="custom-table">
     <Columns>
   
-        <asp:BoundField DataField="BookingID" HeaderText="Booking ID" Visible="false" />
-
-     
         <asp:BoundField DataField="BookingCode" HeaderText="Booking Code" />
 
         <asp:BoundField DataField="ClientName" HeaderText="Client" />

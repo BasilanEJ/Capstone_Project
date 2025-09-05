@@ -47,15 +47,19 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
+                // Concatenate LastName and FirstName for display
+                dt.Columns.Add("FullName", typeof(string), "LastName + ', ' + FirstName");
+
                 ddlClients.DataSource = dt;
-                ddlClients.DataTextField = "FullName";   // <— bind to FullName
+                ddlClients.DataTextField = "FullName";   // Use the concatenated "FullName"
                 ddlClients.DataValueField = "ClientID";
                 ddlClients.DataBind();
 
-                // friendly first item
+                // Add the first item for selection
                 ddlClients.Items.Insert(0, new ListItem("-- Select Client --", ""));
             }
         }
+
 
         protected void btnUpload_Click(object sender, EventArgs e)
         {

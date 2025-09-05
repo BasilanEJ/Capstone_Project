@@ -124,7 +124,6 @@ Swal.fire({
                     if (result != null && result != DBNull.Value) newId = Convert.ToInt32(result);
                 }
 
-
                 // Audit
                 using (var conn = new SqlConnection(connectionString))
                 using (var a = new SqlCommand("dbo.spAudit_Insert", conn))
@@ -135,6 +134,9 @@ Swal.fire({
                     conn.Open();
                     a.ExecuteNonQuery();
                 }
+
+                // Clear the form after successful submission
+                ClearForm();
 
                 Session["ServiceAdded"] = true;
                 lblMessage.Visible = true;

@@ -150,7 +150,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Hash with your PasswordHelper (Argon2, etc.)
+            
             string hashedPassword = PasswordHelper.HashPassword(newPassword);
 
             int rows = 0;
@@ -163,7 +163,7 @@ namespace RRCManagementSystem
                 if (role == "Admin")
                 {
                     cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
-                    cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, -1).Value = hashedPassword; // NVARCHAR(MAX)
+                    cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, -1).Value = hashedPassword;
                 }
                 else
                 {

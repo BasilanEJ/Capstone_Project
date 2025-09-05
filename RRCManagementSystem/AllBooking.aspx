@@ -11,9 +11,11 @@
         .table th { background-color: #004085; color: white; }
         .table-striped tbody tr:nth-child(odd) { background-color: #f9f9f9; }
         .table-striped tbody tr:hover { background-color: #e9ecef; }
-        .status-assigned { color: green; font-weight: bold; }
+        .status-assigned { color: blue; font-weight: bold; }
         .status-pending { color: orange; font-weight: bold; }
         .status-cancelled { color: red; font-weight: bold; }
+        .status-rejected { color: red; font-weight: bold; }
+        .status-completed {color: green; font-weight: bold;}
         .btn { padding: 4px 8px; font-size: 12px; border-radius: 4px; }
         .btn-complete { background-color: #28a745; color: white; border: none; }
         .btn-edit { background-color: #007bff; color: white; border: none; }

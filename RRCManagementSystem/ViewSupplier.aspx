@@ -48,6 +48,7 @@
       function confirmEdit(el) {
           return swalPostBack(el, { title: 'Edit supplier?', icon: 'question', confirmText: 'Edit' });
       }
+
       function confirmArchive(el) {
           return swalPostBack(el, { title: 'Archive supplier?', text: 'This will move the supplier to archive.', icon: 'warning', confirmText: 'Archive' });
       }
@@ -55,39 +56,52 @@
       // unchanged
       function openEmailModal(email, name) {
           var hfEmail = document.getElementById('<%= hfSupplierEmail.ClientID %>');
-      var hfName = document.getElementById('<%= hfSupplierName.ClientID %>');
-      var lblTo = document.getElementById('<%= lblSendTo.ClientID %>');
+          var hfName = document.getElementById('<%= hfSupplierName.ClientID %>');
+          var lblTo = document.getElementById('<%= lblSendTo.ClientID %>');
 
-    hfEmail.value = email || '';
-    hfName.value  = name  || '';
-    lblTo.textContent = 'Sending to: ' + (name ? (name + ' <' + email + '>') : email);
+          hfEmail.value = email || '';
+          hfName.value  = name  || '';
+          lblTo.textContent = 'Sending to: ' + (name ? (name + ' <' + email + '>') : email);
 
-    var modal = new bootstrap.Modal(document.getElementById('emailModal'));
-    modal.show();
-    return false;
-  }
+          var modal = new bootstrap.Modal(document.getElementById('emailModal'));
+          modal.show();
+          return false;
+      }
 
-  function confirmSendEmail(el) {
-    // btnSendEmail is a server Button; ASP.NET renders a proper postback href too
-    return swalPostBack(el, { title: 'Send email?', icon: 'info', confirmText: 'Send' });
-  }
-  function confirmCancelEmail() {
-    Swal.fire({
-      title: 'Cancel email?',
-      text: 'Discard your email content?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Discard',
-      cancelButtonText: 'Stay'
-    }).then(function (res) {
-      if (res.isConfirmed) {
-        var modalEl = document.getElementById('emailModal');
-        var modal   = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-        modal.hide();
-        document.getElementById('<%= txtSubject.ClientID %>').value = '';
-        document.getElementById('<%= txtMessageBody.ClientID %>').value = '';
-        }
-    });
+      function confirmSendEmail(el) {
+          // Call server-side function using __doPostBack after confirmation
+          Swal.fire({
+              title: 'Send email?',
+              icon: 'info',
+              confirmButtonText: 'Send',
+              showCancelButton: true,
+              cancelButtonText: 'Cancel'
+          }).then(function (result) {
+              if (result.isConfirmed) {
+                  // Trigger postback manually
+                  __doPostBack('<%= btnSendEmail.UniqueID %>', '');
+              }
+          });
+          return false; // Block default behavior
+      }
+
+      function confirmCancelEmail() {
+          Swal.fire({
+            title: 'Cancel email?',
+            text: 'Discard your email content?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Discard',
+            cancelButtonText: 'Stay'
+          }).then(function (res) {
+            if (res.isConfirmed) {
+              var modalEl = document.getElementById('emailModal');
+              var modal   = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+              modal.hide();
+              document.getElementById('<%= txtSubject.ClientID %>').value = '';
+              document.getElementById('<%= txtMessageBody.ClientID %>').value = '';
+              }
+          });
           return false;
       }
   </script>
@@ -98,8 +112,7 @@
   <!-- Hidden fields used by JS to pass recipient data to the server -->
   <asp:HiddenField ID="hfSupplierEmail" runat="server" />
   <asp:HiddenField ID="hfSupplierName"  runat="server" />
-    <asp:Panel ID="pnlSendEmail" runat="server" Visible="false"></asp:Panel>
-
+  <asp:Panel ID="pnlSendEmail" runat="server" Visible="false"></asp:Panel>
 
   <div class="main-content">
     <div class="supplier-container">
@@ -170,7 +183,6 @@
             <div class="modal-footer">
               <!-- IMPORTANT: UseSubmitBehavior=false so __doPostBack works with SweetAlert confirm -->
               <asp:Button ID="btnSendEmail" runat="server" CssClass="btn btn-primary"
-                UseSubmitBehavior="false"
                 OnClientClick="return confirmSendEmail(this);"
                 OnClick="btnSendEmail_Click" Text="Send Email" />
               <button type="button" class="btn btn-secondary" onclick="return confirmCancelEmail();">Cancel</button>

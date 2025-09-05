@@ -468,13 +468,14 @@ namespace RRCManagementSystem
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
-                        cmd.Parameters.Add("@StartDateTime", SqlDbType.DateTime).Value = scheduledDateTime;
                         cmd.ExecuteNonQuery();
                     }
+
 
                     tx.Commit();
                     AddAuditLog(adminId, $"Assigned Team {teamId} + equipment/consumables to BookingID {bookingID}");
                     Response.Redirect("AssignBooking.aspx?BookingID=" + bookingID + "&status=Assigned");
+                    Response.End();
                 }
                 catch (Exception ex)
                 {
@@ -499,6 +500,8 @@ namespace RRCManagementSystem
                 return (v != null && v != DBNull.Value && decimal.TryParse(v.ToString(), out var d)) ? d : 333m;
             }
         }
+
+
 
         private void AddAuditLog(int? adminId, string action)
         {
