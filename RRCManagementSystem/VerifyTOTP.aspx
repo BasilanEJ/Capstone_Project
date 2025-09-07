@@ -3,6 +3,7 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
+    <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
     <title>2FA Verification - RRC Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>

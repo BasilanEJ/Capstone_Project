@@ -30,16 +30,17 @@
                 if (Session["IsAuthenticated"] as bool? == true &&
                     Session["UserID"] != null && Session["Role"] != null)
                 {
-                    string role = Session["Role"].ToString();
-                    Response.Redirect(
-                        role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx"
-                      : role == "Inspector" ? "~/InspectorDashboard.aspx"
-                                             : "~/Dashboard.aspx",
-                        false
-                    );
-                    Context.ApplicationInstance.CompleteRequest();
-                    return;
-                }
+                string role = Session["Role"].ToString();
+                Response.Redirect(
+                    role == "RootAdmin" ? "~/RootDashboard.aspx"
+                  : role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx"
+                  : role == "Inspector" ? "~/InspectorDashboard.aspx"
+                                         : "~/Dashboard.aspx",
+                    false
+                );
+                Context.ApplicationInstance.CompleteRequest();
+                return;
+            }
 
                 // Client already logged in
                 if (Session["ClientID"] != null)
@@ -120,51 +121,52 @@
                                     }
                                 }
 
-                                // Password check
-                                if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
+                            // Password check
+                            if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
+                            {
+                                ResetFailedLogin(userID);   // SP
+                                LogIPAttempt(ip, true);     // SP
+                                AddAuditLog(userID, $"{role} {userName} passed password; 2FA pending."); // SP
+
+                                // Enforce 2FA for all roles except Inspector
+                                if (!role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    ResetFailedLogin(userID);   // SP
-                                    LogIPAttempt(ip, true);     // SP
-                                    AddAuditLog(userID, $"{role} {userName} passed password; 2FA pending."); // SP
+                                    // 2FA required -> store pending identity only
+                                    Session["Pending2FA_UserID"] = userID;
+                                    Session["Pending2FA_Email"] = email;
+                                    Session["Pending2FA_Name"] = userName;
+                                    Session["Pending2FA_Role"] = role;
 
-                                    if (!role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        // 2FA required -> store pending identity only
-                                        Session["Pending2FA_UserID"] = userID;
-                                        Session["Pending2FA_Email"] = email;
-                                        Session["Pending2FA_Name"] = userName;
-                                        Session["Pending2FA_Role"] = role;
+                                    // ensure not authenticated yet
+                                    Session.Remove("IsAuthenticated");
+                                    Session.Remove("UserID");
+                                    Session.Remove("Role");
+                                    Session.Remove("Name");
+                                    Session.Remove("Email");
 
-                                        // ensure not authenticated yet
-                                        Session.Remove("IsAuthenticated");
-                                        Session.Remove("UserID");
-                                        Session.Remove("Role");
-                                        Session.Remove("Name");
-                                        Session.Remove("Email");
-
-                                        if (!is2FAEnabled)
-                                            Response.Redirect("Enable2FA.aspx", false);
-                                        else
-                                            Response.Redirect("VerifyTOTP.aspx", false);
-
-                                        Context.ApplicationInstance.CompleteRequest();
-                                        return;
-                                    }
+                                    if (!is2FAEnabled)
+                                        Response.Redirect("Enable2FA.aspx", false);
                                     else
-                                    {
-                                        // Inspectors skip 2FA per your policy
-                                        Session["UserID"] = userID;
-                                        Session["Role"] = role;
-                                        Session["Name"] = userName;
-                                        Session["Email"] = email;
-                                        Session["IsAuthenticated"] = true;
+                                        Response.Redirect("VerifyTOTP.aspx", false);
 
-                                        Response.Redirect("~/InspectorDashboard.aspx", false);
-                                        Context.ApplicationInstance.CompleteRequest();
-                                        return;
-                                    }
+                                    Context.ApplicationInstance.CompleteRequest();
+                                    return;
                                 }
                                 else
+                                {
+                                    // Inspectors skip 2FA
+                                    Session["UserID"] = userID;
+                                    Session["Role"] = role;
+                                    Session["Name"] = userName;
+                                    Session["Email"] = email;
+                                    Session["IsAuthenticated"] = true;
+
+                                    Response.Redirect("~/InspectorDashboard.aspx", false);
+                                    Context.ApplicationInstance.CompleteRequest();
+                                    return;
+                                }
+                            }
+                            else
                                 {
                                     HandleFailedLogin(userID); // SP (increments counter, sets lockout if threshold reached)
                                     LogIPAttempt(ip, false);   // SP
@@ -232,9 +234,7 @@
                 }
             }
 
-            /* =========================
-               CAPTCHA
-               ========================= */
+       
             private bool IsCaptchaValid()
             {
                 string response = Request.Form["g-recaptcha-response"];
@@ -248,9 +248,7 @@
                 }
             }
 
-            /* =========================
-               Stored-proc helpers
-               ========================= */
+
 
             private int GetFailedIPAttempts(string ip, int windowMinutes)
             {

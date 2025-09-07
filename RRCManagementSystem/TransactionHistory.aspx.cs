@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.UI;
 using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
@@ -25,12 +26,24 @@ namespace RRCManagementSystem
                 return;
             }
 
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // Check CanAdd permission for Sales&Transaction module
+            bool canAdd = HasAddPermission(userId, "Sales&Transaction");
+            ViewState["CanAddReceipt"] = canAdd;
+
             if (!IsPostBack)
             {
                 txtFromDate.Text = DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd");
                 txtToDate.Text = DateTime.Now.ToString("yyyy-MM-dd");
                 LoadPaymentMethods();
                 LoadTransactions();
+
+                if (!canAdd)
+                {
+                    lblMessage.Text = "⚠️ You do not have permission to add receipts.";
+                    lblMessage.CssClass = "form-text text-center mb-3 text-warning";
+                }
             }
         }
 
@@ -51,8 +64,7 @@ namespace RRCManagementSystem
                     using (var r = cmd.ExecuteReader())
                     {
                         ddlPaymentMethod.Items.Clear();
-                        ddlPaymentMethod.Items.Add(new ListItem("All Payment Methods", "")); // value = empty
-
+                        ddlPaymentMethod.Items.Add(new ListItem("All Payment Methods", ""));
                         while (r.Read())
                         {
                             var pm = r["PaymentMethod"]?.ToString();
@@ -86,8 +98,6 @@ namespace RRCManagementSystem
                 using (var cmd = new SqlCommand("dbo.spTransactionHistory_List", con))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-
-                    // inclusive to-date (SP uses < DATEADD(DAY,1,@ToDate))
                     cmd.Parameters.Add("@FromDate", SqlDbType.Date).Value = from.Date;
                     cmd.Parameters.Add("@ToDate", SqlDbType.Date).Value = to.Date;
 
@@ -103,6 +113,7 @@ namespace RRCManagementSystem
 
                         gvTransactions.DataSource = dt;
                         gvTransactions.DataBind();
+
                         lblMessage.Text = dt.Rows.Count == 0 ? "⚠ No transaction records found." : string.Empty;
                     }
                 }
@@ -116,13 +127,69 @@ namespace RRCManagementSystem
         protected string GetReceiptLink(object receiptObj)
         {
             var v = (receiptObj == null || receiptObj == DBNull.Value) ? "" : receiptObj.ToString();
-            if (string.IsNullOrWhiteSpace(v)) return ""; // handled by lnkAdd
+            if (string.IsNullOrWhiteSpace(v)) return "";
 
-            // safety: use only the file name
             var file = System.IO.Path.GetFileName(v);
             var url = "DecryptReceipt.aspx?file=" + Server.UrlEncode(file);
             return $"<a class='pill pill-view' href='{url}' target='_blank' rel='noopener'>View Receipt</a>";
         }
 
+        #region Permissions
+        private bool HasAddPermission(int userId, string moduleName)
+        {
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_CanAdd", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                    con.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && Convert.ToInt32(result) == 1;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        #endregion
+
+        #region GridView Events
+        protected void gvTransactions_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                bool canAdd = ViewState["CanAddReceipt"] != null && (bool)ViewState["CanAddReceipt"];
+                var btnAddReceipt = e.Row.FindControl("btnAddReceipt") as LinkButton;
+                if (btnAddReceipt != null)
+                {
+                    btnAddReceipt.Enabled = canAdd;
+                    if (!canAdd)
+                        btnAddReceipt.CssClass += " disabled";
+                }
+            }
+        }
+
+        protected void btnAddReceipt_Click(object sender, EventArgs e)
+        {
+            LinkButton btn = sender as LinkButton;
+            if (btn == null) return;
+
+            bool canAdd = ViewState["CanAddReceipt"] != null && (bool)ViewState["CanAddReceipt"];
+            if (!canAdd)
+            {
+                // Security: prevent unauthorized access
+                lblMessage.Text = "⚠️ You do not have permission to add receipts.";
+                return;
+            }
+
+            int txId = Convert.ToInt32(btn.CommandArgument);
+            Response.Redirect("AddReceipt.aspx?tx=" + txId);
+        }
+        #endregion
     }
 }

@@ -75,6 +75,29 @@ namespace RRCManagementSystem
             }
         }
 
+        private bool HasEditPermission(int adminId, string moduleName)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_CanEdit", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && Convert.ToBoolean(result);
+                }
+            }
+            catch
+            {
+                return false; // deny by default
+            }
+        }
+
+
         private void LoadAllBookings()
         {
             try
@@ -199,8 +222,6 @@ namespace RRCManagementSystem
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
 
-            // Visible columns (0-based): BookingCode(0), Client(1), Service(2), Scheduled(3),
-            // Start(4), Price(5), Remaining(6), Status(7), CreatedAt(8), Op1Status(9), Actions(10)
             string bookingStatus = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
             int statusCol = 7;
 
@@ -219,6 +240,7 @@ namespace RRCManagementSystem
 
             var lblOp1 = (Label)e.Row.FindControl("lblOp1Status");
             var btnOp1 = (Button)e.Row.FindControl("btnTriggerCompleteOp1");
+            var btnEdit = (Button)e.Row.FindControl("btnEdit");
 
             if (lblOp1 != null) lblOp1.Visible = isContract;
 
@@ -226,7 +248,15 @@ namespace RRCManagementSystem
                 btnOp1.Visible = isContract
                                  && string.Equals(bookingStatus, "Assigned", StringComparison.OrdinalIgnoreCase)
                                  && !string.Equals(op1Status, "Completed", StringComparison.OrdinalIgnoreCase);
+
+            // --- Permission check for Edit button ---
+            int userId = Convert.ToInt32(Session["UserID"]);
+            if (btnEdit != null)
+            {
+                btnEdit.Enabled = HasEditPermission(userId, "ManageBooking");
+            }
         }
+
 
         private void AddAuditLog(int adminId, string action)
         {

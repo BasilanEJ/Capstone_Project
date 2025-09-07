@@ -1,5 +1,4 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="ArchivedAdmins.aspx.cs" Inherits="RRCManagementSystem.ArchivedAdmins" %>
-
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/RootAdmin.Master" AutoEventWireup="true" CodeBehind="ArchivedSuperUser.aspx.cs" Inherits="RRCManagementSystem.ArchivedSuperUser" %>
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
     <style>
         .table-container {
@@ -56,7 +55,6 @@
         .btn-action {
             margin: 0 5px;
             padding: 5px 10px;
-            background-color: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
@@ -64,31 +62,19 @@
             text-decoration: none;
         }
 
-        .btn-delete {
-            background-color: #dc3545;
-        }
+        .btn-delete { background-color: #dc3545; }
+        .btn-restore { background-color: #28a745; }
 
-        .btn-restore {
-            background-color: #28a745;
-        }
-
-        .btn-action:hover {
-            opacity: 0.9;
-        }
-
-        .alert-message {
-            text-align: center;
-            margin-bottom: 10px;
-            color: red;
-        }
+        .btn-action:hover { opacity: 0.9; }
+        .alert-message { text-align: center; margin-bottom: 10px; color: red; }
     </style>
 
-     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="text/javascript">
         function confirmRestore(btn, userId) {
             Swal.fire({
                 title: 'Are you sure?',
-                text: "Do you want to restore this admin account?",
+                text: "Do you want to restore this user account?",
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#28a745',
@@ -96,7 +82,7 @@
                 confirmButtonText: 'Yes, restore it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    __doPostBack(btn, 'RestoreAdmin$' + userId); // ✅ CommandName$UserID
+                    __doPostBack(btn, 'RestoreUser$' + userId);
                 }
             });
             return false;
@@ -105,7 +91,7 @@
         function confirmDelete(btn, userId) {
             Swal.fire({
                 title: 'Are you sure?',
-                text: "This will permanently delete the admin account.",
+                text: "This will permanently delete the user account.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
@@ -113,17 +99,15 @@
                 confirmButtonText: 'Yes, delete it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    __doPostBack(btn, 'DeletePermanently$' + userId); // ✅ CommandName$UserID
+                    __doPostBack(btn, 'DeleteUser$' + userId);
                 }
             });
             return false;
         }
-
     </script>
 
-
-   <div class="table-container">
-        <h2>Archived User Accounts</h2>
+    <div class="table-container">
+        <h2>Archived System Accounts</h2>
 
         <div class="search-bar">
             <asp:TextBox ID="txtSearch" runat="server" CssClass="search-input" placeholder="Search by name or email..." />
@@ -132,13 +116,14 @@
 
         <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" />
 
-        <asp:GridView ID="gvArchivedAdmins" runat="server" CssClass="grid"
+        <asp:GridView ID="gvArchivedUsers" runat="server" CssClass="grid"
             AutoGenerateColumns="False"
-            EmptyDataText="No archived Accounts found."
-            OnRowCommand="gvArchivedAdmins_RowCommand"
-            DataKeyNames="UserID">
+            EmptyDataText="No archived users found."
+            OnRowCommand="gvArchivedUsers_RowCommand"
+            DataKeyNames="UserID"
+            AllowPaging="True" PageSize="10"
+            OnPageIndexChanging="gvArchivedUsers_PageIndexChanging">
             <Columns>
-                <asp:BoundField DataField="UserID" HeaderText="ID" />
                 <asp:BoundField DataField="Name" HeaderText="Name" />
                 <asp:BoundField DataField="Email" HeaderText="Email" />
                 <asp:BoundField DataField="Role" HeaderText="Role" />
@@ -146,13 +131,13 @@
                     <ItemTemplate>
                         <a href="javascript:void(0);"
                            class="btn-action btn-restore"
-                           onclick='return confirmRestore("<%= gvArchivedAdmins.UniqueID %>", "<%# Eval("UserID") %>");'>
+                           onclick='return confirmRestore("<%= gvArchivedUsers.UniqueID %>", "<%# Eval("UserID") %>");'>
                             Restore
                         </a>
 
                         <a href="javascript:void(0);"
                            class="btn-action btn-delete"
-                           onclick='return confirmDelete("<%= gvArchivedAdmins.UniqueID %>", "<%# Eval("UserID") %>");'>
+                           onclick='return confirmDelete("<%= gvArchivedUsers.UniqueID %>", "<%# Eval("UserID") %>");'>
                             Delete
                         </a>
                     </ItemTemplate>
@@ -161,4 +146,3 @@
         </asp:GridView>
     </div>
 </asp:Content>
-

@@ -100,7 +100,7 @@
                         <asp:GridView ID="gvLogs" runat="server" CssClass="grid" AutoGenerateColumns="False">
                             <Columns>
                                 <asp:BoundField DataField="LogID" HeaderText="Log ID" />
-                                <asp:BoundField DataField="AdminName" HeaderText="Admin Name" />
+                                <asp:BoundField DataField="AdminName" HeaderText="User Name" />
                                 <asp:BoundField DataField="Action" HeaderText="Action" />
                                 <asp:BoundField DataField="Timestamp" HeaderText="Timestamp" DataFormatString="{0:yyyy-MM-dd HH:mm:ss}" />
                             </Columns>

@@ -40,7 +40,7 @@
             </div>
 
             <asp:Button ID="btnUpload" runat="server" Text="Upload Contract" CssClass="btn btn-primary w-100"
-                OnClick="btnUpload_Click" OnClientClick="return confirmUpload();" />
+                        OnClick="btnUpload_Click" OnClientClick="return confirmUpload();" />
         </div>
     </div>
 

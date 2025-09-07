@@ -22,10 +22,26 @@ namespace RRCManagementSystem
                 Response.Redirect("~/Login.aspx");
                 return;
             }
+
             var role = Session["Role"].ToString();
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔐 Check CanEdit permission for Sales & Transaction
+            if (!HasEditPermission(userId, "Sales&Transaction"))
+            {
+                lblMessage.Text = "❌ You do not have permission to manage payment.";
+                lblMessage.CssClass = "message error";
+                pnlChosen.Visible = false; // hide the payment panel
+                pnlResults.Visible = false;
+                btnSaveReal.Enabled = false; // disable save button
+                btnPrintReceipt.Visible = false;
+                btnDownloadReceipt.Visible = false;
                 return;
             }
 
@@ -34,10 +50,32 @@ namespace RRCManagementSystem
                 BindPaymentDDL(ddlMethod1);
                 BindPaymentDDL(ddlMethod2);
                 txtRemainingBalance.Text = "0.00";
-                //txtProjectedBalance.Text = "0.00";
-                //.Text = "-";
             }
         }
+
+        private bool HasEditPermission(int userId, string moduleName)
+        {
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+                    cmd.Parameters.Add("@Permission", SqlDbType.NVarChar, 10).Value = "CanEdit";
+
+                    con.Open();
+                    object allowed = cmd.ExecuteScalar();
+                    return allowed != null && allowed != DBNull.Value && Convert.ToBoolean(allowed);
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
 
         // -------- Search / pick client ----------
         protected void btnSearchClient_Click(object sender, EventArgs e)

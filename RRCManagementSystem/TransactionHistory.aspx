@@ -22,38 +22,44 @@
     .table tr:hover{ background:#f1f5f9; }
 
     /* Shared pill base */
-.pill {
-  display:inline-block;
-  border-radius:999px;
-  padding:6px 12px;
-  font-size:13px;
-  font-weight:600;
-  text-decoration:none;
-  transition:all 0.2s ease;
-}
+    .pill {
+        display:inline-block;
+        border-radius:999px;
+        padding:6px 12px;
+        font-size:13px;
+        font-weight:600;
+        text-decoration:none;
+        transition:all 0.2s ease;
+    }
 
-/* View Receipt = Blue */
-.pill-view {
-  background:#e0f2fe;          /* light blue */
-  color:#075985;              /* dark blue text */
-  border:1px solid #7dd3fc;   /* blue border */
-}
-.pill-view:hover {
-  background:#bae6fd;
-  color:#0c4a6e;
-}
+    /* View Receipt = Blue */
+    .pill-view {
+        background:#e0f2fe;
+        color:#075985;
+        border:1px solid #7dd3fc;
+    }
+    .pill-view:hover {
+        background:#bae6fd;
+        color:#0c4a6e;
+    }
 
-/* Add Receipt = Green */
-.pill-add {
-  background:#dcfce7;          /* light green */
-  color:#166534;              /* dark green text */
-  border:1px solid #86efac;   /* green border */
-}
-.pill-add:hover {
-  background:#bbf7d0;
-  color:#14532d;
-}
+    /* Add Receipt = Green */
+    .pill-add {
+        background:#dcfce7;
+        color:#166534;
+        border:1px solid #86efac;
+    }
+    .pill-add:hover {
+        background:#bbf7d0;
+        color:#14532d;
+    }
 
+    .pill-add.disabled {
+        background:#f0fdf4;
+        color:#6b7280;
+        border:1px solid #d1fae5;
+        cursor:not-allowed;
+    }
 
 </style>
 
@@ -70,31 +76,33 @@
 
 <div class="grid-container">
     <asp:GridView ID="gvTransactions" runat="server" AutoGenerateColumns="False"
-              CssClass="table table-striped table-bordered" GridLines="None"
-              EmptyDataText="No transaction records found.">
-    <Columns>
-        <asp:BoundField DataField="TransactionID" HeaderText="Transaction ID" />
-        <asp:BoundField DataField="SaleID" HeaderText="Sale ID" />
-        <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="₱{0:N2}" HtmlEncode="false" />
-        <asp:BoundField DataField="PaymentMethod" HeaderText="Payment Method" />
-        <asp:BoundField DataField="TransactionDate" HeaderText="Transaction Date" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
+                  CssClass="table table-striped table-bordered" GridLines="None"
+                  EmptyDataText="No transaction records found."
+                  OnRowDataBound="gvTransactions_RowDataBound">
+        <Columns>
+            <asp:BoundField DataField="TransactionID" HeaderText="Transaction ID" />
+            <asp:BoundField DataField="SaleID" HeaderText="Sale ID" />
+            <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="₱{0:N2}" HtmlEncode="false" />
+            <asp:BoundField DataField="PaymentMethod" HeaderText="Payment Method" />
+            <asp:BoundField DataField="TransactionDate" HeaderText="Transaction Date" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
 
-<asp:TemplateField HeaderText="Receipt">
-  <ItemTemplate>
-    <asp:Literal ID="litView" runat="server" Mode="PassThrough"
-      Visible='<%# !string.IsNullOrWhiteSpace(Eval("Receipt") as string) %>'
-      Text='<%# GetReceiptLink(Eval("Receipt")) %>' />
-    <asp:HyperLink ID="lnkAdd" runat="server"
-      CssClass="pill pill-add"
-      NavigateUrl='<%# "AddReceipt.aspx?tx=" + Eval("TransactionID") %>'
-      Text="Add Receipt"
-      Visible='<%# string.IsNullOrWhiteSpace(Eval("Receipt") as string) %>' />
-  </ItemTemplate>
-</asp:TemplateField>
+            <asp:TemplateField HeaderText="Receipt">
+                <ItemTemplate>
+                    <asp:Literal ID="litView" runat="server" Mode="PassThrough"
+                                 Visible='<%# !string.IsNullOrWhiteSpace(Eval("Receipt") as string) %>'
+                                 Text='<%# GetReceiptLink(Eval("Receipt")) %>' />
 
-    </Columns>
-</asp:GridView>
-
+                    <asp:LinkButton ID="btnAddReceipt" runat="server"
+                        CssClass='<%# (ViewState["CanAddReceipt"] != null && !(bool)ViewState["CanAddReceipt"]) ? "pill pill-add disabled" : "pill pill-add" %>'
+                        CommandArgument='<%# Eval("TransactionID") %>'
+                        Text="Add Receipt"
+                        OnClick="btnAddReceipt_Click"
+                        Enabled='<%# (ViewState["CanAddReceipt"] != null && (bool)ViewState["CanAddReceipt"]) %>'
+                        Visible='<%# string.IsNullOrWhiteSpace(Eval("Receipt") as string) %>' />
+                </ItemTemplate>
+            </asp:TemplateField>
+        </Columns>
+    </asp:GridView>
 </div>
 
 </asp:Content>

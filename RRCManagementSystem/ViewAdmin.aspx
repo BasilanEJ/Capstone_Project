@@ -24,7 +24,6 @@
                         OnRowCommand="gvAdmins_RowCommand"
                         DataKeyNames="UserID">
                         <Columns>
-                            <asp:BoundField DataField="UserID" HeaderText="ID" />
                             <asp:BoundField DataField="Name" HeaderText="Name" />
                             <asp:BoundField DataField="Email" HeaderText="Email" />
                             <asp:BoundField DataField="Role" HeaderText="Role" />

@@ -9,7 +9,7 @@ using RRCManagementSystem.Helpers;
 
 namespace RRCManagementSystem
 {
-    public partial class ManageContract : System.Web.UI.Page
+    public partial class ManageContract : Page
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
@@ -24,16 +24,30 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // Keep your original restriction
-            if (role == "SuperAdmin" || role == "Inspector")
+            if (role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // Store permission in ViewState
+            ViewState["CanEditContract"] = HasEditPermission(userId, "ManageClient");
+
             if (!IsPostBack)
             {
                 LoadClients();
+
+                bool canEdit = ViewState["CanEditContract"] != null && (bool)ViewState["CanEditContract"];
+                btnUpload.Enabled = canEdit;
+
+                if (!canEdit)
+                {
+                    lblMessage.Text = "⚠️ You do not have permission to upload contracts.";
+                    lblMessage.CssClass = "form-text text-center mb-3 text-warning";
+                }
             }
         }
 
@@ -47,33 +61,30 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
-                // Concatenate LastName and FirstName for display
                 dt.Columns.Add("FullName", typeof(string), "LastName + ', ' + FirstName");
 
                 ddlClients.DataSource = dt;
-                ddlClients.DataTextField = "FullName";   // Use the concatenated "FullName"
+                ddlClients.DataTextField = "FullName";
                 ddlClients.DataValueField = "ClientID";
                 ddlClients.DataBind();
 
-                // Add the first item for selection
                 ddlClients.Items.Insert(0, new ListItem("-- Select Client --", ""));
             }
         }
 
-
         protected void btnUpload_Click(object sender, EventArgs e)
         {
-            lblMessage.CssClass = "form-text text-center mb-3";
-            lblMessage.Text = "";
-
-            // session re-check
-            if (Session["UserID"] == null)
+            bool canEdit = ViewState["CanEditContract"] != null && (bool)ViewState["CanEditContract"];
+            if (!canEdit)
             {
-                Fail("❌ You must be logged in to upload a contract.");
+                ShowSweetAlert("No Permission", "You do not have permission to upload contracts.", "warning");
                 return;
             }
 
-            // file checks
+            lblMessage.CssClass = "form-text text-center mb-3";
+            lblMessage.Text = "";
+
+            // Validation
             if (!fuContract.HasFile || Path.GetExtension(fuContract.FileName).ToLowerInvariant() != ".pdf")
             {
                 Fail("❌ Please upload a valid PDF file.");
@@ -105,16 +116,13 @@ namespace RRCManagementSystem
                 int uploadedBy = Convert.ToInt32(Session["UserID"]);
                 string remarks = (txtRemarks.Text ?? string.Empty).Trim();
 
-                // Save encrypted PDF under a virtual path that maps inside the app
                 string fileName = Guid.NewGuid().ToString("N") + ".pdf";
-                string relativePath = "~/EncryptedContracts/" + fileName;     // path saved in DB
-                string physicalPath = Server.MapPath(relativePath);           // where we store the file
+                string relativePath = "~/EncryptedContracts/" + fileName;
+                string physicalPath = Server.MapPath(relativePath);
 
-                // ensure folder exists
                 string dir = Path.GetDirectoryName(physicalPath);
                 if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-                // encrypt and save
                 using (var ms = new MemoryStream())
                 {
                     fuContract.PostedFile.InputStream.CopyTo(ms);
@@ -122,11 +130,10 @@ namespace RRCManagementSystem
                     File.WriteAllBytes(physicalPath, encrypted);
                 }
 
-                // DB insert via SP
                 using (var conn = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand("dbo.spClientContract_Insert", conn))
                 {
-                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
                     cmd.Parameters.Add("@FilePath", SqlDbType.NVarChar, 260).Value = relativePath;
                     cmd.Parameters.Add("@StartDate", SqlDbType.DateTime).Value = startDate;
@@ -135,7 +142,7 @@ namespace RRCManagementSystem
                     cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar).Value = (object)remarks ?? DBNull.Value;
 
                     conn.Open();
-                    cmd.ExecuteScalar(); // (Optionally returns ContractID)
+                    cmd.ExecuteScalar();
                 }
 
                 lblMessage.Text = "✅ Contract uploaded and encrypted successfully!";
@@ -160,6 +167,42 @@ namespace RRCManagementSystem
         {
             lblMessage.Text = msg;
             lblMessage.CssClass = "form-text text-center mb-3 text-danger";
+        }
+
+        private bool HasEditPermission(int userId, string moduleName)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_CanEdit", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && Convert.ToInt32(result) == 1;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void ShowSweetAlert(string title, string message, string icon)
+        {
+            string script = $@"
+<script>
+Swal.fire({{
+    title: '{title}',
+    text: '{message.Replace("'", "\\'")}',
+    icon: '{icon}',
+    confirmButtonColor: '#007bff'
+}});
+</script>";
+            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert" + Guid.NewGuid(), script, false);
         }
     }
 }

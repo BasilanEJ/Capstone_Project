@@ -7,56 +7,58 @@
     </asp:Content>
 
     <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-        <div class="container my-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white text-center fw-bold">
-                    Active Employees
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <asp:GridView ID="gvEmployees" runat="server" AutoGenerateColumns="False"
-                            CssClass="table table-bordered table-striped text-center align-middle"
-                            AllowPaging="True" PageSize="10"
-                            DataKeyNames="EmployeeID"
-                            OnRowCommand="gvEmployees_RowCommand"
-                            OnPageIndexChanging="gvEmployees_PageIndexChanging">
-                            <Columns>
-                                <asp:BoundField DataField="EmployeeID" HeaderText="ID">
-                                    <ItemStyle Width="50px" />
-                                </asp:BoundField>
-                                <asp:BoundField DataField="LastName" HeaderText="Last Name" />
-                                <asp:BoundField DataField="FirstName" HeaderText="First Name" />
-                                <asp:BoundField DataField="MiddleName" HeaderText="Middle Name" />
-                                <asp:BoundField DataField="Email" HeaderText="Email" />
-                                <asp:BoundField DataField="Position" HeaderText="Position" />
-                                <asp:BoundField DataField="Phone" HeaderText="Phone" />
-                                <asp:ImageField DataImageUrlField="ProfileImage" HeaderText="Profile Picture">
-                                    <ControlStyle CssClass="rounded-circle" Width="50px" Height="50px" />
-                                </asp:ImageField>
-                                <asp:TemplateField HeaderText="Actions">
-                                    <ItemTemplate>
-                                        <div class="d-flex justify-content-center gap-2">
-                                            <asp:LinkButton ID="btnEdit" runat="server"
-                                                CommandName="EditEmployee"
-                                                CommandArgument='<%# Eval("EmployeeID") %>'
-                                                CssClass="btn btn-sm btn-primary">
-                                                <i class="fas fa-edit me-1"></i>Edit
-                                            </asp:LinkButton>
+       <div class="container my-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white text-center fw-bold">
+            Active Employees
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <asp:GridView ID="gvEmployees" runat="server" AutoGenerateColumns="False"
+                    CssClass="table table-bordered table-striped text-center align-middle"
+                    AllowPaging="True" PageSize="10"
+                    DataKeyNames="EmployeeID"
+                    OnRowCommand="gvEmployees_RowCommand"
+                    OnPageIndexChanging="gvEmployees_PageIndexChanging"
+                    OnRowDataBound="gvEmployees_RowDataBound">
+                    <Columns>
+                        <asp:BoundField DataField="EmployeeID" HeaderText="ID">
+                            <ItemStyle Width="50px" />
+                        </asp:BoundField>
+                        <asp:BoundField DataField="LastName" HeaderText="Last Name" />
+                        <asp:BoundField DataField="FirstName" HeaderText="First Name" />
+                        <asp:BoundField DataField="MiddleName" HeaderText="Middle Name" />
+                        <asp:BoundField DataField="Email" HeaderText="Email" />
+                        <asp:BoundField DataField="Position" HeaderText="Position" />
+                        <asp:BoundField DataField="Phone" HeaderText="Phone" />
+                        <asp:ImageField DataImageUrlField="ProfileImage" HeaderText="Profile Picture">
+                            <ControlStyle CssClass="rounded-circle" Width="50px" Height="50px" />
+                        </asp:ImageField>
+                        <asp:TemplateField HeaderText="Actions">
+                            <ItemTemplate>
+                                <div class="d-flex justify-content-center gap-2">
+                                    <asp:LinkButton ID="btnEdit" runat="server"
+                                        CommandName="EditEmployee"
+                                        CommandArgument='<%# Eval("EmployeeID") %>'
+                                        CssClass="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit me-1"></i>Edit
+                                    </asp:LinkButton>
 
-                                            <asp:LinkButton ID="btnArchive" runat="server"
-                                                CssClass="btn btn-sm btn-danger"
-                                                OnClientClick='<%# "return confirmArchive(" + Eval("EmployeeID") + ");" %>'>
-                                                <i class="fas fa-archive me-1"></i>Archive
-                                            </asp:LinkButton>
-                                        </div>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                            </Columns>
-                        </asp:GridView>
-                    </div>
-                </div>
+                                    <asp:LinkButton ID="btnArchive" runat="server"
+                                        CssClass="btn btn-sm btn-danger"
+                                        OnClientClick='<%# "return confirmArchive(" + Eval("EmployeeID") + ");" %>'>
+                                        <i class="fas fa-archive me-1"></i>Archive
+                                    </asp:LinkButton>
+                                </div>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                    </Columns>
+                </asp:GridView>
             </div>
         </div>
+    </div>
+</div>
+
 
         <!-- Hidden field and hidden button for archive postback -->
         <asp:HiddenField ID="hfEmployeeToArchive" runat="server" />

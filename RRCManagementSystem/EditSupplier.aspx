@@ -106,7 +106,7 @@
                 cancelButtonText: 'Continue Editing'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = '<%= ResolveUrl("~/ADMIN/ViewSupplier.aspx") %>';
+                    window.location.href = '<%= ResolveUrl("ViewSupplier.aspx") %>';
                 }
             });
             return false;

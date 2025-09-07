@@ -3,6 +3,7 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
+using Isopoh.Cryptography.Argon2;
 
 namespace RRCManagementSystem
 {
@@ -14,8 +15,15 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                // We do NOT disable the page even if a SuperAdmin exists.
-                lblMessage.Text = "";
+                if (RootAdminExists())
+                {
+                    DisableForm();
+                    ShowSweetAlert("info", "Setup Completed", "A Root Admin account already exists. This page is disabled.");
+                }
+                else
+                {
+                    lblMessage.Text = "";
+                }
             }
         }
 
@@ -24,9 +32,9 @@ namespace RRCManagementSystem
             Page.Validate();
             if (!Page.IsValid) return;
 
-            var email = (txtEmail.Text ?? "").Trim().ToLowerInvariant();
-            var password = txtPassword.Text ?? "";
-            var confirm = txtConfirm.Text ?? "";
+            string email = txtEmail.Text.Trim().ToLowerInvariant();
+            string password = txtPassword.Text.Trim();
+            string confirm = txtConfirm.Text.Trim();
 
             if (password != confirm)
             {
@@ -42,33 +50,25 @@ namespace RRCManagementSystem
 
             try
             {
-                // Argon2id hash
-                string hash = PasswordHelper.HashPassword(password);
+                string passwordHash = PasswordHelper.HashPassword(password); // Use Argon2 or your helper
 
-                using (var con = new SqlConnection(cs))
-                using (var cmd = new SqlCommand("dbo.spCreateSuperAdmin", con))
+                using (SqlConnection con = new SqlConnection(cs))
+                using (SqlCommand cmd = new SqlCommand("dbo.spCreateRootAdmin", con))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 256).Value = email;
-                    cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, -1).Value = hash;
-                    cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 150).Value = "Super Admin";
+                    cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = "Root Admin";
+                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                    cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, -1).Value = passwordHash;
+                    cmd.Parameters.Add("@RoleName", SqlDbType.NVarChar, 100).Value = "RootAdmin";
 
                     con.Open();
                     cmd.ExecuteNonQuery();
                 }
 
-                // 🎉 Success with SweetAlert and redirect
-                string script = @"
-            Swal.fire({
-                icon: 'success',
-                title: 'SuperAdmin Created!',
-                text: 'You will be redirected to Login.',
-                confirmButtonText: 'OK'
-            }).then(function() {
-                window.location = 'Login.aspx';
-            });";
+                ShowSweetAlert("success", "Root Admin Created!", "You will be redirected to Login.", "Login.aspx");
 
-                ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlertSuccess", script, true);
+                ClearForm();
+                DisableForm();
             }
             catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
             {
@@ -76,33 +76,85 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
-                ShowSweetAlert("error", "Error", "Error creating SuperAdmin: " + ex.Message);
+                ShowSweetAlert("error", "Error", "Error creating RootAdmin: " + ex.Message);
             }
         }
 
-        private void ShowSweetAlert(string icon, string title, string text)
+        private void ClearForm()
         {
-            string script = $@"
-        Swal.fire({{
-            icon: '{icon}',
-            title: '{title}',
-            text: '{text}'
-        }});";
-            ScriptManager.RegisterStartupScript(this, GetType(), Guid.NewGuid().ToString(), script, true);
+            txtEmail.Text = string.Empty;
+            txtPassword.Text = string.Empty;
+            txtConfirm.Text = string.Empty;
+
+            rfvEmail.IsValid = true;
+            revEmail.IsValid = true;
+            rfvPass.IsValid = true;
+            revPass.IsValid = true;
+            rfvConfirm.IsValid = true;
+            cmpPass.IsValid = true;
         }
 
+        private void ShowSweetAlert(string icon, string title, string text, string redirectUrl = null)
+        {
+            string script;
+            if (redirectUrl != null)
+            {
+                script = $@"
+                    Swal.fire({{
+                        icon: '{icon}',
+                        title: '{title}',
+                        text: '{text}',
+                        confirmButtonText: 'OK'
+                    }}).then(function() {{
+                        window.location = '{redirectUrl}';
+                    }});";
+            }
+            else
+            {
+                script = $@"
+                    Swal.fire({{
+                        icon: '{icon}',
+                        title: '{title}',
+                        text: '{text}'
+                    }});";
+            }
+            ScriptManager.RegisterStartupScript(this, GetType(), Guid.NewGuid().ToString(), script, true);
+        }
 
         private bool EmailExists(string email)
         {
             const string sql = "SELECT TOP 1 1 FROM dbo.Users WHERE Email = @e;";
-            using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(sql, con))
+            using (SqlConnection con = new SqlConnection(cs))
+            using (SqlCommand cmd = new SqlCommand(sql, con))
             {
                 cmd.Parameters.AddWithValue("@e", email);
                 con.Open();
-                var o = cmd.ExecuteScalar();
-                return o != null;
+                return cmd.ExecuteScalar() != null;
             }
+        }
+
+        private bool RootAdminExists()
+        {
+            const string sql = @"
+                SELECT TOP 1 1 
+                FROM dbo.Users U
+                INNER JOIN dbo.Roles R ON U.RoleID = R.RoleID
+                WHERE R.RoleName = 'RootAdmin';";
+
+            using (SqlConnection con = new SqlConnection(cs))
+            using (SqlCommand cmd = new SqlCommand(sql, con))
+            {
+                con.Open();
+                return cmd.ExecuteScalar() != null;
+            }
+        }
+
+        private void DisableForm()
+        {
+            txtEmail.Enabled = false;
+            txtPassword.Enabled = false;
+            txtConfirm.Enabled = false;
+            btnCreate.Enabled = false;
         }
     }
 }

@@ -60,7 +60,7 @@
         </style>
 
         <div class="profile-container">
-            <h2>SuperAdmin Profile</h2>
+            <h2>System Admin Profile</h2>
 
             <asp:Label ID="lblMessage" runat="server" CssClass="alert"></asp:Label>
 
@@ -69,10 +69,11 @@
                 <asp:TextBox ID="txtName" runat="server" CssClass="form-control" />
             </div>
 
-            <div class="form-group">
-                <label for="txtEmail">Email</label>
-                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" />
-            </div>
+         <div class="form-group">
+    <label for="txtEmail">Email</label>
+    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" ReadOnly="true" />
+</div>
+
 
             <div class="form-group">
                 <label for="txtNewPassword">New Password (optional)</label>

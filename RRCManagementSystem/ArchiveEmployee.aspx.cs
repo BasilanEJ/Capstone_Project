@@ -7,7 +7,7 @@ using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
-    public partial class ArchiveEmployee : System.Web.UI.Page
+    public partial class ArchiveEmployee : Page
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
@@ -22,16 +22,19 @@ namespace RRCManagementSystem
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
 
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
                 LoadArchivedEmployees();
 
                 if (Request.QueryString["archived"] == "1")
                 {
-                    ClientScript.RegisterStartupScript(this.GetType(), "archivedOk", @"
-                        Swal.fire({ icon:'success', title:'Archived!',
-                                    text:'Employee has been archived successfully.',
-                                    showConfirmButton:false, timer:1500 });", true);
+                    Toast("success", "Archived!", "Employee has been archived successfully.", 1500);
                 }
             }
         }
@@ -56,12 +59,26 @@ namespace RRCManagementSystem
             if (!int.TryParse(e.CommandArgument?.ToString(), out int employeeID))
                 return;
 
+            int userId = Convert.ToInt32(Session["UserID"]);
+
             if (e.CommandName == "Restore")
             {
+                if (!HasEditPermission(userId, "ManageEmployees"))
+                {
+                    Toast("error", "Access Denied", "You do not have permission to restore employees.", 0);
+                    return;
+                }
+
                 RestoreEmployee(employeeID);
             }
             else if (e.CommandName == "DeleteEmp")
             {
+                if (!HasDeletePermission(userId, "ManageEmployees"))
+                {
+                    Toast("error", "Access Denied", "You do not have permission to delete employees.", 0);
+                    return;
+                }
+
                 TryHardDelete(employeeID);
             }
         }
@@ -74,6 +91,14 @@ namespace RRCManagementSystem
                 return;
 
             int employeeID = Convert.ToInt32(gvArchivedEmployees.DataKeys[e.RowIndex].Value);
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            if (!HasDeletePermission(userId, "ManageEmployees"))
+            {
+                Toast("error", "Access Denied", "You do not have permission to delete employees.", 0);
+                return;
+            }
+
             TryHardDelete(employeeID);
         }
 
@@ -127,6 +152,45 @@ namespace RRCManagementSystem
             }
         }
 
+        // Permission checks
+        private bool HasEditPermission(int adminId, string moduleName)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_CanEdit", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && Convert.ToBoolean(result);
+                }
+            }
+            catch
+            {
+                return false; // deny by default if SP missing
+            }
+        }
+
+        private bool HasDeletePermission(int adminId, string moduleName)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdminPermission_CanDelete", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                conn.Open();
+                object result = cmd.ExecuteScalar();
+                return result != null && Convert.ToBoolean(result);
+            }
+        }
+
+
         private void Toast(string icon, string title, string text, int timerMs = 2000)
         {
             string extra = timerMs > 0 ? $"showConfirmButton:false, timer:{timerMs}" : "showConfirmButton:true";
@@ -141,18 +205,31 @@ namespace RRCManagementSystem
 
         protected override void Render(HtmlTextWriter writer)
         {
+            int userId = Convert.ToInt32(Session["UserID"]);
+
             foreach (GridViewRow row in gvArchivedEmployees.Rows)
             {
                 if (row.RowType == DataControlRowType.DataRow)
                 {
                     string employeeId = gvArchivedEmployees.DataKeys[row.RowIndex].Value.ToString();
 
+                    LinkButton btnRestore = (LinkButton)row.FindControl("btnRestore");
+                    LinkButton btnDelete = (LinkButton)row.FindControl("btnDelete");
+
+                    if (btnRestore != null)
+                        btnRestore.Enabled = HasEditPermission(userId, "ManageEmployees");
+
+                    if (btnDelete != null)
+                        btnDelete.Enabled = HasEditPermission(userId, "ManageEmployees");
+
+                    // Required for event validation
                     ClientScript.RegisterForEventValidation(gvArchivedEmployees.UniqueID, "Restore$" + employeeId);
                     ClientScript.RegisterForEventValidation(gvArchivedEmployees.UniqueID, "DeleteEmp$" + employeeId);
-                    ClientScript.RegisterForEventValidation(gvArchivedEmployees.UniqueID, "Delete$" + employeeId);
                 }
             }
+
             base.Render(writer);
         }
+
     }
 }

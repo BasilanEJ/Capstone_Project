@@ -7,13 +7,12 @@ using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
-    public partial class ArchivedClients : System.Web.UI.Page
+    public partial class ArchivedClients : Page
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -22,12 +21,16 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Block SuperAdmin and Inspector (kept as in your code)
-            if (role == "SuperAdmin" || role == "Inspector")
+            if (role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+            ViewState["CanEditClients"] = HasEditPermission(userId, "ManageClient");
+            ViewState["CanDeleteClients"] = HasDeletePermission(userId, "ManageClient");
 
             if (!IsPostBack)
             {
@@ -42,13 +45,11 @@ namespace RRCManagementSystem
             using (var da = new SqlDataAdapter(cmd))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-
                 var dt = new DataTable();
                 da.Fill(dt);
 
                 gvArchivedClients.DataSource = dt;
                 gvArchivedClients.DataBind();
-
             }
         }
 
@@ -58,32 +59,37 @@ namespace RRCManagementSystem
             LoadArchivedClients();
         }
 
-        protected void gvArchivedClients_RowCommand(object sender, GridViewCommandEventArgs e)
-        {
-            int clientId = Convert.ToInt32(e.CommandArgument);
-
-            if (e.CommandName == "RestoreClient")
-            {
-                UpdateClientStatus(clientId, "Approved", "✅ Client restored successfully.");
-            }
-            else if (e.CommandName == "DeleteClient")
-            {
-                DeleteClient(clientId);
-            }
-        }
-
+        #region Hidden Button Click Handlers
         protected void btnRestoreHidden_Click(object sender, EventArgs e)
         {
-            int clientId = Convert.ToInt32(hfClientID.Value);
+            if (!int.TryParse(hfClientID.Value, out int clientId)) return;
+
+            bool canEdit = ViewState["CanEditClients"] != null && (bool)ViewState["CanEditClients"];
+            if (!canEdit)
+            {
+                ShowSweetAlert("No Permission", "You do not have permission to restore clients.", "warning");
+                return;
+            }
+
             UpdateClientStatus(clientId, "Approved", "✅ Client restored successfully.");
         }
 
         protected void btnDeleteHidden_Click(object sender, EventArgs e)
         {
-            int clientId = Convert.ToInt32(hfClientID.Value);
+            if (!int.TryParse(hfClientID.Value, out int clientId)) return;
+
+            bool canDelete = ViewState["CanDeleteClients"] != null && (bool)ViewState["CanDeleteClients"];
+            if (!canDelete)
+            {
+                ShowSweetAlert("No Permission", "You do not have permission to delete clients.", "warning");
+                return;
+            }
+
             DeleteClient(clientId);
         }
+        #endregion
 
+        #region Client Actions
         private void UpdateClientStatus(int clientId, string newStatus, string successMessage)
         {
             using (var conn = new SqlConnection(connectionString))
@@ -120,7 +126,59 @@ namespace RRCManagementSystem
                                rows > 0 ? "success" : "warning");
             }
         }
+        #endregion
 
+        #region Permissions
+        private bool HasEditPermission(int userId, string moduleName)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_CanEdit", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && Convert.ToInt32(result) == 1;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        protected void gvArchivedClients_RowCommand(object sender, GridViewCommandEventArgs e)
+        {
+            // We are using hidden buttons for actual actions, so this can stay empty
+        }
+
+        private bool HasDeletePermission(int userId, string moduleName)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_CanDelete", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && Convert.ToInt32(result) == 1;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        #endregion
+
+        #region SweetAlert
         private void ShowSweetAlert(string title, string message, string icon)
         {
             string script = $@"
@@ -129,10 +187,11 @@ Swal.fire({{
     title: '{title}',
     text: '{message.Replace("'", "\\'")}',
     icon: '{icon}',
-    confirmButtonColor: '#3085d6'
+    confirmButtonColor: '#007bff'
 }});
 </script>";
             ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert" + Guid.NewGuid(), script, false);
         }
+        #endregion
     }
 }

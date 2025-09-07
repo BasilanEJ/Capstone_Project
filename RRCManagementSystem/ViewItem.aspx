@@ -250,27 +250,30 @@
 
 <asp:TemplateField HeaderText="Actions">
     <ItemTemplate>
-        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
-            <!-- Edit -->
-            <button type="button"
-                    class="btn-action btn-edit"
-                    onclick='confirmEdit("<%# EncodeID(Eval("ItemID").ToString()) %>")'>
-                EDIT
-            </button>
+        <div id="ActionsDiv" runat="server" style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+            <div id="btnEditWrapper" runat="server">
+                <button type="button"
+                        class="btn-action btn-edit"
+                        onclick='confirmEdit("<%# EncodeID(Eval("ItemID").ToString()) %>")'>
+                    EDIT
+                </button>
+            </div>
 
-            <!-- Add Stocks -->
-            <button type="button"
-                    class="btn-action btn-add"
-                    onclick='confirmAddStocks("<%# EncodeID(Eval("ItemID").ToString()) %>")'>
-                ADD STOCKS
-            </button>
+            <div id="btnAddWrapper" runat="server">
+                <button type="button"
+                        class="btn-action btn-add"
+                        onclick='confirmAddStocks("<%# EncodeID(Eval("ItemID").ToString()) %>")'>
+                    ADD STOCKS
+                </button>
+            </div>
 
-            <!-- Delete Stocks -->
-            <button type="button"
-                    class="btn-action btn-delete"
-                    onclick='confirmDeleteStock("<%# Eval("ItemID") %>")'>
-                DELETE ITEM
-            </button>
+            <div id="btnDeleteWrapper" runat="server">
+                <button type="button"
+                        class="btn-action btn-delete"
+                        onclick='confirmDeleteStock("<%# Eval("ItemID") %>")'>
+                    DELETE ITEM
+                </button>
+            </div>
         </div>
     </ItemTemplate>
 </asp:TemplateField>

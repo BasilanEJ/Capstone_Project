@@ -99,10 +99,53 @@ namespace RRCManagementSystem
             }
         }
 
+        protected void gvEmployees_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                int userId = Convert.ToInt32(Session["UserID"]);
+                bool canEdit = HasEditPermission(userId, "ManageEmployees");
+
+                // Find the Archive button
+                LinkButton btnArchive = (LinkButton)e.Row.FindControl("btnArchive");
+                LinkButton btnEdit = (LinkButton)e.Row.FindControl("btnEdit");
+
+                if (btnArchive != null)
+                    btnArchive.Enabled = canEdit; // disable if no edit permission
+
+                if (btnEdit != null)
+                    btnEdit.Enabled = canEdit; // same for edit
+            }
+        }
+
+        private bool HasEditPermission(int adminId, string moduleName)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAdminPermission_CanEdit", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                conn.Open();
+                object result = cmd.ExecuteScalar();
+                return result != null && Convert.ToBoolean(result);
+            }
+        }
+
+
         protected void btnHiddenArchive_Click(object sender, EventArgs e)
         {
             if (!int.TryParse(hfEmployeeToArchive.Value, out int id))
                 return;
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+            if (!HasEditPermission(userId, "ManageEmployees"))
+            {
+                ClientScript.RegisterStartupScript(this.GetType(), "noPerm",
+                    "Swal.fire({icon:'error',title:'Access Denied',text:'You do not have permission to archive employees.'});", true);
+                return;
+            }
 
             try
             {
@@ -118,13 +161,11 @@ namespace RRCManagementSystem
 
                     if (rows > 0)
                     {
-                        // go to archive list
                         Response.Redirect("ArchiveEmployee.aspx?archived=1", false);
                         Context.ApplicationInstance.CompleteRequest();
                         return;
                     }
 
-                    // not found or already inactive
                     ClientScript.RegisterStartupScript(this.GetType(), "archiveWarn",
                         "Swal.fire({icon:'warning',title:'Not Found',text:'Employee not found or already inactive.'});", true);
                 }
@@ -150,5 +191,6 @@ Swal.fire({
                 ClientScript.RegisterStartupScript(this.GetType(), "archiveError", err, true);
             }
         }
+
     }
 }

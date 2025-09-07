@@ -20,14 +20,20 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string role = Session["Role"].ToString();
+            var role = Session["Role"].ToString();
 
-            // 🔐 Block SuperAdmin and Inspector (kept, as before)
-            if (role == "SuperAdmin" || role == "Inspector")
+            // 🔐 Block SuperAdmin and Inspector
+            if (role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
+
+            // ✅ Check CanEdit permission for ManageClient
+            int userId = Convert.ToInt32(Session["UserID"]);
+            bool canEdit = HasEditPermission(userId, "ManageClient");
+            ViewState["CanEditClients"] = canEdit;
 
             if (!IsPostBack)
             {
@@ -35,40 +41,94 @@ namespace RRCManagementSystem
             }
         }
 
-        private void LoadApprovedClients()
+        #region Permissions
+        private bool HasEditPermission(int userId, string moduleName)
         {
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.spClients_ListApproved", conn))
-            using (var da = new SqlDataAdapter(cmd))
+            try
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-
-                var dt = new DataTable();
-                da.Fill(dt);
-
-                gvClients.DataSource = dt;
-                gvClients.DataBind();
-
-                // Optional: show a hint if nothing returned
-                if (dt.Rows.Count == 0)
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_CanEdit", con))
                 {
-                    // You can replace with a label on the page if you prefer
-                    // lblEmpty.Text = "No approved clients found.";
-                    System.Diagnostics.Debug.WriteLine("No approved clients found.");
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                    con.Open();
+                    object result = cmd.ExecuteScalar();
+
+                    // SP returns 1 for CanEdit, 0 otherwise
+                    return result != null && result != DBNull.Value && Convert.ToInt32(result) == 1;
                 }
             }
+            catch
+            {
+                return false;
+            }
         }
+        #endregion
 
+        #region Load Clients
+        private void LoadApprovedClients()
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spClients_ListApproved", conn))
+                using (var da = new SqlDataAdapter(cmd))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
 
+                    var dt = new DataTable();
+                    da.Fill(dt);
+
+                    gvClients.DataSource = dt;
+                    gvClients.DataBind();
+
+                    if (dt.Rows.Count == 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine("No approved clients found.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowSweetAlert("Error", "Failed to load clients. " + ex.Message, "error");
+            }
+        }
+        #endregion
+
+        #region GridView Events
         protected void gvClients_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
             gvClients.PageIndex = e.NewPageIndex;
             LoadApprovedClients();
         }
 
+        protected void gvClients_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+            bool canEdit = ViewState["CanEditClients"] != null && (bool)ViewState["CanEditClients"];
+
+            var btnArchive = e.Row.FindControl("btnArchive") as Button;
+            if (btnArchive != null)
+            {
+                btnArchive.Enabled = canEdit;
+                if (!canEdit)
+                {
+                    btnArchive.ToolTip = "You do not have permission to archive clients.";
+                    btnArchive.CssClass += " disabled"; // optional Bootstrap styling
+                }
+            }
+        }
+
         protected void gvClients_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            int clientId = Convert.ToInt32(e.CommandArgument);
+            if (!int.TryParse(e.CommandArgument.ToString(), out int clientId))
+            {
+                ShowSweetAlert("Error", "Invalid Client ID.", "error");
+                return;
+            }
 
             if (e.CommandName == "ViewProfile")
             {
@@ -76,10 +136,19 @@ namespace RRCManagementSystem
             }
             else if (e.CommandName == "ArchiveClient")
             {
+                bool canEdit = ViewState["CanEditClients"] != null && (bool)ViewState["CanEditClients"];
+                if (!canEdit)
+                {
+                    ShowSweetAlert("No Permission", "You do not have permission to archive clients.", "warning");
+                    return;
+                }
+
                 ArchiveClient(clientId);
             }
         }
+        #endregion
 
+        #region Archive Client
         private void ArchiveClient(int clientId)
         {
             using (var conn = new SqlConnection(connectionString))
@@ -105,7 +174,9 @@ namespace RRCManagementSystem
                 }
             }
         }
+        #endregion
 
+        #region SweetAlert Helper
         private void ShowSweetAlert(string title, string message, string icon)
         {
             string script = $@"
@@ -115,9 +186,10 @@ namespace RRCManagementSystem
         text: '{message.Replace("'", "\\'")}',
         icon: '{icon}',
         confirmButtonColor: '#007bff'
-    }});
+    }}); 
 </script>";
             ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert" + Guid.NewGuid(), script, false);
         }
+        #endregion
     }
 }

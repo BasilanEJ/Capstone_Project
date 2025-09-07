@@ -11,8 +11,26 @@ namespace RRCManagementSystem
 {
 
 
-    public partial class SystemSettings
+    public partial class ArchivedSuperUser
     {
+
+        /// <summary>
+        /// txtSearch control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtSearch;
+
+        /// <summary>
+        /// btnSearch control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnSearch;
 
         /// <summary>
         /// lblMessage control.
@@ -24,12 +42,12 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblMessage;
 
         /// <summary>
-        /// btnToggle control.
+        /// gvArchivedUsers control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnToggle;
+        protected global::System.Web.UI.WebControls.GridView gvArchivedUsers;
     }
 }

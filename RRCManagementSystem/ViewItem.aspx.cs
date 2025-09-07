@@ -11,9 +11,13 @@ namespace RRCManagementSystem
         private readonly string connectionString =
             System.Configuration.ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
+        // Permission flags
+        private bool canAdd = false;
+        private bool canEdit = false;
+        private bool canDelete = false;
+
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -22,7 +26,7 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Block SuperAdmin and Inspector
+            // Restrict SuperAdmin or Inspector from accessing this page
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -31,12 +35,17 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 Check CanView permission for ManageItem via SP
-            if (!HasViewPermission(userId, "ManageItem"))
+            // ✅ Check CanView permission
+            if (!HasPermission(userId, "ManageItem", "CanView"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
             }
+
+            // ✅ Load permissions for actions
+            canAdd = HasPermission(userId, "ManageItem", "CanAdd");
+            canEdit = HasPermission(userId, "ManageItem", "CanEdit");
+            canDelete = HasPermission(userId, "ManageItem", "CanDelete");
 
             if (!IsPostBack)
             {
@@ -45,7 +54,7 @@ namespace RRCManagementSystem
             }
         }
 
-        private bool HasViewPermission(int adminId, string moduleName)
+        private bool HasPermission(int adminId, string moduleName, string permission)
         {
             try
             {
@@ -55,7 +64,7 @@ namespace RRCManagementSystem
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@UserID", adminId);
                     cmd.Parameters.AddWithValue("@ModuleName", moduleName);
-                    cmd.Parameters.AddWithValue("@Permission", "CanView");
+                    cmd.Parameters.AddWithValue("@Permission", permission);
 
                     conn.Open();
                     object result = cmd.ExecuteScalar();
@@ -77,7 +86,6 @@ namespace RRCManagementSystem
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
-                    // Convert "All" -> NULL so SP returns all types
                     if (string.Equals(typeFilter, "All", StringComparison.OrdinalIgnoreCase))
                         cmd.Parameters.AddWithValue("@Type", DBNull.Value);
                     else
@@ -93,7 +101,7 @@ namespace RRCManagementSystem
 
                         lblMessage.Text = dt.Rows.Count == 0 ? "⚠ No items found." : "";
 
-                        // 🔔 Restocking Alert Logic (from SP’s RestockMessage)
+                        // ✅ Restock alert logic
                         string restockMsg = "";
                         foreach (DataRow row in dt.Rows)
                         {
@@ -137,6 +145,12 @@ namespace RRCManagementSystem
         {
             if (e.CommandName == "EditItem")
             {
+                if (!canEdit)
+                {
+                    lblMessage.Text = "❌ You do not have permission to edit items.";
+                    return;
+                }
+
                 int itemId = Convert.ToInt32(e.CommandArgument);
                 string encodedId = EncodeID(itemId.ToString());
                 Response.Redirect($"EditItem.aspx?ItemID={encodedId}");
@@ -155,15 +169,53 @@ namespace RRCManagementSystem
                     if (quantity > 10)
                         lblQuantity.ForeColor = System.Drawing.Color.Black;
                     else if (quantity > 5 && quantity <= 10)
-                        lblQuantity.ForeColor = System.Drawing.Color.Goldenrod; // Yellow
+                        lblQuantity.ForeColor = System.Drawing.Color.Goldenrod;
                     else
                         lblQuantity.ForeColor = System.Drawing.Color.Red;
+                }
+
+                var btnEditWrapper = e.Row.FindControl("btnEditWrapper") as System.Web.UI.HtmlControls.HtmlGenericControl;
+                var btnAddWrapper = e.Row.FindControl("btnAddWrapper") as System.Web.UI.HtmlControls.HtmlGenericControl;
+                var btnDeleteWrapper = e.Row.FindControl("btnDeleteWrapper") as System.Web.UI.HtmlControls.HtmlGenericControl;
+
+                // ✅ Apply styles and tooltips if user has no permission
+                if (!canEdit && btnEditWrapper != null)
+                {
+                    btnEditWrapper.Attributes["style"] += "opacity:0.5; pointer-events:none;";
+                    btnEditWrapper.Attributes["title"] = "You do not have permission to edit.";
+                }
+                if (!canAdd && btnAddWrapper != null)
+                {
+                    btnAddWrapper.Attributes["style"] += "opacity:0.5; pointer-events:none;";
+                    btnAddWrapper.Attributes["title"] = "You do not have permission to add stocks.";
+                }
+                if (!canDelete && btnDeleteWrapper != null)
+                {
+                    btnDeleteWrapper.Attributes["style"] += "opacity:0.5; pointer-events:none;";
+                    btnDeleteWrapper.Attributes["title"] = "You do not have permission to delete.";
                 }
             }
         }
 
+        protected void btnAddStock_Click(object sender, EventArgs e)
+        {
+            if (!canAdd)
+            {
+                lblMessage.Text = "❌ You do not have permission to add stocks.";
+                return;
+            }
+
+            // ✅ Your add stock logic here
+        }
+
         protected void btnDeleteHidden_Click(object sender, EventArgs e)
         {
+            if (!canDelete)
+            {
+                lblMessage.Text = "❌ You do not have permission to delete items.";
+                return;
+            }
+
             if (int.TryParse(hiddenItemId.Value, out int itemId))
             {
                 try
@@ -171,7 +223,7 @@ namespace RRCManagementSystem
                     using (var con = new SqlConnection(connectionString))
                     using (var cmd = new SqlCommand("dbo.spInventory_Delete", con))
                     {
-                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@ItemID", itemId);
 
                         con.Open();
@@ -202,7 +254,6 @@ namespace RRCManagementSystem
             }
         }
 
-        // ✅ Encoding the ItemID to hide the real database ID
         public static string EncodeID(string id)
         {
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(id);

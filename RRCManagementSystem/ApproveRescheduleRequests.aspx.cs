@@ -14,14 +14,12 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
-            // ✅ Allow only SuperAdmin/Admin (adjust if Inspectors should also access)
             var role = Session["Role"].ToString();
             if (!role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) &&
                 !role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
@@ -30,9 +28,44 @@ namespace RRCManagementSystem
                 return;
             }
 
+            int userId = Convert.ToInt32(Session["UserID"]);
+            if (!HasEditPermission(userId, "ManageBooking"))
+            {
+                lblMessage.Text = "❌ You do not have permission to approve or reject reschedule requests.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                gvRescheduleRequests.Visible = false;
+                btnApply.Visible = false;
+                btnClear.Visible = false;
+                return;
+            }
+
             if (!IsPostBack)
             {
                 LoadRescheduleRequests();
+            }
+        }
+
+
+        private bool HasEditPermission(int adminId, string moduleName)
+        {
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_Check", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = adminId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+                    cmd.Parameters.Add("@Permission", SqlDbType.NVarChar, 10).Value = "CanEdit";
+
+                    con.Open();
+                    object allowed = cmd.ExecuteScalar();
+                    return allowed != null && allowed != DBNull.Value && Convert.ToBoolean(allowed);
+                }
+            }
+            catch
+            {
+                return false; // deny by default
             }
         }
 
