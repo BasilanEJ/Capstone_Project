@@ -203,6 +203,41 @@
                     <asp:TextBox ID="txtDescription" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" MaxLength="500" />
                 </div>
 
+                <div class="form-group">
+    <label>Pricing by SQM Range *</label>
+    <div class="row">
+        <div class="col-md-6 mb-2">
+            <label>0 - 100 SQM</label>
+            <asp:TextBox ID="txtPrice_0_100" runat="server" CssClass="form-control" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>101 - 250 SQM</label>
+            <asp:TextBox ID="txtPrice_101_250" runat="server" CssClass="form-control" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>251 - 400 SQM</label>
+            <asp:TextBox ID="txtPrice_251_400" runat="server" CssClass="form-control" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>401 - 600 SQM</label>
+            <asp:TextBox ID="txtPrice_401_600" runat="server" CssClass="form-control" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>601 - 800 SQM</label>
+            <asp:TextBox ID="txtPrice_601_800" runat="server" CssClass="form-control" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>801 - 1000 SQM</label>
+            <asp:TextBox ID="txtPrice_801_1000" runat="server" CssClass="form-control" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>1000+ SQM</label>
+            <asp:TextBox ID="txtPrice_1000_Plus" runat="server" CssClass="form-control" />
+        </div>
+    </div>
+</div>
+
+
 
                 <div class="form-group text-end mt-4">
                     <asp:Button ID="Button1" runat="server" Text="➕ Add Service"

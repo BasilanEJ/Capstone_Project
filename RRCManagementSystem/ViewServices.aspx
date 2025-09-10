@@ -12,43 +12,53 @@
     .action-btn:hover { text-decoration:underline; }
   </style>
 
-  <asp:GridView ID="gvServices" runat="server"
-      AutoGenerateColumns="False"
-      CssClass="table"
-      DataKeyNames="ServiceID"
-      OnRowCommand="gvServices_RowCommand"
-      OnRowDataBound="gvServices_RowDataBound"
-      EmptyDataText="No services found.">
+ <asp:GridView ID="gvServices" runat="server"
+    AutoGenerateColumns="False"
+    CssClass="table"
+    DataKeyNames="ServiceID"
+    OnRowCommand="gvServices_RowCommand"
+    OnRowDataBound="gvServices_RowDataBound"
+    EmptyDataText="No services found.">
 
     <Columns>
-      <asp:BoundField DataField="ServiceID" HeaderText="Service ID" ReadOnly="True" />
-      <asp:BoundField DataField="Name" HeaderText="Service Name" />
-      <asp:BoundField DataField="Description" HeaderText="Description" />
-      <asp:BoundField DataField="ServiceType" HeaderText="Service Type" />
-  
+        <asp:BoundField DataField="ServiceID" HeaderText="Service ID" ReadOnly="True"  Visible="False" />
+        <asp:BoundField DataField="Name" HeaderText="Service Name" />
+        <asp:BoundField DataField="Description" HeaderText="Description" />
+        <asp:BoundField DataField="ServiceType" HeaderText="Service Type" />
 
-      <asp:TemplateField HeaderText="Actions">
-        <ItemTemplate>
-          <asp:LinkButton ID="btnEdit" runat="server"
-              CommandName="EditService"
-              CommandArgument='<%# Eval("ServiceID") %>'
-              CssClass="action-btn" Text="Edit" />
+      
+     <asp:TemplateField HeaderText="Service Price">
+    <ItemTemplate>
+        <asp:LinkButton ID="btnViewPrice" runat="server"
+            CommandName="ViewPrice"
+            CommandArgument='<%# Eval("ServiceID") %>'
+            CssClass="action-btn" Text="View Price" />
+    </ItemTemplate>
+</asp:TemplateField>
 
-          &nbsp;|&nbsp;
 
-    
-          <asp:LinkButton ID="btnDelete" runat="server"
-              CommandName="DisableService"
-              CommandArgument='<%# Eval("ServiceID") %>'
-              CssClass="action-btn"
-              CausesValidation="false"
-              UseSubmitBehavior="false"
-              OnClientClick="return confirmDelete(this, event);"
-              Text="Delete" />
-        </ItemTemplate>
-      </asp:TemplateField>
+        <asp:TemplateField HeaderText="Actions">
+            <ItemTemplate>
+                <asp:LinkButton ID="btnEdit" runat="server"
+                    CommandName="EditService"
+                    CommandArgument='<%# Eval("ServiceID") %>'
+                    CssClass="action-btn" Text="Edit" />
+
+                &nbsp;|&nbsp;
+
+                <asp:LinkButton ID="btnDelete" runat="server"
+                    CommandName="DisableService"
+                    CommandArgument='<%# Eval("ServiceID") %>'
+                    CssClass="action-btn"
+                    CausesValidation="false"
+                    UseSubmitBehavior="false"
+                    OnClientClick="return confirmDelete(this, event);"
+                    Text="Delete" />
+            </ItemTemplate>
+        </asp:TemplateField>
     </Columns>
-  </asp:GridView>
+</asp:GridView>
+
 
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

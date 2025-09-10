@@ -36,7 +36,7 @@ namespace RRCManagementSystem
         {
             var dt = GetCompletedData();
 
-            // Apply client-side sort based on ViewState
+            // Apply sorting based on ViewState
             string sortExp = (ViewState["SortExpression"] as string) ?? "ScheduledDate";
             string sortDir = (ViewState["SortDirection"] as string) ?? "DESC";
 
@@ -47,13 +47,13 @@ namespace RRCManagementSystem
                 dt = dv.ToTable();
             }
 
-            lblCount.Text = dt.Rows.Count == 0 ? "" : $"{dt.Rows.Count} item(s)";
+            //lblCount.Text = dt.Rows.Count == 0 ? "" : $"{dt.Rows.Count} item(s)";
             pnlEmpty.Visible = dt.Rows.Count == 0;
 
             gvCompleted.DataSource = dt;
             gvCompleted.DataBind();
 
-            // Keep a copy (optional)
+            // Save to ViewState if needed
             ViewState["CurrentData"] = dt;
         }
 
@@ -65,6 +65,32 @@ namespace RRCManagementSystem
                 da.SelectCommand.CommandType = CommandType.StoredProcedure;
                 var dt = new DataTable();
                 da.Fill(dt);
+
+                // ✅ Add a new column to check if email exists
+                dt.Columns.Add("HasAccount", typeof(bool));
+
+                using (var checkConn = new SqlConnection(_cs))
+                {
+                    checkConn.Open();
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        string email = row["Email"].ToString();
+                        if (!string.IsNullOrWhiteSpace(email))
+                        {
+                            using (var cmd = new SqlCommand("SELECT COUNT(1) FROM Clients WHERE Email = @Email", checkConn))
+                            {
+                                cmd.Parameters.AddWithValue("@Email", email);
+                                int count = (int)cmd.ExecuteScalar();
+                                row["HasAccount"] = count > 0; // true if email exists
+                            }
+                        }
+                        else
+                        {
+                            row["HasAccount"] = false; // default
+                        }
+                    }
+                }
+
                 return dt;
             }
         }

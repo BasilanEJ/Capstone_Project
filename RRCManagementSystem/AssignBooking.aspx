@@ -8,11 +8,16 @@
         <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
             <div class="container py-4">
                 <div class="card shadow mb-4">
-                    <div class="card-header bg-primary text-white fw-bold">
-                        <i class="fas fa-tasks me-2"></i> Assign Team, Equipment, Chemicals & Safety Gear
-                    </div>
+                   <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
+            <span>Booking Code</span>
+            <span class="badge bg-light text-dark">
+                <asp:Label ID="lblBookingCode" runat="server" CssClass="ms-2 fw-bold" />
+            </span>
+        </div>
                     <div class="card-body">
-
+                         <h5 class="text-primary mb-3">
+            <i class="fas fa-tasks me-2"></i> Assign Team, Equipment, Chemicals & Safety Gear
+        </h5>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Select Team</label>
                             <asp:DropDownList ID="ddlTeams" runat="server" CssClass="form-select" />

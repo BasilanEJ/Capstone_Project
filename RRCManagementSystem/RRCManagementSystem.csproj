@@ -289,6 +289,7 @@
     <Content Include="ViewQuotation.aspx" />
     <Content Include="ViewRole.aspx" />
     <Content Include="ViewSales.aspx" />
+    <Content Include="ViewServicePricing.aspx" />
     <Content Include="ViewServices.aspx" />
     <Content Include="ViewSupplier.aspx" />
     <Content Include="ViewSwitcher.ascx" />
@@ -1095,6 +1096,13 @@
     </Compile>
     <Compile Include="ViewSales.aspx.designer.cs">
       <DependentUpon>ViewSales.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ViewServicePricing.aspx.cs">
+      <DependentUpon>ViewServicePricing.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ViewServicePricing.aspx.designer.cs">
+      <DependentUpon>ViewServicePricing.aspx</DependentUpon>
     </Compile>
     <Compile Include="ViewServices.aspx.cs">
       <DependentUpon>ViewServices.aspx</DependentUpon>

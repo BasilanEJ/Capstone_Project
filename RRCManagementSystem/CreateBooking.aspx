@@ -63,7 +63,7 @@
 
         <asp:Label ID="lblMessage" runat="server" CssClass="text-center d-block fw-semibold text-danger mb-3" />
 
-        <!-- Search Client -->
+
         <div class="mb-3">
           <label for="<%= txtClientSearch.ClientID %>" class="form-label">Search Client</label>
           <asp:TextBox ID="txtClientSearch" runat="server" CssClass="form-control" placeholder="Type name or email..." />
@@ -81,7 +81,7 @@
           <asp:HiddenField ID="hfClientID" runat="server" />
         </div>
 
-        <!-- 🧾 Inquiry background (auto-fills after selecting a client) -->
+
         <div id="inquiryBackground" class="mb-4 p-3 border rounded bg-light" style="display:none;">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h5 class="fw-bold mb-0">Inquiry Background</h5>
@@ -100,44 +100,37 @@
           </div>
         </div>
 
-        <!-- Services -->
+       <div class="mb-3">
+    <label class="form-label">Select Service</label>
+  <asp:DropDownList ID="ddlServices" runat="server" CssClass="form-select"
+    AutoPostBack="true" OnSelectedIndexChanged="ddlServices_SelectedIndexChanged">
+</asp:DropDownList>
+
+</div>
+
+     
         <div class="mb-3">
-          <label class="form-label">Select Services</label>
+    <label class="form-label">Square Meters (SQM)</label>
+    <asp:TextBox ID="txtSQM" runat="server" CssClass="form-control" TextMode="Number" 
+                 AutoPostBack="true" OnTextChanged="RecalculateTotal" />
+</div>
 
-          <!-- Termite Control -->
-          <div class="mb-4 p-3 border rounded bg-light">
-            <h5 class="fw-bold text-primary mb-3">🪲 Termite Control</h5>
-            <asp:CheckBoxList
-              ID="cblTermite" runat="server"
-              RepeatLayout="Table" CssClass="form-check-list"
-              DataTextField="Name" DataValueField="ServiceID">
-            </asp:CheckBoxList>
-          </div>
+          <div class="mb-3">
+    <label class="form-label">Travel Expense (₱)</label>
+    <asp:TextBox ID="txtTravelExpense" runat="server" CssClass="form-control" TextMode="Number"
+                 AutoPostBack="true" OnTextChanged="RecalculateTotal" />
+</div>
+          <div class="mb-3">
+    <label class="form-label">Miscellaneous (₱)</label>
+    <asp:TextBox ID="txtMiscellaneous" runat="server" CssClass="form-control" TextMode="Number"
+                 AutoPostBack="true" OnTextChanged="RecalculateTotal" />
+</div>
 
-          <!-- General Pest Control -->
-          <div class="p-3 border rounded bg-light">
-            <h5 class="fw-bold text-success mb-3">🐜 General Pest Control</h5>
-            <asp:CheckBoxList
-              ID="cblGeneral" runat="server"
-              RepeatLayout="Table" CssClass="form-check-list"
-              DataTextField="Name" DataValueField="ServiceID">
-            </asp:CheckBoxList>
-          </div>
-        </div>
 
-        <!-- SQM -->
-        <div class="mb-3">
-          <label for="<%= txtSQM.ClientID %>" class="form-label">Square Meters (SQM)</label>
-          <asp:TextBox ID="txtSQM" runat="server" CssClass="form-control" TextMode="Number" />
-          <div class="form-helper">Enter total area to be serviced.</div>
-        </div>
-
-        <!-- Total Price -->
-        <div class="mb-4">
-          <label for="<%= txtTotalPrice.ClientID %>" class="form-label">Total Quotation Price (₱)</label>
-          <asp:TextBox ID="txtTotalPrice" runat="server" CssClass="form-control" TextMode="Number" />
-          <div class="form-helper">Set the total price you discussed with the client.</div>
-        </div>
+       <div class="mb-4">
+    <label class="form-label">Total Price (₱)</label>
+    <asp:TextBox ID="txtTotalPrice" runat="server" CssClass="form-control" ReadOnly="true" />
+</div>
 
         <!-- Actions -->
         <div class="d-flex justify-content-center gap-12">
@@ -154,11 +147,11 @@
 
   <!-- Autocomplete selection handler -->
   <script type="text/javascript">
-    function setClientID(source, eventArgs) {
-      var clientName = eventArgs.get_text();
-      var clientID = eventArgs.get_value();
-      document.getElementById('<%= txtClientSearch.ClientID %>').value = clientName;
-      document.getElementById('<%= hfClientID.ClientID %>').value = clientID;
+      function setClientID(source, eventArgs) {
+          var clientName = eventArgs.get_text();
+          var clientID = eventArgs.get_value();
+          document.getElementById('<%= txtClientSearch.ClientID %>').value = clientName;
+          document.getElementById('<%= hfClientID.ClientID %>').value = clientID;
 
           // Fetch & render inquiry background (InquiryCode + Findings)
           try {
@@ -178,7 +171,7 @@
                       if (!res) {
                           code.textContent = "—";
                           empty.style.display = "";
-                          box.style.display = "";
+                          box.style.display = "block";
                           return;
                       }
 
@@ -197,7 +190,7 @@
                           empty.style.display = "";
                       }
 
-                      box.style.display = "";
+                      box.style.display = "block";
                   },
                   function () {
                       // On error, show empty panel
@@ -206,11 +199,12 @@
                       document.getElementById('ibFindings').innerHTML = "";
                       document.getElementById('ibEmpty').style.display = "";
                       document.getElementById('ibUpdated').textContent = "";
-                      box.style.display = "";
+                      box.style.display = "block";
                   });
           } catch (e) {
               // ignore
           }
       }
+
   </script>
 </asp:Content>

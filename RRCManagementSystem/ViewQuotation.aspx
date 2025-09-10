@@ -48,13 +48,19 @@
     OnPageIndexChanging="gvQuotations_PageIndexChanging">
 
     <Columns>
-     <asp:BoundField DataField="PendingQuotationID" HeaderText="Quote #" />
+     <asp:BoundField DataField="PendingQuotationID" HeaderText="Quote #"   Visible="False"/>
+        <asp:BoundField DataField="QuotationCode" HeaderText="Quotation Code" />
+
       <asp:BoundField DataField="CreatedAt" HeaderText="Created" DataFormatString="{0:yyyy-MM-dd HH:mm}" HtmlEncode="false" />
       <asp:BoundField DataField="ClientName" HeaderText="Client" />
       <asp:BoundField DataField="InspectorName" HeaderText="Inspector" />
       <asp:BoundField DataField="ServiceNames" HeaderText="Services" />
       <asp:BoundField DataField="SQM" HeaderText="SQM" />
-      <asp:BoundField DataField="Price" HeaderText="Price (₱)" DataFormatString="{0:N2}" HtmlEncode="false" />
+      <asp:BoundField DataField="BasePrice" HeaderText="Base Price (₱)" DataFormatString="{0:N2}" HtmlEncode="false" />
+      <asp:BoundField DataField="TravelExpense" HeaderText="Travel Expense (₱)" DataFormatString="{0:N2}" HtmlEncode="false" />
+      <asp:BoundField DataField="Miscellaneous" HeaderText="Miscellaneous (₱)" DataFormatString="{0:N2}" HtmlEncode="false" />
+      <asp:BoundField DataField="Price" HeaderText="Total Price (₱)" DataFormatString="{0:N2}" HtmlEncode="false" />
+
       <asp:TemplateField HeaderText="Contract?">
         <ItemTemplate>
           <span class="badge-pill"><%# Convert.ToBoolean(Eval("IsContract")) ? "Yes" : "No" %></span>

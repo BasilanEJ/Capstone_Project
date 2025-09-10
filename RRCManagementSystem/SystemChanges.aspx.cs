@@ -11,10 +11,16 @@ namespace RRCManagementSystem
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
-        // Keys we care about (avoid magic strings everywhere)
-        private const string KEY_100 = "BottledChemicalUsageML100sqm";
-        private const string KEY_200 = "BottledChemicalUsageML200sqm";
-        private const string KEY_200PLUS = "BottledChemicalUsageML200Plus";
+        // Keys for each SQM range
+        private const string KEY_0_100 = "Usage_0_100";
+        private const string KEY_101_250 = "Usage_101_250";
+        private const string KEY_251_400 = "Usage_251_400";
+        private const string KEY_401_600 = "Usage_401_600";
+        private const string KEY_601_800 = "Usage_601_800";
+        private const string KEY_801_1000 = "Usage_801_1000";
+        private const string KEY_1000PLUS = "Usage_1000plus";
+
+        // Max inspections
         private const string KEY_MAXINSP = "MaxInspectionsPerDay";
 
         protected void Page_Load(object sender, EventArgs e)
@@ -48,39 +54,50 @@ namespace RRCManagementSystem
                     }
                 }
 
-                txtUsage100.Text = map.ContainsKey(KEY_100) ? map[KEY_100] : "";
-                txtUsage200.Text = map.ContainsKey(KEY_200) ? map[KEY_200] : "";
-                txtUsage200Plus.Text = map.ContainsKey(KEY_200PLUS) ? map[KEY_200PLUS] : "";
+                // Assign values to textboxes
+                txtUsage_0_100.Text = map.ContainsKey(KEY_0_100) ? map[KEY_0_100] : "";
+                txtUsage_101_250.Text = map.ContainsKey(KEY_101_250) ? map[KEY_101_250] : "";
+                txtUsage_251_400.Text = map.ContainsKey(KEY_251_400) ? map[KEY_251_400] : "";
+                txtUsage_401_600.Text = map.ContainsKey(KEY_401_600) ? map[KEY_401_600] : "";
+                txtUsage_601_800.Text = map.ContainsKey(KEY_601_800) ? map[KEY_601_800] : "";
+                txtUsage_801_1000.Text = map.ContainsKey(KEY_801_1000) ? map[KEY_801_1000] : "";
+                txtUsage_1000plus.Text = map.ContainsKey(KEY_1000PLUS) ? map[KEY_1000PLUS] : "";
                 txtMaxInspections.Text = map.ContainsKey(KEY_MAXINSP) ? map[KEY_MAXINSP] : "";
             }
             catch (Exception ex)
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "LoadErr",
-                    $"Swal.fire('Error','Failed to load settings: {ex.Message.Replace("'", "\\'")}','error');", true);
+                hfAlertMessage.Value = "error|Failed to load settings: " + ex.Message;
             }
         }
 
         protected void btnSave_Click(object sender, EventArgs e)
         {
-            // Validate inputs (same rules as before)
-            if (!decimal.TryParse((txtUsage100.Text ?? "").Trim(), out decimal usage100) ||
-                !decimal.TryParse((txtUsage200.Text ?? "").Trim(), out decimal usage200) ||
-                !decimal.TryParse((txtUsage200Plus.Text ?? "").Trim(), out decimal usage200Plus) ||
-                !int.TryParse((txtMaxInspections.Text ?? "").Trim(), out int maxInspections))
+            // Validate inputs
+            if (!decimal.TryParse(txtUsage_0_100.Text.Trim(), out decimal usage0_100) ||
+                !decimal.TryParse(txtUsage_101_250.Text.Trim(), out decimal usage101_250) ||
+                !decimal.TryParse(txtUsage_251_400.Text.Trim(), out decimal usage251_400) ||
+                !decimal.TryParse(txtUsage_401_600.Text.Trim(), out decimal usage401_600) ||
+                !decimal.TryParse(txtUsage_601_800.Text.Trim(), out decimal usage601_800) ||
+                !decimal.TryParse(txtUsage_801_1000.Text.Trim(), out decimal usage801_1000) ||
+                !decimal.TryParse(txtUsage_1000plus.Text.Trim(), out decimal usage1000plus) ||
+                !int.TryParse(txtMaxInspections.Text.Trim(), out int maxInspections))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "ValErr",
-                    "Swal.fire('Error','Please enter valid numeric values in all fields.','error');", true);
+                hfAlertMessage.Value = "error|Please enter valid numeric values in all fields.";
                 return;
             }
 
-            // Build TVP
+            // Prepare TVP
             var tvp = new DataTable();
             tvp.Columns.Add("SettingName", typeof(string));
             tvp.Columns.Add("SettingValue", typeof(string));
 
-            tvp.Rows.Add(KEY_100, usage100.ToString());
-            tvp.Rows.Add(KEY_200, usage200.ToString());
-            tvp.Rows.Add(KEY_200PLUS, usage200Plus.ToString());
+            tvp.Rows.Add(KEY_0_100, usage0_100.ToString());
+            tvp.Rows.Add(KEY_101_250, usage101_250.ToString());
+            tvp.Rows.Add(KEY_251_400, usage251_400.ToString());
+            tvp.Rows.Add(KEY_401_600, usage401_600.ToString());
+            tvp.Rows.Add(KEY_601_800, usage601_800.ToString());
+            tvp.Rows.Add(KEY_801_1000, usage801_1000.ToString());
+            tvp.Rows.Add(KEY_1000PLUS, usage1000plus.ToString());
             tvp.Rows.Add(KEY_MAXINSP, maxInspections.ToString());
 
             try
@@ -98,14 +115,18 @@ namespace RRCManagementSystem
                     cmd.ExecuteNonQuery();
                 }
 
-                ScriptManager.RegisterStartupScript(this, GetType(), "Saved",
-                    "Swal.fire('Saved!','System settings updated successfully!','success');", true);
+                // Set SweetAlert message to success
+                hfAlertMessage.Value = "success|System settings updated successfully!";
+
+                // Clear the form
+              
             }
             catch (Exception ex)
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "SaveErr",
-                    $"Swal.fire('Error','Failed to save: {ex.Message.Replace("'", "\\'")}','error');", true);
+                hfAlertMessage.Value = "error|Failed to save: " + ex.Message;
             }
         }
+
+   
     }
 }

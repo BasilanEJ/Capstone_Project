@@ -101,12 +101,14 @@ Swal.fire({
                 return;
             }
 
-            // Your original rule
+            // Determine if this is a contractual service
             bool isContract = serviceType == "Termite Control";
 
             try
             {
-                int newId = 0;
+                int newServiceID = 0;
+
+                // 1️⃣ Insert new service into Services table
                 using (var conn = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand("dbo.spService_Insert", conn))
                 {
@@ -116,31 +118,65 @@ Swal.fire({
                     cmd.Parameters.AddWithValue("@Description", string.IsNullOrWhiteSpace(description) ? (object)DBNull.Value : description);
                     cmd.Parameters.AddWithValue("@IsContract", isContract);
 
-                    // 👇 Optional, if proc handles it you don’t need this
-                    // cmd.Parameters.AddWithValue("@Status", "Available");
-
                     conn.Open();
                     var result = cmd.ExecuteScalar();
-                    if (result != null && result != DBNull.Value) newId = Convert.ToInt32(result);
+                    if (result != null && result != DBNull.Value)
+                        newServiceID = Convert.ToInt32(result);
                 }
 
-                // Audit
+                if (newServiceID <= 0)
+                {
+                    lblMessage.Text = "⚠ Failed to create service. Please try again.";
+                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                    return;
+                }
+
+                // 2️⃣ Insert the seven pricing ranges for the service
+                // 2️⃣ Insert the seven pricing ranges for the service using a stored procedure
+                decimal price0_100 = ParseDecimal(txtPrice_0_100.Text);
+                decimal price101_250 = ParseDecimal(txtPrice_101_250.Text);
+                decimal price251_400 = ParseDecimal(txtPrice_251_400.Text);
+                decimal price401_600 = ParseDecimal(txtPrice_401_600.Text);
+                decimal price601_800 = ParseDecimal(txtPrice_601_800.Text);
+                decimal price801_1000 = ParseDecimal(txtPrice_801_1000.Text);
+                decimal price1000Plus = ParseDecimal(txtPrice_1000_Plus.Text);
+
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spServicePricing_InsertRanges", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.AddWithValue("@ServiceID", newServiceID);
+                    cmd.Parameters.AddWithValue("@Price0_100", price0_100);
+                    cmd.Parameters.AddWithValue("@Price101_250", price101_250);
+                    cmd.Parameters.AddWithValue("@Price251_400", price251_400);
+                    cmd.Parameters.AddWithValue("@Price401_600", price401_600);
+                    cmd.Parameters.AddWithValue("@Price601_800", price601_800);
+                    cmd.Parameters.AddWithValue("@Price801_1000", price801_1000);
+                    cmd.Parameters.AddWithValue("@Price1000Plus", price1000Plus);
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+
+                // 3️⃣ Insert into Audit logs
                 using (var conn = new SqlConnection(connectionString))
                 using (var a = new SqlCommand("dbo.spAudit_Insert", conn))
                 {
                     a.CommandType = CommandType.StoredProcedure;
                     a.Parameters.AddWithValue("@AdminID", (object)adminId ?? DBNull.Value);
-                    a.Parameters.AddWithValue("@Action", $"Added service (ID: {newId}) - {serviceName} ({serviceType}) | Contractual: {isContract}");
+                    a.Parameters.AddWithValue("@Action", $"Added service (ID: {newServiceID}) - {serviceName} ({serviceType}) | Contractual: {isContract}");
                     conn.Open();
                     a.ExecuteNonQuery();
                 }
 
-                // Clear the form after successful submission
+                // 4️⃣ Clear the form and set success session
                 ClearForm();
 
                 Session["ServiceAdded"] = true;
                 lblMessage.Visible = true;
-                lblMessage.Text = "✅ Service added successfully!";
+                lblMessage.Text = "✅ Service and pricing added successfully!";
                 lblMessage.ForeColor = System.Drawing.Color.Green;
             }
             catch (Exception ex)
@@ -150,11 +186,25 @@ Swal.fire({
             }
         }
 
+        // Helper to safely parse decimals
+        private decimal ParseDecimal(string input)
+        {
+            return string.IsNullOrWhiteSpace(input) ? 0 : Convert.ToDecimal(input);
+        }
+
         private void ClearForm()
         {
             txtName.Text = "";
             ddlServiceType.SelectedIndex = 0;
             txtDescription.Text = "";
+
+            txtPrice_0_100.Text = "";
+            txtPrice_101_250.Text = "";
+            txtPrice_251_400.Text = "";
+            txtPrice_401_600.Text = "";
+            txtPrice_601_800.Text = "";
+            txtPrice_801_1000.Text = "";
+            txtPrice_1000_Plus.Text = "";
         }
     }
 }

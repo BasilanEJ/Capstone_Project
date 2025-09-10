@@ -42,6 +42,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.HiddenField hfQuotationID;
 
         /// <summary>
+        /// lblQuotationCode control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblQuotationCode;
+
+        /// <summary>
         /// lblServices control.
         /// </summary>
         /// <remarks>
@@ -60,13 +69,40 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblSQM;
 
         /// <summary>
-        /// lblPrice control.
+        /// lblBasePrice control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblPrice;
+        protected global::System.Web.UI.WebControls.Label lblBasePrice;
+
+        /// <summary>
+        /// lblTravelExpense control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblTravelExpense;
+
+        /// <summary>
+        /// lblMiscellaneous control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblMiscellaneous;
+
+        /// <summary>
+        /// lblTotalPrice control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblTotalPrice;
 
         /// <summary>
         /// lblSelectedDateTime control.

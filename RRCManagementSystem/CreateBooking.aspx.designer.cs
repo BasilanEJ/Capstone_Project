@@ -60,22 +60,13 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.HiddenField hfClientID;
 
         /// <summary>
-        /// cblTermite control.
+        /// ddlServices control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.CheckBoxList cblTermite;
-
-        /// <summary>
-        /// cblGeneral control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.CheckBoxList cblGeneral;
+        protected global::System.Web.UI.WebControls.DropDownList ddlServices;
 
         /// <summary>
         /// txtSQM control.
@@ -85,6 +76,24 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.TextBox txtSQM;
+
+        /// <summary>
+        /// txtTravelExpense control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtTravelExpense;
+
+        /// <summary>
+        /// txtMiscellaneous control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtMiscellaneous;
 
         /// <summary>
         /// txtTotalPrice control.

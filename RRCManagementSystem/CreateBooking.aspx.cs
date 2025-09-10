@@ -24,6 +24,9 @@ namespace RRCManagementSystem
             }
         }
 
+        /// <summary>
+        /// Load all available services into dropdown
+        /// </summary>
         private void LoadServices()
         {
             using (var con = new SqlConnection(connectionString))
@@ -32,33 +35,106 @@ namespace RRCManagementSystem
                 cmd.CommandType = CommandType.StoredProcedure;
                 con.Open();
 
-                using (var rdr = cmd.ExecuteReader())
-                {
-                    var dt = new DataTable();
-                    dt.Load(rdr);
+                ddlServices.DataSource = cmd.ExecuteReader();
+                ddlServices.DataTextField = "Name";      // Display service name
+                ddlServices.DataValueField = "ServiceID"; // Store service ID
+                ddlServices.DataBind();
 
-                    // Split data by ServiceType
-                    var termiteRows = dt.Select("ServiceType = 'Termite Control'");
-                    var generalRows = dt.Select("ServiceType = 'General Pest Control'");
-
-                    if (termiteRows.Length > 0)
-                    {
-                        cblTermite.DataSource = termiteRows.CopyToDataTable();
-                        cblTermite.DataBind();
-                    }
-
-                    if (generalRows.Length > 0)
-                    {
-                        cblGeneral.DataSource = generalRows.CopyToDataTable();
-                        cblGeneral.DataBind();
-                    }
-                }
+                ddlServices.Items.Insert(0, new ListItem("-- Select a Service --", ""));
             }
         }
 
+        /// <summary>
+        /// Fetch service's price per SQM
+        /// </summary>
+        private decimal GetServicePricePerSQM(int serviceId, int sqm)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("sp_GetServicePriceByID", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ServiceID", SqlDbType.Int).Value = serviceId;
+                cmd.Parameters.Add("@SQM", SqlDbType.Int).Value = sqm;
+
+                con.Open();
+                object result = cmd.ExecuteScalar();
+                return (result != null && result != DBNull.Value) ? Convert.ToDecimal(result) : 0;
+            }
+        }
+
+
+        /// <summary>
+        /// Generate a unique Quotation Code
+        /// Format: QUO-YYYYMMDD-0001
+        /// </summary>
+        private string GenerateQuotationCode()
+        {
+            string prefix = "QUO-" + DateTime.Now.ToString("yyyyMMdd") + "-";
+            int sequence = 1;
+
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(@"
+                SELECT ISNULL(MAX(CAST(RIGHT(QuotationCode, 4) AS INT)), 0) + 1
+                FROM dbo.PendingQuotations
+                WHERE QuotationCode LIKE @Prefix + '%'", con))
+            {
+                cmd.Parameters.AddWithValue("@Prefix", prefix);
+                con.Open();
+                sequence = Convert.ToInt32(cmd.ExecuteScalar());
+            }
+
+            return prefix + sequence.ToString("D4");
+        }
+
+        /// <summary>
+        /// Recalculate total whenever SQM, travel, misc, or service changes
+        /// </summary>
+        protected void RecalculateTotal(object sender, EventArgs e)
+        {
+            if (int.TryParse(ddlServices.SelectedValue, out int serviceId) && serviceId > 0)
+            {
+                int sqm = 0;
+                decimal travel = 0, misc = 0;
+
+                // Parse values from textboxes
+                int.TryParse(txtSQM.Text.Trim(), out sqm);
+                decimal.TryParse(txtTravelExpense.Text.Trim(), out travel);
+                decimal.TryParse(txtMiscellaneous.Text.Trim(), out misc);
+
+                // ✅ Now pass both serviceId and sqm to get the correct tier price
+                decimal price = GetServicePricePerSQM(serviceId, sqm);
+
+                // Total is direct price + travel + misc
+                decimal total = price + travel + misc;
+                txtTotalPrice.Text = total.ToString("F2");
+            }
+            else
+            {
+                txtTotalPrice.Text = "0.00";
+            }
+        }
+
+
+        /// <summary>
+        /// Trigger recalculation when dropdown selection changes
+        /// </summary>
+        protected void ddlServices_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // Keep the Inquiry Background div visible
+            ScriptManager.RegisterStartupScript(this, GetType(), "showInquiryBackground",
+                "document.getElementById('inquiryBackground').style.display = 'block';", true);
+
+            // Optionally, recalculate the total immediately when service changes
+            RecalculateTotal(sender, e);
+        }
+
+
+        /// <summary>
+        /// Submit the quotation and save to DB
+        /// </summary>
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            // ✅ must be logged in AND Inspector
+            // Must be logged in as Inspector
             if (Session["UserID"] == null || Session["Role"] == null ||
                 !string.Equals(Session["Role"].ToString(), "Inspector", StringComparison.OrdinalIgnoreCase))
             {
@@ -67,7 +143,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Client must be selected
+            // Client validation
             if (string.IsNullOrWhiteSpace(hfClientID.Value) || !int.TryParse(hfClientID.Value, out int clientId))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "selectClient",
@@ -75,7 +151,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ SQM validation
+            // SQM validation
             if (!int.TryParse(txtSQM.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int sqm))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "invalidSQM",
@@ -83,7 +159,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Total Price validation
+            // Total Price validation
             if (!decimal.TryParse(txtTotalPrice.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal total) || total <= 0)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "invalidPrice",
@@ -91,51 +167,50 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Must select at least one service
-            var selectedItems = cblTermite.Items.Cast<ListItem>().Where(i => i.Selected)
-                .Concat(cblGeneral.Items.Cast<ListItem>().Where(i => i.Selected))
-                .ToList();
-
-            if (!selectedItems.Any())
+            // Service must be selected
+            if (!int.TryParse(ddlServices.SelectedValue, out int serviceId) || serviceId <= 0)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "noServices",
-                    "Swal.fire('No Services', 'Please select at least one service.', 'error');", true);
+                    "Swal.fire('No Services', 'Please select a service.', 'error');", true);
                 return;
             }
 
-            string selectedServiceIDs = string.Join(",", selectedItems.Select(i => i.Value));
-            string selectedServiceNames = string.Join(", ", selectedItems.Select(i => i.Text));
+            // Get travel and misc amounts
+            decimal.TryParse(txtTravelExpense.Text.Trim(), out decimal travel);
+            decimal.TryParse(txtMiscellaneous.Text.Trim(), out decimal misc);
+
+            string serviceName = ddlServices.SelectedItem.Text;
             int inspectorId = Convert.ToInt32(Session["UserID"], CultureInfo.InvariantCulture);
 
-            bool isContract = GetIsAnyContract(selectedServiceIDs);
+            bool isContract = GetIsAnyContract(serviceId.ToString());
 
-            // ✅ Insert pending quotation
+            // Insert into PendingQuotations
+            string quotationCode;
             int newId = InsertPendingQuotation(
                 clientId: clientId,
                 inspectorId: inspectorId,
-                serviceNames: selectedServiceNames,
-                serviceIdCsv: selectedServiceIDs,
+                serviceName: serviceName,
+                serviceId: serviceId,
                 sqm: sqm,
                 price: total,
-                isContract: isContract
+                travel: travel,
+                misc: misc,
+                isContract: isContract,
+                quotationCode: out quotationCode
             );
 
-            // 🔔 Add notification for the client (Quotation Submitted)
+            // Add client notification
             try
             {
-                string svc = selectedServiceNames;
-                if (svc.Length > 60) svc = svc.Substring(0, 57) + "...";
-
                 var ph = new CultureInfo("en-PH");
-                string priceText = string.Format(ph, "{0:C}", total); // ₱1,000.00 style
-
-                string deepLink = "BookService.aspx?tab=quotes"; // page where client can review quotations
+                string priceText = string.Format(ph, "{0:C}", total);
+                string deepLink = "BookService.aspx?tab=quotes"; // client portal link
 
                 AddNotification(
                     clientId: clientId,
                     type: "quotation",
                     title: "Quotation Submitted",
-                    body: $"New quotation ready: {svc} — {priceText} for {sqm} sqm.",
+                    body: $"New quotation ready: {serviceName} — {priceText} for {sqm} sqm.",
                     url: deepLink,
                     dedupKey: $"QUOTE-{clientId}-{newId}"
                 );
@@ -145,19 +220,23 @@ namespace RRCManagementSystem
                 // Notification failure is non-critical
             }
 
-            // ✅ Success UI
+            // Success message
             ScriptManager.RegisterStartupScript(this, GetType(), "success",
-                "Swal.fire('Success', 'Quotation submitted for client!', 'success');", true);
+                $"Swal.fire('Success', 'Quotation submitted successfully!<br/>Quotation Code: <b>{quotationCode}</b>', 'success');", true);
 
-            // ✅ Reset fields
+            // Reset form
             txtClientSearch.Text = "";
             hfClientID.Value = "";
-            cblTermite.ClearSelection();
-            cblGeneral.ClearSelection();
+            ddlServices.ClearSelection();
             txtSQM.Text = "";
+            txtTravelExpense.Text = "";
+            txtMiscellaneous.Text = "";
             txtTotalPrice.Text = "";
         }
 
+        /// <summary>
+        /// Inserts a new notification record for the client
+        /// </summary>
         private void AddNotification(
             int clientId,
             string type,
@@ -182,6 +261,9 @@ namespace RRCManagementSystem
             }
         }
 
+        /// <summary>
+        /// Check if the selected service is a contract type
+        /// </summary>
         private bool GetIsAnyContract(string serviceIdCsv)
         {
             using (var con = new SqlConnection(connectionString))
@@ -200,8 +282,16 @@ namespace RRCManagementSystem
             }
         }
 
-        private int InsertPendingQuotation(int clientId, int inspectorId, string serviceNames, string serviceIdCsv, int sqm, decimal price, bool isContract)
+        /// <summary>
+        /// Inserts a new Pending Quotation record into the database
+        /// </summary>
+        private int InsertPendingQuotation(
+            int clientId, int inspectorId, string serviceName, int serviceId,
+            int sqm, decimal price, decimal travel, decimal misc, bool isContract,
+            out string quotationCode)
         {
+            quotationCode = GenerateQuotationCode();
+
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.usp_PendingQuotations_Insert", con))
             {
@@ -209,14 +299,14 @@ namespace RRCManagementSystem
 
                 cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
                 cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
-                cmd.Parameters.Add("@ServiceNames", SqlDbType.NVarChar, 4000).Value = (object)serviceNames ?? DBNull.Value;
-                cmd.Parameters.Add("@ServiceIDCsv", SqlDbType.NVarChar, 4000).Value = (object)serviceIdCsv ?? DBNull.Value;
+                cmd.Parameters.Add("@ServiceNames", SqlDbType.NVarChar, 4000).Value = serviceName;
+                cmd.Parameters.Add("@ServiceIDCsv", SqlDbType.NVarChar, 4000).Value = serviceId.ToString();
                 cmd.Parameters.Add("@SQM", SqlDbType.Int).Value = sqm;
-
-                var pPrice = cmd.Parameters.Add("@Price", SqlDbType.Decimal);
-                pPrice.Precision = 18; pPrice.Scale = 2; pPrice.Value = price;
-
+                cmd.Parameters.Add("@Price", SqlDbType.Decimal).Value = price;
+                cmd.Parameters.Add("@TravelExpense", SqlDbType.Decimal).Value = travel;
+                cmd.Parameters.Add("@Miscellaneous", SqlDbType.Decimal).Value = misc;
                 cmd.Parameters.Add("@IsContract", SqlDbType.Bit).Value = isContract;
+                cmd.Parameters.Add("@QuotationCode", SqlDbType.NVarChar, 50).Value = quotationCode;
 
                 var pOutId = cmd.Parameters.Add("@PendingQuotationID", SqlDbType.Int);
                 pOutId.Direction = ParameterDirection.Output;
@@ -224,11 +314,11 @@ namespace RRCManagementSystem
                 con.Open();
                 cmd.ExecuteNonQuery();
 
-                return (pOutId.Value == DBNull.Value) ? 0 : Convert.ToInt32(pOutId.Value, CultureInfo.InvariantCulture);
+                return (pOutId.Value == DBNull.Value) ? 0 : Convert.ToInt32(pOutId.Value);
             }
         }
 
-        // ===== Ajax AutoComplete endpoint (stored procedure) =====
+        // ===== Ajax AutoComplete for Client Search =====
         [WebMethod]
         [ScriptMethod]
         public static List<string> SearchClients(string prefixText, int count)
@@ -264,7 +354,6 @@ namespace RRCManagementSystem
            PageMethods WebMethod: Fetch InquiryCode + recent Findings
            Called by setClientID() in CreateBooking.aspx
            ========================================================= */
-
         public class FindingDto
         {
             public string Text { get; set; }
@@ -295,7 +384,6 @@ namespace RRCManagementSystem
             {
                 con.Open();
 
-                // --- Schema probes (no hard-coded assumptions) ---
                 bool chHasInspectionId = ColumnExists(con, "dbo", "ClientHistory", "InspectionID");
                 bool chHasInquiryCode = ColumnExists(con, "dbo", "ClientHistory", "InquiryCode");
 
@@ -309,7 +397,6 @@ namespace RRCManagementSystem
 
                 if (chHasInspectionId && hasInspectionsTbl && hasInquiriesTbl && insHasInquiryId && iqHasInquiryCode)
                 {
-                    // ✅ Full path: ClientHistory.InspectionID -> Inspections -> Inquiries.InquiryCode
                     sql = @"
 ;WITH Recent AS
 (
@@ -331,7 +418,6 @@ SELECT * FROM Recent ORDER BY CreatedAt DESC;";
                 }
                 else if (chHasInquiryCode)
                 {
-                    // ✅ Fallback: just use InquiryCode already stored in ClientHistory
                     sql = @"
 SELECT TOP (5)
     ch.HistoryID,
@@ -347,7 +433,6 @@ ORDER BY ch.CreatedAt DESC;";
                 }
                 else
                 {
-                    // ✅ Minimal fallback: no inquiry code available from schema
                     sql = @"
 SELECT TOP (5)
     ch.HistoryID,
@@ -407,7 +492,7 @@ ORDER BY ch.CreatedAt DESC;";
             return dto;
         }
 
-        // --- helpers (put in the same code-behind class) ---
+        // Helpers
         private static bool ColumnExists(SqlConnection con, string schema, string table, string column)
         {
             using (var cmd = new SqlCommand(@"
@@ -437,6 +522,5 @@ WHERE s.name = @s AND o.name = @t AND o.type IN ('U','V');", con))
                 return cmd.ExecuteScalar() != null;
             }
         }
-
     }
 }

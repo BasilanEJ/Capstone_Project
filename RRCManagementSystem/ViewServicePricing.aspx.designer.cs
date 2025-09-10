@@ -11,34 +11,34 @@ namespace RRCManagementSystem
 {
 
 
-    public partial class InspectedInquiry
+    public partial class ViewServicePricing
     {
 
         /// <summary>
-        /// lblCount control.
+        /// hfServiceID control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblCount;
+        protected global::System.Web.UI.WebControls.HiddenField hfServiceID;
 
         /// <summary>
-        /// pnlEmpty control.
+        /// gvServicePricing control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlEmpty;
+        protected global::System.Web.UI.WebControls.GridView gvServicePricing;
 
         /// <summary>
-        /// gvCompleted control.
+        /// btnBack control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvCompleted;
+        protected global::System.Web.UI.WebControls.Button btnBack;
     }
 }

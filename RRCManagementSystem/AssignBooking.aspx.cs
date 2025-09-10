@@ -14,12 +14,14 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // 1. Check if user session exists
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
                 return;
             }
 
+            // 2. Restrict SuperAdmin and Inspector roles from accessing this page
             string role = Session["Role"].ToString();
             if (role == "SuperAdmin" || role == "Inspector")
             {
@@ -29,6 +31,7 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
+            // 3. Check if user has edit permission for ManageBooking
             if (!HasEditPermission(userId, "ManageBooking"))
             {
                 lblMessage.Text = "❌ You do not have permission to assign bookings.";
@@ -37,20 +40,34 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // 4. Only load data on first page load
             if (!IsPostBack)
             {
                 hfConfirmAssign.Value = "false";
+
+                // Validate and fetch BookingID from query string
                 if (int.TryParse(Request.QueryString["BookingID"], out bookingID))
                 {
+                    // Load BookingCode for top of the card
+                    LoadBookingCode();
+
+                    // Load dropdowns and grids
                     LoadTeams();
                     LoadAvailableEquipments();
                     LoadAvailableChemicals();
                     LoadAvailableSachetChemicals();
                     LoadSafetyGear();
 
+                    // Show success message if status=Assigned is in query string
                     if (Request.QueryString["status"] == "Assigned")
                     {
-                        string script = @"Swal.fire({icon:'success',title:'Assigned!',text:'The booking was successfully assigned.',showConfirmButton:false,timer:2000});";
+                        string script = @"Swal.fire({
+                    icon:'success',
+                    title:'Assigned!',
+                    text:'The booking was successfully assigned.',
+                    showConfirmButton:false,
+                    timer:2000
+                });";
                         ClientScript.RegisterStartupScript(this.GetType(), "AssignSuccess", script, true);
                     }
                 }
@@ -62,6 +79,9 @@ namespace RRCManagementSystem
                 }
             }
         }
+
+
+
 
         private bool HasEditPermission(int adminId, string moduleName)
         {
@@ -81,6 +101,23 @@ namespace RRCManagementSystem
             }
             catch { return false; }
         }
+        private void LoadBookingCode()
+        {
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spBooking_GetBookingCode", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+
+                con.Open();
+
+                var result = cmd.ExecuteScalar();
+                lblBookingCode.Text = (result != null && result != DBNull.Value) ? result.ToString() : "N/A";
+            }
+        }
+
+
+
 
         private void LoadTeams()
         {
@@ -488,14 +525,21 @@ namespace RRCManagementSystem
 
         private decimal GetChemicalUsageBasedOnSQMProc(SqlConnection con, SqlTransaction tx, int sqm)
         {
-            string setting = "BottledChemicalUsageML100sqm";
-            if (sqm >= 101 && sqm <= 200) setting = "BottledChemicalUsageML200sqm";
-            else if (sqm > 200) setting = "BottledChemicalUsageML200Plus";
+            string settingKey;
+
+            if (sqm <= 100) settingKey = "Usage_0_100";
+            else if (sqm <= 250) settingKey = "Usage_101_250";
+            else if (sqm <= 400) settingKey = "Usage_251_400";
+            else if (sqm <= 600) settingKey = "Usage_401_600";
+            else if (sqm <= 800) settingKey = "Usage_601_800";
+            else if (sqm <= 1000) settingKey = "Usage_801_1000";
+            else settingKey = "Usage_1000plus";
 
             using (var cmd = new SqlCommand("dbo.spSystemSettings_GetValueDecimal", con, tx))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@SettingName", SqlDbType.NVarChar, 100).Value = setting;
+                cmd.Parameters.Add("@SettingName", SqlDbType.NVarChar, 100).Value = settingKey;
+
                 object v = cmd.ExecuteScalar();
                 return (v != null && v != DBNull.Value && decimal.TryParse(v.ToString(), out var d)) ? d : 333m;
             }

@@ -67,6 +67,11 @@
                 <asp:HiddenField ID="hfIsContract" runat="server" />
                 <asp:HiddenField ID="hfQuotationID" runat="server" />
 
+                <div class="mb-3">
+    <label class="form-label">Quotation Code</label>
+    <asp:Label ID="lblQuotationCode" runat="server" CssClass="readonly-field" />
+</div>
+
                 <!-- Services -->
                 <div class="mb-3">
                     <label class="form-label">Service(s) to be Provided</label>
@@ -79,11 +84,28 @@
                     <asp:Label ID="lblSQM" runat="server" CssClass="readonly-field" />
                 </div>
 
-                <!-- Price -->
-                <div class="mb-3">
-                    <label class="form-label">Total Estimated Price</label>
-                    <asp:Label ID="lblPrice" runat="server" CssClass="readonly-field" />
-                </div>
+               <div class="mb-3">
+    <label class="form-label">Base Service Price (Based on SQM)</label>
+    <asp:Label ID="lblBasePrice" runat="server" CssClass="readonly-field" />
+</div>
+
+<!-- Travel Expense -->
+<div class="mb-3">
+    <label class="form-label">Travel Expense</label>
+    <asp:Label ID="lblTravelExpense" runat="server" CssClass="readonly-field" />
+</div>
+
+<!-- Miscellaneous -->
+<div class="mb-3">
+    <label class="form-label">Miscellaneous</label>
+    <asp:Label ID="lblMiscellaneous" runat="server" CssClass="readonly-field" />
+</div>
+
+<!-- Total Price -->
+<div class="mb-3">
+    <label class="form-label">Total Price</label>
+    <asp:Label ID="lblTotalPrice" runat="server" CssClass="readonly-field" />
+</div>
 
                 <!-- Preferred Schedule -->
                 <div class="mb-3">

@@ -82,15 +82,24 @@ namespace RRCManagementSystem
 
         protected void gvServices_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            // Expecting CommandArgument to be a numeric ServiceID
+            // Validate that we have a numeric ServiceID
             if (!int.TryParse(Convert.ToString(e.CommandArgument), out int serviceId)) return;
 
+            // ✅ Handle View Price
+            if (e.CommandName == "ViewPrice")
+            {
+                Response.Redirect("ViewServicePricing.aspx?ServiceID=" + serviceId);
+                return;
+            }
+
+            // Existing EditService logic
             if (e.CommandName == "EditService" && Convert.ToBoolean(ViewState["CanEdit"]))
             {
                 Response.Redirect($"EditServices.aspx?ServiceID={serviceId}");
                 return;
             }
 
+            // Existing DisableService logic
             if (e.CommandName == "DisableService" && Convert.ToBoolean(ViewState["CanDisable"]))
             {
                 try
@@ -111,8 +120,7 @@ namespace RRCManagementSystem
 
                     if (affected > 0)
                     {
-                        LoadServices(); // refresh grid
-                        // UI text says Delete, but we only marked UNAVAILABLE
+                        LoadServices();
                         AlertSuccess("Service deleted.");
                     }
                     else
@@ -126,6 +134,8 @@ namespace RRCManagementSystem
                 }
             }
         }
+
+
 
         protected void gvServices_RowDataBound(object sender, GridViewRowEventArgs e)
         {

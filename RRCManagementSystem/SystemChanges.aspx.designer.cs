@@ -15,31 +15,76 @@ namespace RRCManagementSystem
     {
 
         /// <summary>
-        /// txtUsage100 control.
+        /// hfAlertMessage control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtUsage100;
+        protected global::System.Web.UI.WebControls.HiddenField hfAlertMessage;
 
         /// <summary>
-        /// txtUsage200 control.
+        /// txtUsage_0_100 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtUsage200;
+        protected global::System.Web.UI.WebControls.TextBox txtUsage_0_100;
 
         /// <summary>
-        /// txtUsage200Plus control.
+        /// txtUsage_101_250 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtUsage200Plus;
+        protected global::System.Web.UI.WebControls.TextBox txtUsage_101_250;
+
+        /// <summary>
+        /// txtUsage_251_400 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtUsage_251_400;
+
+        /// <summary>
+        /// txtUsage_401_600 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtUsage_401_600;
+
+        /// <summary>
+        /// txtUsage_601_800 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtUsage_601_800;
+
+        /// <summary>
+        /// txtUsage_801_1000 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtUsage_801_1000;
+
+        /// <summary>
+        /// txtUsage_1000plus control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtUsage_1000plus;
 
         /// <summary>
         /// txtMaxInspections control.
@@ -58,14 +103,5 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Button btnSave;
-
-        /// <summary>
-        /// lblMessage control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblMessage;
     }
 }
