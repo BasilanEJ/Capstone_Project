@@ -7,6 +7,10 @@ using System.Text.RegularExpressions;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using System.Net;
+using System.Net.Mail;
+using System.Text;
+using System.Collections.Generic;
 
 namespace RRCManagementSystem
 {
@@ -52,7 +56,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string email = (txtEmail.Text ?? "").Trim();
+            string email = (txtEmail.Text ?? "").Trim().ToLowerInvariant();
             string contact = (txtContact.Text ?? "").Trim();
             string message = string.IsNullOrWhiteSpace(txtMessage.Text) ? "N/A" : txtMessage.Text.Trim();
 
@@ -61,11 +65,23 @@ namespace RRCManagementSystem
                 ShowSwal("Missing Fields", "Please fill in Email and Contact Number.", "warning");
                 return;
             }
+
+            // Basic shape validation first
             if (!IsValidEmail(email))
             {
                 ShowSwal("Invalid Email", "Please enter a valid email address.", "warning");
                 return;
             }
+
+            // Strict allow-list: consumer domains or any *.edu.ph / *.gov.ph
+            if (!IsAllowedEmailDomain(email, out string domain))
+            {
+                ShowSwal("Invalid Email",
+                    "Only Gmail, Yahoo, Outlook/Hotmail/Live/MSN, iCloud/Me/Mac, Proton, Zoho, or school/government (*.edu.ph / *.gov.ph) emails are allowed.",
+                    "warning");
+                return;
+            }
+
             if (!Regex.IsMatch(contact, @"^\d{11}$"))
             {
                 ShowSwal("Invalid Contact Number", "Contact Number must be exactly 11 digits.", "warning");
@@ -95,6 +111,7 @@ namespace RRCManagementSystem
                     photoPath = UploadVirtualFolder + uniqueName;
                 }
 
+                string genCode;
                 int newId = InsertInquiry_SP(
                     email, contact, message, photoPath,
                     (txtFirstName.Text ?? "").Trim(),
@@ -105,17 +122,42 @@ namespace RRCManagementSystem
                     (txtCity.Text ?? "").Trim(),
                     (txtRegion.Text ?? "").Trim(),
                     (txtCountry.Text ?? "").Trim(),
-                    (txtLandmark.Text ?? "").Trim()
+                    (txtLandmark.Text ?? "").Trim(),
+                    out genCode
                 );
 
                 if (newId > 0)
                 {
-                    Response.Redirect("AllInquiry.aspx", endResponse: true);
+                    // Try to email; show a softer warning if it fails
+                    try
+                    {
+                        SendConfirmationEmail(email, genCode);
+                    }
+                    catch (Exception exMail)
+                    {
+                        ShowSwal("Email Warning",
+                            "Inquiry saved, but failed to send confirmation email: " + HttpUtility.HtmlEncode(exMail.Message),
+                            "warning");
+                    }
+
+                    // Show code, then go back to list
+                    string script = $@"
+                        setTimeout(function(){{
+                            Swal.fire({{
+                                icon: 'success',
+                                title: 'Inquiry Saved',
+                                text: 'Reference Code: {genCode}'
+                            }}).then(() => {{
+                                window.location = 'AllInquiry.aspx';
+                            }});
+                        }}, 0);";
+                    ScriptManager.RegisterStartupScript(this, GetType(), Guid.NewGuid().ToString("N"), script, true);
                 }
                 else
                 {
                     ShowSwal("Error", "Failed to save inquiry. Please try again.", "error");
                 }
+
             }
             catch (Exception ex)
             {
@@ -126,8 +168,11 @@ namespace RRCManagementSystem
         private int InsertInquiry_SP(
             string email, string contact, string message, string photoPath,
             string firstName, string middleName, string lastName,
-            string street, string barangay, string city, string region, string country, string landmark)
+            string street, string barangay, string city, string region, string country, string landmark,
+            out string generatedCode)
         {
+            generatedCode = null;
+
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spInquiry_Create", conn))
             {
@@ -149,9 +194,109 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@Country", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(country) ? (object)DBNull.Value : country;
                 cmd.Parameters.Add("@Landmark", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(landmark) ? (object)DBNull.Value : landmark;
 
+                // OUTPUT params
+                var pCode = new SqlParameter("@GeneratedInquiryCode", SqlDbType.NVarChar, 25)
+                { Direction = ParameterDirection.Output };
+                cmd.Parameters.Add(pCode);
+
+                var pId = new SqlParameter("@NewInquiryID", SqlDbType.Int)
+                { Direction = ParameterDirection.Output };
+                cmd.Parameters.Add(pId);
+
                 conn.Open();
-                object result = cmd.ExecuteScalar();
-                return (result != null && int.TryParse(result.ToString(), out int id)) ? id : 0;
+                cmd.ExecuteNonQuery();
+
+                generatedCode = Convert.ToString(pCode.Value ?? "");
+                return (pId.Value == DBNull.Value) ? 0 : Convert.ToInt32(pId.Value);
+            }
+        }
+
+        // ===== Domain allow-list (exact + suffix) =====
+        private static readonly HashSet<string> AllowedExactDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Gmail family
+            "gmail.com",
+
+            // Yahoo family
+            "yahoo.com", "ymail.com", "rocketmail.com",
+
+            // Microsoft family
+            "outlook.com", "hotmail.com", "live.com", "msn.com",
+
+            // Apple family
+            "icloud.com", "me.com", "mac.com",
+
+            // Proton & Zoho
+            "protonmail.com", "proton.me",
+            "zoho.com", "zohomail.com"
+        };
+
+        private static readonly string[] AllowedSuffixes = new[]
+        {
+            ".edu.ph",
+            ".gov.ph"
+        };
+
+        private static bool IsAllowedEmailDomain(string email, out string domain)
+        {
+            domain = "";
+            if (string.IsNullOrWhiteSpace(email)) return false;
+
+            int at = email.IndexOf('@');
+            if (at < 0 || at == email.Length - 1) return false;
+
+            domain = email.Substring(at + 1).Trim().ToLowerInvariant();
+
+            if (AllowedExactDomains.Contains(domain))
+                return true;
+
+            foreach (var sfx in AllowedSuffixes)
+                if (domain.EndsWith(sfx, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+            return false;
+        }
+
+        // === EMAIL SENDER (Gmail) ===
+        private void SendConfirmationEmail(string toEmail, string inquiryCode)
+        {
+            string fromEmail = ConfigurationManager.AppSettings["emailFrom"];
+            string appPassword = ConfigurationManager.AppSettings["emailPassword"];
+
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            using (var mail = new MailMessage())
+            {
+                mail.From = new MailAddress(fromEmail, "RRC Management System", Encoding.UTF8);
+                mail.To.Add(new MailAddress(toEmail));
+                mail.ReplyToList.Add(new MailAddress("rrctermiteandpestcontrol@gmail.com"));
+
+                mail.Subject = $"RRC Inquiry Received - Ref {inquiryCode}";
+                mail.SubjectEncoding = Encoding.UTF8;
+
+                mail.Body =
+$@"Thank you for contacting R.R.C. Termite & Pest Control!
+
+We received your inquiry. Your reference code is: {inquiryCode}
+Please keep this code so we can quickly find your record.
+
+We'll get back to you as soon as possible.
+
+—
+RRC Termite & Pest Control
+rrctermiteandpestcontrol@gmail.com";
+                mail.BodyEncoding = Encoding.UTF8;
+                mail.IsBodyHtml = false;
+
+                using (var smtp = new SmtpClient("smtp.gmail.com", 587))
+                {
+                    smtp.UseDefaultCredentials = false;
+                    smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
+                    smtp.EnableSsl = true; // STARTTLS
+                    smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+                    smtp.Timeout = 20000;
+                    smtp.Send(mail);
+                }
             }
         }
 

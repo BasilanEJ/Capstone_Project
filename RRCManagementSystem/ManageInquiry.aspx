@@ -64,25 +64,29 @@
         }
     </style>
 
-    <h2 class="page-title">📨 Manage Inquiries</h2>
+   <h2 class="page-title">📨 Manage Inquiries</h2>
 
-    <div class="links-container">
-        <a href="AllInquiry.aspx" class="dash-card">
-            <i class="fas fa-list"></i>
-            <div class="dash-card-title">All Inquiries</div>
-        </a>
+<div class="links-container">
+    <a href="AllInquiry.aspx" class="dash-card">
+        <i class="fas fa-list"></i>
+        <div class="dash-card-title">All Inquiries</div>
+    </a>
 
-        <a href="CreateInquiry.aspx" class="dash-card">
-            <i class="fas fa-plus-circle"></i>
-            <div class="dash-card-title">Create Inquiry</div>
-        </a>
+    <a href="CreateInquiry.aspx" class="dash-card">
+        <i class="fas fa-plus-circle"></i>
+        <div class="dash-card-title">Create Inquiry</div>
+    </a>
 
-        <a href="ViewQuotation.aspx" class="dash-card">
-  <i class="fas fa-file-invoice"></i>
-  <div class="dash-card-title">View Quotations</div>
-</a>
+    <a href="ViewQuotation.aspx" class="dash-card">
+        <i class="fas fa-file-invoice"></i>
+        <div class="dash-card-title">View Quotations</div>
+    </a>
 
+    <!-- ✅ New Card for Inquiry Inspected -->
+    <a href="InspectedInquiry.aspx" class="dash-card">
+        <i class="fas fa-clipboard-check"></i>
+        <div class="dash-card-title">Inquiry Inspected</div>
+    </a>
+</div>
 
-
-    </div>
 </asp:Content>

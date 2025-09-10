@@ -47,7 +47,7 @@
     <asp:ValidationSummary ID="vs" runat="server" CssClass="vs-hidden" ValidationGroup="inq" />
 
     <div class="form-card">
-        <!-- Contact section -->
+     
         <div class="section-title">Contact Info</div>
         <div class="divider"></div>
 
@@ -60,12 +60,13 @@
                     ValidationGroup="inq"
                     ErrorMessage="Email is required"
                     CssClass="text-danger" Display="Dynamic" />
-                <asp:RegularExpressionValidator runat="server"
-                    ControlToValidate="txtEmail"
-                    ValidationGroup="inq"
-                    ValidationExpression="^[^@\s]+@[^@\s]+\.[^@\s]+$"
-                    ErrorMessage="Enter a valid email"
-                    CssClass="text-danger" Display="Dynamic" />
+           <asp:RegularExpressionValidator ID="revEmail" runat="server"
+    ControlToValidate="txtEmail"
+    ErrorMessage="Please enter a valid Gmail, Yahoo, Outlook, iCloud, or school/government email address."
+    ForeColor="Red" Display="Dynamic"
+    ValidationGroup="inq"
+    ValidationExpression="^[A-Za-z0-9._%+\-]+@((?:gmail|yahoo|ymail|rocketmail|outlook|hotmail|live|msn|icloud|me|mac|protonmail|proton|zoho|zohomail)\.com|(?:[A-Za-z0-9-]+\.)+edu\.ph|(?:[A-Za-z0-9-]+\.)+gov\.ph)$" />
+
             </div>
 
             <div>
@@ -93,7 +94,7 @@
 
         </div>
 
-        <!-- Optional section -->
+    
         <div class="section-title" style="margin-top:14px;">Optional Info</div>
         <div class="divider"></div>
 
@@ -168,7 +169,7 @@
             </div>
         </div>
 
-        <!-- Actions -->
+      
         <div class="btn-row">
             <a href="AllInquiry.aspx" class="btn btn-secondary">Back to All Inquiries</a>
             <asp:Button ID="btnSave" runat="server" CssClass="btn btn-primary" Text="Save Inquiry"
@@ -182,7 +183,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        // Live input enforcement (numbers-only for contact; letters-only for names)
+     
         (function () {
             const contact = document.getElementById('<%= txtContact.ClientID %>');
             if (contact) {

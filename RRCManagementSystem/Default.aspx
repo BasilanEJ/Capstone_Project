@@ -235,7 +235,7 @@
     <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:20px; margin-top:30px;">
         
         <!-- Blog Card 1 -->
-        <a href="/blog/diy-vs-professional" style="text-decoration:none; color:inherit; width:300px; border:1px solid #ddd; border-radius:10px; overflow:hidden; transition: transform 0.3s;">
+        <a href="DIY.aspx" style="text-decoration:none; color:inherit; width:300px; border:1px solid #ddd; border-radius:10px; overflow:hidden; transition: transform 0.3s;">
             <img src="/Images/DIY.jpg" alt="DIY vs Professional Pest Control" style="width:100%; height:200px; object-fit:cover;">
             <div style="padding:15px; text-align:left;">
                 <h3 style="font-size:18px; font-weight:bold; margin-bottom:10px;">DIY pest control vs. hiring a pest control company: What’s the difference?</h3>
@@ -243,7 +243,7 @@
         </a>
 
         <!-- Blog Card 2 -->
-        <a href="/blog/brigada-eskela" style="text-decoration:none; color:inherit; width:300px; border:1px solid #ddd; border-radius:10px; overflow:hidden; transition: transform 0.3s;">
+        <a href="Eskwela.aspx" style="text-decoration:none; color:inherit; width:300px; border:1px solid #ddd; border-radius:10px; overflow:hidden; transition: transform 0.3s;">
             <img src="/Images/blog2.jpg" alt="Brigada Eskela Anti-Dengue" style="width:100%; height:200px; object-fit:cover;">
             <div style="padding:15px; text-align:left;">
                 <h3 style="font-size:18px; font-weight:bold; margin-bottom:10px;">Brigada Eskela Anti-Dengue Campaign: Ensuring a Safe and Healthy Learning Environment</h3>
@@ -251,7 +251,7 @@
         </a>
 
         <!-- Blog Card 3 -->
-        <a href="/blog/termite-home" style="text-decoration:none; color:inherit; width:300px; border:1px solid #ddd; border-radius:10px; overflow:hidden; transition: transform 0.3s;">
+        <a href="Termite.aspx" style="text-decoration:none; color:inherit; width:300px; border:1px solid #ddd; border-radius:10px; overflow:hidden; transition: transform 0.3s;">
             <img src="/Images/blog3.jpg" alt="Termite Swarms" style="width:100%; height:200px; object-fit:cover;">
             <div style="padding:15px; text-align:left;">
                 <h3 style="font-size:18px; font-weight:bold; margin-bottom:10px;">Don’t Let Termite Swarms Take Over Your Home!</h3>
@@ -316,12 +316,21 @@
            <!-- Email -->
 <div style="margin-bottom: 15px;">
     <asp:Label runat="server" AssociatedControlID="txtEmail" Text="Your email *" />
-    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control form-underline" TextMode="Email"
-        placeholder="email@gmail.com" required />
-    <asp:RegularExpressionValidator ID="revEmail" runat="server" ControlToValidate="txtEmail"
-        ErrorMessage="Please enter a valid Gmail, Yahoo, or Outlook email address."
-        ForeColor="Red" Display="Dynamic"
-        ValidationExpression="^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$" />
+  <asp:TextBox ID="txtEmail" runat="server"
+    CssClass="form-control form-underline"
+    TextMode="Email"
+    placeholder="email@gmail.com"
+    required />
+
+<asp:RegularExpressionValidator ID="revEmail" runat="server"
+    ControlToValidate="txtEmail"
+    ErrorMessage="Please enter a valid Gmail, Yahoo, Outlook, iCloud, or school/government email address."
+    ForeColor="Red"
+    Display="Dynamic"
+    ValidationExpression="^[A-Za-z0-9._%+\-]+@(?:(?:gmail|yahoo|outlook|hotmail|live|icloud)\.com|(?:[A-Za-z0-9-]+\.)*edu\.ph|(?:[A-Za-z0-9-]+\.)*gov\.ph)$" />
+
+
+
 </div>
 
 

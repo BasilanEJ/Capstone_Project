@@ -89,11 +89,11 @@
 
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 10px;">
-                <a href="../ChatWithClient.aspx" class="chat-client-button" title="Chat with Clients"
+               <div style="display: flex; align-items: center; gap: 10px;">
+                <!--<a href="../ChatWithClient.aspx" class="chat-client-button" title="Chat with Clients"
                    onclick="window.location.href=this.href; return false;">
                     <i class="fab fa-facebook-messenger"></i>
-                </a>
+                </a>  -->
 
                     <div class="admin-info">
                         <i class="fas fa-user-circle"></i>

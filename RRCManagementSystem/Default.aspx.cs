@@ -6,8 +6,10 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.Net.Mail;
 using System.Net;
+using System.Text;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace RRCManagementSystem
 {
@@ -32,9 +34,43 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string email = txtEmail.Text.Trim();
-            string contact = txtContactNumber.Text.Trim();
-            string message = txtMessage.Text.Trim();
+            string email = (txtEmail.Text ?? "").Trim().ToLowerInvariant();
+            string contact = (txtContactNumber.Text ?? "").Trim();
+            string message = (txtMessage.Text ?? "").Trim();
+
+            // ===== Domain allow-list guard (server-side) =====
+            // Allowed consumer mailbox domains (case-insensitive)
+            var allowedDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "live.com", "icloud.com"
+            };
+
+            // Extract domain
+            int atIndex = email.IndexOf('@');
+            if (atIndex < 0 || atIndex == email.Length - 1)
+            {
+                ShowSweetAlert("Invalid Email", "Email address must contain @ and a domain.", "error");
+                return;
+            }
+
+            string domain = email.Substring(atIndex + 1);
+
+            // ✅ Check direct allowed domains OR if it's a school/government PH domain
+            bool isValid =
+                allowedDomains.Contains(domain) ||
+                domain.EndsWith(".edu.ph", StringComparison.OrdinalIgnoreCase) ||
+                domain.EndsWith(".gov.ph", StringComparison.OrdinalIgnoreCase);
+
+            if (!isValid)
+            {
+                ShowSweetAlert(
+                    "Invalid Email",
+                    "Only Gmail, Yahoo, Outlook/Hotmail/Live, iCloud, or school/government (.edu.ph / .gov.ph) emails are allowed.",
+                    "error"
+                );
+                return;
+            }
+            // =================================================
 
             if (!System.Text.RegularExpressions.Regex.IsMatch(contact, @"^09\d{9}$"))
             {
@@ -49,8 +85,8 @@ namespace RRCManagementSystem
             {
                 try
                 {
-                    string extension = Path.GetExtension(fuPestPhoto.FileName).ToLower();
-                    string contentType = fuPestPhoto.PostedFile.ContentType.ToLower();
+                    string extension = Path.GetExtension(fuPestPhoto.FileName).ToLowerInvariant();
+                    string contentType = (fuPestPhoto.PostedFile.ContentType ?? "").ToLowerInvariant();
 
                     string[] allowedExtensions = { ".png", ".jpg", ".jpeg" };
                     string[] allowedMimeTypes = { "image/png", "image/jpg", "image/jpeg" };
@@ -70,7 +106,7 @@ namespace RRCManagementSystem
                         Directory.CreateDirectory(folderPhysicalPath); // ✅ Auto-create the folder
                     }
 
-                    string filename = Guid.NewGuid().ToString() + extension;
+                    string filename = Guid.NewGuid().ToString("N") + extension;
                     string savePath = Path.Combine(folderPhysicalPath, filename);
 
                     fuPestPhoto.SaveAs(savePath);
@@ -85,9 +121,10 @@ namespace RRCManagementSystem
                 }
             }
 
-
             try
             {
+                string generatedCode;
+
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 using (SqlCommand cmd = new SqlCommand("dbo.spInquirySimple_Insert", conn))
                 {
@@ -98,8 +135,7 @@ namespace RRCManagementSystem
                     cmd.Parameters.AddWithValue("@Message", (object)message ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@PhotoPath", string.IsNullOrEmpty(photoPath) ? (object)DBNull.Value : photoPath);
 
-                    // If you don’t have name/address inputs on this form, send safe defaults:
-                    cmd.Parameters.AddWithValue("@LastName", "");   // or pull from a textbox if you add one
+                    cmd.Parameters.AddWithValue("@LastName", "");
                     cmd.Parameters.AddWithValue("@FirstName", "");
                     cmd.Parameters.AddWithValue("@MiddleName", "");
 
@@ -110,12 +146,26 @@ namespace RRCManagementSystem
                     cmd.Parameters.AddWithValue("@Country", DBNull.Value);
                     cmd.Parameters.AddWithValue("@Landmark", DBNull.Value);
 
+                    // OUTPUT params
+                    var pCode = new SqlParameter("@GeneratedInquiryCode", SqlDbType.NVarChar, 25) { Direction = ParameterDirection.Output };
+                    cmd.Parameters.Add(pCode);
+
+                    var pId = new SqlParameter("@NewInquiryID", SqlDbType.Int) { Direction = ParameterDirection.Output };
+                    cmd.Parameters.Add(pId);
+
                     conn.Open();
                     cmd.ExecuteNonQuery();
+
+                    generatedCode = Convert.ToString(pCode.Value ?? "");
                 }
 
-                SendConfirmationEmail(email);
-                ShowSweetAlert("Submitted!", "Your inquiry was submitted successfully.", "success");
+                SendConfirmationEmail(email, generatedCode);
+
+                ShowSweetAlert(
+                    "Submitted!",
+                    $"Your inquiry was submitted successfully.\nReference Code: {generatedCode}",
+                    "success"
+                );
                 ClearForm();
             }
             catch (Exception ex)
@@ -124,47 +174,108 @@ namespace RRCManagementSystem
             }
         }
 
-        private void SendConfirmationEmail(string toEmail)
+        private void SendConfirmationEmail(string toEmail, string inquiryCode)
         {
-            string fromEmail = ConfigurationManager.AppSettings["emailFrom"];
-            string password = ConfigurationManager.AppSettings["emailPassword"]; // Set in Web.config
+            // Gmail account used to send emails
+            string fromEmail = ConfigurationManager.AppSettings["emailFrom"];       // Your Gmail address
+            string appPassword = ConfigurationManager.AppSettings["emailPassword"]; // Gmail App Password
 
-            MailMessage mail = new MailMessage
-            {
-                From = new MailAddress(fromEmail, "RRC Management System"),
-                Subject = "RRC Inquiry Received",
-                Body = "Thank you for contacting us! We will get back to you as soon as possible."
-            };
-            mail.To.Add(toEmail);
+            // Use modern TLS only
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-            SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587)
+            using (var mail = new MailMessage())
             {
-                Credentials = new NetworkCredential(fromEmail, password),
-                EnableSsl = true
-            };
+                mail.From = new MailAddress(fromEmail, "RRC Management System", Encoding.UTF8);
+                mail.To.Add(new MailAddress(toEmail));
+                // Where replies should go (can be same Gmail or a support alias)
+                mail.ReplyToList.Add(new MailAddress("rrctermiteandpestcontrol@gmail.com"));
 
-            try
-            {
-                smtp.Send(mail);
-            }
-            catch (Exception ex)
-            {
-                ShowSweetAlert("Email Error", "We saved your inquiry but failed to send confirmation: " + ex.Message, "warning");
+                // Plain hyphen for broad compatibility
+                mail.Subject = $"RRC Inquiry Received - Ref {inquiryCode}";
+                mail.SubjectEncoding = Encoding.UTF8;
+
+                mail.Body =
+$@"Thank you for contacting R.R.C. Termite & Pest Control!
+
+We received your inquiry. Your reference code is: {inquiryCode}
+Please keep this code so we can quickly find your record.
+
+We'll get back to you as soon as possible.
+
+—
+RRC Termite & Pest Control
+rrctermiteandpestcontrol@gmail.com";
+                mail.BodyEncoding = Encoding.UTF8;
+                mail.IsBodyHtml = false;
+                mail.HeadersEncoding = Encoding.UTF8;
+
+                using (var smtp = new SmtpClient("smtp.gmail.com", 587))
+                {
+                    smtp.UseDefaultCredentials = false;
+                    smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
+                    smtp.EnableSsl = true;                       // STARTTLS on 587
+                    smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+                    smtp.Timeout = 20000;
+
+                    try
+                    {
+                        smtp.Send(mail);
+                    }
+                    catch (SmtpFailedRecipientException ex)
+                    {
+                        ShowSweetAlert("Email Error",
+                            $"Recipient rejected ({ex.FailedRecipient}).\nStatus: {ex.StatusCode}\nDetails: {ex.Message}",
+                            "warning");
+                    }
+                    catch (SmtpException ex)
+                    {
+                        var more = ex.InnerException?.Message ?? "";
+                        ShowSweetAlert("Email Error",
+                            $"SMTP failed (Status {ex.StatusCode}): {ex.Message}" + (string.IsNullOrEmpty(more) ? "" : " / " + more),
+                            "warning");
+                    }
+                    catch (Exception ex)
+                    {
+                        ShowSweetAlert("Email Error",
+                            "We saved your inquiry but failed to send confirmation: " + ex.Message,
+                            "warning");
+                    }
+                }
             }
         }
 
         private void ShowSweetAlert(string title, string message, string icon)
         {
+            string Esc(string s) => (s ?? "")
+                .Replace("\\", "\\\\")
+                .Replace("'", "\\'")
+                .Replace("\r", "")
+                .Replace("\n", "\\n");
+
+            var key = "swal_" + Guid.NewGuid().ToString("N");
+
             string script = $@"
-<script>
-    Swal.fire({{
-        title: '{title}',
-        text: '{message}',
-        icon: '{icon}',
+(function() {{
+  function show() {{
+    if (window.Swal && typeof Swal.fire === 'function') {{
+      Swal.fire({{
+        title: '{Esc(title)}',
+        text: '{Esc(message)}',
+        icon: '{Esc(icon)}',
         confirmButtonColor: '#007bff'
-    }});
-</script>";
-            ScriptManager.RegisterStartupScript(this, this.GetType(), "SweetAlert", script, false);
+      }});
+    }} else {{
+      alert('{Esc(title)}\n{Esc(message)}');
+    }}
+  }}
+  if (document.readyState === 'complete') {{
+    show();
+  }} else {{
+    window.addEventListener('load', show);
+  }}
+}})();";
+
+            ScriptManager.RegisterStartupScript(this, GetType(), key, script, addScriptTags: true);
         }
 
         private void ClearForm()

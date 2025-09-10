@@ -293,7 +293,9 @@ namespace RRCManagementSystem
 
                 Button btnAssign = (Button)e.Row.FindControl("btnAssign");
                 string inquiryId = drv["InquiryID"].ToString();
+                string inquiryCode = drv["InquiryCode"].ToString(); // ← available now
 
+                // your existing attributes…
                 btnAssign.Attributes["data-fn"] = SafeAttr(drv["FirstName"]);
                 btnAssign.Attributes["data-mn"] = SafeAttr(drv["MiddleName"]);
                 btnAssign.Attributes["data-ln"] = SafeAttr(drv["LastName"]);
@@ -304,9 +306,13 @@ namespace RRCManagementSystem
                 btnAssign.Attributes["data-ctry"] = SafeAttr(drv["Country"]);
                 btnAssign.Attributes["data-lmk"] = SafeAttr(drv["Landmark"]);
 
+                // optionally expose the code to your modal
+                btnAssign.Attributes["data-code"] = inquiryCode;
+
                 btnAssign.OnClientClick = $"showAssignModal(this, {inquiryId}); return false;";
             }
         }
+
 
         private static string SafeAttr(object val)
         {

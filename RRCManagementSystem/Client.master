@@ -159,8 +159,6 @@
             <a href="AboutUs.aspx" class="text-white text-decoration-underline">About Us</a>
             <span class="divider">|</span>
             <a href="PrivacyPolicy.aspx" class="text-white text-decoration-underline">Privacy Policy</a>
-            <span class="divider">|</span>
-            <a href="HelpCenter.aspx" class="text-white text-decoration-underline">Help Center</a>
         </div>
         <div class="mt-2">
             &copy; <%= DateTime.Now.Year %> RRC Management System. All Rights Reserved.
@@ -168,9 +166,9 @@
     </footer>
 
     <!-- CHAT BUTTON -->
-    <a href="ChatWithAdmin.aspx" class="btn btn-primary chat-fab" aria-label="Open chat">
+    <!-- <a href="ChatWithAdmin.aspx" class="btn btn-primary chat-fab" aria-label="Open chat">
         <i class="fab fa-facebook-messenger"></i>
-    </a>
+    </a>  -->
 
     <!-- Toast container -->
     <div id="toastContainer" class="toast-container"></div>

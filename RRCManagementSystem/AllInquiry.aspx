@@ -27,50 +27,60 @@
             UseSubmitBehavior="false" />
 
 
-    <!-- Hidden controls for deletion -->
     <asp:HiddenField ID="hfDeleteInquiryID" runat="server" />
     <asp:Button ID="btnDeleteHidden" runat="server" OnClick="btnDeleteHidden_Click" Style="display:none;" />
 
-    <!-- NEW: hidden source dropdown (server-bound) to feed Swal select -->
+
     <asp:DropDownList ID="ddlInspectorSource" runat="server" Style="display:none;"></asp:DropDownList>
 
     <h2 class="inquiry-header">📋 Manage Inquiries</h2>
     <asp:Label ID="lblPermission" runat="server" CssClass="text-danger" />
 
-    <asp:GridView ID="gvInquiries" runat="server" AutoGenerateColumns="False" CssClass="inquiry-table"
-        DataKeyNames="InquiryID" OnRowDataBound="gvInquiries_RowDataBound">
-        <Columns>
-            <asp:BoundField DataField="InquiryID" HeaderText="Inquiry ID" />
-            <asp:BoundField DataField="Email" HeaderText="Client Email" />
-            <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
-            <asp:BoundField DataField="Message" HeaderText="Message" />
-            <asp:TemplateField HeaderText="Photo">
-                <ItemTemplate>
-                    <asp:Image runat="server" ID="imgPhoto" ImageUrl='<%# ResolveUrl(Eval("PhotoPath").ToString()) %>' 
-                        Width="60" Visible='<%# !string.IsNullOrEmpty(Eval("PhotoPath").ToString()) %>' AlternateText="Pest Photo" />
-                    <%# string.IsNullOrEmpty(Eval("PhotoPath").ToString()) ? "No Photo" : "" %>
-                </ItemTemplate>
-            </asp:TemplateField>
-            <asp:BoundField DataField="SubmittedAt" HeaderText="Submitted At" DataFormatString="{0:g}" />
-            <asp:TemplateField HeaderText="Action">
-                <ItemTemplate>
-                    <asp:Button ID="btnAssign" runat="server" Text="Assign Inspector"
-                        CssClass="btn-primary-sm"
-                        CommandName="Assign"
-                        CommandArgument='<%# Eval("InquiryID") %>' />
-                </ItemTemplate>
-            </asp:TemplateField>
+   <asp:GridView ID="gvInquiries" runat="server" AutoGenerateColumns="False"
+    CssClass="inquiry-table"
+    DataKeyNames="InquiryID,InquiryCode"
+    OnRowDataBound="gvInquiries_RowDataBound">
+    <Columns>
+      
+        <asp:BoundField DataField="InquiryCode" HeaderText="Reference Code" />
 
-            <asp:TemplateField HeaderText="Delete">
-                <ItemTemplate>
-                    <button type="button" class="btn-danger-sm"
-                            onclick='confirmDelete(<%# Eval("InquiryID") %>)'>
-                        Delete
-                    </button>
-                </ItemTemplate>
-            </asp:TemplateField>
-        </Columns>
-    </asp:GridView>
+        <asp:BoundField DataField="Email" HeaderText="Client Email" />
+        <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
+        <asp:BoundField DataField="Message" HeaderText="Message" />
+
+        <asp:TemplateField HeaderText="Photo">
+            <ItemTemplate>
+                <asp:Image runat="server" ID="imgPhoto"
+                    ImageUrl='<%# ResolveUrl(Eval("PhotoPath").ToString()) %>'
+                    Width="60"
+                    Visible='<%# !string.IsNullOrEmpty(Eval("PhotoPath").ToString()) %>'
+                    AlternateText="Pest Photo" />
+                <%# string.IsNullOrEmpty(Eval("PhotoPath").ToString()) ? "No Photo" : "" %>
+            </ItemTemplate>
+        </asp:TemplateField>
+
+        <asp:BoundField DataField="SubmittedAt" HeaderText="Submitted At" DataFormatString="{0:g}" />
+
+        <asp:TemplateField HeaderText="Action">
+            <ItemTemplate>
+                <asp:Button ID="btnAssign" runat="server" Text="Assign Inspector"
+                    CssClass="btn-primary-sm"
+                    CommandName="Assign"
+                    CommandArgument='<%# Eval("InquiryID") %>' />
+            </ItemTemplate>
+        </asp:TemplateField>
+
+        <asp:TemplateField HeaderText="Delete">
+            <ItemTemplate>
+                <button type="button" class="btn-danger-sm"
+                        onclick='confirmDelete(<%# Eval("InquiryID") %>)'>
+                    Delete
+                </button>
+            </ItemTemplate>
+        </asp:TemplateField>
+    </Columns>
+</asp:GridView>
+
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 

@@ -26,7 +26,6 @@ namespace RRCManagementSystem
             {
                 lblWelcome.Text = "Welcome back, " + (Session["AdminName"]?.ToString() ?? "Admin") + "!";
                 LoadTotalCounts();
-                LoadBlockchainLog();
                 LoadWeeklyBookingCalendar();
             }
         }
@@ -198,55 +197,15 @@ namespace RRCManagementSystem
         }
 
         // ==================== BLOCKCHAIN LOG LIST/FILTER ====================
-        private void LoadBlockchainLog()
-        {
-            // Read PHT dates from the inputs
-            DateTime fromLocal, toLocal;
-            bool hasFrom = DateTime.TryParse(txtFromDate.Text, out fromLocal);
-            bool hasTo = DateTime.TryParse(txtToDate.Text, out toLocal);
-
-            // Convert to UTC day-range for SQL (upper bound exclusive)
-            DateTime? fromUtc = PhtRangeStartUtc(hasFrom ? (DateTime?)fromLocal : null);
-            DateTime? toUtc = PhtRangeEndUtcExclusive(hasTo ? (DateTime?)toLocal : null);
-
-            using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("dbo.spBlockchain_Log_List", con))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@From", SqlDbType.DateTime).Value = (object)fromUtc ?? DBNull.Value;
-                cmd.Parameters.Add("@To", SqlDbType.DateTime).Value = (object)toUtc ?? DBNull.Value; // exclusive
-
-                var dt = new DataTable();
-                using (var da = new SqlDataAdapter(cmd))
-                {
-                    con.Open();
-                    da.Fill(dt);
-                }
-
-                rptBlockchainLog.DataSource = dt;
-                rptBlockchainLog.DataBind();
-            }
-        }
 
 
-        protected void btnFilterBlockchain_Click(object sender, EventArgs e)
-        {
-            LoadBlockchainLog();
-        }
+
 
         // ==================== BLOCKCHAIN VERIFY (CANONICAL) ====================
         protected void btnVerifyBlockchain_Click(object sender, EventArgs e)
         {
             int checkedCount = 0, tamperedCount = 0;
             bool allValid = true;
-
-            // --- 1) Read PHT dates from UI and convert to UTC (DB stores UTC) ---
-            DateTime fromLocal, toLocal;
-            bool hasFrom = DateTime.TryParse(txtFromDate.Text, out fromLocal);
-            bool hasTo = DateTime.TryParse(txtToDate.Text, out toLocal);
-
-            DateTime? fromUtc = PhtRangeStartUtc(hasFrom ? (DateTime?)fromLocal : null);
-            DateTime? toUtc = PhtRangeEndUtcExclusive(hasTo ? (DateTime?)toLocal : null);
 
             // --- Optional HMAC key (base64 in web.config appSettings) ---
             byte[] hmacKey = null;
@@ -258,76 +217,66 @@ namespace RRCManagementSystem
             }
             catch { hmacKey = null; }
 
-            // --- 2) Read rows, buffer, and sort ASC by LogID (critical) ---
-            var rows = new List<BlockRow>(64);
+            // --- 1) Load all blockchain rows ---
+            var rows = new List<BlockRow>();
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("dbo.spBlockchain_Log_ListForVerify", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@From", SqlDbType.DateTime).Value = (object)fromUtc ?? DBNull.Value;
-                cmd.Parameters.Add("@To", SqlDbType.DateTime).Value = (object)toUtc ?? DBNull.Value; // exclusive
-
                 con.Open();
                 using (var r = cmd.ExecuteReader())
                 {
                     while (r.Read())
                     {
-                        var row = new BlockRow();
-                        row.LogID = (int)r["LogID"];
-                        row.SaleJson = r["SaleDataJson"] as string ?? "";
-                        row.SaleHashDb = r["SaleHash"] as string ?? "";
-                        row.PrevHashDb = r["PrevHash"] as string ?? "";
-                        row.ChainHashDb = r["ChainHash"] as string ?? "";
-                        row.TxId = (int)r["TransactionID"];
-                        row.Timestamp = (DateTime)r["Timestamp"];
-                        row.AuthTag = r["AuthTag"] as byte[];
-                        rows.Add(row);
+                        rows.Add(new BlockRow
+                        {
+                            LogID = (int)r["LogID"],
+                            SaleJson = r["SaleDataJson"] as string ?? "",
+                            SaleHashDb = r["SaleHash"] as string ?? "",
+                            PrevHashDb = r["PrevHash"] as string ?? "",
+                            ChainHashDb = r["ChainHash"] as string ?? "",
+                            TxId = (int)r["TransactionID"],
+                            Timestamp = (DateTime)r["Timestamp"],
+                            AuthTag = r["AuthTag"] as byte[]
+                        });
                     }
                 }
             }
 
             rows.Sort((a, b) => a.LogID.CompareTo(b.LogID)); // oldest -> newest
 
-            // --- 3) Verify forward ---
+            // --- 2) Verify forward ---
             string previousChain = null; // null on first row
             foreach (var row in rows)
             {
                 checkedCount++;
 
-                // (1) Sale hash recompute (UTF-8 -> SHA256 -> lowercase hex)
                 string saleHash = Sha256Utf8Lower(row.SaleJson);
                 bool okSale = row.SaleHashDb.Equals(saleHash, StringComparison.OrdinalIgnoreCase);
 
-                // (2) PrevHash must equal previous row's ChainHash.
-                // First row tolerance: PrevHash == SaleHash (new) OR null/zeros (legacy).
                 bool isFirst = (previousChain == null);
-                bool prevOkFirst =
-                    row.PrevHashDb.Equals(saleHash, StringComparison.OrdinalIgnoreCase) ||
-                    string.IsNullOrWhiteSpace(row.PrevHashDb) ||
-                    IsAllZeros64(row.PrevHashDb);
+                bool prevOkFirst = row.PrevHashDb.Equals(saleHash, StringComparison.OrdinalIgnoreCase)
+                                   || string.IsNullOrWhiteSpace(row.PrevHashDb)
+                                   || IsAllZeros64(row.PrevHashDb);
 
-                bool okPrev = isFirst
-                    ? prevOkFirst
-                    : row.PrevHashDb.Equals(previousChain, StringComparison.OrdinalIgnoreCase);
+                bool okPrev = isFirst ? prevOkFirst : row.PrevHashDb.Equals(previousChain, StringComparison.OrdinalIgnoreCase);
 
-                // (3) ChainHash = SHA256( (previousChain ?? saleHash) + "." + saleHash )
                 string material = (previousChain == null ? saleHash : (previousChain + "." + saleHash));
                 string chainHash = Sha256Utf8Lower(material);
                 bool okChain = row.ChainHashDb.Equals(chainHash, StringComparison.OrdinalIgnoreCase);
 
-                // Advance link using the DB value so we continue even if this row failed
                 previousChain = row.ChainHashDb;
 
-                // (4) Optional HMAC over JSON + txId + UTC timestamp
                 bool okHmac = true;
-                if (hmacKey != null && row.AuthTag != null && row.AuthTag.Length > 0)
+                if (hmacKey != null && row.AuthTag?.Length > 0)
                 {
                     string paidAtIso = row.Timestamp.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
                     string macMaterial = row.SaleJson + "|" + row.TxId + "|" + paidAtIso;
-                    byte[] expected;
                     using (var h = new HMACSHA256(hmacKey))
-                        expected = h.ComputeHash(Encoding.UTF8.GetBytes(macMaterial));
-                    okHmac = Enumerable.SequenceEqual(row.AuthTag, expected);
+                    {
+                        byte[] expected = h.ComputeHash(Encoding.UTF8.GetBytes(macMaterial));
+                        okHmac = Enumerable.SequenceEqual(row.AuthTag, expected);
+                    }
                 }
 
                 if (!(okSale && okPrev && okChain && okHmac))
@@ -337,16 +286,16 @@ namespace RRCManagementSystem
                 }
             }
 
-            // --- 4) Show result ---
+            // --- 3) Display result only ---
             if (checkedCount == 0)
             {
                 lblVerificationResult.ForeColor = System.Drawing.Color.Gray;
-                lblVerificationResult.Text = "ℹ No blockchain records in the selected range.";
+                lblVerificationResult.Text = "ℹ No blockchain records found.";
             }
             else if (allValid)
             {
                 lblVerificationResult.ForeColor = System.Drawing.Color.Green;
-                lblVerificationResult.Text = "✅ Verification complete.<br/>Your records match what was originally saved.<br/>The sequence is correct.<br/>No signs of tampering.";
+                lblVerificationResult.Text = "✅ Verification complete. All records are consistent. No tampering detected.";
             }
             else
             {
@@ -355,6 +304,7 @@ namespace RRCManagementSystem
             }
 
             LogAudit("Performed blockchain verification.");
+            LoadWeeklyBookingCalendar();
         }
 
 

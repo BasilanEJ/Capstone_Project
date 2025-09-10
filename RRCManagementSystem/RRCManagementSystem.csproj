@@ -195,6 +195,7 @@
     <Content Include="Images\service-reticulation.jpg" />
     <Content Include="Images\service-soil.jpg" />
     <Content Include="Images\service-termite.jpg" />
+    <Content Include="InspectedInquiry.aspx" />
     <Content Include="InspectorDashboard.aspx" />
     <Content Include="Login.aspx" />
     <Content Include="Logout.aspx" />
@@ -724,6 +725,13 @@
     </Compile>
     <Compile Include="Inquiry.Master.designer.cs">
       <DependentUpon>Inquiry.Master</DependentUpon>
+    </Compile>
+    <Compile Include="InspectedInquiry.aspx.cs">
+      <DependentUpon>InspectedInquiry.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="InspectedInquiry.aspx.designer.cs">
+      <DependentUpon>InspectedInquiry.aspx</DependentUpon>
     </Compile>
     <Compile Include="Inspector.master.cs">
       <DependentUpon>Inspector.master</DependentUpon>

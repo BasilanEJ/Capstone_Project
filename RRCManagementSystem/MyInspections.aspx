@@ -9,9 +9,7 @@
     .text-break-any{overflow-wrap:anywhere;word-break:break-word}
     .addr-line{display:block}
     .btn-xs{padding:.3rem .6rem;font-size:.85rem}
-    @media (max-width:575.98px){
-      .container{padding-left:.75rem;padding-right:.75rem}
-    }
+    @media (max-width:575.98px){ .container{padding-left:.75rem;padding-right:.75rem} }
   </style>
 
   <div class="container py-4">
@@ -43,6 +41,10 @@
                   Inspection #<%# Eval("InspectionID") %>
                 </h5>
 
+                <p class="mb-1"><strong>Inquiry Code:</strong>
+                  <span class="text-break-any"><%# Eval("InquiryCode") %></span>
+                </p>
+
                 <p class="mb-1"><strong>Name:</strong>
                   <span class="text-break-any"><%# Eval("FullName") %></span>
                 </p>
@@ -52,9 +54,7 @@
                   <span class="addr-line">
                     <%# Eval("StreetAndUnit") %>, <%# Eval("Barangay") %>, <%# Eval("City") %>, <%# Eval("Region") %>, <%# Eval("Country") %>
                   </span>
-                  <em>
-                    <%# !string.IsNullOrEmpty(Eval("Landmark")?.ToString()) ? "(Landmark: " + Eval("Landmark") + ")" : "" %>
-                  </em>
+                  <em><%# !string.IsNullOrEmpty(Eval("Landmark")?.ToString()) ? "(Landmark: " + Eval("Landmark") + ")" : "" %></em>
                 </p>
 
                 <p class="mb-1">
@@ -62,12 +62,12 @@
                   <%# Eval("ScheduledDate", "{0:yyyy-MM-dd hh:mm tt}") %>
                 </p>
 
-                <p class="mb-1">
-                  <strong>Status:</strong> <%# Eval("InspectionStatus") %>
-                </p>
+                <p class="mb-1"><strong>Status:</strong> <%# Eval("InspectionStatus") %></p>
+
+                <p class="mb-1 text-break-any"><strong>Remarks:</strong> <%# Eval("Remarks") %></p>
 
                 <p class="mb-1 text-break-any">
-                  <strong>Remarks:</strong> <%# Eval("Remarks") %>
+                  <strong>Findings:</strong> <%#: Eval("Findings") %>
                 </p>
 
                 <p class="mb-3">
@@ -75,7 +75,7 @@
                 </p>
 
                 <%# Eval("InspectionStatus").ToString() == "Pending"
-                    ? "<button type='button' class=\"btn btn-success btn-xs\" onclick=\"markDone('" + Eval("InspectionID") + "')\">Mark Done</button>"
+                    ? "<button type=\"button\" class=\"btn btn-success btn-xs\" onclick=\"markDoneWithFindings('" + Eval("InspectionID") + "')\">Mark Done</button>"
                     : "" %>
               </div>
             </div>
@@ -87,18 +87,26 @@
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
-      function markDone(inspectionId) {
+      function markDoneWithFindings(inspectionId) {
           Swal.fire({
               title: 'Mark as Done?',
-              text: 'Are you sure you want to mark this inspection as completed?',
+              text: 'Please enter your findings for this inspection.',
               icon: 'question',
+              input: 'textarea',
+              inputLabel: 'Findings',
+              inputPlaceholder: 'Describe your findings...',
+              inputAttributes: { 'aria-label': 'Findings' },
+              inputValidator: (value) => {
+                  if (!value || !value.trim()) return 'Findings are required.';
+              },
               showCancelButton: true,
               confirmButtonColor: '#198754',
               cancelButtonColor: '#d33',
-              confirmButtonText: 'Yes, mark done'
+              confirmButtonText: 'Yes, Mark Done'
           }).then((result) => {
               if (result.isConfirmed) {
-                  window.location.href = 'MyInspections.aspx?done=' + inspectionId;
+                  const findings = encodeURIComponent(result.value.trim());
+                  window.location.href = 'MyInspections.aspx?done=' + inspectionId + '&findings=' + findings;
               }
           });
       }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -33,7 +34,7 @@ namespace RRCManagementSystem
 
                 using (var rdr = cmd.ExecuteReader())
                 {
-                    var dt = new System.Data.DataTable();
+                    var dt = new DataTable();
                     dt.Load(rdr);
 
                     // Split data by ServiceType
@@ -54,8 +55,6 @@ namespace RRCManagementSystem
                 }
             }
         }
-
-
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
@@ -94,8 +93,8 @@ namespace RRCManagementSystem
 
             // ✅ Must select at least one service
             var selectedItems = cblTermite.Items.Cast<ListItem>().Where(i => i.Selected)
-      .Concat(cblGeneral.Items.Cast<ListItem>().Where(i => i.Selected))
-      .ToList();
+                .Concat(cblGeneral.Items.Cast<ListItem>().Where(i => i.Selected))
+                .ToList();
 
             if (!selectedItems.Any())
             {
@@ -132,19 +131,18 @@ namespace RRCManagementSystem
 
                 string deepLink = "BookService.aspx?tab=quotes"; // page where client can review quotations
 
-                // Use Title + Body (so it renders in your bell dropdown)
                 AddNotification(
                     clientId: clientId,
                     type: "quotation",
                     title: "Quotation Submitted",
                     body: $"New quotation ready: {svc} — {priceText} for {sqm} sqm.",
                     url: deepLink,
-                    dedupKey: $"QUOTE-{clientId}-{newId}" // optional
+                    dedupKey: $"QUOTE-{clientId}-{newId}"
                 );
             }
             catch
             {
-                // Notification failed is non-critical; ignore silently
+                // Notification failure is non-critical
             }
 
             // ✅ Success UI
@@ -156,20 +154,17 @@ namespace RRCManagementSystem
             hfClientID.Value = "";
             cblTermite.ClearSelection();
             cblGeneral.ClearSelection();
-
             txtSQM.Text = "";
             txtTotalPrice.Text = "";
         }
 
-
-
         private void AddNotification(
-    int clientId,
-    string type,              // e.g. "quotation"
-    string title,             // short line, e.g. "Quotation Submitted"
-    string body,              // details, e.g. "New quotation ready …"
-    string url = null,        // deep-link, e.g. "BookService.aspx?tab=quotes"
-    string dedupKey = null)   // optional, for de-dup logic if you have it
+            int clientId,
+            string type,
+            string title,
+            string body,
+            string url = null,
+            string dedupKey = null)
         {
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.usp_Notifications_Add", con))
@@ -181,11 +176,11 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@Body", SqlDbType.NVarChar, 1000).Value = (object)body ?? DBNull.Value;
                 cmd.Parameters.Add("@Url", SqlDbType.NVarChar, 400).Value = (object)url ?? DBNull.Value;
                 cmd.Parameters.Add("@DedupKey", SqlDbType.NVarChar, 100).Value = (object)dedupKey ?? DBNull.Value;
+
                 con.Open();
                 cmd.ExecuteNonQuery();
             }
         }
-
 
         private bool GetIsAnyContract(string serviceIdCsv)
         {
@@ -236,9 +231,9 @@ namespace RRCManagementSystem
         // ===== Ajax AutoComplete endpoint (stored procedure) =====
         [WebMethod]
         [ScriptMethod]
-        public static System.Collections.Generic.List<string> SearchClients(string prefixText, int count)
+        public static List<string> SearchClients(string prefixText, int count)
         {
-            var results = new System.Collections.Generic.List<string>();
+            var results = new List<string>();
             string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
             using (var con = new SqlConnection(cs))
@@ -248,7 +243,6 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@Prefix", SqlDbType.NVarChar, 200).Value =
                     (object)(prefixText ?? string.Empty) ?? DBNull.Value;
 
-                // Bounds check for sanity
                 int capped = Math.Max(1, Math.Min(count <= 0 ? 10 : count, 50));
                 cmd.Parameters.Add("@Top", SqlDbType.Int).Value = capped;
 
@@ -259,13 +253,190 @@ namespace RRCManagementSystem
                     {
                         string fullName = rdr["FullName"]?.ToString() ?? "";
                         string id = rdr["ClientID"]?.ToString() ?? "";
-                        // Keep the same format your extender expects
                         results.Add(AjaxControlToolkit.AutoCompleteExtender.CreateAutoCompleteItem(fullName, id));
                     }
                 }
             }
-
             return results;
         }
+
+        /* =========================================================
+           PageMethods WebMethod: Fetch InquiryCode + recent Findings
+           Called by setClientID() in CreateBooking.aspx
+           ========================================================= */
+
+        public class FindingDto
+        {
+            public string Text { get; set; }
+            public string When { get; set; }
+        }
+
+        public class InquirySummaryDto
+        {
+            public string InquiryCode { get; set; }
+            public List<FindingDto> Findings { get; set; }
+            public string LastUpdated { get; set; }
+        }
+
+        [WebMethod]
+        [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
+        public static InquirySummaryDto GetClientInquirySummary(int clientId)
+        {
+            var dto = new InquirySummaryDto
+            {
+                InquiryCode = null,
+                Findings = new List<FindingDto>(),
+                LastUpdated = null
+            };
+
+            string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
+            using (var con = new SqlConnection(cs))
+            {
+                con.Open();
+
+                // --- Schema probes (no hard-coded assumptions) ---
+                bool chHasInspectionId = ColumnExists(con, "dbo", "ClientHistory", "InspectionID");
+                bool chHasInquiryCode = ColumnExists(con, "dbo", "ClientHistory", "InquiryCode");
+
+                bool hasInspectionsTbl = TableExists(con, "dbo", "Inspections");
+                bool hasInquiriesTbl = TableExists(con, "dbo", "Inquiries");
+
+                bool insHasInquiryId = hasInspectionsTbl && ColumnExists(con, "dbo", "Inspections", "InquiryID");
+                bool iqHasInquiryCode = hasInquiriesTbl && ColumnExists(con, "dbo", "Inquiries", "InquiryCode");
+
+                string sql;
+
+                if (chHasInspectionId && hasInspectionsTbl && hasInquiriesTbl && insHasInquiryId && iqHasInquiryCode)
+                {
+                    // ✅ Full path: ClientHistory.InspectionID -> Inspections -> Inquiries.InquiryCode
+                    sql = @"
+;WITH Recent AS
+(
+    SELECT TOP (5)
+        ch.HistoryID,
+        ch.ClientID,
+        ch.Title,
+        ch.Description,
+        ch.CreatedAt,
+        COALESCE(ch.InquiryCode, iq.InquiryCode) AS InquiryCode
+    FROM dbo.ClientHistory ch
+    LEFT JOIN dbo.Inspections ins ON ins.InspectionID = ch.InspectionID
+    LEFT JOIN dbo.Inquiries   iq  ON iq.InquiryID     = ins.InquiryID
+    WHERE ch.ClientID = @ClientID
+      AND (ch.Title = 'Inspection Findings' OR ch.Description IS NOT NULL)
+    ORDER BY ch.CreatedAt DESC
+)
+SELECT * FROM Recent ORDER BY CreatedAt DESC;";
+                }
+                else if (chHasInquiryCode)
+                {
+                    // ✅ Fallback: just use InquiryCode already stored in ClientHistory
+                    sql = @"
+SELECT TOP (5)
+    ch.HistoryID,
+    ch.ClientID,
+    ch.Title,
+    ch.Description,
+    ch.CreatedAt,
+    ch.InquiryCode
+FROM dbo.ClientHistory ch
+WHERE ch.ClientID = @ClientID
+  AND (ch.Title = 'Inspection Findings' OR ch.Description IS NOT NULL)
+ORDER BY ch.CreatedAt DESC;";
+                }
+                else
+                {
+                    // ✅ Minimal fallback: no inquiry code available from schema
+                    sql = @"
+SELECT TOP (5)
+    ch.HistoryID,
+    ch.ClientID,
+    ch.Title,
+    ch.Description,
+    ch.CreatedAt,
+    CAST(NULL AS NVARCHAR(50)) AS InquiryCode
+FROM dbo.ClientHistory ch
+WHERE ch.ClientID = @ClientID
+  AND (ch.Title = 'Inspection Findings' OR ch.Description IS NOT NULL)
+ORDER BY ch.CreatedAt DESC;";
+                }
+
+                using (var cmd = new SqlCommand(sql, con))
+                {
+                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+
+                    using (var rdr = cmd.ExecuteReader())
+                    {
+                        DateTime? latest = null;
+
+                        while (rdr.Read())
+                        {
+                            if (string.IsNullOrEmpty(dto.InquiryCode))
+                                dto.InquiryCode = rdr["InquiryCode"] as string;
+
+                            string desc = rdr["Description"] as string;
+                            string title = rdr["Title"] as string;
+
+                            DateTime? createdAt = rdr["CreatedAt"] == DBNull.Value
+                                ? (DateTime?)null
+                                : Convert.ToDateTime(rdr["CreatedAt"], CultureInfo.InvariantCulture);
+
+                            string text = !string.IsNullOrWhiteSpace(desc)
+                                ? desc
+                                : (!string.IsNullOrWhiteSpace(title) ? title : "(no description)");
+
+                            dto.Findings.Add(new FindingDto
+                            {
+                                Text = text,
+                                When = createdAt.HasValue
+                                    ? createdAt.Value.ToString("MMM dd, yyyy h:mm tt", CultureInfo.InvariantCulture)
+                                    : null
+                            });
+
+                            if (createdAt.HasValue && (!latest.HasValue || createdAt > latest))
+                                latest = createdAt;
+                        }
+
+                        if (latest.HasValue)
+                            dto.LastUpdated = latest.Value.ToString("MMM dd, yyyy h:mm tt", CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+
+            return dto;
+        }
+
+        // --- helpers (put in the same code-behind class) ---
+        private static bool ColumnExists(SqlConnection con, string schema, string table, string column)
+        {
+            using (var cmd = new SqlCommand(@"
+SELECT 1
+FROM sys.columns c
+JOIN sys.objects o  ON o.object_id = c.object_id
+JOIN sys.schemas s  ON s.schema_id = o.schema_id
+WHERE s.name = @s AND o.name = @t AND c.name = @c;", con))
+            {
+                cmd.Parameters.AddWithValue("@s", schema);
+                cmd.Parameters.AddWithValue("@t", table);
+                cmd.Parameters.AddWithValue("@c", column);
+                return cmd.ExecuteScalar() != null;
+            }
+        }
+
+        private static bool TableExists(SqlConnection con, string schema, string table)
+        {
+            using (var cmd = new SqlCommand(@"
+SELECT 1
+FROM sys.objects o
+JOIN sys.schemas s ON s.schema_id = o.schema_id
+WHERE s.name = @s AND o.name = @t AND o.type IN ('U','V');", con))
+            {
+                cmd.Parameters.AddWithValue("@s", schema);
+                cmd.Parameters.AddWithValue("@t", table);
+                return cmd.ExecuteScalar() != null;
+            }
+        }
+
     }
 }

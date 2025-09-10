@@ -34,10 +34,18 @@
         <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-control" />
     </div>
 
-    <div class="col-md-4">
-        <label class="form-label">Email *</label>
-        <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" />
-    </div>
+                        <div class="col-md-4">
+                        <label class="form-label">Email *</label>
+                        <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" />
+                      
+                       <asp:RegularExpressionValidator ID="revEmail" runat="server"
+                        ControlToValidate="txtEmail"
+                        ErrorMessage="Please enter a valid Gmail, Yahoo, Outlook, iCloud, or school/government email address."
+                        ForeColor="Red" Display="Dynamic"
+                        ValidationGroup="inq"
+                        ValidationExpression="^[A-Za-z0-9._%+\-]+@((?:gmail|yahoo|ymail|rocketmail|outlook|hotmail|live|msn|icloud|me|mac|protonmail|proton|zoho|zohomail)\.com|(?:[A-Za-z0-9-]+\.)+edu\.ph|(?:[A-Za-z0-9-]+\.)+gov\.ph)$" />
+
+                    </div>
 
     <div class="col-md-4">
         <label class="form-label">Contact Number *</label>
@@ -89,7 +97,13 @@
 </div>
 
 
-            <asp:Button ID="btnCreate" runat="server" Text="Create Account" CssClass="btn btn-primary w-100" OnClick="btnCreate_Click" />
+           <asp:Button ID="btnCreate" runat="server"
+    Text="Create Account"
+    CssClass="btn btn-primary w-100"
+    OnClick="btnCreate_Click"
+    ValidationGroup="inq"
+    CausesValidation="true" />
+
         </div>
     </div>
 </div>

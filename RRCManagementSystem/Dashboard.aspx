@@ -126,79 +126,61 @@
         </div>
     </section>
 
-    <!-- ===== BLOCKCHAIN SECTION (stays in place on click) ===== -->
-    <!-- Anchor to scroll back after async updates -->
-    <span id="blockchainSection"></span>
+ <!-- ===== BLOCKCHAIN SECTION (stays in place on click) ===== -->
+<!-- Anchor to scroll back after async updates -->
+<span id="blockchainSection"></span>
 
-    <asp:UpdatePanel ID="upBlockchain" runat="server" UpdateMode="Conditional" ChildrenAsTriggers="true">
-        <ContentTemplate>
-            <section class="blockchain-transparency" id="blockchain-transparency">
-                <div class="container">
-                    <hr />
-                    <h3 class="section-title">Blockchain Sales Transparency</h3>
+<asp:UpdatePanel ID="upBlockchain" runat="server" UpdateMode="Conditional" ChildrenAsTriggers="true">
+    <ContentTemplate>
+        <section class="blockchain-transparency" id="blockchain-transparency">
+            <div class="container">
+                <hr />
+                <h3 class="section-title">Blockchain Sales Transparency</h3>
 
-                    <!-- Filter + Verify -->
-                    <div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:20px;">
-                        <asp:TextBox ID="txtFromDate" runat="server" TextMode="Date" CssClass="form-control" Style="max-width:180px;" />
-                        <asp:TextBox ID="txtToDate"   runat="server" TextMode="Date" CssClass="form-control" Style="max-width:180px;" />
-                        <asp:Button ID="btnFilterBlockchain" runat="server" Text="📅 Filter"
-                                    CssClass="btn-sales" OnClick="btnFilterBlockchain_Click"
-                                    CausesValidation="false" UseSubmitBehavior="false" />
-                   <asp:Button ID="btnVerifyBlockchain" runat="server" Text="🔍 Verify Blockchain"
-                                    CssClass="btn-sales" OnClick="btnVerifyBlockchain_Click"
-                                    CausesValidation="false" UseSubmitBehavior="false" />
-                          <!--   <asp:Button ID="btnRecomputeChain"  
-            runat="server" 
-            Text="🔧 Recompute Chain (Maintenance)" 
-            CssClass="btn btn-warning" 
-            OnClick="btnRecomputeChain_Click" /> -->
-
-                    </div>
-
-                    <div style="text-align:center;margin-bottom:30px;">
-                        <asp:Label ID="lblVerificationResult" runat="server" Style="font-size:18px;font-weight:bold;"></asp:Label>
-                    </div>
-
-                    <!-- Blockchain Logs Table -->
-                    <div class="table-responsive">
-                        <table class="custom-table">
-                            <thead>
-                                <tr>
-                                    <th>Log ID</th>
-                                    <th>Transaction ID</th>
-                                    <th>Verification Code<br/><small>(Ensures the transaction hasn’t been altered)</small></th> 
-                                    <th>Timestamp</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <asp:Repeater ID="rptBlockchainLog" runat="server" OnItemCommand="rptBlockchainLog_ItemCommand">
-                                    <ItemTemplate>
-                                        <tr>
-                                            <td><%# Eval("LogID") %></td>
-                                            <td>
-                                                <asp:LinkButton ID="lnkTransactionID" runat="server"
-                                                    Text='<%# Eval("TransactionID") %>'
-                                                    CommandName="ViewJson"
-                                                    CommandArgument='<%# Eval("TransactionID") %>'
-                                                    CssClass="btn btn-link"
-                                                    CausesValidation="false" />
-                                            </td>
-                                            <td><%# Eval("SaleHash") %></td>
-                                            <td><%# FormatLocalPH(Eval("Timestamp")) %></td>
-                                        </tr>
-                                    </ItemTemplate>
-                                </asp:Repeater>
-                            </tbody>
-                        </table>
-                    </div>
+                <!-- Verify Button -->
+                <div style="text-align:center; margin:20px 0;">
+                    <asp:Button ID="btnVerifyBlockchain" runat="server"
+                        Text="🔍 Verify Blockchain"
+                        CssClass="btn-sales"
+                        OnClick="btnVerifyBlockchain_Click"
+                        CausesValidation="false"
+                        UseSubmitBehavior="false" />
                 </div>
-            </section>
-        </ContentTemplate>
-        <Triggers>
-            <asp:AsyncPostBackTrigger ControlID="btnFilterBlockchain" EventName="Click" />
-            <asp:AsyncPostBackTrigger ControlID="btnVerifyBlockchain" EventName="Click" />
-        </Triggers>
-    </asp:UpdatePanel>
+
+                <!-- Loading indicator -->
+                <asp:UpdateProgress ID="upProgress" runat="server" AssociatedUpdatePanelID="upBlockchain">
+                    <ProgressTemplate>
+                        <div style="text-align:center; color:blue; font-weight:bold; margin-bottom:10px;">
+                            ⏳ Verifying blockchain, please wait...
+                        </div>
+                    </ProgressTemplate>
+                </asp:UpdateProgress>
+
+                <!-- Verification Result -->
+                <div style="text-align:center; margin-bottom:30px;">
+                    <asp:Label ID="lblVerificationResult" runat="server"
+                        Style="font-size:18px; font-weight:bold;"></asp:Label>
+                </div>
+            </div>
+        </section>
+    </ContentTemplate>
+
+    <Triggers>
+        <asp:AsyncPostBackTrigger ControlID="btnVerifyBlockchain" EventName="Click" />
+    </Triggers>
+</asp:UpdatePanel>
+
+<!-- Scroll-to-anchor script -->
+<script type="text/javascript">
+    Sys.WebForms.PageRequestManager.getInstance().add_endRequest(function () {
+        var anchor = document.getElementById("blockchainSection");
+        if (anchor) {
+            anchor.scrollIntoView({ behavior: "smooth" });
+        }
+    });
+</script>
+
+
 
     <!-- JSON modal -->
     <div id="jsonModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; align-items:center; justify-content:center;">
