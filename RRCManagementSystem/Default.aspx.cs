@@ -23,6 +23,7 @@ namespace RRCManagementSystem
             {
                 // Restrict file picker to image files only
                 fuPestPhoto.Attributes["accept"] = "image/png,image/jpeg,image/jpg";
+                MaintainScrollPositionOnPostBack = true;
             }
         }
 
@@ -30,9 +31,35 @@ namespace RRCManagementSystem
         {
             if (!chkTerms.Checked)
             {
-                ShowSweetAlert("Terms Required", "Please agree to the terms and conditions before submitting.", "warning");
+                ScriptManager.RegisterStartupScript(
+                    this,
+                    GetType(),
+                    "ShowSweetAlertAndModal",
+                    @"
+        Swal.fire({
+            icon: 'warning',
+            title: 'Terms Required',
+            text: 'Please agree to the terms and conditions before submitting.',
+            showConfirmButton: false,
+            timer: 2000,
+            position: 'center',
+            backdrop: false
+        });
+
+        // Open Terms modal after SweetAlert finishes
+        setTimeout(function() {
+            var termsModal = new bootstrap.Modal(document.getElementById('termsModal'));
+            termsModal.show();
+        }, 2100);
+        ",
+                    true
+                );
                 return;
             }
+
+
+
+
 
             string email = (txtEmail.Text ?? "").Trim().ToLowerInvariant();
             string contact = (txtContactNumber.Text ?? "").Trim();
@@ -255,28 +282,45 @@ rrctermiteandpestcontrol@gmail.com";
             var key = "swal_" + Guid.NewGuid().ToString("N");
 
             string script = $@"
-(function() {{
-  function show() {{
-    if (window.Swal && typeof Swal.fire === 'function') {{
-      Swal.fire({{
-        title: '{Esc(title)}',
-        text: '{Esc(message)}',
-        icon: '{Esc(icon)}',
-        confirmButtonColor: '#007bff'
-      }});
-    }} else {{
-      alert('{Esc(title)}\n{Esc(message)}');
-    }}
-  }}
-  if (document.readyState === 'complete') {{
-    show();
-  }} else {{
-    window.addEventListener('load', show);
-  }}
-}})();";
+    (function() {{
+      function show() {{
+        if (window.Swal && typeof Swal.fire === 'function') {{
+          Swal.fire({{
+            title: '{Esc(title)}',
+            text: '{Esc(message)}',
+            icon: '{Esc(icon)}',
+            confirmButtonColor: '#007bff',
+            focusConfirm: false,      // Don't focus button
+            backdrop: false,          // No dimmed background
+            position: 'center',       // Keep it inline
+            allowOutsideClick: false, // Force user to acknowledge
+            allowEscapeKey: false,
+            didOpen: () => {{
+                // Prevent scroll jump
+                if (history.scrollRestoration) {{
+                    history.scrollRestoration = 'manual';
+                }}
+            }}
+          }}).then(() => {{
+              // Restore scroll manually
+              const y = sessionStorage.getItem('scrollPosition');
+              if (y) window.scrollTo(0, parseInt(y));
+          }});
+        }} else {{
+          alert('{Esc(title)}\\n{Esc(message)}');
+        }}
+      }}
+      if (document.readyState === 'complete') {{
+        show();
+      }} else {{
+        window.addEventListener('load', show);
+      }}
+    }})();";
 
             ScriptManager.RegisterStartupScript(this, GetType(), key, script, addScriptTags: true);
         }
+
+
 
         private void ClearForm()
         {
