@@ -135,6 +135,8 @@
 
         .hidden { display: none; }
 
+
+
         @media screen and (max-width: 480px) {
             .login-container {
                 width: 90%;
@@ -152,22 +154,28 @@
 
         <asp:Panel ID="pnlLogin" runat="server" DefaultButton="btnLogin">
             <!-- Email -->
-            <asp:TextBox ID="txtEmail" runat="server" CssClass="input" placeholder="Email"
-                         TextMode="Email" AutoCompleteType="Disabled"
-                         onkeydown="return focusPasswordOnEnter(event)" />
+       <asp:TextBox ID="txtEmail" runat="server" CssClass="input" placeholder="Email"
+             TextMode="Email" AutoCompleteType="Disabled" 
+             MaxLength="100"
+             onkeydown="return focusPasswordOnEnter(event)" />
+
 
             <!-- Password with eye toggle -->
-            <div class="password-wrapper">
-                <asp:TextBox ID="txtPassword" runat="server"
-                             CssClass="input"
-                             placeholder="Password"
-                             TextMode="Password"
-                             AutoCompleteType="Disabled" />
-                <!-- The eye toggle appears only when there's input -->
-                <button type="button" id="btnTogglePwd" class="toggle-password hidden" aria-label="Show password">
-                    <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                </button>
-            </div>
+         <div class="password-wrapper position-relative">
+    <!-- Password TextBox -->
+    <asp:TextBox ID="txtPassword" runat="server"
+                 CssClass="input"
+                 placeholder="Password"
+                 TextMode="Password"
+                 MaxLength="64"
+                 AutoCompleteType="Disabled" />
+
+    <!-- Toggle Visibility Button -->
+    <button type="button" id="btnTogglePwd" class="toggle-password hidden" aria-label="Show password">
+        <i class="fa-solid fa-eye" aria-hidden="true"></i>
+    </button>
+</div>
+
 
             <!-- CAPTCHA Panel -->
             <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">

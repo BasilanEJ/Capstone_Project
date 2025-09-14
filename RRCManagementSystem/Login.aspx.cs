@@ -1,35 +1,36 @@
-﻿    using System;
-    using System.Configuration;
-    using System.Data;
-    using System.Data.SqlClient;
-    using System.Net;
-    using System.Web;
-    using System.Web.UI;
+﻿using System;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Net;
+using System.Text.RegularExpressions;
+using System.Web;
+using System.Web.UI;
 
-    namespace RRCManagementSystem
+namespace RRCManagementSystem
+{
+    public partial class Login : Page
     {
-        public partial class Login : Page
+        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private const int IpWindowMinutes = 10;  // rate-limit window for IP failures
+
+        protected void Page_Load(object sender, EventArgs e)
         {
-            private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-            private const int IpWindowMinutes = 10;  // rate-limit window for IP failures
+            // Prevent cached pages (back/forward bypass after logout)
+            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            Response.Cache.SetNoStore();
+            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
 
-            protected void Page_Load(object sender, EventArgs e)
+            if (!IsPostBack)
             {
-                // Prevent cached pages (back/forward bypass after logout)
-                Response.Cache.SetCacheability(HttpCacheability.NoCache);
-                Response.Cache.SetNoStore();
-                Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
+                pnlCaptcha.Visible = false;
+                lblMessage.Text = "";
+            }
 
-                if (!IsPostBack)
-                {
-                    pnlCaptcha.Visible = false;
-                    lblMessage.Text = "";
-                }
-
-                // Auto-redirect only if fully authenticated (after 2FA)
-                if (Session["IsAuthenticated"] as bool? == true &&
-                    Session["UserID"] != null && Session["Role"] != null)
-                {
+            // Auto-redirect only if fully authenticated (after 2FA)
+            if (Session["IsAuthenticated"] as bool? == true &&
+                Session["UserID"] != null && Session["Role"] != null)
+            {
                 string role = Session["Role"].ToString();
                 Response.Redirect(
                     role == "RootAdmin" ? "~/RootDashboard.aspx"
@@ -42,86 +43,123 @@
                 return;
             }
 
-                // Client already logged in
-                if (Session["ClientID"] != null)
-                {
-                    Response.Redirect("Home.aspx", false);
-                    Context.ApplicationInstance.CompleteRequest();
-                    return;
-                }
+            // Client already logged in
+            if (Session["ClientID"] != null)
+            {
+                Response.Redirect("Home.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
+                return;
+            }
+        }
+
+        protected void btnLogin_Click(object sender, EventArgs e)
+        {
+            string ip = Request.UserHostAddress ?? "";
+
+            // ======== IP rate-limit check ========
+            if (GetFailedIPAttempts(ip, IpWindowMinutes) >= 5)
+            {
+                lblMessage.Text = "⏳ Too many failed attempts from this IP. Try again later.";
+                return;
             }
 
-            protected void btnLogin_Click(object sender, EventArgs e)
+            string email = txtEmail.Text.Trim();
+            string password = txtPassword.Text.Trim();
+
+            // ======== Validation: Empty fields ========
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                string ip = Request.UserHostAddress ?? "";
+                lblMessage.Text = "⚠ Please enter both email and password.";
+                return;
+            }
 
-                if (GetFailedIPAttempts(ip, IpWindowMinutes) >= 5)
+            // ======== Validation: Email length ========
+            if (email.Length > 100)
+            {
+                lblMessage.Text = "⚠ Email address is too long. Maximum 100 characters allowed.";
+                return;
+            }
+
+            // ======== Validation: Email format ========
+            bool isValidEmail = Regex.IsMatch(email,
+                @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+                RegexOptions.IgnoreCase);
+
+            if (!isValidEmail)
+            {
+                lblMessage.Text = "⚠ Please enter a valid email address.";
+                return;
+            }
+
+            // ======== Validation: Password length ========
+            if (password.Length < 8 || password.Length > 64)
+            {
+                lblMessage.Text = "⚠ Password must be between 8 and 64 characters.";
+                return;
+            }
+
+            // ======== Validation: Password complexity ========
+            Regex strongPasswordRegex = new Regex(
+                @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,64}$");
+
+            if (!strongPasswordRegex.IsMatch(password))
+            {
+                lblMessage.Text = "⚠ Password must contain at least one uppercase, one lowercase, one number, and one special character.";
+                return;
+            }
+
+            try
+            {
+                // ========== 1) Try Users (admins/staff) ==========
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAuth_GetUserByEmail", conn))
                 {
-                    lblMessage.Text = "⏳ Too many failed attempts from this IP. Try again later.";
-                    return;
-                }
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                    conn.Open();
 
-                string email = txtEmail.Text.Trim();
-                string password = txtPassword.Text.Trim();
-
-                if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
-                {
-                    lblMessage.Text = "⚠ Please enter both email and password.";
-                    return;
-                }
-
-                try
-                {
-                    // ========== 1) Try Users (admins/staff) via SP ==========
-                    using (var conn = new SqlConnection(connectionString))
-                    using (var cmd = new SqlCommand("dbo.spAuth_GetUserByEmail", conn))
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
-                        conn.Open();
-
-                        using (var reader = cmd.ExecuteReader())
+                        if (reader.Read())
                         {
-                            if (reader.Read())
+                            string status = reader["Status"]?.ToString() ?? "";
+                            string role = reader["Role"]?.ToString() ?? "";
+                            string hash = reader["PasswordHash"]?.ToString();
+                            bool is2FAEnabled = reader["TwoFactorEnabled"] != DBNull.Value && Convert.ToBoolean(reader["TwoFactorEnabled"]);
+                            int failedAttempts = reader["FailedAttempts"] != DBNull.Value ? Convert.ToInt32(reader["FailedAttempts"]) : 0;
+                            object lockoutObj = reader["LockoutUntil"];
+
+                            int userID = Convert.ToInt32(reader["UserID"]);
+                            string userName = reader["Name"]?.ToString() ?? "";
+
+                            // Status check
+                            if (!status.Equals("Active", StringComparison.OrdinalIgnoreCase) &&
+                                !status.Equals("Available", StringComparison.OrdinalIgnoreCase))
                             {
-                                string status = reader["Status"]?.ToString() ?? "";
-                                string role = reader["Role"]?.ToString() ?? "";
-                                string hash = reader["PasswordHash"]?.ToString();
-                                bool is2FAEnabled = reader["TwoFactorEnabled"] != DBNull.Value && Convert.ToBoolean(reader["TwoFactorEnabled"]);
-                                int failedAttempts = reader["FailedAttempts"] != DBNull.Value ? Convert.ToInt32(reader["FailedAttempts"]) : 0;
-                                object lockoutObj = reader["LockoutUntil"];
+                                lblMessage.Text = "⚠ Your account is not active.";
+                                return;
+                            }
 
-                                int userID = Convert.ToInt32(reader["UserID"]);
-                                string userName = reader["Name"]?.ToString() ?? "";
+                            // Lockout check
+                            if (lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
+                            {
+                                pnlCaptcha.Visible = true;
+                                lblMessage.Text = $"⏳ Account locked. Try again after {Convert.ToDateTime(lockoutObj):hh:mm tt}.";
+                                return;
+                            }
 
-                                // Status check
-                                if (!status.Equals("Active", StringComparison.OrdinalIgnoreCase) &&
-                                    !status.Equals("Available", StringComparison.OrdinalIgnoreCase))
+                            // CAPTCHA after 5 failed attempts
+                            if (failedAttempts >= 5)
+                            {
+                                pnlCaptcha.Visible = true;
+                                if (!IsCaptchaValid())
                                 {
-                                    lblMessage.Text = "⚠ Your account is not active.";
+                                    lblMessage.Text = "⚠ CAPTCHA verification failed.";
                                     return;
                                 }
+                            }
 
-                                // Lockout check
-                                if (lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
-                                {
-                                    pnlCaptcha.Visible = true;
-                                    lblMessage.Text = $"⏳ Account locked. Try again after {Convert.ToDateTime(lockoutObj):hh:mm tt}.";
-                                    return;
-                                }
-
-                                // CAPTCHA after 5 failed attempts
-                                if (failedAttempts >= 5)
-                                {
-                                    pnlCaptcha.Visible = true;
-                                    if (!IsCaptchaValid())
-                                    {
-                                        lblMessage.Text = "⚠ CAPTCHA verification failed.";
-                                        return;
-                                    }
-                                }
-
-                            // Password check
+                            // Password check using Argon2
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
                                 ResetFailedLogin(userID);   // SP
@@ -131,13 +169,12 @@
                                 // Enforce 2FA for all roles except Inspector
                                 if (!role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    // 2FA required -> store pending identity only
                                     Session["Pending2FA_UserID"] = userID;
                                     Session["Pending2FA_Email"] = email;
                                     Session["Pending2FA_Name"] = userName;
                                     Session["Pending2FA_Role"] = role;
 
-                                    // ensure not authenticated yet
+                                    // Clear any authenticated session values
                                     Session.Remove("IsAuthenticated");
                                     Session.Remove("UserID");
                                     Session.Remove("Role");
@@ -167,155 +204,150 @@
                                 }
                             }
                             else
-                                {
-                                    HandleFailedLogin(userID); // SP (increments counter, sets lockout if threshold reached)
-                                    LogIPAttempt(ip, false);   // SP
+                            {
+                                HandleFailedLogin(userID); // SP
+                                LogIPAttempt(ip, false);   // SP
 
-                                    int remaining = Math.Max(0, 4 - failedAttempts);
-                                    lblMessage.Text = $"⚠ Invalid credentials. {remaining} attempt(s) left.";
-                                    if (failedAttempts + 1 >= 5) pnlCaptcha.Visible = true;
-                                    return;
-                                }
+                                int remaining = Math.Max(0, 4 - failedAttempts);
+                                lblMessage.Text = $"⚠ Invalid credentials. {remaining} attempt(s) left.";
+                                if (failedAttempts + 1 >= 5) pnlCaptcha.Visible = true;
+                                return;
                             }
                         }
                     }
+                }
 
-                    // ========== 2) Try Clients via SP ==========
-                    using (var conn = new SqlConnection(connectionString))
-                    using (var cmd = new SqlCommand("dbo.spAuth_GetClientByEmail", conn))
+                // ========== 2) Try Clients ==========
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spAuth_GetClientByEmail", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
+                    conn.Open();
+
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        // Clients.Email is NVARCHAR(255)
-                        cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
-                        conn.Open();
-
-                        using (var reader = cmd.ExecuteReader())
+                        if (reader.Read())
                         {
-                            if (reader.Read())
+                            string status = reader["Status"]?.ToString() ?? "";
+                            string hash = reader["PasswordHash"]?.ToString();
+                            int clientId = Convert.ToInt32(reader["ClientID"]);
+                            string name = reader["Name"]?.ToString() ?? "";
+
+                            if (!status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                             {
-                                string status = reader["Status"]?.ToString() ?? "";
-                                string hash = reader["PasswordHash"]?.ToString();
-                                int clientId = Convert.ToInt32(reader["ClientID"]);
-                                string name = reader["Name"]?.ToString() ?? "";
+                                lblMessage.Text = "⚠ Your account is not approved yet.";
+                                return;
+                            }
 
-                                if (!status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    lblMessage.Text = "⚠ Your account is not approved yet.";
-                                    return;
-                                }
+                            if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
+                            {
+                                Session["ClientID"] = clientId;
+                                Session["ClientName"] = name;
+                                Session["Email"] = email;
 
-                                if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
-                                {
-                                    Session["ClientID"] = clientId;
-                                    Session["ClientName"] = name;
-                                    Session["Email"] = email;
-
-                                    AddAuditLog(null, $"Client {name} logged in."); // SP
-                                    Response.Redirect("Home.aspx", false);
-                                    Context.ApplicationInstance.CompleteRequest();
-                                    return;
-                                }
-                                else
-                                {
-                                    lblMessage.Text = "⚠ Invalid credentials for client account.";
-                                    return;
-                                }
+                                AddAuditLog(null, $"Client {name} logged in."); // SP
+                                Response.Redirect("Home.aspx", false);
+                                Context.ApplicationInstance.CompleteRequest();
+                                return;
                             }
                             else
                             {
-                                lblMessage.Text = "⚠ Account not found.";
+                                lblMessage.Text = "⚠ Invalid credentials for client account.";
+                                return;
                             }
+                        }
+                        else
+                        {
+                            lblMessage.Text = "⚠ Account not found.";
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    lblMessage.Text = "⚠ Error during login: " + ex.Message;
-                }
             }
-
-       
-            private bool IsCaptchaValid()
+            catch (Exception ex)
             {
-                string response = Request.Form["g-recaptcha-response"];
-                if (string.IsNullOrEmpty(response)) return false;
-
-                using (var client = new WebClient())
-                {
-                    string secret = "6Ld6VrcrAAAAANJi4Djjr9vN7N5KIWoIoL_CCi_z"; // TODO: move to config
-                    string result = client.DownloadString($"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}");
-                    return result.Contains("\"success\": true");
-                }
+                lblMessage.Text = "⚠ Error during login: " + ex.Message;
             }
+        }
 
+        // ======== CAPTCHA Validation ========
+        private bool IsCaptchaValid()
+        {
+            string response = Request.Form["g-recaptcha-response"];
+            if (string.IsNullOrEmpty(response)) return false;
 
-
-            private int GetFailedIPAttempts(string ip, int windowMinutes)
+            using (var client = new WebClient())
             {
-                using (var conn = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.spLoginAttempt_CountRecentFailures", conn))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
-                    cmd.Parameters.Add("@WindowMinutes", SqlDbType.Int).Value = windowMinutes;
-                    conn.Open();
-                    return Convert.ToInt32(cmd.ExecuteScalar());
-                }
+                string secret = "6Ld6VrcrAAAAANJi4Djjr9vN7N5KIWoIoL_CCi_z"; // TODO: move to config
+                string result = client.DownloadString($"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}");
+                return result.Contains("\"success\": true");
             }
+        }
 
-            private void LogIPAttempt(string ip, bool success)
+        // ======== IP Tracking ========
+        private int GetFailedIPAttempts(string ip, int windowMinutes)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spLoginAttempt_CountRecentFailures", conn))
             {
-                using (var conn = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.spLoginAttempt_Insert", conn))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
-                    cmd.Parameters.Add("@IsSuccess", SqlDbType.Bit).Value = success;
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
+                cmd.Parameters.Add("@WindowMinutes", SqlDbType.Int).Value = windowMinutes;
+                conn.Open();
+                return Convert.ToInt32(cmd.ExecuteScalar());
             }
+        }
 
-            private void HandleFailedLogin(int userId)
+        private void LogIPAttempt(string ip, bool success)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spLoginAttempt_Insert", conn))
             {
-                using (var conn = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.spAuth_FailAndMaybeLock", conn))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
-                    // Optionally override defaults:
-                    // cmd.Parameters.Add("@Threshold", SqlDbType.Int).Value = 5;
-                    // cmd.Parameters.Add("@LockoutMinutes", SqlDbType.Int).Value = 5;
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
+                cmd.Parameters.Add("@IsSuccess", SqlDbType.Bit).Value = success;
+                conn.Open();
+                cmd.ExecuteNonQuery();
             }
+        }
 
-            private void ResetFailedLogin(int userId)
+        private void HandleFailedLogin(int userId)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAuth_FailAndMaybeLock", conn))
             {
-                using (var conn = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.spAuth_ResetFailures", conn))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                conn.Open();
+                cmd.ExecuteNonQuery();
             }
+        }
 
-            private void AddAuditLog(int? userID, string action)
+        private void ResetFailedLogin(int userId)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAuth_ResetFailures", conn))
             {
-                if (userID == null) return;
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
 
-                using (var conn = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = userID.Value;
-                    cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action ?? "";
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                }
+        private void AddAuditLog(int? userID, string action)
+        {
+            if (userID == null) return;
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAudit_Insert", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = userID.Value;
+                cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action ?? "";
+                conn.Open();
+                cmd.ExecuteNonQuery();
             }
         }
     }
+}
