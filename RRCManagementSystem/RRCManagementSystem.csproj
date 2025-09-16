@@ -141,6 +141,7 @@
     <Content Include="ArchiveEmployee.aspx" />
     <Content Include="AssignBooking.aspx" />
     <Content Include="AuditLogs.aspx" />
+    <Content Include="Baiting.aspx" />
     <Content Include="BookingHistory.aspx" />
     <Content Include="BookService.aspx" />
     <Content Include="ChatWithAdmin.aspx" />
@@ -191,10 +192,17 @@
     <Content Include="Images\rrc1.png" />
     <Content Include="Images\rrclogo.jpg" />
     <Content Include="Images\service-baiting.jpg" />
+    <Content Include="Images\service-bedbugs.jpg" />
     <Content Include="Images\service-gen pest.jpg" />
+    <Content Include="Images\service-general-pest.jpg" />
+    <Content Include="Images\service-mound.jpg" />
+    <Content Include="Images\service-rats.jpg" />
     <Content Include="Images\service-reticulation.jpg" />
     <Content Include="Images\service-soil.jpg" />
+    <Content Include="Images\service-termite-prevention.jpg" />
     <Content Include="Images\service-termite.jpg" />
+    <Content Include="Images\service-tick-fleas.jpg" />
+    <Content Include="Images\services-reticulations.jpg" />
     <Content Include="InspectedInquiry.aspx" />
     <Content Include="InspectorDashboard.aspx" />
     <Content Include="Login.aspx" />
@@ -224,6 +232,7 @@
     <None Include="Properties\PublishProfiles\rrc.pubxml" />
     <None Include="Properties\PublishProfiles\RRCManagement - Web Deploy.pubxml" />
     <None Include="Properties\PublishProfiles\rrcmngmnt.com - Web Deploy.pubxml" />
+    <Content Include="Reticulation.aspx" />
     <Content Include="RootAdmin.Master" />
     <None Include="Scripts\jquery-3.7.1.intellisense.js" />
     <Content Include="ManageItem.aspx" />
@@ -269,6 +278,7 @@
     <Content Include="Scripts\WebForms\WebForms.js" />
     <Content Include="Scripts\WebForms\WebParts.js" />
     <Content Include="Scripts\WebForms\WebUIValidation.js" />
+    <Content Include="SoilPoisoning.aspx" />
     <Content Include="Styles\Styles.css" />
     <Content Include="SuperAdminDashboard.aspx" />
     <Content Include="SuperAdminProfile.aspx" />
@@ -276,6 +286,7 @@
     <Content Include="SystemChanges.aspx" />
     <Content Include="SystemSettings.aspx" />
     <Content Include="Termite.aspx" />
+    <Content Include="TermitePrevention.aspx" />
     <Content Include="TotalStocks.aspx" />
     <Content Include="TransactionHistory.aspx" />
     <Content Include="Unauthorized.aspx" />
@@ -477,6 +488,13 @@
     </Compile>
     <Compile Include="AuditLogs.aspx.designer.cs">
       <DependentUpon>AuditLogs.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Baiting.aspx.cs">
+      <DependentUpon>Baiting.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Baiting.aspx.designer.cs">
+      <DependentUpon>Baiting.aspx</DependentUpon>
     </Compile>
     <Compile Include="BlockchainLogger.cs" />
     <Compile Include="BookingHistory.aspx.cs">
@@ -928,6 +946,13 @@
     <Compile Include="ResetPassword.aspx.designer.cs">
       <DependentUpon>ResetPassword.aspx</DependentUpon>
     </Compile>
+    <Compile Include="Reticulation.aspx.cs">
+      <DependentUpon>Reticulation.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Reticulation.aspx.designer.cs">
+      <DependentUpon>Reticulation.aspx</DependentUpon>
+    </Compile>
     <Compile Include="RootAdmin.Master.cs">
       <DependentUpon>RootAdmin.Master</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -955,6 +980,13 @@
     </Compile>
     <Compile Include="Site.Mobile.Master.designer.cs">
       <DependentUpon>Site.Mobile.Master</DependentUpon>
+    </Compile>
+    <Compile Include="SoilPoisoning.aspx.cs">
+      <DependentUpon>SoilPoisoning.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="SoilPoisoning.aspx.designer.cs">
+      <DependentUpon>SoilPoisoning.aspx</DependentUpon>
     </Compile>
     <Compile Include="SuperAdmin.Master.cs">
       <DependentUpon>SuperAdmin.Master</DependentUpon>
@@ -1004,6 +1036,13 @@
     </Compile>
     <Compile Include="Termite.aspx.designer.cs">
       <DependentUpon>Termite.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="TermitePrevention.aspx.cs">
+      <DependentUpon>TermitePrevention.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="TermitePrevention.aspx.designer.cs">
+      <DependentUpon>TermitePrevention.aspx</DependentUpon>
     </Compile>
     <Compile Include="TotalStocks.aspx.cs">
       <DependentUpon>TotalStocks.aspx</DependentUpon>
@@ -1181,14 +1220,14 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
-  <Import Project="..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets" Condition="Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets'))" />
     <Error Condition="!Exists('..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets'))" />
   </Target>
+  <Import Project="..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets" Condition="Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

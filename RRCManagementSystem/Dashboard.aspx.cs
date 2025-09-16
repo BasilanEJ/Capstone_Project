@@ -1,17 +1,18 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Web.Services;
+using System.Web;
 using System.Web.Script.Services;
+using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using System.Web;
-using System.Linq;
-using System.Globalization;
 
 namespace RRCManagementSystem
 {
@@ -89,25 +90,30 @@ namespace RRCManagementSystem
                 {
                     while (reader.Read())
                     {
-                        // Date part
                         DateTime schedDate = Convert.ToDateTime(reader["ScheduledDate"]);
 
-                        // Time part (SQL time -> .NET TimeSpan)
                         TimeSpan startTime = reader.IsDBNull(reader.GetOrdinal("StartTime"))
                             ? TimeSpan.Zero
                             : reader.GetTimeSpan(reader.GetOrdinal("StartTime"));
 
-                        // For display (12-hour with AM/PM)
                         string time = DateTime.Today.Add(startTime).ToString("h:mm tt");
 
                         DayOfWeek day = schedDate.DayOfWeek;
 
                         string client = $"{reader["LastName"]}, {reader["FirstName"]}";
-                        string address = $"{reader["StreetAndUnit"]}, {reader["Barangay"]}, {reader["City"]}";
+
+                        // 🔹 Decrypt the address fields
+                        string street = AESHelper.DecryptField(reader["StreetEnc"].ToString());
+                        string barangay = AESHelper.DecryptField(reader["BarangayEnc"].ToString());
+                        string city = AESHelper.DecryptField(reader["CityEnc"].ToString());
+
+                        string address = $"{street}, {barangay}, {city}";
+
                         string groupName = reader["GroupName"] == DBNull.Value ? "Unassigned" : reader["GroupName"].ToString();
 
                         string modalContent = $"{client}<br/>{time}<br/>{address}<br/><strong>Team:</strong> {groupName}"
                             .Replace("'", "\\'");
+
                         string clickableDiv = $@"
 <div onclick=""showBookingDetails('{modalContent}')""
      style='cursor:pointer; padding:6px; border-radius:6px; transition:0.2s;'
@@ -121,6 +127,7 @@ namespace RRCManagementSystem
 
                         calendarData[day].Add(clickableDiv);
                     }
+
 
                 }
             }

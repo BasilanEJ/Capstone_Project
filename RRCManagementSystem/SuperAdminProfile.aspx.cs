@@ -2,7 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using RRCManagementSystem.Helpers; // PasswordHelper
+using RRCManagementSystem.Helpers; // For AESHelper and PasswordHelper
 
 namespace RRCManagementSystem
 {
@@ -15,7 +15,8 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 // Only logged-in SuperAdmin can access
-                if (Session["UserID"] == null || !string.Equals(Session["Role"]?.ToString(), "SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                if (Session["UserID"] == null ||
+                    !string.Equals(Session["Role"]?.ToString(), "SuperAdmin", StringComparison.OrdinalIgnoreCase))
                 {
                     Response.Redirect("~/Login.aspx");
                     return;
@@ -43,7 +44,10 @@ namespace RRCManagementSystem
                         if (rdr.Read())
                         {
                             txtName.Text = rdr["Name"].ToString();
-                            txtEmail.Text = rdr["Email"].ToString();
+
+                            // Decrypt email before showing it in UI
+                            string encryptedEmail = rdr["Email"].ToString();
+                            txtEmail.Text = AESHelper.DecryptEmail(encryptedEmail);
                         }
                         else
                         {
@@ -60,7 +64,8 @@ namespace RRCManagementSystem
 
         protected void btnSaveProfile_Click(object sender, EventArgs e)
         {
-            if (Session["UserID"] == null || !string.Equals(Session["Role"]?.ToString(), "SuperAdmin", StringComparison.OrdinalIgnoreCase))
+            if (Session["UserID"] == null ||
+                !string.Equals(Session["Role"]?.ToString(), "SuperAdmin", StringComparison.OrdinalIgnoreCase))
             {
                 Response.Redirect("~/Login.aspx");
                 return;
@@ -77,8 +82,12 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Only hash if a new password was entered
-            string hashed = string.IsNullOrEmpty(newPw) ? null : PasswordHelper.HashPassword(newPw);
+            // Encrypt and hash email
+            string encryptedEmail = AESHelper.EncryptEmail(newEmail);
+            string emailHash = AESHelper.ComputeSHA256(newEmail);
+
+            // Hash password only if a new password was entered
+            string hashedPassword = string.IsNullOrEmpty(newPw) ? null : PasswordHelper.HashPassword(newPw);
 
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spSuperAdmin_UpdateProfile", conn))
@@ -86,10 +95,11 @@ namespace RRCManagementSystem
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = superAdminId;
                 cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = newName;
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = newEmail;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, -1).Value = encryptedEmail;
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
 
                 var pHash = cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, -1);
-                pHash.Value = (object)hashed ?? DBNull.Value;
+                pHash.Value = (object)hashedPassword ?? DBNull.Value;
 
                 try
                 {

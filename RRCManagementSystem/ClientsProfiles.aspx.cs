@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -81,13 +82,35 @@ namespace RRCManagementSystem
                     var dt = new DataTable();
                     da.Fill(dt);
 
+                    // ✅ Add decrypted columns for GridView
+                    if (!dt.Columns.Contains("Email")) dt.Columns.Add("Email", typeof(string));
+                    if (!dt.Columns.Contains("ContactNumber")) dt.Columns.Add("ContactNumber", typeof(string));
+                    if (!dt.Columns.Contains("City")) dt.Columns.Add("City", typeof(string));
+                    if (!dt.Columns.Contains("Country")) dt.Columns.Add("Country", typeof(string));
+
+                    // ✅ Decrypt each row
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        // Email
+                        if (row["EmailEnc"] != DBNull.Value)
+                            row["Email"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
+
+                        // Contact
+                        if (row["ContactEnc"] != DBNull.Value)
+                            row["ContactNumber"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
+
+                        // City
+                        if (row["CityEnc"] != DBNull.Value)
+                            row["City"] = AESHelper.DecryptField(row["CityEnc"].ToString());
+
+                        // Country
+                        if (row["CountryEnc"] != DBNull.Value)
+                            row["Country"] = AESHelper.DecryptField(row["CountryEnc"].ToString());
+                    }
+
+                    // ✅ Bind the decrypted DataTable to the GridView
                     gvClients.DataSource = dt;
                     gvClients.DataBind();
-
-                    if (dt.Rows.Count == 0)
-                    {
-                        System.Diagnostics.Debug.WriteLine("No approved clients found.");
-                    }
                 }
             }
             catch (Exception ex)
@@ -95,6 +118,7 @@ namespace RRCManagementSystem
                 ShowSweetAlert("Error", "Failed to load clients. " + ex.Message, "error");
             }
         }
+
         #endregion
 
         #region GridView Events

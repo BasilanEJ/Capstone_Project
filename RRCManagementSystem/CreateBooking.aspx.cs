@@ -22,7 +22,26 @@ namespace RRCManagementSystem
             {
                 LoadServices();
             }
+            else
+            {
+                if (hfInquiryVisible.Value == "true")
+                {
+                    ScriptManager.RegisterStartupScript(this, GetType(), "keepVisible",
+                        "document.getElementById('inquiryBackground').style.display = 'block';", true);
+                }
+            }
         }
+
+
+        protected void ddlServices_PreRender(object sender, EventArgs e)
+        {
+            if (hfInquiryVisible.Value == "true")
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "keepVisible",
+                    "document.getElementById('inquiryBackground').style.display = 'block';", true);
+            }
+        }
+
 
         /// <summary>
         /// Load all available services into dropdown
@@ -120,13 +139,17 @@ namespace RRCManagementSystem
         /// </summary>
         protected void ddlServices_SelectedIndexChanged(object sender, EventArgs e)
         {
+            // Mark as visible in the server-side HiddenField
+            hfInquiryVisible.Value = "true";
+
             // Keep the Inquiry Background div visible
             ScriptManager.RegisterStartupScript(this, GetType(), "showInquiryBackground",
                 "document.getElementById('inquiryBackground').style.display = 'block';", true);
 
-            // Optionally, recalculate the total immediately when service changes
+            // Recalculate total
             RecalculateTotal(sender, e);
         }
+
 
 
         /// <summary>

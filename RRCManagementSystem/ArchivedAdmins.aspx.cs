@@ -2,7 +2,9 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.UI;
 using System.Web.UI.WebControls;
+using RRCManagementSystem.Helpers; // Required for AESHelper
 
 namespace RRCManagementSystem
 {
@@ -12,7 +14,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // prevent cached/stale view on back-button
+            // Prevent cached/stale view on back-button
             Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
@@ -43,6 +45,25 @@ namespace RRCManagementSystem
                 try
                 {
                     da.Fill(dt);
+
+                    // 🔹 Decrypt each email before binding
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        if (row["Email"] != DBNull.Value && !string.IsNullOrEmpty(row["Email"].ToString()))
+                        {
+                            try
+                            {
+                                string encryptedEmail = row["Email"].ToString();
+                                string decryptedEmail = AESHelper.DecryptEmail(encryptedEmail);
+                                row["Email"] = decryptedEmail;
+                            }
+                            catch
+                            {
+                                row["Email"] = "[Decryption Error]";
+                            }
+                        }
+                    }
+
                     gvArchivedAdmins.DataSource = dt;
                     gvArchivedAdmins.DataBind();
                 }
@@ -60,12 +81,10 @@ namespace RRCManagementSystem
 
         protected void gvArchivedAdmins_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            // Your JS passes "__doPostBack(gridID, 'RestoreAdmin$<id>')" etc.
             var parts = (e.CommandArgument ?? "").ToString().Split('$');
             string cmdName = e.CommandName;
             string arg = e.CommandArgument?.ToString();
 
-            // Some setups place both in CommandArgument. Handle both styles safely.
             if (parts.Length == 2)
             {
                 cmdName = parts[0];
@@ -99,7 +118,6 @@ namespace RRCManagementSystem
 
                     if (rows > 0)
                     {
-                        // Go back to ViewAdmin and show success toast there
                         Response.Redirect("ViewAdmin.aspx?restored=1", false);
                         Context.ApplicationInstance.CompleteRequest();
                         return;
@@ -133,7 +151,6 @@ namespace RRCManagementSystem
 
                     if (rows > 0)
                     {
-                        // Go back to ViewAdmin and show success toast there
                         Response.Redirect("ViewAdmin.aspx?deleted=1", false);
                         Context.ApplicationInstance.CompleteRequest();
                         return;
@@ -152,14 +169,12 @@ namespace RRCManagementSystem
             LoadArchivedAdmins(txtSearch.Text);
         }
 
-        // Optional: if your GridView uses paging
         protected void gvArchivedAdmins_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
             gvArchivedAdmins.PageIndex = e.NewPageIndex;
             LoadArchivedAdmins(txtSearch.Text);
         }
 
-        // Keep your event validation registrations
         protected override void Render(System.Web.UI.HtmlTextWriter writer)
         {
             foreach (GridViewRow row in gvArchivedAdmins.Rows)

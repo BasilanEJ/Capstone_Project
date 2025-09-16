@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Web.UI.WebControls;
+using RRCManagementSystem.Helpers; // For AESHelper
 
 namespace RRCManagementSystem
 {
@@ -15,7 +16,8 @@ namespace RRCManagementSystem
         protected void Page_Load(object sender, EventArgs e)
         {
             // 🔐 Require login + SuperAdmin
-            if (Session["UserID"] == null || Session["Role"] == null || !Session["Role"].ToString().Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
+            if (Session["UserID"] == null || Session["Role"] == null ||
+                !Session["Role"].ToString().Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
             {
                 Response.Redirect("~/Login.aspx");
                 return;
@@ -72,7 +74,23 @@ Swal.fire({
                     if (reader.Read())
                     {
                         txtName.Text = reader["Name"]?.ToString() ?? "";
-                        txtEmail.Text = reader["Email"]?.ToString() ?? "";
+
+                        // 🔹 Decrypt email before displaying
+                        if (reader["Email"] != DBNull.Value && !string.IsNullOrEmpty(reader["Email"].ToString()))
+                        {
+                            try
+                            {
+                                txtEmail.Text = AESHelper.DecryptEmail(reader["Email"].ToString());
+                            }
+                            catch
+                            {
+                                txtEmail.Text = "[Decryption Error]";
+                            }
+                        }
+                        else
+                        {
+                            txtEmail.Text = "";
+                        }
                     }
                     else
                     {
@@ -130,7 +148,10 @@ Swal.fire({
                 "AdminGuide"
             };
 
-            var present = dt.AsEnumerable().Select(r => r.Field<string>("ModuleName")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var present = dt.AsEnumerable()
+                            .Select(r => r.Field<string>("ModuleName"))
+                            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             foreach (string m in modules)
             {
                 if (!present.Contains(m))
@@ -201,6 +222,11 @@ Swal.fire({
                 tvp.Rows.Add(moduleName, canView, canAdd, canEdit, canDelete);
             }
 
+            // Encrypt the email and generate its SHA-256 hash before saving
+            string plainEmail = (txtEmail.Text ?? "").Trim().ToLowerInvariant();
+            string encryptedEmail = AESHelper.EncryptEmail(plainEmail);
+            string emailHash = AESHelper.ComputeSHA256(plainEmail);
+
             using (var conn = new SqlConnection(connectionString))
             {
                 conn.Open();
@@ -214,7 +240,8 @@ Swal.fire({
                             cmdUpdate.CommandType = CommandType.StoredProcedure;
                             cmdUpdate.Parameters.Add("@UserID", SqlDbType.Int).Value = userID;
                             cmdUpdate.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = (txtName.Text ?? "").Trim();
-                            cmdUpdate.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = (txtEmail.Text ?? "").Trim();
+                            cmdUpdate.Parameters.Add("@Email", SqlDbType.NVarChar, -1).Value = encryptedEmail;
+                            cmdUpdate.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
                             cmdUpdate.ExecuteNonQuery();
                         }
 

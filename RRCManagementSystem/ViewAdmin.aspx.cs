@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using RRCManagementSystem.Helpers; // Make sure AESHelper is accessible
 
 namespace RRCManagementSystem
 {
@@ -13,7 +14,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // prevent cached/stale view on back-button
+            // Prevent cached/stale view on back-button
             Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
@@ -29,7 +30,7 @@ namespace RRCManagementSystem
             {
                 BindUsers(null);
 
-                // show toast if redirected from actions
+                // Show toast if redirected from actions
                 if (Request.QueryString["archived"] == "1")
                     Toast("Archived!", "User has been successfully archived.", "success");
             }
@@ -55,6 +56,25 @@ namespace RRCManagementSystem
                 try
                 {
                     da.Fill(dt);
+
+                    // 🔹 Decrypt each email before binding
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        if (row["Email"] != DBNull.Value && !string.IsNullOrEmpty(row["Email"].ToString()))
+                        {
+                            try
+                            {
+                                string encryptedEmail = row["Email"].ToString();
+                                string decryptedEmail = AESHelper.DecryptEmail(encryptedEmail);
+                                row["Email"] = decryptedEmail;
+                            }
+                            catch
+                            {
+                                row["Email"] = "[Decryption Error]";
+                            }
+                        }
+                    }
+
                     gvAdmins.DataSource = dt;
                     gvAdmins.DataBind();
                 }

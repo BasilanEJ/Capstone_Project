@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Net;
 using System.Net.Mail;
 using System.Security.Cryptography;
+using RRCManagementSystem.Helpers; // AESHelper for SHA256 hashing and encryption/decryption
 
 namespace RRCManagementSystem
 {
@@ -29,15 +30,18 @@ namespace RRCManagementSystem
 
             try
             {
+                // Generate SHA256 hash for search
+                string emailHash = AESHelper.ComputeSHA256(email);
+
                 // 1) USERS first (Admins/Staff) — allow only Active/Available
-                if (TryGetEligibleUser(email, out int userId, out string userName, out string userRole))
+                if (TryGetEligibleUser(emailHash, out int userId, out string userName, out string userRole, out string encryptedEmail))
                 {
                     string otp = GenerateOTP();
 
                     // Save OTP context (2 minutes)
                     Session["OTP"] = otp;
                     Session["OTP_Expiry"] = DateTime.Now.AddMinutes(2);
-                    Session["OTP_Email"] = email;
+                    Session["OTP_Email"] = email; // Keep plain for UI display only
                     Session["OTP_AccountType"] = "User";
                     Session["OTP_UserID"] = userId;
                     Session.Remove("OTP_ClientID");
@@ -55,13 +59,13 @@ namespace RRCManagementSystem
                 }
 
                 // 2) CLIENTS next — allow only Approved
-                if (TryGetApprovedClient(email, out int clientId, out string clientName))
+                if (TryGetApprovedClient(emailHash, out int clientId, out string clientName, out string encryptedEmailClient))
                 {
                     string otp = GenerateOTP();
 
                     Session["OTP"] = otp;
                     Session["OTP_Expiry"] = DateTime.Now.AddMinutes(2);
-                    Session["OTP_Email"] = email;
+                    Session["OTP_Email"] = email; // plain for UI
                     Session["OTP_AccountType"] = "Client";
                     Session["OTP_ClientID"] = clientId;
                     Session.Remove("OTP_UserID");
@@ -88,18 +92,20 @@ namespace RRCManagementSystem
         }
 
         /// <summary>
-        /// Query Users via spAuth_GetUserByEmail; allow only Status = Active or Available.
-        /// Expects columns: UserID, Name, Role, Status.
+        /// Query Users via spAuth_GetUserByEmail using SHA256 hash.
         /// </summary>
-        private bool TryGetEligibleUser(string email, out int userId, out string name, out string role)
+        private bool TryGetEligibleUser(string emailHash, out int userId, out string name, out string role, out string encryptedEmail)
         {
-            userId = 0; name = ""; role = "";
+            userId = 0;
+            name = "";
+            role = "";
+            encryptedEmail = "";
 
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spAuth_GetUserByEmail", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
 
                 conn.Open();
                 using (var reader = cmd.ExecuteReader())
@@ -114,6 +120,11 @@ namespace RRCManagementSystem
                         return false;
                     }
 
+                    // Decrypt email
+                    string encrypted = reader["Email"]?.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(encrypted))
+                        encryptedEmail = AESHelper.DecryptEmail(encrypted);
+
                     userId = Convert.ToInt32(reader["UserID"]);
                     name = reader["Name"]?.ToString() ?? "";
                     role = reader["Role"]?.ToString() ?? "";
@@ -123,28 +134,46 @@ namespace RRCManagementSystem
         }
 
         /// <summary>
-        /// Query Clients via spAuth_GetClientByEmail; allow only Status = Approved.
-        /// Expects columns: ClientID, Name, Status.
+        /// Query Clients using SHA256 email hash.
         /// </summary>
-        private bool TryGetApprovedClient(string email, out int clientId, out string name)
+        private bool TryGetApprovedClient(string emailHash, out int clientId, out string name, out string decryptedEmail)
         {
-            clientId = 0; name = "";
+            clientId = 0;
+            name = "";
+            decryptedEmail = "";
 
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spAuth_GetClientByEmail", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
 
                 conn.Open();
                 using (var reader = cmd.ExecuteReader())
                 {
+                    // No matching client found
                     if (!reader.Read())
                         return false;
 
                     string status = reader["Status"]?.ToString() ?? "";
+
+                    // Ensure client account is approved before continuing
                     if (!status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                         return false;
+
+                    // Safely decrypt the encrypted email
+                    string encryptedValue = reader["EmailEnc"]?.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(encryptedValue))
+                    {
+                        try
+                        {
+                            decryptedEmail = AESHelper.DecryptEmail(encryptedValue);
+                        }
+                        catch
+                        {
+                            decryptedEmail = "[Decryption Error]";
+                        }
+                    }
 
                     clientId = Convert.ToInt32(reader["ClientID"]);
                     name = reader["Name"]?.ToString() ?? "";
@@ -152,6 +181,7 @@ namespace RRCManagementSystem
                 }
             }
         }
+
 
         private string GenerateOTP()
         {

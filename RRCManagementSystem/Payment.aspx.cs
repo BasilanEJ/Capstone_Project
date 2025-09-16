@@ -714,7 +714,7 @@ namespace RRCManagementSystem
 
         private string GetHttpsBaseUrl()
         {
-            // e.g., https://rrcmanagement-bcfgfpa5hzaafhdy.eastasia-01.azurewebsites.net
+            // e.g., https://rrcmngmnt.com
             string left = Request.Url.GetLeftPart(UriPartial.Authority);
             if (left.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
                 left = "https://" + left.Substring("http://".Length);

@@ -8,6 +8,7 @@ using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using RRCManagementSystem.Helpers; // AESHelper
 
 namespace RRCManagementSystem
 {
@@ -45,7 +46,7 @@ namespace RRCManagementSystem
                         while (reader.Read())
                         {
                             string roleName = reader["RoleName"].ToString();
-                            ddlRole.Items.Add(new ListItem(roleName, roleName)); // keeping Users.Role as NVARCHAR(RoleName)
+                            ddlRole.Items.Add(new ListItem(roleName, roleName));
                         }
                     }
                 }
@@ -56,27 +57,35 @@ namespace RRCManagementSystem
             }
         }
 
-        private bool EmailExists(string email)
+        private bool EmailExists(string plainEmail)
         {
+            // Compute hash of the plain email
+            string emailHash = AESHelper.ComputeSHA256(plainEmail);
+
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spUser_EmailExists", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
                 conn.Open();
                 var existsFlag = cmd.ExecuteScalar();
                 return existsFlag != null && Convert.ToInt32(existsFlag) == 1;
             }
         }
 
-        private int CreateAdminUser(string name, string email, string role, string resetToken, DateTime tokenExpiry)
+        private int CreateAdminUser(string name, string plainEmail, string role, string resetToken, DateTime tokenExpiry)
         {
+            // Encrypt and hash the email
+            string encryptedEmail = AESHelper.EncryptEmail(plainEmail);
+            string emailHash = AESHelper.ComputeSHA256(plainEmail);
+
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spUser_CreateAdmin", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = name;
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, -1).Value = encryptedEmail;
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
                 cmd.Parameters.Add("@Role", SqlDbType.NVarChar, 100).Value = role;
                 cmd.Parameters.Add("@ResetToken", SqlDbType.NVarChar, 100).Value = resetToken;
                 cmd.Parameters.Add("@TokenExpiry", SqlDbType.DateTime).Value = tokenExpiry;
@@ -92,7 +101,6 @@ namespace RRCManagementSystem
 
         private void SavePermissionsBulk(int userId)
         {
-            // Build a DataTable that matches dbo.AdminPermissionTVP
             var tvp = new DataTable();
             tvp.Columns.Add("ModuleName", typeof(string));
             tvp.Columns.Add("CanView", typeof(bool));
@@ -136,7 +144,7 @@ namespace RRCManagementSystem
 
             if (!string.IsNullOrEmpty(selectedRole))
             {
-                LoadDefaultPermissions(0, selectedRole); // 0 = not yet created
+                LoadDefaultPermissions(0, selectedRole);
             }
             else
             {
@@ -188,10 +196,10 @@ namespace RRCManagementSystem
 
             try
             {
-                // 1) Create user via SP (returns new UserID)
+                // 1) Create user via SP
                 int newUserId = CreateAdminUser(name, email, role, resetToken, tokenExpiry);
 
-                // 2) Save permissions in one go via TVP
+                // 2) Save permissions via TVP
                 SavePermissionsBulk(newUserId);
 
                 // 3) Email invite
@@ -278,7 +286,7 @@ namespace RRCManagementSystem
             {
                 TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
                 string formattedRole = textInfo.ToTitleCase((role ?? "").ToLower());
-                string resetLink = $"https://rrcmngmnt.com/ResetAdminPassword.aspx?type=admin&token={token}";
+                string resetLink = $"https://localhost:44341/ResetAdminPassword.aspx?type=admin&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
                 string body = $@"
@@ -347,7 +355,7 @@ namespace RRCManagementSystem
                     {
                         smtp.Credentials = new NetworkCredential(
                             "rrctermiteandpestcontrol@gmail.com",
-                            "pktz jwzp tbvx qheq" // move to Web.config/appSettings
+                            "pktz jwzp tbvx qheq" // TODO: Move to Web.config
                         );
                         smtp.EnableSsl = true;
                         smtp.Send(mail);

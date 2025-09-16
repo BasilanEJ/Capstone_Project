@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Web.UI;
+using RRCManagementSystem.Helpers; // For AESHelper
 
 namespace RRCManagementSystem
 {
@@ -110,12 +111,15 @@ namespace RRCManagementSystem
 
             try
             {
+                // ======== Compute SHA-256 hash for email lookup ========
+                string emailHash = AESHelper.ComputeSHA256(email);
+
                 // ========== 1) Try Users (admins/staff) ==========
                 using (var conn = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand("dbo.spAuth_GetUserByEmail", conn))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
+                    cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
                     conn.Open();
 
                     using (var reader = cmd.ExecuteReader())
@@ -128,9 +132,22 @@ namespace RRCManagementSystem
                             bool is2FAEnabled = reader["TwoFactorEnabled"] != DBNull.Value && Convert.ToBoolean(reader["TwoFactorEnabled"]);
                             int failedAttempts = reader["FailedAttempts"] != DBNull.Value ? Convert.ToInt32(reader["FailedAttempts"]) : 0;
                             object lockoutObj = reader["LockoutUntil"];
-
                             int userID = Convert.ToInt32(reader["UserID"]);
                             string userName = reader["Name"]?.ToString() ?? "";
+
+                            // Decrypt the email for session usage or display
+                            string decryptedEmail = string.Empty;
+                            if (reader["Email"] != DBNull.Value)
+                            {
+                                try
+                                {
+                                    decryptedEmail = AESHelper.DecryptEmail(reader["Email"].ToString());
+                                }
+                                catch
+                                {
+                                    decryptedEmail = "[Decryption Error]";
+                                }
+                            }
 
                             // Status check
                             if (!status.Equals("Active", StringComparison.OrdinalIgnoreCase) &&
@@ -170,7 +187,7 @@ namespace RRCManagementSystem
                                 if (!role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
                                 {
                                     Session["Pending2FA_UserID"] = userID;
-                                    Session["Pending2FA_Email"] = email;
+                                    Session["Pending2FA_Email"] = decryptedEmail;
                                     Session["Pending2FA_Name"] = userName;
                                     Session["Pending2FA_Role"] = role;
 
@@ -195,7 +212,7 @@ namespace RRCManagementSystem
                                     Session["UserID"] = userID;
                                     Session["Role"] = role;
                                     Session["Name"] = userName;
-                                    Session["Email"] = email;
+                                    Session["Email"] = decryptedEmail;
                                     Session["IsAuthenticated"] = true;
 
                                     Response.Redirect("~/InspectorDashboard.aspx", false);
@@ -222,9 +239,12 @@ namespace RRCManagementSystem
                 using (var cmd = new SqlCommand("dbo.spAuth_GetClientByEmail", conn))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
-                    conn.Open();
 
+                    // 1. Compute SHA-256 hash of the email for lookup
+                    string clientEmailHash = AESHelper.ComputeSHA256WithPepper(email); // Use with pepper for extra security
+                    cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = clientEmailHash;
+
+                    conn.Open();
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
@@ -234,19 +254,38 @@ namespace RRCManagementSystem
                             int clientId = Convert.ToInt32(reader["ClientID"]);
                             string name = reader["Name"]?.ToString() ?? "";
 
+                            // 2. Decrypt EmailEnc
+                            string decryptedClientEmail = string.Empty;
+                            if (reader["EmailEnc"] != DBNull.Value)
+                            {
+                                try
+                                {
+                                    decryptedClientEmail = AESHelper.DecryptEmail(reader["EmailEnc"].ToString());
+                                }
+                                catch
+                                {
+                                    decryptedClientEmail = "[Decryption Error]";
+                                }
+                            }
+
+                            // 3. Validate account status
                             if (!status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                             {
                                 lblMessage.Text = "⚠ Your account is not approved yet.";
                                 return;
                             }
 
+                            // 4. Validate password using Argon2
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
+                                // ✅ Login success
                                 Session["ClientID"] = clientId;
                                 Session["ClientName"] = name;
-                                Session["Email"] = email;
+                                Session["Email"] = decryptedClientEmail;
 
-                                AddAuditLog(null, $"Client {name} logged in."); // SP
+                                // Add to audit logs
+                                AddAuditLog(null, $"Client {name} logged in.");
+
                                 Response.Redirect("Home.aspx", false);
                                 Context.ApplicationInstance.CompleteRequest();
                                 return;
@@ -263,6 +302,7 @@ namespace RRCManagementSystem
                         }
                     }
                 }
+
             }
             catch (Exception ex)
             {

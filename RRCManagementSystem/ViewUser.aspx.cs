@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.Configuration;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using RRCManagementSystem.Helpers; // Make sure AESHelper is accessible
 
 namespace RRCManagementSystem
 {
@@ -31,6 +32,25 @@ namespace RRCManagementSystem
                 con.Open();
                 DataTable dt = new DataTable();
                 dt.Load(cmd.ExecuteReader());
+
+                // 🔹 Decrypt each email before binding
+                foreach (DataRow row in dt.Rows)
+                {
+                    if (row["Email"] != DBNull.Value && !string.IsNullOrEmpty(row["Email"].ToString()))
+                    {
+                        try
+                        {
+                            string encryptedEmail = row["Email"].ToString();
+                            string decryptedEmail = AESHelper.DecryptEmail(encryptedEmail);
+                            row["Email"] = decryptedEmail;
+                        }
+                        catch
+                        {
+                            // If decryption fails, leave the encrypted value
+                            row["Email"] = "[Error decrypting email]";
+                        }
+                    }
+                }
 
                 gvUsers.DataSource = dt;
                 gvUsers.DataBind();
@@ -110,7 +130,7 @@ namespace RRCManagementSystem
             }
 
             // Refresh GridView immediately
-            gvUsers.PageIndex = 0; // optional: reset to first page
+            gvUsers.PageIndex = 0;
             LoadUsers(txtSearch.Text.Trim());
             updUsers.Update();
 

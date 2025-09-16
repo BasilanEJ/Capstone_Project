@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -62,12 +63,34 @@ namespace RRCManagementSystem
                             ? $"{lastName}, {firstName}"
                             : $"{lastName}, {firstName} {middle}";
 
+                        // ✅ Decrypt sensitive fields
+                        string email = rdr["EmailEnc"] != DBNull.Value
+                            ? AESHelper.DecryptEmail(rdr["EmailEnc"].ToString())
+                            : "[No Email]";
+
+                        string contact = rdr["ContactEnc"] != DBNull.Value
+                            ? AESHelper.DecryptField(rdr["ContactEnc"].ToString())
+                            : "[No Contact]";
+
+                        string city = rdr["CityEnc"] != DBNull.Value
+                            ? AESHelper.DecryptField(rdr["CityEnc"].ToString())
+                            : "[No City]";
+
+                        string region = rdr["RegionEnc"] != DBNull.Value
+                            ? AESHelper.DecryptField(rdr["RegionEnc"].ToString())
+                            : "[No Region]";
+
+                        string country = rdr["CountryEnc"] != DBNull.Value
+                            ? AESHelper.DecryptField(rdr["CountryEnc"].ToString())
+                            : "[No Country]";
+
+                        // ✅ Populate labels
                         lblName.Text = $"<span class='profile-label'>Name:</span> {fullName}";
-                        lblEmail.Text = $"<span class='profile-label'>Email:</span> {rdr["Email"]}";
-                        lblContact.Text = $"<span class='profile-label'>Contact:</span> {rdr["ContactNumber"]}";
-                        lblCity.Text = $"<span class='profile-label'>City:</span> {rdr["City"]}";
-                        lblRegion.Text = $"<span class='profile-label'>Region:</span> {rdr["Region"]}";
-                        lblCountry.Text = $"<span class='profile-label'>Country:</span> {rdr["Country"]}";
+                        lblEmail.Text = $"<span class='profile-label'>Email:</span> {email}";
+                        lblContact.Text = $"<span class='profile-label'>Contact:</span> {contact}";
+                        lblCity.Text = $"<span class='profile-label'>City:</span> {city}";
+                        lblRegion.Text = $"<span class='profile-label'>Region:</span> {region}";
+                        lblCountry.Text = $"<span class='profile-label'>Country:</span> {country}";
                         lblStatus.Text = $"<span class='profile-label'>Status:</span> {rdr["Status"]}";
                     }
                     else
@@ -77,6 +100,7 @@ namespace RRCManagementSystem
                 }
             }
         }
+
 
         private void LoadClientHistory(int clientId)
         {
@@ -104,6 +128,9 @@ namespace RRCManagementSystem
                 }
             }
         }
+
+  
+
 
         protected void btnBack_Click(object sender, EventArgs e)
         {

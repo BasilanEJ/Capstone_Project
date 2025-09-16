@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -94,30 +95,35 @@ namespace RRCManagementSystem
         /// </summary>
         private string GetAccountTypeByEmail(string email)
         {
+            // Compute hash for comparison
+            string emailHash = AESHelper.ComputeSHA256WithPepper(email);
+
             using (var con = new SqlConnection(cs))
             {
                 con.Open();
 
-                // Check Users first (admins/staff)
+                // Check Users table
                 using (var cmd = new SqlCommand(
-                    "IF EXISTS (SELECT 1 FROM dbo.Users WHERE Email = @Email) SELECT 1 ELSE SELECT 0", con))
+                    "IF EXISTS (SELECT 1 FROM dbo.Users WHERE EmailHash = @EmailHash) SELECT 1 ELSE SELECT 0", con))
                 {
-                    cmd.Parameters.AddWithValue("@Email", email);
+                    cmd.Parameters.AddWithValue("@EmailHash", emailHash);
                     int inUsers = (int)cmd.ExecuteScalar();
                     if (inUsers == 1) return "User";
                 }
 
-                // Then check Clients
+                // Check Clients table
                 using (var cmd = new SqlCommand(
-                    "IF EXISTS (SELECT 1 FROM dbo.Clients WHERE Email = @Email) SELECT 1 ELSE SELECT 0", con))
+                    "IF EXISTS (SELECT 1 FROM dbo.Clients WHERE EmailHash = @EmailHash) SELECT 1 ELSE SELECT 0", con))
                 {
-                    cmd.Parameters.AddWithValue("@Email", email);
+                    cmd.Parameters.AddWithValue("@EmailHash", emailHash);
                     int inClients = (int)cmd.ExecuteScalar();
                     if (inClients == 1) return "Client";
                 }
             }
+
             return null;
         }
+
 
         /// <summary>Create a URL-safe random token (length ~32 chars when base64url).</summary>
         /// <summary>Create a URL-safe random token (~32 chars when base64url).</summary>
@@ -143,14 +149,21 @@ namespace RRCManagementSystem
         private string IssueResetTokenAndGetUrl(string email, string accountType)
         {
             string token = NewToken();
-            DateTime expiry = DateTime.Now.AddMinutes(15); // adjust if you want
+            DateTime expiry = DateTime.Now.AddMinutes(15);
+
+            // Compute SHA-256 hash with pepper
+            string emailHash = AESHelper.ComputeSHA256WithPepper(email);
 
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand(
                 accountType == "User" ? "dbo.spResetToken_IssueUser" : "dbo.spResetToken_IssueClient", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
+
+                // Use plain email only for sending email notifications
                 cmd.Parameters.AddWithValue("@Email", email);
+
+                // Pass the token and expiry
                 cmd.Parameters.AddWithValue("@Token", token);
                 cmd.Parameters.AddWithValue("@Expiry", expiry);
 
@@ -162,9 +175,9 @@ namespace RRCManagementSystem
 
             string baseUrl = Request.Url.GetLeftPart(UriPartial.Authority);
             string path = accountType == "User" ? "~/ResetAdminPassword.aspx" : "~/ResetPassword.aspx";
-            string url = baseUrl + ResolveUrl(path) + "?token=" + token;
-            return url;
+            return baseUrl + ResolveUrl(path) + "?token=" + token;
         }
+
 
         /// <summary>Email the reset link to the user.</summary>
         private void SendResetLinkEmail(string recipientEmail, string resetUrl)

@@ -1,15 +1,16 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Configuration;
-using System.Web.UI;
-using System.Web.UI.WebControls;
-using System.Net.Mail;
-using System.Net;
-using System.Text;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
+using System.Net;
+using System.Net.Mail;
+using System.Text;
+using System.Web.UI;
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
@@ -36,120 +37,114 @@ namespace RRCManagementSystem
                     GetType(),
                     "ShowSweetAlertAndModal",
                     @"
-        Swal.fire({
-            icon: 'warning',
-            title: 'Terms Required',
-            text: 'Please agree to the terms and conditions before submitting.',
-            showConfirmButton: false,
-            timer: 2000,
-            position: 'center',
-            backdrop: false
-        });
+            Swal.fire({
+                icon: 'warning',
+                title: 'Terms Required',
+                text: 'Please agree to the terms and conditions before submitting.',
+                showConfirmButton: false,
+                timer: 2000,
+                position: 'center',
+                backdrop: false
+            });
 
-        // Open Terms modal after SweetAlert finishes
-        setTimeout(function() {
-            var termsModal = new bootstrap.Modal(document.getElementById('termsModal'));
-            termsModal.show();
-        }, 2100);
-        ",
+            setTimeout(function() {
+                var termsModal = new bootstrap.Modal(document.getElementById('termsModal'));
+                termsModal.show();
+            }, 2100);
+            ",
                     true
                 );
                 return;
             }
 
-
-
-
-
             string email = (txtEmail.Text ?? "").Trim().ToLowerInvariant();
             string contact = (txtContactNumber.Text ?? "").Trim();
             string message = (txtMessage.Text ?? "").Trim();
 
-            // ===== Domain allow-list guard (server-side) =====
-            // Allowed consumer mailbox domains (case-insensitive)
-            var allowedDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "live.com", "icloud.com"
-            };
-
-            // Extract domain
+            // Validate email
             int atIndex = email.IndexOf('@');
             if (atIndex < 0 || atIndex == email.Length - 1)
             {
-                ShowSweetAlert("Invalid Email", "Email address must contain @ and a domain.", "error");
+                ShowSweetAlert("Invalid Email", "Email must contain @ and a domain.", "error");
                 return;
             }
 
             string domain = email.Substring(atIndex + 1);
+            var allowedDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "live.com", "icloud.com"
+    };
 
-            // ✅ Check direct allowed domains OR if it's a school/government PH domain
-            bool isValid =
-                allowedDomains.Contains(domain) ||
-                domain.EndsWith(".edu.ph", StringComparison.OrdinalIgnoreCase) ||
-                domain.EndsWith(".gov.ph", StringComparison.OrdinalIgnoreCase);
+            bool isValid = allowedDomains.Contains(domain) ||
+                           domain.EndsWith(".edu.ph", StringComparison.OrdinalIgnoreCase) ||
+                           domain.EndsWith(".gov.ph", StringComparison.OrdinalIgnoreCase);
 
             if (!isValid)
             {
-                ShowSweetAlert(
-                    "Invalid Email",
-                    "Only Gmail, Yahoo, Outlook/Hotmail/Live, iCloud, or school/government (.edu.ph / .gov.ph) emails are allowed.",
-                    "error"
-                );
+                ShowSweetAlert("Invalid Email", "Only Gmail, Yahoo, Outlook, iCloud, or .edu.ph / .gov.ph emails allowed.", "error");
                 return;
             }
-            // =================================================
 
+            // Validate contact number
             if (!System.Text.RegularExpressions.Regex.IsMatch(contact, @"^09\d{9}$"))
             {
-                ShowSweetAlert("Invalid Contact", "Please enter a valid 11-digit contact number starting with 09.", "warning");
+                ShowSweetAlert("Invalid Contact", "Contact number must be 11 digits starting with 09.", "warning");
                 return;
             }
 
+            // Handle photo upload
             string photoPath = null;
-
-            // ✅ Image validation & upload
             if (fuPestPhoto.HasFile)
             {
                 try
                 {
                     string extension = Path.GetExtension(fuPestPhoto.FileName).ToLowerInvariant();
                     string contentType = (fuPestPhoto.PostedFile.ContentType ?? "").ToLowerInvariant();
-
                     string[] allowedExtensions = { ".png", ".jpg", ".jpeg" };
                     string[] allowedMimeTypes = { "image/png", "image/jpg", "image/jpeg" };
 
                     if (!allowedExtensions.Contains(extension) || !allowedMimeTypes.Contains(contentType))
                     {
-                        ShowSweetAlert("Invalid File", "Only PNG or JPEG image files are allowed.", "warning");
+                        ShowSweetAlert("Invalid File", "Only PNG or JPEG files are allowed.", "warning");
                         return;
                     }
 
-                    // ✅ Auto-create folder path
                     string folderRelativePath = "/UploadedPestPhotos/";
                     string folderPhysicalPath = Server.MapPath(folderRelativePath);
 
                     if (!Directory.Exists(folderPhysicalPath))
-                    {
-                        Directory.CreateDirectory(folderPhysicalPath); // ✅ Auto-create the folder
-                    }
+                        Directory.CreateDirectory(folderPhysicalPath);
 
                     string filename = Guid.NewGuid().ToString("N") + extension;
                     string savePath = Path.Combine(folderPhysicalPath, filename);
 
                     fuPestPhoto.SaveAs(savePath);
-
-                    // ✅ Save relative path for browser access
                     photoPath = folderRelativePath + filename;
                 }
                 catch (Exception ex)
                 {
-                    ShowSweetAlert("Upload Error", "Unable to save the uploaded photo. " + ex.Message, "error");
+                    ShowSweetAlert("Upload Error", "Unable to save uploaded photo. " + ex.Message, "error");
                     return;
                 }
             }
 
             try
             {
+                // ================================================
+                // Encryption + Hashing
+                // ================================================
+                string emailHash = AESHelper.ComputeSHA256WithPepper(email); // For search
+                string emailEnc = AESHelper.EncryptEmail(email);
+                string contactEnc = AESHelper.EncryptField(contact);
+
+                // Address placeholders (client not entering these yet)
+                string streetEnc = AESHelper.EncryptField("");
+                string barangayEnc = AESHelper.EncryptField("");
+                string cityEnc = AESHelper.EncryptField("");
+                string regionEnc = AESHelper.EncryptField("");
+                string countryEnc = AESHelper.EncryptField("");
+                string landmarkEnc = AESHelper.EncryptField("");
+
                 string generatedCode;
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
@@ -157,23 +152,23 @@ namespace RRCManagementSystem
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
-                    cmd.Parameters.AddWithValue("@Email", email);
-                    cmd.Parameters.AddWithValue("@ContactNumber", contact);
-                    cmd.Parameters.AddWithValue("@Message", (object)message ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@EmailHash", emailHash);
+                    cmd.Parameters.AddWithValue("@EmailEnc", emailEnc);
+                    cmd.Parameters.AddWithValue("@ContactEnc", contactEnc);
+                    cmd.Parameters.AddWithValue("@Message", string.IsNullOrEmpty(message) ? (object)DBNull.Value : message);
                     cmd.Parameters.AddWithValue("@PhotoPath", string.IsNullOrEmpty(photoPath) ? (object)DBNull.Value : photoPath);
 
                     cmd.Parameters.AddWithValue("@LastName", "");
                     cmd.Parameters.AddWithValue("@FirstName", "");
                     cmd.Parameters.AddWithValue("@MiddleName", "");
 
-                    cmd.Parameters.AddWithValue("@StreetAndUnit", DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Barangay", DBNull.Value);
-                    cmd.Parameters.AddWithValue("@City", DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Region", DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Country", DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Landmark", DBNull.Value);
+                    cmd.Parameters.AddWithValue("@StreetEnc", streetEnc);
+                    cmd.Parameters.AddWithValue("@BarangayEnc", barangayEnc);
+                    cmd.Parameters.AddWithValue("@CityEnc", cityEnc);
+                    cmd.Parameters.AddWithValue("@RegionEnc", regionEnc);
+                    cmd.Parameters.AddWithValue("@CountryEnc", countryEnc);
+                    cmd.Parameters.AddWithValue("@LandmarkEnc", landmarkEnc);
 
-                    // OUTPUT params
                     var pCode = new SqlParameter("@GeneratedInquiryCode", SqlDbType.NVarChar, 25) { Direction = ParameterDirection.Output };
                     cmd.Parameters.Add(pCode);
 
@@ -188,11 +183,7 @@ namespace RRCManagementSystem
 
                 SendConfirmationEmail(email, generatedCode);
 
-                ShowSweetAlert(
-                    "Submitted!",
-                    $"Your inquiry was submitted successfully.\nReference Code: {generatedCode}",
-                    "success"
-                );
+                ShowSweetAlert("Submitted!", $"Your inquiry was submitted successfully.\nReference Code: {generatedCode}", "success");
                 ClearForm();
             }
             catch (Exception ex)
@@ -200,6 +191,7 @@ namespace RRCManagementSystem
                 ShowSweetAlert("Error", "Something went wrong while saving: " + ex.Message, "error");
             }
         }
+
 
         private void SendConfirmationEmail(string toEmail, string inquiryCode)
         {

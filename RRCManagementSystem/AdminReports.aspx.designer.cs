@@ -96,6 +96,105 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblTotalBookings;
 
         /// <summary>
+        /// btnTabUsers control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabUsers;
+
+        /// <summary>
+        /// btnTabInquiries control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabInquiries;
+
+        /// <summary>
+        /// btnTabClients control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabClients;
+
+        /// <summary>
+        /// btnTabInventorySnapshots control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabInventorySnapshots;
+
+        /// <summary>
+        /// btnTabInventory control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabInventory;
+
+        /// <summary>
+        /// btnTabEquipment control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabEquipment;
+
+        /// <summary>
+        /// btnTabSales control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabSales;
+
+        /// <summary>
+        /// btnTabBookings control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabBookings;
+
+        /// <summary>
+        /// btnTabInspections control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabInspections;
+
+        /// <summary>
+        /// btnTabTeams control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabTeams;
+
+        /// <summary>
+        /// pnlUsers control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlUsers;
+
+        /// <summary>
         /// btnExportUsers control.
         /// </summary>
         /// <remarks>
@@ -112,6 +211,15 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.GridView gvUserAccounts;
+
+        /// <summary>
+        /// pnlInquiries control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlInquiries;
 
         /// <summary>
         /// btnExportInquiries control.
@@ -132,6 +240,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.GridView gvInquiries;
 
         /// <summary>
+        /// pnlClients control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlClients;
+
+        /// <summary>
         /// btnExportClients control.
         /// </summary>
         /// <remarks>
@@ -148,6 +265,15 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.GridView gvApprovedClients;
+
+        /// <summary>
+        /// pnlInventorySnapshots control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlInventorySnapshots;
 
         /// <summary>
         /// btnExportInventorySnapshots control.
@@ -168,6 +294,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.GridView gvInventorySnapshots;
 
         /// <summary>
+        /// pnlInventory control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlInventory;
+
+        /// <summary>
         /// btnExportInventory control.
         /// </summary>
         /// <remarks>
@@ -184,6 +319,42 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.GridView gvInventory;
+
+        /// <summary>
+        /// pnlEquipment control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlEquipment;
+
+        /// <summary>
+        /// btnExportEquipment control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnExportEquipment;
+
+        /// <summary>
+        /// gvEquipment control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.GridView gvEquipment;
+
+        /// <summary>
+        /// pnlSales control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlSales;
 
         /// <summary>
         /// btnExportSales control.
@@ -213,22 +384,13 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.GridView gvSales;
 
         /// <summary>
-        /// btnExportEquipment control.
+        /// pnlBookings control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnExportEquipment;
-
-        /// <summary>
-        /// gvEquipment control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvEquipment;
+        protected global::System.Web.UI.WebControls.Panel pnlBookings;
 
         /// <summary>
         /// btnExportBookings control.
@@ -249,6 +411,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.GridView gvBookings;
 
         /// <summary>
+        /// pnlInspections control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlInspections;
+
+        /// <summary>
         /// btnExportInspections control.
         /// </summary>
         /// <remarks>
@@ -265,6 +436,15 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.GridView gvInspections;
+
+        /// <summary>
+        /// pnlTeams control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlTeams;
 
         /// <summary>
         /// txtTeamDate control.

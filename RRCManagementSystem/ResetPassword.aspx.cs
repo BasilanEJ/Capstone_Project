@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -50,7 +51,9 @@ namespace RRCManagementSystem
                 {
                     con.Open();
                     object result = cmd.ExecuteScalar();
-                    return result?.ToString();
+
+                    // Decrypt the returned EmailEnc
+                    return result != null ? AESHelper.DecryptEmail(result.ToString()) : null;
                 }
                 catch (Exception ex)
                 {
@@ -59,6 +62,7 @@ namespace RRCManagementSystem
                 }
             }
         }
+
 
         protected void btnResetPassword_Click(object sender, EventArgs e)
         {
@@ -83,7 +87,10 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // ✅ Hash password (your existing Argon2 helper)
+            // ✅ Compute email hash
+            string emailHash = AESHelper.ComputeSHA256WithPepper(email);
+
+            // ✅ Hash password (Argon2 or your preferred hashing method)
             string hashedPassword = PasswordHelper.HashPassword(newPassword);
 
             int rows = 0;
@@ -91,7 +98,7 @@ namespace RRCManagementSystem
             using (var cmd = new SqlCommand("dbo.spClient_ResetPassword", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
                 cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, 256).Value = hashedPassword;
 
                 try
@@ -116,6 +123,7 @@ namespace RRCManagementSystem
                 ShowSweetAlert("Failed", "Could not reset password. Try again later.", "error", true);
             }
         }
+
 
         private void ShowSweetAlert(string title, string message, string icon, bool showButton, string redirectUrl = "")
         {

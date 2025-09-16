@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -66,8 +67,60 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
-                // ✅ Add a new column to check if email exists
-                dt.Columns.Add("HasAccount", typeof(bool));
+                // ✅ Add FullName column dynamically
+                if (!dt.Columns.Contains("FullName"))
+                    dt.Columns.Add("FullName", typeof(string));
+
+                // ✅ Decrypt and rename columns
+                foreach (DataRow row in dt.Rows)
+                {
+                    // Decrypt Email
+                    if (row["EmailEnc"] != DBNull.Value)
+                        row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
+
+                    // Decrypt Contact
+                    if (row["ContactEnc"] != DBNull.Value)
+                        row["ContactEnc"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
+
+                    // Decrypt Address
+                    if (row["StreetEnc"] != DBNull.Value)
+                        row["StreetEnc"] = AESHelper.DecryptField(row["StreetEnc"].ToString());
+
+                    if (row["BarangayEnc"] != DBNull.Value)
+                        row["BarangayEnc"] = AESHelper.DecryptField(row["BarangayEnc"].ToString());
+
+                    if (row["CityEnc"] != DBNull.Value)
+                        row["CityEnc"] = AESHelper.DecryptField(row["CityEnc"].ToString());
+
+                    if (row["RegionEnc"] != DBNull.Value)
+                        row["RegionEnc"] = AESHelper.DecryptField(row["RegionEnc"].ToString());
+
+                    if (row["CountryEnc"] != DBNull.Value)
+                        row["CountryEnc"] = AESHelper.DecryptField(row["CountryEnc"].ToString());
+
+                    if (row["LandmarkEnc"] != DBNull.Value)
+                        row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
+
+                    // Build FullName
+                    string first = row["FirstName"]?.ToString() ?? "";
+                    string middle = row["MiddleName"]?.ToString() ?? "";
+                    string last = row["LastName"]?.ToString() ?? "";
+                    row["FullName"] = $"{last}, {first} {middle}".Replace("  ", " ").Trim();
+                }
+
+                // ✅ Rename columns to match old UI
+                dt.Columns["EmailEnc"].ColumnName = "Email";
+                dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
+                dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
+                dt.Columns["BarangayEnc"].ColumnName = "Barangay";
+                dt.Columns["CityEnc"].ColumnName = "City";
+                dt.Columns["RegionEnc"].ColumnName = "Region";
+                dt.Columns["CountryEnc"].ColumnName = "Country";
+                dt.Columns["LandmarkEnc"].ColumnName = "Landmark";
+
+                // ✅ Add column to check if email exists
+                if (!dt.Columns.Contains("HasAccount"))
+                    dt.Columns.Add("HasAccount", typeof(bool));
 
                 using (var checkConn = new SqlConnection(_cs))
                 {
@@ -77,23 +130,28 @@ namespace RRCManagementSystem
                         string email = row["Email"].ToString();
                         if (!string.IsNullOrWhiteSpace(email))
                         {
-                            using (var cmd = new SqlCommand("SELECT COUNT(1) FROM Clients WHERE Email = @Email", checkConn))
+                            // 🔹 Compute SHA-256 hash for search
+                            string emailHash = AESHelper.ComputeSHA256WithPepper(email);
+
+                            using (var cmd = new SqlCommand("SELECT COUNT(1) FROM Clients WHERE EmailHash = @EmailHash", checkConn))
                             {
-                                cmd.Parameters.AddWithValue("@Email", email);
+                                cmd.Parameters.AddWithValue("@EmailHash", emailHash);
                                 int count = (int)cmd.ExecuteScalar();
-                                row["HasAccount"] = count > 0; // true if email exists
+                                row["HasAccount"] = count > 0;
                             }
                         }
                         else
                         {
-                            row["HasAccount"] = false; // default
+                            row["HasAccount"] = false;
                         }
                     }
                 }
 
+
                 return dt;
             }
         }
+
 
         #endregion
 
@@ -178,9 +236,48 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
-                return dt; // Return all matching rows now
+                // ✅ Decrypt encrypted fields
+                foreach (DataRow row in dt.Rows)
+                {
+                    if (row["EmailEnc"] != DBNull.Value)
+                        row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
+
+                    if (row["ContactEnc"] != DBNull.Value)
+                        row["ContactEnc"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
+
+                    if (row["StreetEnc"] != DBNull.Value)
+                        row["StreetEnc"] = AESHelper.DecryptField(row["StreetEnc"].ToString());
+
+                    if (row["BarangayEnc"] != DBNull.Value)
+                        row["BarangayEnc"] = AESHelper.DecryptField(row["BarangayEnc"].ToString());
+
+                    if (row["CityEnc"] != DBNull.Value)
+                        row["CityEnc"] = AESHelper.DecryptField(row["CityEnc"].ToString());
+
+                    if (row["RegionEnc"] != DBNull.Value)
+                        row["RegionEnc"] = AESHelper.DecryptField(row["RegionEnc"].ToString());
+
+                    if (row["CountryEnc"] != DBNull.Value)
+                        row["CountryEnc"] = AESHelper.DecryptField(row["CountryEnc"].ToString());
+
+                    if (row["LandmarkEnc"] != DBNull.Value)
+                        row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
+                }
+
+                // ✅ Rename decrypted columns to match old UI
+                dt.Columns["EmailEnc"].ColumnName = "Email";
+                dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
+                dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
+                dt.Columns["BarangayEnc"].ColumnName = "Barangay";
+                dt.Columns["CityEnc"].ColumnName = "City";
+                dt.Columns["RegionEnc"].ColumnName = "Region";
+                dt.Columns["CountryEnc"].ColumnName = "Country";
+                dt.Columns["LandmarkEnc"].ColumnName = "Landmark";
+
+                return dt;
             }
         }
+
 
 
         private static string Safe(object v) =>

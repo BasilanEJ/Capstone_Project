@@ -12,43 +12,45 @@
                 Approved Client Profiles
             </div>
             <div class="card-body">
-                <asp:GridView ID="gvClients" runat="server" AutoGenerateColumns="False"
-                    CssClass="table table-bordered table-striped text-center"
-                    AllowPaging="True" PageSize="10"
-                    OnPageIndexChanging="gvClients_PageIndexChanging"
-                    OnRowCommand="gvClients_RowCommand">
-                    <Columns>
-                        <asp:BoundField DataField="ClientID" HeaderText="Client ID" ReadOnly="True" />
-                        <asp:TemplateField HeaderText="Name">
-                            <ItemTemplate>
-                                <%# Eval("LastName") %>, <%# Eval("FirstName") %> <%# Eval("MiddleName") %>
-                            </ItemTemplate>
-                        </asp:TemplateField>
+            <asp:GridView ID="gvClients" runat="server" AutoGenerateColumns="False"
+    CssClass="table table-bordered table-striped text-center"
+    AllowPaging="True" PageSize="10"
+    OnPageIndexChanging="gvClients_PageIndexChanging"
+    OnRowCommand="gvClients_RowCommand">
+    <Columns>
+        <asp:BoundField DataField="ClientID" HeaderText="Client ID" ReadOnly="True" />
 
-                        <asp:BoundField DataField="Email" HeaderText="Email" />
-                        <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
-                        <asp:BoundField DataField="City" HeaderText="City" />
-                        <asp:BoundField DataField="Country" HeaderText="Country" />
-                        <asp:TemplateField HeaderText="Actions">
-  <ItemTemplate>
-    <asp:Button ID="btnView" runat="server"
-        CssClass="btn btn-primary btn-sm me-2"
-        Text="View Profile"
-        CommandName="ViewProfile"
-        CommandArgument='<%# Eval("ClientID") %>' />
+        <asp:TemplateField HeaderText="Name">
+            <ItemTemplate>
+                <%# Eval("LastName") %>, <%# Eval("FirstName") %> <%# Eval("MiddleName") %>
+            </ItemTemplate>
+        </asp:TemplateField>
 
-    <asp:Button ID="btnArchive" runat="server"
-        CssClass="btn btn-danger btn-sm"
-        Text="Archive"
-        CommandName="ArchiveClient"
-        CommandArgument='<%# Eval("ClientID") %>'
-        UseSubmitBehavior="false"
-        OnClientClick="return confirmArchive(this);" />
-  </ItemTemplate>
-</asp:TemplateField>
+        <asp:BoundField DataField="Email" HeaderText="Email" />
+        <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
+        <asp:BoundField DataField="City" HeaderText="City" />
+        <asp:BoundField DataField="Country" HeaderText="Country" />
 
-                    </Columns>
-                </asp:GridView>
+        <asp:TemplateField HeaderText="Actions">
+            <ItemTemplate>
+                <asp:Button ID="btnView" runat="server"
+                    CssClass="btn btn-primary btn-sm me-2"
+                    Text="View Profile"
+                    CommandName="ViewProfile"
+                    CommandArgument='<%# Eval("ClientID") %>' />
+
+                <asp:Button ID="btnArchive" runat="server"
+                    CssClass="btn btn-danger btn-sm"
+                    Text="Archive"
+                    CommandName="ArchiveClient"
+                    CommandArgument='<%# Eval("ClientID") %>'
+                    UseSubmitBehavior="false"
+                    OnClientClick="return confirmArchive(this);" />
+            </ItemTemplate>
+        </asp:TemplateField>
+    </Columns>
+</asp:GridView>
+
             </div>
         </div>
     </div>

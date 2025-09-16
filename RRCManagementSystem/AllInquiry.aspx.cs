@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using RRCManagementSystem.Helpers; // Needed for AESHelper
 
 namespace RRCManagementSystem
 {
@@ -110,10 +111,52 @@ namespace RRCManagementSystem
                 conn.Open();
                 da.Fill(dt);
 
+                // ===== Decrypt sensitive fields before binding =====
+                foreach (DataRow row in dt.Rows)
+                {
+                    // Decrypt email and contact
+                    if (row["EmailEnc"] != DBNull.Value)
+                        row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
+
+                    if (row["ContactEnc"] != DBNull.Value)
+                        row["ContactEnc"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
+
+                    // Decrypt address fields
+                    if (row["StreetEnc"] != DBNull.Value)
+                        row["StreetEnc"] = AESHelper.DecryptField(row["StreetEnc"].ToString());
+
+                    if (row["BarangayEnc"] != DBNull.Value)
+                        row["BarangayEnc"] = AESHelper.DecryptField(row["BarangayEnc"].ToString());
+
+                    if (row["CityEnc"] != DBNull.Value)
+                        row["CityEnc"] = AESHelper.DecryptField(row["CityEnc"].ToString());
+
+                    if (row["RegionEnc"] != DBNull.Value)
+                        row["RegionEnc"] = AESHelper.DecryptField(row["RegionEnc"].ToString());
+
+                    if (row["CountryEnc"] != DBNull.Value)
+                        row["CountryEnc"] = AESHelper.DecryptField(row["CountryEnc"].ToString());
+
+                    if (row["LandmarkEnc"] != DBNull.Value)
+                        row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
+                }
+
+                // ✅ Rename columns to match old UI so GridView binds correctly
+                dt.Columns["EmailEnc"].ColumnName = "Email";
+                dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
+                dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
+                dt.Columns["BarangayEnc"].ColumnName = "Barangay";
+                dt.Columns["CityEnc"].ColumnName = "City";
+                dt.Columns["RegionEnc"].ColumnName = "Region";
+                dt.Columns["CountryEnc"].ColumnName = "Country";
+                dt.Columns["LandmarkEnc"].ColumnName = "Landmark";
+
+                // Bind to GridView
                 gvInquiries.DataSource = dt;
                 gvInquiries.DataBind();
             }
         }
+
 
         private int GetSystemSettingInt(string settingName)
         {
@@ -157,18 +200,25 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value =
                     string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName;
                 cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = lastName ?? "";
+
+                // Encrypt address fields before saving
                 cmd.Parameters.Add("@StreetAndUnit", SqlDbType.NVarChar, 255).Value =
-                    string.IsNullOrWhiteSpace(street) ? (object)DBNull.Value : street;
+                    string.IsNullOrWhiteSpace(street) ? (object)DBNull.Value : AESHelper.EncryptField(street);
+
                 cmd.Parameters.Add("@Barangay", SqlDbType.NVarChar, 100).Value =
-                    string.IsNullOrWhiteSpace(barangay) ? (object)DBNull.Value : barangay;
+                    string.IsNullOrWhiteSpace(barangay) ? (object)DBNull.Value : AESHelper.EncryptField(barangay);
+
                 cmd.Parameters.Add("@City", SqlDbType.NVarChar, 100).Value =
-                    string.IsNullOrWhiteSpace(city) ? (object)DBNull.Value : city;
+                    string.IsNullOrWhiteSpace(city) ? (object)DBNull.Value : AESHelper.EncryptField(city);
+
                 cmd.Parameters.Add("@Region", SqlDbType.NVarChar, 100).Value =
-                    string.IsNullOrWhiteSpace(region) ? (object)DBNull.Value : region;
+                    string.IsNullOrWhiteSpace(region) ? (object)DBNull.Value : AESHelper.EncryptField(region);
+
                 cmd.Parameters.Add("@Country", SqlDbType.NVarChar, 100).Value =
-                    string.IsNullOrWhiteSpace(country) ? (object)DBNull.Value : country;
+                    string.IsNullOrWhiteSpace(country) ? (object)DBNull.Value : AESHelper.EncryptField(country);
+
                 cmd.Parameters.Add("@Landmark", SqlDbType.NVarChar, 255).Value =
-                    string.IsNullOrWhiteSpace(landmark) ? (object)DBNull.Value : landmark;
+                    string.IsNullOrWhiteSpace(landmark) ? (object)DBNull.Value : AESHelper.EncryptField(landmark);
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
@@ -185,7 +235,6 @@ namespace RRCManagementSystem
                 conn.Open();
                 using (var tx = conn.BeginTransaction())
                 {
-                    // 1) create/assign inspection
                     using (var cmd = new SqlCommand("dbo.spInspection_Assign", conn, tx))
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
@@ -203,7 +252,7 @@ namespace RRCManagementSystem
                             createdInspectionId = Convert.ToInt32(pOut.Value);
                     }
 
-                    // 2) inspector notification ONLY
+                    // Send notification to inspector
                     string when = scheduleLocalPHT.ToString("yyyy-MM-dd HH:mm");
                     string title = "New Inspection Assigned";
                     string body = $"You have a new inspection scheduled on {when} for Inquiry #{inquiryId}.";
@@ -216,7 +265,7 @@ namespace RRCManagementSystem
                     {
                         cmdN.CommandType = CommandType.StoredProcedure;
                         cmdN.Parameters.AddWithValue("@UserID", inspectorUserId);
-                        cmdN.Parameters.AddWithValue("@ClientID", DBNull.Value); // inspector-only
+                        cmdN.Parameters.AddWithValue("@ClientID", DBNull.Value);
                         cmdN.Parameters.AddWithValue("@Type", "Inspection");
                         cmdN.Parameters.AddWithValue("@Title", title);
                         cmdN.Parameters.AddWithValue("@Body", body);
@@ -227,26 +276,6 @@ namespace RRCManagementSystem
 
                     tx.Commit();
                 }
-            }
-        }
-
-        // (generic helper; not used for client here but kept for reuse)
-        private void CreateNotification(int userId, int? clientId, string type, string title, string body, string url, string dedupKey = null)
-        {
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.spNotification_Add", conn))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@UserID", userId);
-                cmd.Parameters.AddWithValue("@ClientID", (object)clientId ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Type", (object)type ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Title", (object)title ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Body", (object)body ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Url", (object)url ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@DedupKey", (object)dedupKey ?? DBNull.Value);
-
-                conn.Open();
-                cmd.ExecuteNonQuery();
             }
         }
 
@@ -279,7 +308,7 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
 
                 conn.Open();
-                int rows = Convert.ToInt32(cmd.ExecuteScalar()); // proc SELECTs @@ROWCOUNT
+                int rows = Convert.ToInt32(cmd.ExecuteScalar());
                 if (rows == 0)
                     throw new InvalidOperationException("Inquiry not found.");
             }
@@ -293,9 +322,9 @@ namespace RRCManagementSystem
 
                 Button btnAssign = (Button)e.Row.FindControl("btnAssign");
                 string inquiryId = drv["InquiryID"].ToString();
-                string inquiryCode = drv["InquiryCode"].ToString(); // ← available now
+                string inquiryCode = drv["InquiryCode"].ToString();
 
-                // your existing attributes…
+                // ✅ Use final renamed columns here
                 btnAssign.Attributes["data-fn"] = SafeAttr(drv["FirstName"]);
                 btnAssign.Attributes["data-mn"] = SafeAttr(drv["MiddleName"]);
                 btnAssign.Attributes["data-ln"] = SafeAttr(drv["LastName"]);
@@ -305,13 +334,12 @@ namespace RRCManagementSystem
                 btnAssign.Attributes["data-reg"] = SafeAttr(drv["Region"]);
                 btnAssign.Attributes["data-ctry"] = SafeAttr(drv["Country"]);
                 btnAssign.Attributes["data-lmk"] = SafeAttr(drv["Landmark"]);
-
-                // optionally expose the code to your modal
                 btnAssign.Attributes["data-code"] = inquiryCode;
 
                 btnAssign.OnClientClick = $"showAssignModal(this, {inquiryId}); return false;";
             }
         }
+
 
 
         private static string SafeAttr(object val)

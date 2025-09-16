@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Data.SqlClient;
 using System.Data;
-using System.Linq;
-using System.Web;
+using System.Data.SqlClient;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using RRCManagementSystem.Helpers; // Needed for AESHelper
 
 namespace RRCManagementSystem
 {
@@ -16,6 +14,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Prevent caching to avoid stale data when navigating back
             Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
@@ -37,6 +36,25 @@ namespace RRCManagementSystem
                 try
                 {
                     da.Fill(dt);
+
+                    // 🔹 Decrypt each email before displaying
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        if (row["Email"] != DBNull.Value && !string.IsNullOrEmpty(row["Email"].ToString()))
+                        {
+                            try
+                            {
+                                string encryptedEmail = row["Email"].ToString();
+                                string decryptedEmail = AESHelper.DecryptEmail(encryptedEmail);
+                                row["Email"] = decryptedEmail;
+                            }
+                            catch
+                            {
+                                row["Email"] = "[Decryption Error]";
+                            }
+                        }
+                    }
+
                     gvArchivedUsers.DataSource = dt;
                     gvArchivedUsers.DataBind();
                 }

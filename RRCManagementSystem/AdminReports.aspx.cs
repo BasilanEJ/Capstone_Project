@@ -1,50 +1,50 @@
-﻿    using System;
-    using System.Configuration;
-    using System.Data;
-    using System.Data.SqlClient;
-    using System.IO;
-    using System.Text;
-    using System.Web;
-    using System.Web.UI;
-    using System.Web.UI.WebControls;
-    using iTextSharp.text;
-    using iTextSharp.text.pdf;
-    using RRCManagementSystem.Helpers; // keep if you actually have PdfWatermark
+﻿using System;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.IO;
+using System.Text;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using RRCManagementSystem.Helpers; // keep if you actually have PdfWatermark
 
-    namespace RRCManagementSystem
+namespace RRCManagementSystem
+{
+    public partial class AdminReports : System.Web.UI.Page
     {
-        public partial class AdminReports : System.Web.UI.Page
+        private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
+        protected void Page_Load(object sender, EventArgs e)
         {
-            private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-
-            protected void Page_Load(object sender, EventArgs e)
+            if (!IsPostBack)
             {
-                if (!IsPostBack)
-                {
-                    txtFromDate.Text = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
-                    txtToDate.Text   = DateTime.Now.ToString("yyyy-MM-dd");
-                    txtTeamDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
+                txtFromDate.Text = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
+                txtToDate.Text = DateTime.Now.ToString("yyyy-MM-dd");
+                txtTeamDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
 
-                    LoadReports();
-                    LoadUserAccounts();
-                    LoadTeamReports();
-                    LoadSales(DateTime.Parse(txtFromDate.Text), DateTime.Parse(txtToDate.Text));
-                }
-            }
-
-            // ---------------------- UI actions ----------------------
-            protected void btnFilter_Click(object sender, EventArgs e)
-            {
                 LoadReports();
+                LoadUserAccounts();
                 LoadTeamReports();
-                AddAuditLog(Convert.ToInt32(Session["UserID"]), "Filtered Admin Reports");
+                LoadSales(DateTime.Parse(txtFromDate.Text), DateTime.Parse(txtToDate.Text));
             }
+        }
 
-            protected void btnTeamDateApply_Click(object sender, EventArgs e)
-            {
-                LoadTeamReports();
-                AddAuditLog(Convert.ToInt32(Session["UserID"]), "Applied Team Availability Date in Reports");
-            }
+        // ---------------------- UI actions ----------------------
+        protected void btnFilter_Click(object sender, EventArgs e)
+        {
+            LoadReports();
+            LoadTeamReports();
+            AddAuditLog(Convert.ToInt32(Session["UserID"]), "Filtered Admin Reports");
+        }
+
+        protected void btnTeamDateApply_Click(object sender, EventArgs e)
+        {
+            LoadTeamReports();
+            AddAuditLog(Convert.ToInt32(Session["UserID"]), "Applied Team Availability Date in Reports");
+        }
 
         protected void btnExportPDF_Click(object sender, EventArgs e)
         {
@@ -100,135 +100,344 @@
             AddAuditLog(Convert.ToInt32(Session["UserID"]), "Exported All Reports to PDF");
         }
 
-
         protected void btnExportTeamsSummary_Click(object sender, EventArgs e)
-            {
-                if (gvTeamsSummary.Rows.Count > 0)
-                    ExportGridViewToPDF(gvTeamsSummary, "Team_Summary_Report");
-            }
+        {
+            if (gvTeamsSummary.Rows.Count > 0)
+                ExportGridViewToPDF(gvTeamsSummary, "Team_Summary_Report");
+        }
 
-            protected void btnExportTeamMembers_Click(object sender, EventArgs e)
-            {
-                if (gvTeamMembers.Rows.Count > 0)
-                    ExportGridViewToPDF(gvTeamMembers, "Team_Members_Report");
-            }
+        protected void btnExportTeamMembers_Click(object sender, EventArgs e)
+        {
+            if (gvTeamMembers.Rows.Count > 0)
+                ExportGridViewToPDF(gvTeamMembers, "Team_Members_Report");
+        }
 
-            protected void btnExportUsers_Click(object sender, EventArgs e)
-            {
-                if (gvUserAccounts.Rows.Count > 0) ExportGridViewToPDF(gvUserAccounts, "Users_Report");
-            }
-            protected void btnExportSales_Click(object sender, EventArgs e)
-            {
-                if (gvSales.Rows.Count > 0) ExportGridViewToPDF(gvSales, "Sales_Report");
-            }
-            protected void btnExportInquiries_Click(object sender, EventArgs e)
-            {
-                if (gvInquiries.Rows.Count > 0) ExportGridViewToPDF(gvInquiries, "Inquiry_Report");
-            }
-            protected void btnExportClients_Click(object sender, EventArgs e)
-            {
-                if (gvApprovedClients.Rows.Count > 0) ExportGridViewToPDF(gvApprovedClients, "ApprovedClients_Report");
-            }
-            protected void btnExportInventorySnapshots_Click(object sender, EventArgs e)
-            {
-                if (gvInventorySnapshots.Rows.Count > 0) ExportGridViewToPDF(gvInventorySnapshots, "InventorySnapshots_Report");
-            }
-            protected void btnExportInventory_Click(object sender, EventArgs e)
-            {
-                if (gvInventory.Rows.Count > 0) ExportGridViewToPDF(gvInventory, "Inventory_Report");
-            }
-            protected void btnExportEquipment_Click(object sender, EventArgs e)
-            {
-                if (gvEquipment.Rows.Count > 0) ExportGridViewToPDF(gvEquipment, "Equipment_Report");
-            }
-            protected void btnExportBookings_Click(object sender, EventArgs e)
-            {
-                if (gvBookings.Rows.Count > 0) ExportGridViewToPDF(gvBookings, "Bookings_Report");
-            }
-            protected void btnExportInspections_Click(object sender, EventArgs e)
-            {
-                if (gvInspections.Rows.Count > 0) ExportGridViewToPDF(gvInspections, "Inspections_Report");
-            }
+        protected void btnExportUsers_Click(object sender, EventArgs e)
+        {
+            if (gvUserAccounts.Rows.Count > 0) ExportGridViewToPDF(gvUserAccounts, "Users_Report");
+        }
 
-            // ---------------------- Loaders (SP-based) ----------------------
-            private void LoadReports()
-            {
-                var from = DateTime.Parse(txtFromDate.Text).Date;
-                var to   = DateTime.Parse(txtToDate.Text).Date;
+        protected void btnExportSales_Click(object sender, EventArgs e)
+        {
+            if (gvSales.Rows.Count > 0) ExportGridViewToPDF(gvSales, "Sales_Report");
+        }
 
-                LoadSummaryCounts(from, to);
-                LoadInquiries(from, to);
-                LoadApprovedClients(from, to);
-                LoadInventorySnapshots(from, to);
-                LoadInventory();
-                LoadEquipment();
-                LoadBookings(from, to);
-                LoadInspections(from, to);
-                LoadSales(from, to);
-            }
+        protected void btnExportInquiries_Click(object sender, EventArgs e)
+        {
+            if (gvInquiries.Rows.Count > 0) ExportGridViewToPDF(gvInquiries, "Inquiry_Report");
+        }
 
-            private void LoadSummaryCounts(DateTime from, DateTime to)
+        protected void btnExportClients_Click(object sender, EventArgs e)
+        {
+            if (gvApprovedClients.Rows.Count > 0) ExportGridViewToPDF(gvApprovedClients, "ApprovedClients_Report");
+        }
+
+        protected void btnExportInventorySnapshots_Click(object sender, EventArgs e)
+        {
+            if (gvInventorySnapshots.Rows.Count > 0) ExportGridViewToPDF(gvInventorySnapshots, "InventorySnapshots_Report");
+        }
+
+        protected void btnExportInventory_Click(object sender, EventArgs e)
+        {
+            if (gvInventory.Rows.Count > 0) ExportGridViewToPDF(gvInventory, "Inventory_Report");
+        }
+
+        protected void btnExportEquipment_Click(object sender, EventArgs e)
+        {
+            if (gvEquipment.Rows.Count > 0) ExportGridViewToPDF(gvEquipment, "Equipment_Report");
+        }
+
+        protected void btnExportBookings_Click(object sender, EventArgs e)
+        {
+            if (gvBookings.Rows.Count > 0) ExportGridViewToPDF(gvBookings, "Bookings_Report");
+        }
+
+        protected void btnExportInspections_Click(object sender, EventArgs e)
+        {
+            if (gvInspections.Rows.Count > 0) ExportGridViewToPDF(gvInspections, "Inspections_Report");
+        }
+
+        // Hide all panels
+        private void HideAllPanels()
+        {
+            pnlUsers.Visible = false;
+            pnlInquiries.Visible = false;
+            pnlClients.Visible = false;
+            pnlInventorySnapshots.Visible = false;
+            pnlInventory.Visible = false;
+            pnlSales.Visible = false;
+            pnlBookings.Visible = false;
+            pnlInspections.Visible = false;
+            pnlTeams.Visible = false;
+            pnlEquipment.Visible = false; // <-- make sure this is included
+        }
+
+        // User Accounts Tab
+        protected void btnTabUsers_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlUsers.Visible = true;
+            SetActiveTab("btnTabUsers");
+        }
+
+        // Inquiries Tab
+        protected void btnTabInquiries_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlInquiries.Visible = true;
+            SetActiveTab("btnTabInquiries");
+        }
+
+        // Clients Tab
+        protected void btnTabClients_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlClients.Visible = true;
+            SetActiveTab("btnTabClients");
+        }
+
+        // Inventory Snapshots Tab
+        protected void btnTabInventorySnapshots_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlInventorySnapshots.Visible = true;
+            SetActiveTab("btnTabInventorySnapshots");
+        }
+
+        // Inventory Tab
+        protected void btnTabInventory_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlInventory.Visible = true;
+            SetActiveTab("btnTabInventory");
+        }
+
+        // Sales Tab
+        protected void btnTabSales_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlSales.Visible = true;
+            SetActiveTab("btnSales");
+        }
+
+        // Bookings Tab
+        protected void btnTabBookings_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlBookings.Visible = true;
+            SetActiveTab("btnTabBookings");
+        }
+
+        // Inspections Tab
+        protected void btnTabInspections_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlInspections.Visible = true;
+            SetActiveTab("btnTabInspections");
+        }
+
+        // Teams Tab
+        protected void btnTabTeams_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlTeams.Visible = true;
+            SetActiveTab("btnTabTeams");
+        }
+
+        // Equipment Tab (if you added it)
+        protected void btnTabEquipment_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            pnlEquipment.Visible = true;
+            SetActiveTab("btnTabEquipment");
+        }
+
+        private void SetActiveTab(string activeButtonID)
+        {
+            // List all tab buttons
+            var buttons = new[] { btnTabUsers, btnTabInquiries, btnTabClients, btnTabInventorySnapshots, btnTabInventory, btnTabEquipment, btnTabSales, btnTabBookings, btnTabInspections, btnTabTeams };
+
+            // Loop through each button and set CSS class
+            foreach (var btn in buttons)
             {
-                using (var con = new SqlConnection(cs))
-                using (var cmd = new SqlCommand("dbo.spReports_SummaryCounts", con))
+                btn.CssClass = "tab-btn"; // default style
+                if (btn.ID == activeButtonID)
                 {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add(new SqlParameter("@FromDate", SqlDbType.Date){Value = from});
-                    cmd.Parameters.Add(new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
+                    btn.CssClass += " active"; // add active style
+                }
+            }
+        }
 
-                    con.Open();
-                    using (var r = cmd.ExecuteReader())
+
+        // ---------------------- Loaders (SP-based) ----------------------
+        private void LoadReports()
+        {
+            var from = DateTime.Parse(txtFromDate.Text).Date;
+            var to = DateTime.Parse(txtToDate.Text).Date;
+
+            LoadSummaryCounts(from, to);
+            LoadInquiries(from, to);
+            LoadApprovedClients(from, to);
+            LoadInventorySnapshots(from, to);
+            LoadInventory();
+            LoadEquipment();
+            LoadBookings(from, to);
+            LoadInspections(from, to);
+            LoadSales(from, to);
+        }
+
+        private void LoadSummaryCounts(DateTime from, DateTime to)
+        {
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spReports_SummaryCounts", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add(new SqlParameter("@FromDate", SqlDbType.Date) { Value = from });
+                cmd.Parameters.Add(new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
+
+                con.Open();
+                using (var r = cmd.ExecuteReader())
+                {
+                    if (r.Read())
                     {
-                        if (r.Read())
-                        {
-                            lblTotalInquiries.Text = Convert.ToInt32(r["TotalInquiries"]).ToString();
-                            lblTotalClients.Text   = Convert.ToInt32(r["TotalApprovedClients"]).ToString();
-                            lblTotalEquipment.Text = Convert.ToInt32(r["TotalAvailableEquipment"]).ToString();
-                            lblTotalBookings.Text  = Convert.ToInt32(r["TotalBookings"]).ToString();
-                        }
+                        lblTotalInquiries.Text = Convert.ToInt32(r["TotalInquiries"]).ToString();
+                        lblTotalClients.Text = Convert.ToInt32(r["TotalApprovedClients"]).ToString();
+                        lblTotalEquipment.Text = Convert.ToInt32(r["TotalAvailableEquipment"]).ToString();
+                        lblTotalBookings.Text = Convert.ToInt32(r["TotalBookings"]).ToString();
+                    }
+                }
+            }
+        }
+
+        private void LoadUserAccounts()
+        {
+            var dt = ExecToTable("dbo.spReports_UserAccounts");
+
+            // Decrypt emails in code before binding
+            foreach (DataRow row in dt.Rows)
+            {
+                if (row["Email"] != DBNull.Value)
+                {
+                    try
+                    {
+                        row["Email"] = AESHelper.DecryptEmail(row["Email"].ToString());
+                    }
+                    catch
+                    {
+                        row["Email"] = "[Decryption Error]";
                     }
                 }
             }
 
-            private void LoadUserAccounts()
+            gvUserAccounts.DataSource = dt;
+            gvUserAccounts.DataBind();
+        }
+
+        private void LoadInquiries(DateTime from, DateTime to)
+        {
+            var dt = ExecToTable("dbo.spReports_Inquiries",
+                new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
+                new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
+
+            // 🔐 Decrypt sensitive data
+            foreach (DataRow row in dt.Rows)
             {
-                gvUserAccounts.DataSource = ExecToTable("dbo.spReports_UserAccounts");
-                gvUserAccounts.DataBind();
+                // Email
+                if (row["EmailEnc"] != DBNull.Value)
+                {
+                    try
+                    {
+                        row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
+                    }
+                    catch
+                    {
+                        row["EmailEnc"] = "[Decryption Error]";
+                    }
+                }
+
+                // Contact
+                if (row["ContactEnc"] != DBNull.Value)
+                {
+                    row["ContactEnc"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
+                }
+
+                // Address Parts
+                string street = row["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(row["StreetEnc"].ToString()) : "";
+                string barangay = row["BarangayEnc"] != DBNull.Value ? AESHelper.DecryptField(row["BarangayEnc"].ToString()) : "";
+                string city = row["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CityEnc"].ToString()) : "";
+                string region = row["RegionEnc"] != DBNull.Value ? AESHelper.DecryptField(row["RegionEnc"].ToString()) : "";
+                string country = row["CountryEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CountryEnc"].ToString()) : "";
+                string landmark = row["LandmarkEnc"] != DBNull.Value ? AESHelper.DecryptField(row["LandmarkEnc"].ToString()) : "";
+
+                // Combine into a single Address column
+                row["StreetEnc"] = $"{street}, {barangay}, {city}, {region}, {country}, {landmark}".Trim(',', ' ');
             }
 
-            private void LoadInquiries(DateTime from, DateTime to)
+            // Rename columns for GridView display
+            dt.Columns["EmailEnc"].ColumnName = "Email";
+            dt.Columns["ContactEnc"].ColumnName = "Contact";
+            dt.Columns["StreetEnc"].ColumnName = "Address";
+
+            gvInquiries.DataSource = dt;
+            gvInquiries.DataBind();
+        }
+
+        private void LoadApprovedClients(DateTime from, DateTime to)
+        {
+            var dt = ExecToTable("dbo.spReports_ApprovedClients",
+                new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
+                new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
+
+            // 🔐 Decrypt sensitive fields
+            foreach (DataRow row in dt.Rows)
             {
-                gvInquiries.DataSource = ExecToTable("dbo.spReports_Inquiries",
-                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
-                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
-                gvInquiries.DataBind();
+                // Email
+                if (row["EmailEnc"] != DBNull.Value)
+                {
+                    try
+                    {
+                        row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
+                    }
+                    catch
+                    {
+                        row["EmailEnc"] = "[Decryption Error]";
+                    }
+                }
+
+                // Address
+                string street = row["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(row["StreetEnc"].ToString()) : "";
+                string barangay = row["BarangayEnc"] != DBNull.Value ? AESHelper.DecryptField(row["BarangayEnc"].ToString()) : "";
+                string city = row["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CityEnc"].ToString()) : "";
+                string region = row["RegionEnc"] != DBNull.Value ? AESHelper.DecryptField(row["RegionEnc"].ToString()) : "";
+                string country = row["CountryEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CountryEnc"].ToString()) : "";
+
+                row["StreetEnc"] = $"{street}, {barangay}, {city}, {region}, {country}".Trim(',', ' ', '\t');
             }
 
-            private void LoadApprovedClients(DateTime from, DateTime to)
-            {
-                gvApprovedClients.DataSource = ExecToTable("dbo.spReports_ApprovedClients",
-                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
-                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
-                gvApprovedClients.DataBind();
-            }
+            dt.Columns["EmailEnc"].ColumnName = "Email";
+            dt.Columns["StreetEnc"].ColumnName = "Address";
 
-            private void LoadInventorySnapshots(DateTime from, DateTime to)
-            {
-                gvInventorySnapshots.DataSource = ExecToTable("dbo.spReports_InventorySnapshots",
-                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
-                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
-                gvInventorySnapshots.DataBind();
-            }
+            gvApprovedClients.DataSource = dt;
+            gvApprovedClients.DataBind();
+        }
 
-            private void LoadInventory()
-            {
-                gvInventory.DataSource = ExecToTable("dbo.spReports_Inventory");
-                gvInventory.DataBind();
-            }
+        private void LoadInventorySnapshots(DateTime from, DateTime to)
+        {
+            gvInventorySnapshots.DataSource = ExecToTable("dbo.spReports_InventorySnapshots",
+                new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
+                new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
+            gvInventorySnapshots.DataBind();
+        }
+
+        private void LoadInventory()
+        {
+            gvInventory.DataSource = ExecToTable("dbo.spReports_Inventory");
+            gvInventory.DataBind();
+        }
 
         private void LoadEquipment()
         {
-            DateTime reportDate = DateTime.Today; // or DateTime.Parse(txtTeamDate.Text).Date;
+            DateTime reportDate = DateTime.Today;
 
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("dbo.spReports_EquipmentAvailableOnDate", con))
@@ -245,7 +454,6 @@
             }
         }
 
-
         private void LoadBookings(DateTime from, DateTime to)
         {
             gvBookings.DataSource = ExecToTable(
@@ -256,174 +464,188 @@
             gvBookings.DataBind();
         }
 
-
         private void LoadInspections(DateTime from, DateTime to)
+        {
+            var dt = ExecToTable("dbo.spReports_Inspections",
+                new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
+                new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
+
+            foreach (DataRow row in dt.Rows)
             {
-                gvInspections.DataSource = ExecToTable("dbo.spReports_Inspections",
-                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
-                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
-                gvInspections.DataBind();
+                string street = row["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(row["StreetEnc"].ToString()) : "";
+                string barangay = row["BarangayEnc"] != DBNull.Value ? AESHelper.DecryptField(row["BarangayEnc"].ToString()) : "";
+                string city = row["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CityEnc"].ToString()) : "";
+                string region = row["RegionEnc"] != DBNull.Value ? AESHelper.DecryptField(row["RegionEnc"].ToString()) : "";
+                string country = row["CountryEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CountryEnc"].ToString()) : "";
+
+                row["StreetEnc"] = $"{street}, {barangay}, {city}, {region}, {country}".Trim(',', ' ');
             }
 
-            private void LoadSales(DateTime from, DateTime to)
+            dt.Columns["StreetEnc"].ColumnName = "ClientAddress";
+
+            gvInspections.DataSource = dt;
+            gvInspections.DataBind();
+        }
+
+        private void LoadSales(DateTime from, DateTime to)
+        {
+            var dt = ExecToTable("dbo.spReports_Sales",
+                new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
+                new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
+
+            if (!dt.Columns.Contains("TransactionIDFormatted"))
+                dt.Columns.Add("TransactionIDFormatted", typeof(string));
+
+            foreach (DataRow row in dt.Rows)
             {
-                var dt = ExecToTable("dbo.spReports_Sales",
-                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
-                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to});
+                row["TransactionIDFormatted"] = PrettyId("Transaction", row["TransactionID"]);
+            }
 
-                if (!dt.Columns.Contains("TransactionIDFormatted"))
-                    dt.Columns.Add("TransactionIDFormatted", typeof(string));
+            gvSales.DataSource = dt;
+            gvSales.DataBind();
 
-                foreach (DataRow row in dt.Rows)
+            decimal total = 0;
+            foreach (DataRow row in dt.Rows) total += row.Field<decimal>("Amount");
+            lblSalesSummary.Text = $"Total Sales: ₱{total:N2} ({dt.Rows.Count} transactions)";
+        }
+
+        private void LoadTeamReports()
+        {
+            var from = DateTime.Parse(txtFromDate.Text).Date;
+            var to = DateTime.Parse(txtToDate.Text).Date;
+            var teamDate = DateTime.TryParse(txtTeamDate.Text, out var d) ? d.Date : DateTime.Today;
+
+            LoadTeamsSummary(from, to, teamDate);
+            LoadTeamMembers();
+        }
+
+        private void LoadTeamsSummary(DateTime from, DateTime to, DateTime teamDate)
+        {
+            gvTeamsSummary.DataSource = ExecToTable("dbo.spReports_TeamsSummary",
+                new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
+                new SqlParameter("@ToDate", SqlDbType.Date) { Value = to },
+                new SqlParameter("@TeamDate", SqlDbType.Date) { Value = teamDate });
+            gvTeamsSummary.DataBind();
+        }
+
+        private void LoadTeamMembers()
+        {
+            gvTeamMembers.DataSource = ExecToTable("dbo.spReports_TeamMembers");
+            gvTeamMembers.DataBind();
+        }
+
+        // ---------------------- Helpers ----------------------
+        private DataTable ExecToTable(string procName, params SqlParameter[] parameters)
+        {
+            var dt = new DataTable();
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand(procName, con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                if (parameters != null) cmd.Parameters.AddRange(parameters);
+                using (var da = new SqlDataAdapter(cmd))
                 {
-                    row["TransactionIDFormatted"] = PrettyId("Transaction", row["TransactionID"]);
+                    da.Fill(dt);
                 }
-
-                gvSales.DataSource = dt;
-                gvSales.DataBind();
-
-                decimal total = 0;
-                foreach (DataRow row in dt.Rows) total += row.Field<decimal>("Amount");
-                lblSalesSummary.Text = $"Total Sales: ₱{total:N2} ({dt.Rows.Count} transactions)";
             }
+            return dt;
+        }
 
-            private void LoadTeamReports()
+        private void AddGridToPDF(Document doc, GridView grid, string title)
+        {
+            if (grid.Rows.Count == 0) return;
+
+            doc.NewPage();
+            doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
+            doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+            doc.Add(new Paragraph(" "));
+
+            int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
+            PdfPTable table = new PdfPTable(visibleCols)
             {
-                var from     = DateTime.Parse(txtFromDate.Text).Date;
-                var to       = DateTime.Parse(txtToDate.Text).Date;
-                var teamDate = DateTime.TryParse(txtTeamDate.Text, out var d) ? d.Date : DateTime.Today;
+                WidthPercentage = 100,
+                SpacingBefore = 10f
+            };
 
-                LoadTeamsSummary(from, to, teamDate);
-                LoadTeamMembers();
-            }
-
-            private void LoadTeamsSummary(DateTime from, DateTime to, DateTime teamDate)
+            if (grid.HeaderRow != null)
             {
-                gvTeamsSummary.DataSource = ExecToTable("dbo.spReports_TeamsSummary",
-                    new SqlParameter("@FromDate", SqlDbType.Date){Value = from},
-                    new SqlParameter("@ToDate",   SqlDbType.Date){Value = to},
-                    new SqlParameter("@TeamDate", SqlDbType.Date){Value = teamDate});
-                gvTeamsSummary.DataBind();
-            }
-
-            private void LoadTeamMembers()
-            {
-                gvTeamMembers.DataSource = ExecToTable("dbo.spReports_TeamMembers");
-                gvTeamMembers.DataBind();
-            }
-
-            // ---------------------- Helpers ----------------------
-            private DataTable ExecToTable(string procName, params SqlParameter[] parameters)
-            {
-                var dt = new DataTable();
-                using (var con = new SqlConnection(cs))
-                using (var cmd = new SqlCommand(procName, con))
+                foreach (TableCell hc in grid.HeaderRow.Cells)
                 {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    if (parameters != null) cmd.Parameters.AddRange(parameters);
-                    using (var da = new SqlDataAdapter(cmd))
+                    string headerText = HttpUtility.HtmlDecode(GetCellText(hc));
+                    PdfPCell headerCell = new PdfPCell(new Phrase(headerText, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
                     {
-                        da.Fill(dt);
-                    }
+                        BackgroundColor = BaseColor.DARK_GRAY,
+                        HorizontalAlignment = Element.ALIGN_CENTER,
+                        Padding = 6
+                    };
+                    table.AddCell(headerCell);
                 }
-                return dt;
             }
 
-            private void AddGridToPDF(Document doc, GridView grid, string title)
+            foreach (GridViewRow row in grid.Rows)
             {
-                if (grid.Rows.Count == 0) return;
-
-                doc.NewPage();
-                doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
-                doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
-                doc.Add(new Paragraph(" "));
-
-                int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
-                PdfPTable table = new PdfPTable(visibleCols)
+                for (int c = 0; c < row.Cells.Count; c++)
                 {
-                    WidthPercentage = 100,
-                    SpacingBefore = 10f
-                };
+                    string text = GetCellText(row.Cells[c]);
+                    string header = (grid.HeaderRow != null && c < grid.HeaderRow.Cells.Count)
+                                    ? (grid.HeaderRow.Cells[c].Text ?? "").ToLower()
+                                    : "";
 
-                if (grid.HeaderRow != null)
-                {
-                    foreach (TableCell hc in grid.HeaderRow.Cells)
+                    int align = Element.ALIGN_LEFT;
+                    if (header.Contains("quantity") || header.Contains("price") || header.Contains("amount") ||
+                        header.Contains("sqm") || header.Contains("ml"))
+                        align = Element.ALIGN_RIGHT;
+                    else if (header.Contains("status") || header.Contains("date"))
+                        align = Element.ALIGN_CENTER;
+                    else if (int.TryParse(text, out _))
+                        align = Element.ALIGN_CENTER;
+
+                    PdfPCell bodyCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
                     {
-                        string headerText = HttpUtility.HtmlDecode(GetCellText(hc));
-                        PdfPCell headerCell = new PdfPCell(new Phrase(headerText, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
-                        {
-                            BackgroundColor = BaseColor.DARK_GRAY,
-                            HorizontalAlignment = Element.ALIGN_CENTER,
-                            Padding = 6
-                        };
-                        table.AddCell(headerCell);
-                    }
+                        HorizontalAlignment = align,
+                        Padding = 5
+                    };
+                    table.AddCell(bodyCell);
                 }
+            }
 
-                foreach (GridViewRow row in grid.Rows)
+            doc.Add(table);
+        }
+
+        private static string GetCellText(TableCell cell)
+        {
+            if (cell.Controls != null && cell.Controls.Count > 0)
+            {
+                foreach (Control ctrl in cell.Controls)
                 {
-                    for (int c = 0; c < row.Cells.Count; c++)
-                    {
-                        string text = GetCellText(row.Cells[c]);
-                        string header = (grid.HeaderRow != null && c < grid.HeaderRow.Cells.Count)
-                                        ? (grid.HeaderRow.Cells[c].Text ?? "").ToLower()
-                                        : "";
-
-                        int align = Element.ALIGN_LEFT;
-                        if (header.Contains("quantity") || header.Contains("price") || header.Contains("amount") ||
-                            header.Contains("sqm") || header.Contains("ml"))
-                            align = Element.ALIGN_RIGHT;
-                        else if (header.Contains("status") || header.Contains("date"))
-                            align = Element.ALIGN_CENTER;
-                        else if (int.TryParse(text, out _))
-                            align = Element.ALIGN_CENTER;
-
-                        PdfPCell bodyCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
-                        {
-                            HorizontalAlignment = align,
-                            Padding = 5
-                        };
-                        table.AddCell(bodyCell);
-                    }
+                    if (ctrl is ITextControl t) return (t.Text ?? "").Trim();
+                    if (ctrl is IButtonControl b) return (b.Text ?? "").Trim();
+                    if (ctrl is Literal l) return (l.Text ?? "").Trim();
+                    if (ctrl is LinkButton lb) return (lb.Text ?? "").Trim();
                 }
-
-                doc.Add(table);
             }
+            var raw = HttpUtility.HtmlDecode(cell.Text ?? "").Trim();
+            return raw == "&nbsp;" ? "" : raw;
+        }
 
-            private static string GetCellText(TableCell cell)
-            {
-                if (cell.Controls != null && cell.Controls.Count > 0)
-                {
-                    foreach (Control ctrl in cell.Controls)
-                    {
-                        if (ctrl is ITextControl t) return (t.Text ?? "").Trim();
-                        if (ctrl is IButtonControl b) return (b.Text ?? "").Trim();
-                        if (ctrl is Literal l) return (l.Text ?? "").Trim();
-                        if (ctrl is LinkButton lb) return (lb.Text ?? "").Trim();
-                    }
-                }
-                var raw = HttpUtility.HtmlDecode(cell.Text ?? "").Trim();
-                return raw == "&nbsp;" ? "" : raw;
-            }
+        private static string GetIdPrefix(string keyName)
+        {
+            if (keyName.IndexOf("user", StringComparison.OrdinalIgnoreCase) >= 0) return "User";
+            if (keyName.IndexOf("client", StringComparison.OrdinalIgnoreCase) >= 0) return "Client";
+            if (keyName.IndexOf("booking", StringComparison.OrdinalIgnoreCase) >= 0) return "Booking";
+            if (keyName.IndexOf("item", StringComparison.OrdinalIgnoreCase) >= 0) return "Item";
+            if (keyName.IndexOf("inspect", StringComparison.OrdinalIgnoreCase) >= 0) return "Inspect";
+            if (keyName.IndexOf("team", StringComparison.OrdinalIgnoreCase) >= 0) return "Team";
+            if (keyName.IndexOf("sales", StringComparison.OrdinalIgnoreCase) >= 0) return "Sales";
+            return "ID";
+        }
 
-            private static string GetIdPrefix(string keyName)
-            {
-                if (keyName.IndexOf("user", StringComparison.OrdinalIgnoreCase) >= 0) return "User";
-                if (keyName.IndexOf("client", StringComparison.OrdinalIgnoreCase) >= 0) return "Client";
-                if (keyName.IndexOf("booking", StringComparison.OrdinalIgnoreCase) >= 0) return "Booking";
-                if (keyName.IndexOf("item", StringComparison.OrdinalIgnoreCase) >= 0) return "Item";
-                if (keyName.IndexOf("inspect", StringComparison.OrdinalIgnoreCase) >= 0) return "Inspect";
-                if (keyName.IndexOf("team", StringComparison.OrdinalIgnoreCase) >= 0) return "Team";
-                if (keyName.IndexOf("sales", StringComparison.OrdinalIgnoreCase) >= 0) return "Sales";
-                return "ID";
-            }
-
-            private static string PrettyId(string keyName, object rawVal)
-            {
-                var s = rawVal?.ToString() ?? "";
-                if (int.TryParse(s, out var n)) return $"{GetIdPrefix(keyName)}{n:D4}";
-                return $"{GetIdPrefix(keyName)}{s}";
-            }
+        private static string PrettyId(string keyName, object rawVal)
+        {
+            var s = rawVal?.ToString() ?? "";
+            if (int.TryParse(s, out var n)) return $"{GetIdPrefix(keyName)}{n:D4}";
+            return $"{GetIdPrefix(keyName)}{s}";
+        }
 
         private void ExportGridViewToPDF(GridView grid, string title)
         {
@@ -448,7 +670,6 @@
 
                 doc.Open();
 
-                // Title + timestamp
                 doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
                 doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
                 doc.Add(new Paragraph(" "));
@@ -456,7 +677,6 @@
                 int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
                 var table = new PdfPTable(visibleCols) { WidthPercentage = 100, SpacingBefore = 10f };
 
-                // Headers
                 if (grid.HeaderRow != null)
                 {
                     foreach (TableCell hc in grid.HeaderRow.Cells)
@@ -474,14 +694,12 @@
                     }
                 }
 
-                // Rows
                 foreach (GridViewRow row in grid.Rows)
                 {
                     for (int c = 0; c < row.Cells.Count; c++)
                     {
                         string text = GetCellText(row.Cells[c]);
 
-                        // simple alignment heuristics
                         int align = Element.ALIGN_LEFT;
                         string header = (grid.HeaderRow != null && c < grid.HeaderRow.Cells.Count)
                                         ? (grid.HeaderRow.Cells[c].Text ?? "").ToLower()
@@ -506,7 +724,6 @@
                 doc.Add(table);
                 doc.Close();
 
-                // Return the file
                 Response.Clear();
                 Response.ContentType = "application/pdf";
                 Response.AddHeader("content-disposition", $"attachment;filename={title.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf");
@@ -518,22 +735,21 @@
             }
         }
 
-
         private void AddAuditLog(int adminId, string action)
+        {
+            try
             {
-                try
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAudit_Insert", con))
                 {
-                    using (var con = new SqlConnection(cs))
-                    using (var cmd = new SqlCommand("dbo.spAudit_Insert", con))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.Add(new SqlParameter("@AdminID", SqlDbType.Int){Value = adminId});
-                        cmd.Parameters.Add(new SqlParameter("@Action",  SqlDbType.NVarChar, 255){Value = action});
-                        con.Open();
-                        cmd.ExecuteNonQuery();
-                    }
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new SqlParameter("@AdminID", SqlDbType.Int) { Value = adminId });
+                    cmd.Parameters.Add(new SqlParameter("@Action", SqlDbType.NVarChar, 255) { Value = action });
+                    con.Open();
+                    cmd.ExecuteNonQuery();
                 }
-                catch { /* swallow */ }
             }
+            catch { /* swallow */ }
         }
     }
+}

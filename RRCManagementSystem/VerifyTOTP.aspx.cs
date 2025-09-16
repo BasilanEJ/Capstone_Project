@@ -1,10 +1,11 @@
-﻿using System;
+﻿using OtpNet;
+using RRCManagementSystem.Helpers; // AESHelper for hashing
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Net;
 using System.Web;
-using OtpNet;
 
 namespace RRCManagementSystem
 {
@@ -50,7 +51,7 @@ namespace RRCManagementSystem
 
         protected void btnVerifyTOTP_Click(object sender, EventArgs e)
         {
-            // Still require pending identity
+            // Ensure pending state exists
             if (Session["Pending2FA_Email"] == null || Session["Pending2FA_UserID"] == null)
             {
                 Response.Redirect("Login.aspx", false);
@@ -76,7 +77,10 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string totpSecret = GetTOTPSecret(email);
+            // Compute SHA-256 of email for lookup
+            string emailHash = AESHelper.ComputeSHA256(email);
+            string totpSecret = GetTOTPSecret(emailHash);
+
             if (string.IsNullOrEmpty(totpSecret))
             {
                 lblMessage.Text = "⚠ 2FA is not enabled for this account.";
@@ -86,12 +90,13 @@ namespace RRCManagementSystem
             try
             {
                 var totp = new Totp(Base32Encoding.ToBytes(totpSecret));
-                // Accept code with standard network delay window
+
+                // Verify with network delay tolerance
                 bool isValid = totp.VerifyTotp(userInputCode, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
 
                 if (isValid)
                 {
-                    // ✅ Finalize real authentication
+                    // ✅ Finalize authentication
                     Session["UserID"] = userID;
                     Session["Role"] = role;
                     Session["Name"] = name;
@@ -106,6 +111,7 @@ namespace RRCManagementSystem
 
                     AddAuditLog(userID, $"{role} {name} completed 2FA verification.");
 
+                    // Redirect based on role
                     string redirect = role == "SuperAdmin" ? "SuperAdminDashboard.aspx"
                                      : role == "Inspector" ? "InspectorDashboard.aspx"
                                      : "Dashboard.aspx";
@@ -127,14 +133,13 @@ namespace RRCManagementSystem
         /* =========================
            Stored-proc helpers
            ========================= */
-
-        private string GetTOTPSecret(string email)
+        private string GetTOTPSecret(string emailHash)
         {
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spAuth_GetTOTPSecretByEmail", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email ?? string.Empty;
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash ?? string.Empty;
 
                 conn.Open();
                 object result = cmd.ExecuteScalar();
@@ -182,7 +187,7 @@ namespace RRCManagementSystem
 
             using (var client = new WebClient())
             {
-                string secret = "6Ld6VrcrAAAAANJi4Djjr9vN7N5KIWoIoL_CCi_z"; // move to config
+                string secret = "6Ld6VrcrAAAAANJi4Djjr9vN7N5KIWoIoL_CCi_z"; // Move to Web.config
                 string result = client.DownloadString(
                     $"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}"
                 );

@@ -113,6 +113,41 @@
     border-radius: 4px;
 }
 
+       .service-image {
+        width: 100%;
+        height: 150px; /* Adjust as needed */
+        object-fit: cover; /* Crop to fit without distortion */
+        border-radius: 8px; /* Optional rounded corners */
+        display: block;
+        margin: 0 auto;
+    }
+
+    /* Service Card Styling */
+    .service-card {
+        background: #fff;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        height: 100%;
+        transition: transform 0.3s ease;
+    }
+
+    .service-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Text Styling */
+    .service-card h4 {
+        font-size: 1rem;
+        margin-top: 10px;
+        color: #333;
+    }
+
+    .service-card p {
+        font-size: 0.85rem;
+        color: #666;
+    }
 
 
         /* ============ Cookie Banner / Modal ============ */
@@ -135,6 +170,233 @@
             p { font-size: 15px; }
             .service-card h4 { font-size: 14px; }
         }
+
+        body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+/* Section Titles */
+.services h1 {
+    font-weight: 700;
+    color: #007bff;
+}
+
+.services h2 {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+/* ==========================================
+   CAROUSEL & INDICATORS
+========================================== */
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+    background-size: 70% 70%;
+}
+
+.carousel-control-prev-icon.bg-dark,
+.carousel-control-next-icon.bg-dark {
+    background-color: rgba(0, 0, 0, 0.75);
+}
+
+/* Carousel indicators */
+.carousel-indicators button {
+    background-color: #007bff;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.carousel-indicators button.active {
+    background-color: #0056b3;
+}
+
+/* ==========================================
+   SERVICE CARDS
+========================================== */
+.service-card {
+    cursor: pointer;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    padding: 15px 10px;
+    height: 100%;
+    text-align: center;
+}
+
+.service-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    border-color: #007bff;
+}
+
+/* Service Image */
+.service-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+/* Service Title */
+.service-card h4 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #333;
+    margin: 10px 0 5px;
+}
+
+/* Service Description */
+.service-card p {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+/* ==========================================
+   MODAL ANIMATIONS
+========================================== */
+
+/* Smooth dark overlay */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.6);
+    transition: opacity 0.4s ease-in-out;
+}
+
+/* Slide up & fade animation */
+.modal.fade .modal-dialog {
+    transform: translateY(-40px);
+    opacity: 0;
+    transition: all 0.4s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* ==========================================
+   MODAL DESIGN
+========================================== */
+.modal-content {
+    border-radius: 12px;
+    border: none;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    background: #fff;
+}
+
+/* Modal Header */
+.modal-header {
+    background: #007bff;
+    color: white;
+    border-bottom: none;
+    padding: 15px 20px;
+}
+
+.modal-header .modal-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.modal-header .btn-close {
+    filter: invert(1); /* Makes close button white */
+    opacity: 0.9;
+}
+
+/* Modal Body */
+.modal-body img {
+    border-radius: 8px;
+    margin-bottom: 15px;
+    max-width: 400px;     /* Set the maximum width */
+    max-height: 350px;    /* Set the maximum height */
+    width: 100%;          /* Keep it responsive */
+    height: auto;         /* Maintain aspect ratio */
+    display: block;       /* Center the image */
+    margin-left: auto;
+    margin-right: auto;
+    object-fit: cover;    /* Crop if necessary without stretching */
+}
+
+
+.modal-body p {
+    font-size: 1rem;
+    color: #444;
+    line-height: 1.6;
+}
+
+/* Bullet List inside Modal */
+.modal-body ul {
+    padding-left: 20px;
+    margin-top: 15px;
+}
+
+.modal-body ul li {
+    font-size: 0.95rem;
+    padding: 4px 0;
+    color: #333;
+}
+
+/* Modal Footer */
+.modal-footer {
+    background: #f8f9fa;
+    border-top: none;
+    padding: 15px;
+}
+
+.modal-footer .btn {
+    min-width: 100px;
+    font-weight: 500;
+}
+
+/* Close button hover effect */
+.modal-footer .btn-secondary:hover {
+    background-color: #5a6268;
+    color: #fff;
+    transition: background 0.3s ease-in-out;
+}
+/* Prevent page content from shifting when modal opens */
+body.modal-open {
+    overflow: hidden;
+    padding-right: 0 !important; /* Prevents scrollbar gap */
+}
+
+
+/* ==========================================
+   RESPONSIVE DESIGN
+========================================== */
+@media (max-width: 992px) {
+    .service-image {
+        height: 130px;
+    }
+    .service-card h4 {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .service-image {
+        height: 110px;
+    }
+    .service-card h4 {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .service-image {
+        height: 100px;
+    }
+    .service-card h4 {
+        font-size: 0.85rem;
+    }
+}
+
+
+
     </style>
 
     <!-- ====== HERO BANNER ====== -->
@@ -143,53 +405,423 @@
             <img src="/images/rrc1.png" alt="Pest Control Banner" class="hero-banner img-fluid">
         </div>
     </section>
-
-    <!-- ====== SERVICES ====== -->
-    <section class="services">
-        <div class="container">
-            <div class="text-center">
-                <h2 style="color: gray;">WE PROVIDE THE BEST</h2>
-                <h1 style="color: blue;">Termite and Pest Control Services</h1>
-            </div>
-
-            <div class="row justify-content-center g-3">
-                <div class="col-lg-2 col-md-3 col-sm-4 col-6 fade-in">
-                    <div class="service-card text-center h-100">
-                        <img src="/images/service-baiting.jpg" alt="Baiting System" class="img-fluid">
-                        <h4>Baiting System</h4>
-                    </div>
-                </div>
-
-                <div class="col-lg-2 col-md-3 col-sm-4 col-6 fade-in">
-                    <div class="service-card text-center h-100">
-                        <img src="/images/service-termite.jpg" alt="Termite Control" class="img-fluid">
-                        <h4>Termite Control</h4>
-                    </div>
-                </div>
-
-                <div class="col-lg-2 col-md-3 col-sm-4 col-6 fade-in">
-                    <div class="service-card text-center h-100">
-                        <img src="/images/service-gen pest.jpg" alt="General Pest Control" class="img-fluid">
-                        <h4>General Pest Control</h4>
-                    </div>
-                </div>
-
-                <div class="col-lg-2 col-md-3 col-sm-4 col-6 fade-in">
-                    <div class="service-card text-center h-100">
-                        <img src="/images/service-reticulation.jpg" alt="Reticulation System" class="img-fluid">
-                        <h4>Reticulation System</h4>
-                    </div>
-                </div>
-
-                <div class="col-lg-2 col-md-3 col-sm-4 col-6 fade-in">
-                    <div class="service-card text-center h-100">
-                        <img src="/images/service-soil.jpg" alt="Soil Poisoning" class="img-fluid">
-                        <h4>Soil Poisoning</h4>
-                    </div>
-                </div>
-            </div>
+    <section class="services py-5">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 style="color: gray;">WE PROVIDE THE BEST</h2>
+            <h1 style="color: blue;">Termite and Pest Control Services</h1>
         </div>
-    </section>
+
+        <div id="servicesCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner">
+
+                <!-- ====== TERMITE CONTROL SERVICES ====== -->
+                <div class="carousel-item active">
+                    <h3 class="text-dark mb-3 text-center">Termite Control Services</h3>
+                    <div class="row justify-content-center g-3">
+
+                        <!-- Baiting System -->
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalBaiting">
+                                <img src="/images/service-baiting.jpg" alt="Baiting System" class="service-image">
+                                <h4>Baiting System</h4>
+                                <p class="small">Above Ground and In Ground for Colony Elimination</p>
+                            </div>
+                        </div>
+
+                   <!-- Termite Prevention -->
+<div class="col-lg-2 col-md-3 col-sm-4 col-6">
+    <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalTermitePrevention">
+        <img src="/images/service-termite-prevention.jpg" alt="Termite Prevention" class="service-image">
+        <h4>Termite Prevention</h4>
+        <p class="small">Stops infestations before they begin with long-term barrier protection</p>
+    </div>
+</div>
+
+
+                        <!-- Soil Poisoning -->
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalSoilPoisoning">
+                                <img src="/images/service-soil.jpg" alt="Soil Poisoning" class="service-image">
+                                <h4>Soil Poisoning</h4>
+                               <p class="small">Build a strong foundation with termite-proof protection for new & existing homes.</p>
+                            </div>
+                        </div>
+
+                        <!-- Reticulation -->
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalReticulation">
+                                <img src="/images/services-reticulations.jpg" alt="Reticulation" class="service-image">
+                                <h4>Reticulation</h4>
+                                <p class="small">Smart termite defense with a hidden pipe system for hassle-free treatments.</p>
+                            </div>
+                        </div>
+
+                        <!-- Mound Demolition -->
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalMoundDemolition">
+                                <img src="/images/service-mound.jpg" alt="Mound Demolition" class="service-image">
+                                <h4>Mound Demolition</h4>
+                                <p class="small">Directly eliminate termite colonies by targeting the queen at the source.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====== GENERAL PEST CONTROL SERVICES ====== -->
+                <div class="carousel-item">
+                    <h3 class="text-dark mb-3 text-center">General Pest Control Services</h3>
+                    <div class="row justify-content-center g-3">
+                        
+                        <!-- General Pest Control -->
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalGeneralPest">
+                                <img src="/images/service-general-pest.jpg" alt="General Pest Control" class="service-image">
+                                <h4>General Pest Control</h4>
+                                <p class="small">Cockroaches, Ants, Mosquitoes, Flies</p>
+                            </div>
+                        </div>
+
+                        <!-- Tick & Fleas Control -->
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalTickFleas">
+                                <img src="/images/service-tick-fleas.jpg" alt="Tick & Fleas Control" class="service-image">
+                                <h4>Tick & Fleas Control</h4>
+                                <p class="small">Breaks the breeding cycle and protects your pets & family</p>
+                            </div>
+                        </div>
+
+                        <!-- Bedbugs Control -->
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalBedbugs">
+                                <img src="/images/service-bedbugs.jpg" alt="Bedbugs Control" class="service-image">
+                                <h4>Bedbugs Control</h4>
+                                <p class="small">Thorough inspection and treatment for lasting relief</p>
+                            </div>
+                        </div>
+
+                        <!-- Rat / Rodents Control -->
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalRatControl">
+                                <img src="/images/service-rats.jpg" alt="Rat Control" class="service-image">
+                                <h4>Rat / Rodents Control</h4>
+                                <p class="small">Safe and effective removal to prevent health risks</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Carousel Controls -->
+            <button class="carousel-control-prev" type="button" data-bs-target="#servicesCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon bg-dark rounded-circle p-3" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#servicesCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon bg-dark rounded-circle p-3" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+
+            <!-- Carousel Indicators
+            <div class="carousel-indicators">
+                <button type="button" data-bs-target="#servicesCarousel" data-bs-slide-to="0" class="active" aria-current="true"></button>
+                <button type="button" data-bs-target="#servicesCarousel" data-bs-slide-to="1"></button>
+            </div> -->
+        </div>
+    </div>
+</section>
+
+
+
+    <!-- ======================================
+     TERMITE CONTROL SERVICES MODALS
+====================================== -->
+
+<!-- Baiting System Modal -->
+<div class="modal fade" id="modalBaiting" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Baiting System</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img src="/images/service-baiting.jpg" alt="Baiting System" class="img-fluid mb-3 rounded">
+        <p>
+          Our termite baiting system is one of the most advanced and environmentally responsible methods
+          available for colony elimination. Bait stations are carefully placed above ground in active areas
+          and in-ground around the perimeter of your property. Termites consume the specially formulated
+          bait and unknowingly spread it throughout the colony, including to the queen.
+        </p>
+        <p>
+          This process leads to the gradual but complete elimination of the entire termite population.
+          Regular inspections ensure the stations remain effective and monitored over time.
+        </p>
+        <ul>
+          <li>✅ Targets the colony at its source</li>
+          <li>✅ Minimal chemical use, safe for sensitive environments</li>
+          <li>✅ Monitored and maintained for long-term effectiveness</li>
+          <li>✅ Safe for families, pets, and the environment</li>
+        </ul>
+      </div>
+     
+    </div>
+  </div>
+</div>
+
+<!-- Termite Prevention Modal -->
+<div class="modal fade" id="modalTermitePrevention" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Termite Prevention</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img src="/images/service-termite-prevention.jpg" alt="Termite Prevention" class="img-fluid mb-3 rounded">
+        <p>
+          Prevention is the smartest and most cost-effective way to handle termites before they cause damage.
+          Our preventive services create a protective barrier that blocks termites from ever reaching your property.
+          Using a mix of physical barriers, liquid termiticides, and advanced technology,
+          we provide coverage for both new and existing structures.
+        </p>
+        <p>
+          Regular inspections allow us to identify risks early and reinforce your defenses,
+          protecting your property value and preventing expensive repairs in the future.
+        </p>
+        <ul>
+          <li>✅ Stops infestations before they begin</li>
+          <li>✅ Long-term barrier protection for homes and businesses</li>
+          <li>✅ Reduces costly repair risks by preventing structural damage</li>
+          <li>✅ Ideal for both residential and commercial properties</li>
+        </ul>
+      </div>
+     
+    </div>
+  </div>
+</div>
+
+<!-- Soil Poisoning Modal -->
+<div class="modal fade" id="modalSoilPoisoning" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Soil Poisoning (Pre & Post Construction)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img src="/images/service-soil.jpg" alt="Soil Poisoning" class="img-fluid mb-3 rounded">
+        <p>
+          Soil treatment, also called soil poisoning, is one of the most trusted termite-proofing techniques.
+          For pre-construction, we apply a termiticide treatment to the soil before the foundation is laid,
+          creating a shield that termites cannot cross.
+        </p>
+        <p>
+          For post-construction, we drill around the foundation and inject chemicals deep into the soil to
+          reinforce protection. Both methods create a continuous chemical barrier that protects against termite entry.
+        </p>
+        <ul>
+          <li>✅ Essential for long-term structural protection</li>
+          <li>✅ Provides defense for both new builds and existing properties</li>
+          <li>✅ Creates a continuous barrier termites cannot cross</li>
+          <li>✅ Peace of mind against hidden termite threats</li>
+        </ul>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+<!-- Reticulation Modal -->
+<div class="modal fade" id="modalReticulation" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Reticulation (Perforated Pipe System)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img src="/images/services-reticulations.jpg" alt="Reticulation" class="img-fluid mb-3 rounded">
+        <p>
+          Our reticulation system is a modern termite management solution that makes re-treatment simple and efficient.
+          A network of underground perforated pipes is installed around your property’s foundation,
+          allowing termiticide to be evenly distributed in the soil.
+        </p>
+        <p>
+          When it’s time for re-application, chemicals can be delivered directly into the system without drilling
+          or damaging floors. This provides a long-term, cost-effective solution for termite management.
+        </p>
+        <ul>
+          <li>✅ Even, reliable distribution of termiticide</li>
+          <li>✅ Easy re-application without drilling or disruption</li>
+          <li>✅ Long-lasting and cost-effective protection</li>
+          <li>✅ Discreet system that preserves your property’s appearance</li>
+        </ul>
+      </div>
+     
+    </div>
+  </div>
+</div>
+
+<!-- Mound Demolition Modal -->
+<div class="modal fade" id="modalMoundDemolition" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Mound Demolition (Queen Finder)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img src="/images/service-mound.jpg" alt="Mound Demolition" class="img-fluid mb-3 rounded">
+        <p>
+          For properties with visible termite mounds, mound demolition provides a direct and highly effective treatment.
+          Our specialists carefully dismantle the mound, apply treatment, and locate the queen for elimination.
+          Removing the queen ensures the colony cannot rebuild and prevents further spread.
+        </p>
+        <ul>
+          <li>✅ Fast and decisive colony elimination</li>
+          <li>✅ Long-term results by directly targeting the queen</li>
+          <li>✅ Prevents spread of termites to nearby areas</li>
+          <li>✅ Effective solution for large outdoor infestations</li>
+        </ul>
+      </div>
+     
+    </div>
+  </div>
+</div>
+
+
+<!-- ======================================
+     GENERAL PEST CONTROL SERVICES MODALS
+====================================== -->
+
+<!-- General Pest Control Modal -->
+<div class="modal fade" id="modalGeneralPest" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">General Pest Control Treatment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img src="/images/service-general-pest.jpg" alt="General Pest Control" class="img-fluid mb-3 rounded">
+        <p>
+          Our general pest control services cover the most common pests that threaten health, hygiene, and comfort.
+          Each pest is treated using specialized methods:
+        </p>
+        <ul>
+          <li><strong>Cockroaches:</strong> Targeted sprays and gel baits reach deep into hiding places.</li>
+          <li><strong>Ants:</strong> Eliminate visible ants and hidden colonies to prevent reinfestation.</li>
+          <li><strong>Mosquitoes:</strong> Reduce breeding areas and apply larvicides and residual sprays.</li>
+          <li><strong>Flies:</strong> Traps, sprays, and sanitation recommendations reduce contamination risks.</li>
+        </ul>
+        <p>
+          This integrated approach ensures healthier, cleaner, and pest-free surroundings.
+        </p>
+        <ul>
+          <li>✅ Comprehensive coverage for common household pests</li>
+          <li>✅ Treatments tailored to each species and infestation level</li>
+          <li>✅ Protects families and businesses from health risks</li>
+          <li>✅ Creates a cleaner, more comfortable environment</li>
+        </ul>
+      </div>
+     
+    </div>
+  </div>
+</div>
+
+<!-- Tick & Fleas Control Modal -->
+<div class="modal fade" id="modalTickFleas" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Tick & Fleas Control</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img src="/images/service-tick-fleas.jpg" alt="Tick & Fleas Control" class="img-fluid mb-3 rounded">
+        <p>
+          Ticks and fleas are more than just annoying—they can transmit harmful diseases to both humans and pets.
+          Our treatments target every stage of their lifecycle, from eggs to adults, to break the cycle of infestation.
+        </p>
+        <p>
+          We focus on key areas such as carpets, pet bedding, gardens, and shaded spots where these pests thrive,
+          while providing preventive advice for long-term protection.
+        </p>
+        <ul>
+          <li>✅ Safe for households with pets and children</li>
+          <li>✅ Breaks the breeding cycle for long-term results</li>
+          <li>✅ Reduces risks of diseases like Lyme disease and flea-borne fevers</li>
+          <li>✅ Targets indoor and outdoor hotspots</li>
+        </ul>
+      </div>
+     
+    </div>
+  </div>
+</div>
+
+<!-- Bedbugs Control Modal -->
+<div class="modal fade" id="modalBedbugs" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Bedbugs Control</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img src="/images/service-bedbugs.jpg" alt="Bedbugs Control" class="img-fluid mb-3 rounded">
+        <p>
+          Bedbugs are notorious for hiding in hard-to-reach areas like mattresses, furniture, and cracks.
+          Our service begins with a thorough inspection to identify all hiding spots, followed by targeted treatments
+          like heat and residual sprays to kill bedbugs at every stage.
+        </p>
+        <p>
+          Follow-up visits ensure complete eradication and prevent re-infestation, restoring comfort and peace of mind.
+        </p>
+        <ul>
+          <li>✅ Comprehensive inspection to locate infestations</li>
+          <li>✅ Treatments that eliminate eggs, nymphs, and adults</li>
+          <li>✅ Effective for both minor and severe infestations</li>
+          <li>✅ Restful, bite-free sleep restored</li>
+        </ul>
+      </div>
+    
+    </div>
+  </div>
+</div>
+
+<!-- Rat & Rodents Control Modal -->
+<div class="modal fade" id="modalRatControl" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Rat & Rodents Control</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <img src="/images/service-rats.jpg" alt="Rat & Rodents Control" class="img-fluid mb-3 rounded">
+        <p>
+          Rodents like rats and mice pose serious threats to health and property. They spread diseases,
+          contaminate food, and can cause electrical fires by chewing wires.
+        </p>
+        <p>
+          Our service uses traps, baits, and exclusion methods to remove infestations and prevent recurrence.
+          We also seal entry points and advise on sanitation practices to keep them away for good.
+        </p>
+        <ul>
+          <li>✅ Safe and effective elimination methods</li>
+          <li>✅ Preventive measures to block future infestations</li>
+          <li>✅ Protects property from costly damage</li>
+          <li>✅ Reduces health risks linked to rodent-borne diseases</li>
+        </ul>
+      </div>
+     
+    </div>
+  </div>
+</div>
+
+
 
     <!-- ====== ABOUT SPLIT ====== -->
     <section class="hero">
@@ -769,6 +1401,21 @@
                 window.scrollTo(0, parseInt(scrollPos));
                 sessionStorage.removeItem('scrollPosition');
             }
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modals = document.querySelectorAll('.modal');
+
+            modals.forEach(modal => {
+                modal.addEventListener('hidden.bs.modal', function () {
+                    // Keep the scroll position exactly where it was
+                    document.documentElement.style.scrollBehavior = 'auto';
+                    window.scrollTo(window.scrollX, window.scrollY);
+                    document.documentElement.style.scrollBehavior = '';
+                });
+            });
         });
     </script>
 

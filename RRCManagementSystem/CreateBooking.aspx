@@ -5,6 +5,11 @@
   <!-- EnablePageMethods is required for calling static [WebMethod]s via JS -->
   <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePageMethods="true" />
 
+  <!-- Hidden field to track Inquiry Background visibility -->
+  <asp:HiddenField ID="hfInquiryVisible" runat="server" Value="false" />
+  <!-- Hidden field to persist Inquiry JSON Data -->
+  <asp:HiddenField ID="hfInquiryData" runat="server" Value="" />
+
   <style>
     .page-title{font-weight:700;color:#0d6efd;margin-bottom:1rem;text-align:center;font-size:clamp(1.2rem,3.8vw,1.7rem)}
     .card-wrap{max-width:720px}
@@ -14,10 +19,8 @@
     .btn-full-xs{width:auto}
     .gap-12{gap:.75rem}
 
-    /* Services list: checkbox on the left, text wraps beside it */
+    /* Inquiry Background */
     .form-check-list table { width: 100%; border-collapse: separate; border-spacing: 0; }
-    .form-check-list tr { border-bottom: 1px solid #f1f3f5; }
-    .form-check-list tr:last-child { border-bottom: 0; }
     .form-check-list td {
       display: flex;
       align-items: flex-start;
@@ -37,22 +40,8 @@
       margin: 0;
       font-weight: 400;
       line-height: 1.35;
-      white-space: normal;
       word-break: break-word;
       user-select: none;
-    }
-
-    h5.fw-bold { font-size: 1.1rem; margin-bottom: 0.75rem; }
-
-    /* AjaxControlToolkit autocomplete dropdown */
-    .ajax__autocomplete_container{z-index:2000 !important; max-width:100%}
-    .ajax__autocomplete_item{padding:.5rem .75rem; font-size:.95rem}
-    .ajax__autocomplete_item:hover{background:#f1f5f9}
-
-    /* Small screens */
-    @media (max-width:575.98px){
-      .container{padding-left:.75rem; padding-right:.75rem}
-      .btn-full-xs{width:100%}
     }
   </style>
 
@@ -63,81 +52,91 @@
 
         <asp:Label ID="lblMessage" runat="server" CssClass="text-center d-block fw-semibold text-danger mb-3" />
 
+        <!-- Wrap dynamic parts with UpdatePanel -->
+        <asp:UpdatePanel ID="UpdatePanelMain" runat="server" UpdateMode="Conditional">
+          <ContentTemplate>
 
-        <div class="mb-3">
-          <label for="<%= txtClientSearch.ClientID %>" class="form-label">Search Client</label>
-          <asp:TextBox ID="txtClientSearch" runat="server" CssClass="form-control" placeholder="Type name or email..." />
-          <div class="form-helper">Start typing to search, then tap a suggestion.</div>
+            <!-- Search Client -->
+            <div class="mb-3">
+              <label for="<%= txtClientSearch.ClientID %>" class="form-label">Search Client</label>
+              <asp:TextBox ID="txtClientSearch" runat="server" CssClass="form-control" placeholder="Type name or email..." />
+              <div class="form-helper">Start typing to search, then tap a suggestion.</div>
 
-          <ajaxToolkit:AutoCompleteExtender 
-            ID="AutoCompleteExtender1" runat="server"
-            TargetControlID="txtClientSearch"
-            ServiceMethod="SearchClients"
-            MinimumPrefixLength="1"
-            CompletionSetCount="10"
-            EnableCaching="true"
-            FirstRowSelected="true"
-            OnClientItemSelected="setClientID" />
-          <asp:HiddenField ID="hfClientID" runat="server" />
-        </div>
+              <ajaxToolkit:AutoCompleteExtender 
+                ID="AutoCompleteExtender1" runat="server"
+                TargetControlID="txtClientSearch"
+                ServiceMethod="SearchClients"
+                MinimumPrefixLength="1"
+                CompletionSetCount="10"
+                EnableCaching="true"
+                FirstRowSelected="true"
+                OnClientItemSelected="setClientID" />
+              <asp:HiddenField ID="hfClientID" runat="server" />
+            </div>
 
+            <!-- Inquiry Background Section -->
+            <div id="inquiryBackground" class="mb-4 p-3 border rounded bg-light" style="display:none;">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="fw-bold mb-0">Inquiry Background</h5>
+                <small class="text-muted" id="ibUpdated"></small>
+              </div>
 
-        <div id="inquiryBackground" class="mb-4 p-3 border rounded bg-light" style="display:none;">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5 class="fw-bold mb-0">Inquiry Background</h5>
-            <small class="text-muted" id="ibUpdated"> </small>
-          </div>
+              <div class="mb-2">
+                <span class="fw-semibold">Inquiry Code:</span>
+                <span id="ibCode" class="text-primary fw-semibold">—</span>
+              </div>
 
-          <div class="mb-2">
-            <span class="fw-semibold">Inquiry Code:</span>
-            <span id="ibCode" class="text-primary fw-semibold">—</span>
-          </div>
+              <div>
+                <span class="fw-semibold">Recent Findings:</span>
+                <ul id="ibFindings" class="mb-0 mt-2" style="padding-left:1.25rem;"></ul>
+                <div id="ibEmpty" class="text-muted">No findings found for this client yet.</div>
+              </div>
+            </div>
 
-          <div>
-            <span class="fw-semibold">Recent Findings:</span>
-            <ul id="ibFindings" class="mb-0 mt-2" style="padding-left:1.25rem;"></ul>
-            <div id="ibEmpty" class="text-muted">No findings found for this client yet.</div>
-          </div>
-        </div>
+            <!-- Service Selection -->
+            <div class="mb-3">
+              <label class="form-label">Select Service</label>
+              <asp:DropDownList ID="ddlServices" runat="server" CssClass="form-select"
+                AutoPostBack="true" OnSelectedIndexChanged="ddlServices_SelectedIndexChanged">
+              </asp:DropDownList>
+            </div>
 
-       <div class="mb-3">
-    <label class="form-label">Select Service</label>
-  <asp:DropDownList ID="ddlServices" runat="server" CssClass="form-select"
-    AutoPostBack="true" OnSelectedIndexChanged="ddlServices_SelectedIndexChanged">
-</asp:DropDownList>
+            <!-- SQM -->
+            <div class="mb-3">
+              <label class="form-label">Square Meters (SQM)</label>
+              <asp:TextBox ID="txtSQM" runat="server" CssClass="form-control" TextMode="Number" 
+                           AutoPostBack="true" OnTextChanged="RecalculateTotal" />
+            </div>
 
-</div>
+            <!-- Travel Expense -->
+            <div class="mb-3">
+              <label class="form-label">Travel Expense (₱)</label>
+              <asp:TextBox ID="txtTravelExpense" runat="server" CssClass="form-control" TextMode="Number"
+                           AutoPostBack="true" OnTextChanged="RecalculateTotal" />
+            </div>
 
-     
-        <div class="mb-3">
-    <label class="form-label">Square Meters (SQM)</label>
-    <asp:TextBox ID="txtSQM" runat="server" CssClass="form-control" TextMode="Number" 
-                 AutoPostBack="true" OnTextChanged="RecalculateTotal" />
-</div>
+            <!-- Miscellaneous -->
+            <div class="mb-3">
+              <label class="form-label">Miscellaneous (₱)</label>
+              <asp:TextBox ID="txtMiscellaneous" runat="server" CssClass="form-control" TextMode="Number"
+                           AutoPostBack="true" OnTextChanged="RecalculateTotal" />
+            </div>
 
-          <div class="mb-3">
-    <label class="form-label">Travel Expense (₱)</label>
-    <asp:TextBox ID="txtTravelExpense" runat="server" CssClass="form-control" TextMode="Number"
-                 AutoPostBack="true" OnTextChanged="RecalculateTotal" />
-</div>
-          <div class="mb-3">
-    <label class="form-label">Miscellaneous (₱)</label>
-    <asp:TextBox ID="txtMiscellaneous" runat="server" CssClass="form-control" TextMode="Number"
-                 AutoPostBack="true" OnTextChanged="RecalculateTotal" />
-</div>
+            <!-- Total Price -->
+            <div class="mb-4">
+              <label class="form-label">Total Price (₱)</label>
+              <asp:TextBox ID="txtTotalPrice" runat="server" CssClass="form-control" ReadOnly="true" />
+            </div>
 
+            <!-- Actions -->
+            <div class="d-flex justify-content-center gap-12">
+              <asp:Button ID="btnSubmit" runat="server" Text="Submit Quotation"
+                CssClass="btn btn-success px-4 btn-wide btn-full-xs"
+                OnClick="btnSubmit_Click" />
+            </div>
 
-       <div class="mb-4">
-    <label class="form-label">Total Price (₱)</label>
-    <asp:TextBox ID="txtTotalPrice" runat="server" CssClass="form-control" ReadOnly="true" />
-</div>
-
-        <!-- Actions -->
-        <div class="d-flex justify-content-center gap-12">
-          <asp:Button ID="btnSubmit" runat="server" Text="Submit Quotation"
-            CssClass="btn btn-success px-4 btn-wide btn-full-xs"
-            OnClick="btnSubmit_Click" />
-        </div>
+          </ContentTemplate>
+        </asp:UpdatePanel>
       </div>
     </div>
   </div>
@@ -153,58 +152,70 @@
           document.getElementById('<%= txtClientSearch.ClientID %>').value = clientName;
           document.getElementById('<%= hfClientID.ClientID %>').value = clientID;
 
-          // Fetch & render inquiry background (InquiryCode + Findings)
-          try {
-              PageMethods.GetClientInquirySummary(parseInt(clientID, 10),
-                  function (res) {
-                      var box = document.getElementById('inquiryBackground');
-                      var code = document.getElementById('ibCode');
-                      var list = document.getElementById('ibFindings');
-                      var empty = document.getElementById('ibEmpty');
-                      var upd = document.getElementById('ibUpdated');
+          // Show Inquiry panel
+          document.getElementById('<%= hfInquiryVisible.ClientID %>').value = "true";
+          document.getElementById('inquiryBackground').style.display = "block";
 
-                      // Reset
-                      list.innerHTML = "";
-                      empty.style.display = "none";
-                      upd.textContent = "";
+          // Fetch Inquiry Data
+          PageMethods.GetClientInquirySummary(parseInt(clientID, 10),
+              function (res) {
+                  var jsonString = JSON.stringify(res);
+                  document.getElementById('<%= hfInquiryData.ClientID %>').value = jsonString; // Persist data
 
-                      if (!res) {
-                          code.textContent = "—";
-                          empty.style.display = "";
-                          box.style.display = "block";
-                          return;
-                      }
-
-                      code.textContent = res.InquiryCode || "—";
-
-                      if (res.Findings && res.Findings.length > 0) {
-                          res.Findings.forEach(function (f) {
-                              var li = document.createElement("li");
-                              li.className = "small";
-                              var when = f.When ? (" (" + f.When + ")") : "";
-                              li.textContent = f.Text + when;
-                              list.appendChild(li);
-                          });
-                          if (res.LastUpdated) upd.textContent = "Updated: " + res.LastUpdated;
-                      } else {
-                          empty.style.display = "";
-                      }
-
-                      box.style.display = "block";
-                  },
-                  function () {
-                      // On error, show empty panel
-                      var box = document.getElementById('inquiryBackground');
-                      document.getElementById('ibCode').textContent = "—";
-                      document.getElementById('ibFindings').innerHTML = "";
-                      document.getElementById('ibEmpty').style.display = "";
-                      document.getElementById('ibUpdated').textContent = "";
-                      box.style.display = "block";
-                  });
-          } catch (e) {
-              // ignore
-          }
+                  renderInquiry(res);
+              },
+              function () {
+                  document.getElementById('ibCode').textContent = "—";
+                  document.getElementById('ibFindings').innerHTML = "";
+                  document.getElementById('ibEmpty').style.display = "";
+                  document.getElementById('ibUpdated').textContent = "";
+                  document.getElementById('inquiryBackground').style.display = "block";
+              });
       }
 
+      // Renders Inquiry Background from object
+      function renderInquiry(data) {
+          var box = document.getElementById('inquiryBackground');
+          var code = document.getElementById('ibCode');
+          var list = document.getElementById('ibFindings');
+          var empty = document.getElementById('ibEmpty');
+          var upd = document.getElementById('ibUpdated');
+
+          list.innerHTML = "";
+          empty.style.display = "none";
+          upd.textContent = "";
+
+          if (!data) {
+              code.textContent = "—";
+              empty.style.display = "";
+              box.style.display = "block";
+              return;
+          }
+
+          code.textContent = data.InquiryCode || "—";
+
+          if (data.Findings && data.Findings.length > 0) {
+              data.Findings.forEach(function (f) {
+                  var li = document.createElement("li");
+                  li.className = "small";
+                  var when = f.When ? (" (" + f.When + ")") : "";
+                  li.textContent = f.Text + when;
+                  list.appendChild(li);
+              });
+              if (data.LastUpdated) upd.textContent = "Updated: " + data.LastUpdated;
+          } else {
+              empty.style.display = "";
+          }
+
+          box.style.display = "block";
+      }
+
+      // Reload Inquiry after postback (service selection)
+      Sys.WebForms.PageRequestManager.getInstance().add_endRequest(function () {
+          var json = document.getElementById('<%= hfInquiryData.ClientID %>').value;
+          if (json) {
+              renderInquiry(JSON.parse(json));
+          }
+      });
   </script>
 </asp:Content>

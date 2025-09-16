@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Data.SqlClient;
 using System.Data;
-using System.Linq;
-using System.Web;
+using System.Data.SqlClient;
+using RRCManagementSystem.Helpers; // For AESHelper
 using System.Web.UI;
-using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
@@ -21,7 +18,6 @@ namespace RRCManagementSystem
                 // Only RootAdmin can access this page
                 if (Session["Role"] == null || !string.Equals(Session["Role"].ToString(), "RootAdmin", StringComparison.OrdinalIgnoreCase))
                 {
-                    // optional: go to Unauthorized or Login
                     SafeRedirect("~/Unauthorized.aspx");
                 }
             }
@@ -35,7 +31,7 @@ namespace RRCManagementSystem
 
         protected void btnCreate_Click(object sender, EventArgs e)
         {
-            string email = txtEmail.Text.Trim();
+            string plainEmail = txtEmail.Text.Trim().ToLowerInvariant();
             string name = txtName.Text.Trim();
             string password = txtPassword.Text;
             string confirmPassword = txtConfirm.Text;
@@ -50,24 +46,27 @@ namespace RRCManagementSystem
             // Hash password using Argon2
             string hashedPassword = PasswordHelper.HashPassword(password);
 
+            // Encrypt the email and create hash
+            string encryptedEmail = AESHelper.EncryptEmail(plainEmail);
+            string emailHash = AESHelper.ComputeSHA256(plainEmail);
+
             try
             {
                 using (SqlConnection con = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand("spCreateSuperAdmin", con))
                 {
-                    using (SqlCommand cmd = new SqlCommand("spCreateSuperAdmin", con))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.AddWithValue("@Email", email);
-                        cmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
-                        cmd.Parameters.AddWithValue("@Name", name);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@Email", encryptedEmail);
+                    cmd.Parameters.AddWithValue("@EmailHash", emailHash);
+                    cmd.Parameters.AddWithValue("@PasswordHash", hashedPassword);
+                    cmd.Parameters.AddWithValue("@Name", name);
 
-                        con.Open();
-                        cmd.ExecuteNonQuery();
+                    con.Open();
+                    cmd.ExecuteNonQuery();
 
-                        // If execution reaches here, user was created successfully
-                        ClientScript.RegisterStartupScript(this.GetType(), "SweetAlert",
-                            "showSuccess('Super Admin created successfully!');", true);
-                    }
+                    // If execution reaches here, user was created successfully
+                    ClientScript.RegisterStartupScript(this.GetType(), "SweetAlert",
+                        "showSuccess('Super Admin created successfully!');", true);
                 }
             }
             catch (SqlException ex)
@@ -75,7 +74,7 @@ namespace RRCManagementSystem
                 string message;
 
                 // Handle RAISERROR messages from stored procedure
-                if (ex.Number == 50000) // RAISERROR default severity for custom messages
+                if (ex.Number == 50000) // Custom errors
                 {
                     message = ex.Message; // e.g., "Email already exists."
                 }

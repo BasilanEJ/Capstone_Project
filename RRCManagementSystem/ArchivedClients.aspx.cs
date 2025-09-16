@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -48,10 +49,48 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
+                // ✅ Add decrypted columns for display
+                if (!dt.Columns.Contains("Email")) dt.Columns.Add("Email", typeof(string));
+                if (!dt.Columns.Contains("ContactNumber")) dt.Columns.Add("ContactNumber", typeof(string));
+                if (!dt.Columns.Contains("City")) dt.Columns.Add("City", typeof(string));
+                if (!dt.Columns.Contains("Country")) dt.Columns.Add("Country", typeof(string));
+                if (!dt.Columns.Contains("Name")) dt.Columns.Add("Name", typeof(string));
+
+                // ✅ Decrypt each row
+                foreach (DataRow row in dt.Rows)
+                {
+                    // Decrypt Email
+                    if (row["EmailEnc"] != DBNull.Value)
+                        row["Email"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
+
+                    // Decrypt Contact Number
+                    if (row["ContactEnc"] != DBNull.Value)
+                        row["ContactNumber"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
+
+                    // Decrypt City
+                    if (row["CityEnc"] != DBNull.Value)
+                        row["City"] = AESHelper.DecryptField(row["CityEnc"].ToString());
+
+                    // Decrypt Country
+                    if (row["CountryEnc"] != DBNull.Value)
+                        row["Country"] = AESHelper.DecryptField(row["CountryEnc"].ToString());
+
+                    // Build Full Name
+                    string lastName = row["LastName"]?.ToString() ?? "";
+                    string firstName = row["FirstName"]?.ToString() ?? "";
+                    string middleName = row["MiddleName"]?.ToString() ?? "";
+
+                    row["Name"] = string.IsNullOrWhiteSpace(middleName)
+                        ? $"{lastName}, {firstName}"
+                        : $"{lastName}, {firstName} {middleName}";
+                }
+
+                // ✅ Bind decrypted data to GridView
                 gvArchivedClients.DataSource = dt;
                 gvArchivedClients.DataBind();
             }
         }
+
 
         protected void gvArchivedClients_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {

@@ -1,11 +1,12 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
+using System.Collections.Generic;      // HashSet
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Net;
 using System.Net.Mail;
 using System.Text.RegularExpressions;   // email shape check
-using System.Collections.Generic;      // HashSet
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -274,7 +275,7 @@ namespace RRCManagementSystem
             {
                 string fromEmail = ConfigurationManager.AppSettings["emailFrom"] ?? "rrctermiteandpestcontrol@gmail.com";
                 string appPassword = ConfigurationManager.AppSettings["emailPassword"] ?? "";
-                string resetLink = $"https://rrcmngmnt.com/ResetPassword.aspx?type=client&token={token}";
+                string resetLink = $"https://localhost:44341/ResetPassword.aspx?type=client&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
                 string body = $@"<!DOCTYPE html><html><head><meta charset='UTF-8'>
@@ -350,38 +351,53 @@ Swal.fire({{
 
         private bool EmailExists(string email)
         {
+            string emailHash = AESHelper.ComputeSHA256WithPepper(email);
+
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spClient_EmailExists", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
+
                 con.Open();
                 return Convert.ToInt32(cmd.ExecuteScalar()) == 1;
             }
         }
 
+
+
         private int CreateClientWithReset(
-            string lastName, string firstName, string middleName, string email, string contact,
-            string street, string brgy, string city, string region, string country, string landmark,
-            string token, DateTime expiry)
+      string lastName, string firstName, string middleName, string email, string contact,
+      string street, string brgy, string city, string region, string country, string landmark,
+      string token, DateTime expiry)
         {
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spClient_CreateWithReset", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
+                // Plaintext names remain as-is
                 cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = lastName;
                 cmd.Parameters.Add("@FirstName", SqlDbType.NVarChar, 100).Value = firstName;
-                cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value = (object)middleName ?? DBNull.Value;
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 255).Value = email;
-                cmd.Parameters.Add("@ContactNumber", SqlDbType.NVarChar, 50).Value = contact;
-                cmd.Parameters.Add("@StreetAndUnit", SqlDbType.NVarChar, 255).Value = street;
-                cmd.Parameters.Add("@Barangay", SqlDbType.NVarChar, 100).Value = brgy;
-                cmd.Parameters.Add("@City", SqlDbType.NVarChar, 100).Value = city;
-                cmd.Parameters.Add("@Region", SqlDbType.NVarChar, 100).Value = region;
-                cmd.Parameters.Add("@Country", SqlDbType.NVarChar, 100).Value = country;
-                cmd.Parameters.Add("@Landmark", SqlDbType.NVarChar, 255).Value = (object)landmark ?? DBNull.Value;
+                cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value =
+                    string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName;
 
+                // Encrypt sensitive fields
+                cmd.Parameters.Add("@EmailEnc", SqlDbType.NVarChar).Value = AESHelper.EncryptEmail(email);
+                cmd.Parameters.Add("@ContactEnc", SqlDbType.NVarChar).Value = AESHelper.EncryptField(contact);
+                cmd.Parameters.Add("@StreetEnc", SqlDbType.NVarChar).Value = AESHelper.EncryptField(street);
+                cmd.Parameters.Add("@BarangayEnc", SqlDbType.NVarChar).Value = AESHelper.EncryptField(brgy);
+                cmd.Parameters.Add("@CityEnc", SqlDbType.NVarChar).Value = AESHelper.EncryptField(city);
+                cmd.Parameters.Add("@RegionEnc", SqlDbType.NVarChar).Value = AESHelper.EncryptField(region);
+                cmd.Parameters.Add("@CountryEnc", SqlDbType.NVarChar).Value = AESHelper.EncryptField(country);
+                cmd.Parameters.Add("@LandmarkEnc", SqlDbType.NVarChar).Value =
+                    string.IsNullOrWhiteSpace(landmark) ? (object)DBNull.Value : AESHelper.EncryptField(landmark);
+
+                // Compute SHA-256 email hash
+                string emailHash = AESHelper.ComputeSHA256WithPepper(email);
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
+
+                // Reset token
                 cmd.Parameters.Add("@ResetToken", SqlDbType.NVarChar, 200).Value = token;
                 cmd.Parameters.Add("@ResetTokenExpiry", SqlDbType.DateTime).Value = expiry;
 
@@ -390,6 +406,7 @@ Swal.fire({{
                 return (id != null && int.TryParse(id.ToString(), out int clientId)) ? clientId : 0;
             }
         }
+
 
         /// <summary>
         /// Inserts a history entry capturing the inspection findings for the newly created client.

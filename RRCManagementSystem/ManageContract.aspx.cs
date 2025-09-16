@@ -61,7 +61,32 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
-                dt.Columns.Add("FullName", typeof(string), "LastName + ', ' + FirstName");
+                // 🔹 Add a FullName column for dropdown display
+                if (!dt.Columns.Contains("FullName"))
+                    dt.Columns.Add("FullName", typeof(string));
+
+                foreach (DataRow row in dt.Rows)
+                {
+                    string lastName = row["LastName"]?.ToString() ?? "";
+                    string firstName = row["FirstName"]?.ToString() ?? "";
+                    string middleName = row["MiddleName"]?.ToString() ?? "";
+
+                    // Combine for dropdown
+                    row["FullName"] = $"{lastName}, {firstName} {middleName}".Trim();
+
+                    // 🔹 Decrypt encrypted columns for internal use
+                    if (row["EmailEnc"] != DBNull.Value)
+                        row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
+
+                    if (row["ContactEnc"] != DBNull.Value)
+                        row["ContactEnc"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
+
+                    if (row["CityEnc"] != DBNull.Value)
+                        row["CityEnc"] = AESHelper.DecryptField(row["CityEnc"].ToString());
+
+                    if (row["CountryEnc"] != DBNull.Value)
+                        row["CountryEnc"] = AESHelper.DecryptField(row["CountryEnc"].ToString());
+                }
 
                 ddlClients.DataSource = dt;
                 ddlClients.DataTextField = "FullName";
@@ -71,6 +96,7 @@ namespace RRCManagementSystem
                 ddlClients.Items.Insert(0, new ListItem("-- Select Client --", ""));
             }
         }
+
 
         protected void btnUpload_Click(object sender, EventArgs e)
         {

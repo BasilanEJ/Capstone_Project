@@ -11,6 +11,7 @@ using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.Collections.Generic;
+using RRCManagementSystem.Helpers; // AESHelper for encryption
 
 namespace RRCManagementSystem
 {
@@ -66,14 +67,14 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Basic shape validation first
+            // Validate email format
             if (!IsValidEmail(email))
             {
                 ShowSwal("Invalid Email", "Please enter a valid email address.", "warning");
                 return;
             }
 
-            // Strict allow-list: consumer domains or any *.edu.ph / *.gov.ph
+            // Validate email domain
             if (!IsAllowedEmailDomain(email, out string domain))
             {
                 ShowSwal("Invalid Email",
@@ -82,17 +83,17 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // Validate contact format
             if (!Regex.IsMatch(contact, @"^\d{11}$"))
             {
                 ShowSwal("Invalid Contact Number", "Contact Number must be exactly 11 digits.", "warning");
                 return;
             }
 
+            // Optional photo upload
             string photoPath = null;
-
             try
             {
-                // optional upload
                 if (fuPhoto.HasFile)
                 {
                     if (!ValidateUpload(fuPhoto))
@@ -111,24 +112,44 @@ namespace RRCManagementSystem
                     photoPath = UploadVirtualFolder + uniqueName;
                 }
 
+                // =========================================
+                // ENCRYPTION + HASHING BEFORE SAVING
+                // =========================================
+                string street = (txtStreet.Text ?? "").Trim();
+                string barangay = (txtBarangay.Text ?? "").Trim();
+                string city = (txtCity.Text ?? "").Trim();
+                string region = (txtRegion.Text ?? "").Trim();
+                string country = (txtCountry.Text ?? "").Trim();
+                string landmark = (txtLandmark.Text ?? "").Trim();
+
+                // Generate SHA-256 hash for email uniqueness/search
+                string emailHash = AESHelper.ComputeSHA256WithPepper(email);
+
+                // Encrypt sensitive fields
+                string emailEnc = AESHelper.EncryptEmail(email);
+                string contactEnc = AESHelper.EncryptField(contact);
+                string streetEnc = AESHelper.EncryptField(street);
+                string barangayEnc = AESHelper.EncryptField(barangay);
+                string cityEnc = AESHelper.EncryptField(city);
+                string regionEnc = AESHelper.EncryptField(region);
+                string countryEnc = AESHelper.EncryptField(country);
+                string landmarkEnc = AESHelper.EncryptField(landmark);
+
+                // =========================================
+                // SAVE TO DATABASE
+                // =========================================
                 string genCode;
                 int newId = InsertInquiry_SP(
-                    email, contact, message, photoPath,
+                    emailHash, emailEnc, contactEnc, message, photoPath,
                     (txtFirstName.Text ?? "").Trim(),
                     (txtMiddleName.Text ?? "").Trim(),
                     (txtLastName.Text ?? "").Trim(),
-                    (txtStreet.Text ?? "").Trim(),
-                    (txtBarangay.Text ?? "").Trim(),
-                    (txtCity.Text ?? "").Trim(),
-                    (txtRegion.Text ?? "").Trim(),
-                    (txtCountry.Text ?? "").Trim(),
-                    (txtLandmark.Text ?? "").Trim(),
+                    streetEnc, barangayEnc, cityEnc, regionEnc, countryEnc, landmarkEnc,
                     out genCode
                 );
 
                 if (newId > 0)
                 {
-                    // Try to email; show a softer warning if it fails
                     try
                     {
                         SendConfirmationEmail(email, genCode);
@@ -140,7 +161,6 @@ namespace RRCManagementSystem
                             "warning");
                     }
 
-                    // Show code, then go back to list
                     string script = $@"
                         setTimeout(function(){{
                             Swal.fire({{
@@ -157,7 +177,6 @@ namespace RRCManagementSystem
                 {
                     ShowSwal("Error", "Failed to save inquiry. Please try again.", "error");
                 }
-
             }
             catch (Exception ex)
             {
@@ -166,9 +185,9 @@ namespace RRCManagementSystem
         }
 
         private int InsertInquiry_SP(
-            string email, string contact, string message, string photoPath,
+            string emailHash, string emailEnc, string contactEnc, string message, string photoPath,
             string firstName, string middleName, string lastName,
-            string street, string barangay, string city, string region, string country, string landmark,
+            string streetEnc, string barangayEnc, string cityEnc, string regionEnc, string countryEnc, string landmarkEnc,
             out string generatedCode)
         {
             generatedCode = null;
@@ -178,8 +197,9 @@ namespace RRCManagementSystem
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = email;
-                cmd.Parameters.Add("@ContactNumber", SqlDbType.NVarChar, 20).Value = contact;
+                cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
+                cmd.Parameters.Add("@EmailEnc", SqlDbType.NVarChar).Value = emailEnc;
+                cmd.Parameters.Add("@ContactEnc", SqlDbType.NVarChar).Value = contactEnc;
                 cmd.Parameters.Add("@Message", SqlDbType.NVarChar).Value = (object)message ?? DBNull.Value;
                 cmd.Parameters.Add("@PhotoPath", SqlDbType.NVarChar, 255).Value = (object)photoPath ?? DBNull.Value;
 
@@ -187,12 +207,12 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName;
                 cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(lastName) ? (object)DBNull.Value : lastName;
 
-                cmd.Parameters.Add("@StreetAndUnit", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(street) ? (object)DBNull.Value : street;
-                cmd.Parameters.Add("@Barangay", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(barangay) ? (object)DBNull.Value : barangay;
-                cmd.Parameters.Add("@City", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(city) ? (object)DBNull.Value : city;
-                cmd.Parameters.Add("@Region", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(region) ? (object)DBNull.Value : region;
-                cmd.Parameters.Add("@Country", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(country) ? (object)DBNull.Value : country;
-                cmd.Parameters.Add("@Landmark", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(landmark) ? (object)DBNull.Value : landmark;
+                cmd.Parameters.Add("@StreetEnc", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(streetEnc) ? (object)DBNull.Value : streetEnc;
+                cmd.Parameters.Add("@BarangayEnc", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(barangayEnc) ? (object)DBNull.Value : barangayEnc;
+                cmd.Parameters.Add("@CityEnc", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(cityEnc) ? (object)DBNull.Value : cityEnc;
+                cmd.Parameters.Add("@RegionEnc", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(regionEnc) ? (object)DBNull.Value : regionEnc;
+                cmd.Parameters.Add("@CountryEnc", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(countryEnc) ? (object)DBNull.Value : countryEnc;
+                cmd.Parameters.Add("@LandmarkEnc", SqlDbType.NVarChar).Value = string.IsNullOrWhiteSpace(landmarkEnc) ? (object)DBNull.Value : landmarkEnc;
 
                 // OUTPUT params
                 var pCode = new SqlParameter("@GeneratedInquiryCode", SqlDbType.NVarChar, 25)
@@ -211,31 +231,18 @@ namespace RRCManagementSystem
             }
         }
 
-        // ===== Domain allow-list (exact + suffix) =====
+        // ===== Domain allow-list (unchanged) =====
         private static readonly HashSet<string> AllowedExactDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            // Gmail family
             "gmail.com",
-
-            // Yahoo family
             "yahoo.com", "ymail.com", "rocketmail.com",
-
-            // Microsoft family
             "outlook.com", "hotmail.com", "live.com", "msn.com",
-
-            // Apple family
             "icloud.com", "me.com", "mac.com",
-
-            // Proton & Zoho
             "protonmail.com", "proton.me",
             "zoho.com", "zohomail.com"
         };
 
-        private static readonly string[] AllowedSuffixes = new[]
-        {
-            ".edu.ph",
-            ".gov.ph"
-        };
+        private static readonly string[] AllowedSuffixes = new[] { ".edu.ph", ".gov.ph" };
 
         private static bool IsAllowedEmailDomain(string email, out string domain)
         {
@@ -257,7 +264,7 @@ namespace RRCManagementSystem
             return false;
         }
 
-        // === EMAIL SENDER (Gmail) ===
+        // === Email Sending (unchanged) ===
         private void SendConfirmationEmail(string toEmail, string inquiryCode)
         {
             string fromEmail = ConfigurationManager.AppSettings["emailFrom"];
@@ -292,7 +299,7 @@ rrctermiteandpestcontrol@gmail.com";
                 {
                     smtp.UseDefaultCredentials = false;
                     smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
-                    smtp.EnableSsl = true; // STARTTLS
+                    smtp.EnableSsl = true;
                     smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
                     smtp.Timeout = 20000;
                     smtp.Send(mail);
