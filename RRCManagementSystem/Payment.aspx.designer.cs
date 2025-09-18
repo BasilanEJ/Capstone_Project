@@ -111,7 +111,7 @@ namespace RRCManagementSystem
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.HtmlControls.HtmlGenericControl paymentPlanContainer;
+        protected global::System.Web.UI.WebControls.Panel paymentPlanContainer;
 
         /// <summary>
         /// ddlPlanChoice control.

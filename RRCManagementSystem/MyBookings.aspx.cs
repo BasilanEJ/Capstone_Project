@@ -2,7 +2,6 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Globalization;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -46,6 +45,7 @@ namespace RRCManagementSystem
             }
         }
 
+        #region Load Bookings
 
         private void LoadMyBookings(int clientId)
         {
@@ -61,16 +61,13 @@ namespace RRCManagementSystem
                 gvMyBookings.DataSource = dt;
                 gvMyBookings.DataBind();
 
-                if (dt.Rows.Count > 0)
-                {
-                    lblMessage.Text = $"✅ You have {dt.Rows.Count} booking(s).";
-                    lblMessage.ForeColor = System.Drawing.Color.Green;
-                }
-                else
-                {
-                    lblMessage.Text = "⚠️ You have no bookings yet.";
-                    lblMessage.ForeColor = System.Drawing.Color.Orange;
-                }
+                lblMessage.Text = dt.Rows.Count > 0
+                    ? $"✅ You have {dt.Rows.Count} booking(s)."
+                    : "⚠️ You have no bookings yet.";
+
+                lblMessage.ForeColor = dt.Rows.Count > 0
+                    ? System.Drawing.Color.Green
+                    : System.Drawing.Color.Orange;
             }
         }
 
@@ -107,19 +104,18 @@ namespace RRCManagementSystem
         {
             using (var con = new SqlConnection(connectionString))
             using (var da = new SqlDataAdapter(@"
-    SELECT 
-        ss.ScheduleID,
-        ss.BookingID,
-        b.BookingCode,
-        ss.OperationNumber,
-        ss.ScheduledDate,
-        ss.Status,
-        b.CreatedAt
-    FROM ServiceSchedule ss
-    INNER JOIN Bookings b ON ss.BookingID = b.BookingID
-    WHERE b.ClientID = @ClientID
-    ORDER BY ss.OperationNumber;", con))
-
+                SELECT 
+                    ss.ScheduleID,
+                    ss.BookingID,
+                    b.BookingCode,
+                    ss.OperationNumber,
+                    ss.ScheduledDate,
+                    ss.Status,
+                    b.CreatedAt
+                FROM ServiceSchedule ss
+                INNER JOIN Bookings b ON ss.BookingID = b.BookingID
+                WHERE b.ClientID = @ClientID
+                ORDER BY ss.OperationNumber;", con))
             {
                 da.SelectCommand.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
@@ -132,7 +128,45 @@ namespace RRCManagementSystem
             }
         }
 
+        #endregion
 
+        #region GridView Events
+
+        protected void gvMyBookings_PageIndexChanging(object sender, GridViewPageEventArgs e)
+        {
+            gvMyBookings.PageIndex = e.NewPageIndex;
+            LoadMyBookings(Convert.ToInt32(Session["ClientID"]));
+        }
+
+        protected void gvMyBookings_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                string status = DataBinder.Eval(e.Row.DataItem, "Status").ToString();
+                int statusCol = 5; // Column index for Status
+                if (status == "Assigned")
+                    e.Row.Cells[statusCol].CssClass = "status-assigned";
+                else if (status == "Pending")
+                    e.Row.Cells[statusCol].CssClass = "status-pending";
+                else if (status == "Cancelled")
+                    e.Row.Cells[statusCol].CssClass = "status-cancelled";
+            }
+        }
+
+        protected void gvUpcoming_RowCommand(object sender, GridViewCommandEventArgs e)
+        {
+            if (e.CommandName == "SetSchedule")
+            {
+                string[] args = e.CommandArgument.ToString().Split('|');
+                if (args.Length == 2)
+                {
+                    string scheduleId = args[0];
+                    string scheduledDateTime = args[1];
+                    string script = $"showModal('{scheduleId}', '{scheduledDateTime}');";
+                    ScriptManager.RegisterStartupScript(this, GetType(), "ShowSetScheduleModal", script, true);
+                }
+            }
+        }
 
         protected void gvAllOps_RowCommand(object sender, GridViewCommandEventArgs e)
         {
@@ -159,11 +193,93 @@ namespace RRCManagementSystem
                 if (lt != null)
                 {
                     lt.Text = status == "Completed"
-                        ? "<span class='badge bg-success'>Done</span>"
-                        : "<span class='badge bg-secondary'>Pending</span>";
+                        ? "<span class='badge-success'>Done</span>"
+                        : "<span class='badge-secondary'>Pending</span>";
                 }
             }
         }
+
+        #endregion
+
+        #region Actions
+
+        protected void btnConfirmSchedule_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(hfSelectedScheduleID.Value))
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "NoSched", "Swal.fire('Oops', 'No schedule selected.', 'warning');", true);
+                return;
+            }
+
+            int scheduleId = Convert.ToInt32(hfSelectedScheduleID.Value);
+            int clientId = Convert.ToInt32(Session["ClientID"]);
+
+            if (string.IsNullOrWhiteSpace(txtNewScheduleDate.Text) || string.IsNullOrWhiteSpace(txtNewScheduleTime.Text))
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "MissingDT", "Swal.fire('Missing', 'Please pick date and time.', 'warning');", true);
+                return;
+            }
+
+            if (!DateTime.TryParse(txtNewScheduleDate.Text, out DateTime newDate) ||
+                !TimeSpan.TryParse(txtNewScheduleTime.Text, out TimeSpan newTime))
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "BadDT", "Swal.fire('Invalid', 'Invalid date or time.', 'error');", true);
+                return;
+            }
+
+            DateTime newScheduledDate = newDate.Date.Add(newTime);
+
+            // Insert reschedule request
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_RescheduleRequest_Create", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleId;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                cmd.Parameters.Add("@NewScheduledDate", SqlDbType.DateTime).Value = newScheduledDate;
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
+
+            ScriptManager.RegisterStartupScript(this, GetType(), "ReqSent",
+                "Swal.fire('Sent!', 'Your reschedule request has been submitted for approval.', 'success');", true);
+
+            hfSelectedScheduleID.Value = "";
+            LoadUpcomingOperations(clientId);
+            LoadAllOperations(clientId);
+            ScriptManager.RegisterStartupScript(this, GetType(), "HideModal", "hideModal();", true);
+        }
+
+        private void CancelBooking(int bookingId)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_Booking_CancelIfPending", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
+
+                con.Open();
+                int rows = cmd.ExecuteNonQuery();
+
+                if (rows > 0)
+                {
+                    ScriptManager.RegisterStartupScript(this, GetType(), "CancelSuccess",
+                        "Swal.fire('Cancelled!', 'Booking cancelled successfully.', 'success');", true);
+                }
+                else
+                {
+                    ScriptManager.RegisterStartupScript(this, GetType(), "CancelFail",
+                        $"Swal.fire('Oops!', 'Unable to cancel. Booking may already be processed. BookingID: {bookingId}', 'warning');", true);
+                }
+            }
+
+            LoadMyBookings(Convert.ToInt32(Session["ClientID"]));
+        }
+
+        #endregion
+
+        #region Contract & Notifications
 
         private void CheckIfContractCompleted(int clientId)
         {
@@ -237,122 +353,6 @@ namespace RRCManagementSystem
             }
         }
 
-        protected void gvMyBookings_PageIndexChanging(object sender, GridViewPageEventArgs e)
-        {
-            gvMyBookings.PageIndex = e.NewPageIndex;
-            LoadMyBookings(Convert.ToInt32(Session["ClientID"]));
-        }
-
-        protected void gvMyBookings_RowDataBound(object sender, GridViewRowEventArgs e)
-        {
-            if (e.Row.RowType == DataControlRowType.DataRow)
-            {
-                // Column index may shift because BookingCode was added
-                string status = DataBinder.Eval(e.Row.DataItem, "Status").ToString();
-                int statusCol = 5; // BookingCode(1), Service(2), InitialDate(3), StartTime(4), Status(5)
-                if (status == "Assigned")
-                    e.Row.Cells[statusCol].CssClass = "status-assigned";
-                else if (status == "Pending")
-                    e.Row.Cells[statusCol].CssClass = "status-pending";
-                else if (status == "Cancelled")
-                    e.Row.Cells[statusCol].CssClass = "status-cancelled";
-            }
-        }
-
-        protected void gvUpcoming_RowCommand(object sender, GridViewCommandEventArgs e)
-        {
-            if (e.CommandName == "SetSchedule")
-            {
-                string[] args = e.CommandArgument.ToString().Split('|');
-                if (args.Length == 2)
-                {
-                    string scheduleId = args[0];
-                    string scheduledDateTime = args[1];
-
-                    string script = $"showModal('{scheduleId}', '{scheduledDateTime}');";
-                    ScriptManager.RegisterStartupScript(this, GetType(), "ShowSetScheduleModal", script, true);
-                }
-            }
-        }
-
-        protected void btnConfirmSchedule_Click(object sender, EventArgs e)
-        {
-            // If the designer did not regenerate, this handler will fail to compile.
-            // Ensure the three controls exist in MyBookings.aspx with runat="server".
-            if (string.IsNullOrWhiteSpace(hfSelectedScheduleID.Value))
-            {
-                ScriptManager.RegisterStartupScript(this, GetType(), "NoSched", "Swal.fire('Oops', 'No schedule selected.', 'warning');", true);
-                return;
-            }
-
-            int scheduleId = Convert.ToInt32(hfSelectedScheduleID.Value);
-            int clientId = Convert.ToInt32(Session["ClientID"]);
-
-            if (string.IsNullOrWhiteSpace(txtNewScheduleDate.Text) || string.IsNullOrWhiteSpace(txtNewScheduleTime.Text))
-            {
-                ScriptManager.RegisterStartupScript(this, GetType(), "MissingDT", "Swal.fire('Missing', 'Please pick date and time.', 'warning');", true);
-                return;
-            }
-
-            DateTime newDate;
-            TimeSpan newTime;
-            if (!DateTime.TryParse(txtNewScheduleDate.Text, out newDate) ||
-                !TimeSpan.TryParse(txtNewScheduleTime.Text, out newTime))
-            {
-                ScriptManager.RegisterStartupScript(this, GetType(), "BadDT", "Swal.fire('Invalid', 'Invalid date or time.', 'error');", true);
-                return;
-            }
-
-            DateTime newScheduledDate = newDate.Date.Add(newTime);
-
-            // Create a Reschedule Request (Pending)
-            using (var con = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.usp_RescheduleRequest_Create", con))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleId;
-                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
-                cmd.Parameters.Add("@NewScheduledDate", SqlDbType.DateTime).Value = newScheduledDate;
-
-                con.Open();
-                cmd.ExecuteNonQuery();
-            }
-
-            ScriptManager.RegisterStartupScript(this, GetType(), "ReqSent", "Swal.fire('Sent!', 'Your reschedule request has been submitted for approval.', 'success');", true);
-            hfSelectedScheduleID.Value = "";
-            LoadUpcomingOperations(clientId);
-            ScriptManager.RegisterStartupScript(this, GetType(), "HideModal", "hideModal();", true);
-        }
-
-
-        private void CancelBooking(int bookingId)
-        {
-            using (var con = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.usp_Booking_CancelIfPending", con))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
-
-                con.Open();
-                int rows = cmd.ExecuteNonQuery();
-
-                if (rows > 0)
-                {
-                    ScriptManager.RegisterStartupScript(this, GetType(), "CancelSuccess",
-                        "Swal.fire('Cancelled!', 'Booking cancelled successfully.', 'success');", true);
-                }
-                else
-                {
-                    ScriptManager.RegisterStartupScript(this, GetType(), "CancelFail",
-                        "Swal.fire('Oops!', 'Unable to cancel. Booking may already be processed. BookingID: " + bookingId + "', 'warning');", true);
-                }
-            }
-
-            LoadMyBookings(Convert.ToInt32(Session["ClientID"]));
-        }
-
-
-
         private void SeedConfirmedBookingNotifications(int clientId)
         {
             using (var con = new SqlConnection(connectionString))
@@ -374,9 +374,7 @@ namespace RRCManagementSystem
                     {
                         int bookingId = Convert.ToInt32(r["BookingID"]);
                         DateTime scheduledDate = Convert.ToDateTime(r["ScheduledDate"]);
-                        TimeSpan startTime = (r["StartTime"] is TimeSpan)
-                            ? (TimeSpan)r["StartTime"]
-                            : TimeSpan.Parse(r["StartTime"].ToString());
+                        TimeSpan startTime = TimeSpan.Parse(r["StartTime"].ToString());
 
                         try
                         {
@@ -388,19 +386,19 @@ namespace RRCManagementSystem
                                 cmd2.Parameters.AddWithValue("@Type", "booking");
                                 cmd2.Parameters.AddWithValue("@Title", "Booking Confirmed");
                                 cmd2.Parameters.AddWithValue("@Body",
-                                    "Your service is scheduled on " +
-                                    scheduledDate.ToString("MMM dd, yyyy") +
-                                    " at " + startTime.ToString(@"hh\:mm") + ".");
+                                    $"Your service is scheduled on {scheduledDate:MMM dd, yyyy} at {startTime:hh\\:mm}.");
                                 cmd2.Parameters.AddWithValue("@Url", "MyBookings.aspx");
-                                cmd2.Parameters.AddWithValue("@DedupKey", "BOOK-" + bookingId + "-CONFIRMED");
+                                cmd2.Parameters.AddWithValue("@DedupKey", $"BOOK-{bookingId}-CONFIRMED");
                                 con2.Open();
                                 cmd2.ExecuteNonQuery();
                             }
                         }
-                        catch { }
+                        catch { /* Ignore notification errors */ }
                     }
                 }
             }
         }
+
+        #endregion
     }
 }

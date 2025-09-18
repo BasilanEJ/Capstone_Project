@@ -5,185 +5,141 @@
 <head runat="server">
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />                   
+    <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
     <title>Inspector Panel</title>
 
-    <!-- Bootstrap 5 & FontAwesome -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
     <style>
+        /* Custom styles that cannot be fully replicated with Tailwind utilities */
         :root { --sidebar-w: 280px; --header-h: 60px; }
 
-        body { background-color: #f3f4f6; }
-
-        header.app-header {
-            height: var(--header-h);
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 1050;
+        body {
+            @apply bg-gray-100;
         }
 
-        #sidebarDesktop {
-            position: fixed;
-            top: var(--header-h);
-            left: 0;
-            width: var(--sidebar-w);
-            height: calc(100vh - var(--header-h));
-            overflow-y: auto;
+        #mainContent {
+            transition: margin-left 0.3s ease;
         }
 
-        @media (min-width: 992px) {
+        @media (min-width: 1024px) {
             #mainContent {
                 margin-left: var(--sidebar-w);
                 margin-top: var(--header-h);
                 padding: 30px;
                 min-height: calc(100vh - var(--header-h) - 56px);
-                background-color: #f3f4f6;
             }
-            footer.app-footer {
+            #footerDesktop {
                 left: var(--sidebar-w);
                 width: calc(100% - var(--sidebar-w));
             }
         }
-
-        @media (max-width: 991.98px) {
-            #mainContent {
-                margin: 0;
-                margin-top: var(--header-h);
-                padding: 16px;
-                min-height: calc(100vh - var(--header-h) - 56px);
-            }
-            footer.app-footer {
-                left: 0;
-                width: 100%;
-            }
-        }
-
-        #notificationList {
-            right: 0;
-            top: 35px;
-            width: 300px;
-            display: none;
-            z-index: 1090;
-            max-height: 350px;
-            overflow-y: auto;
-        }
-
-        .unread { font-weight: bold; background-color: #f8f9fa; }
-        .read { font-weight: normal; color: #6c757d; }
     </style>
 </head>
-<body>
-    <form id="form1" runat="server" class="d-flex flex-column min-vh-100">
-        <!-- Header -->
-        <header class="app-header bg-dark text-white d-flex align-items-center justify-content-between px-3 px-md-4">
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-light d-lg-none me-1" type="button"
-                        data-bs-toggle="offcanvas" data-bs-target="#sidebarMobile" aria-controls="sidebarMobile">
-                    <i class="fas fa-bars"></i>
+<body class="flex flex-col min-h-screen">
+    <form id="form1" runat="server">
+        <header class="fixed top-0 left-0 w-full h-[var(--header-h)] bg-gray-900 text-white flex items-center justify-between px-4 lg:px-6 z-50 shadow-md">
+            <div class="flex items-center gap-2">
+                <button class="lg:hidden text-white hover:text-gray-300 focus:outline-none" type="button"
+                        onclick="document.getElementById('mobileMenu').classList.toggle('hidden');">
+                    <i class="fas fa-bars text-xl"></i>
                 </button>
-                <h2 class="mb-0 fs-5">Inspector Panel</h2>
+                <h2 class="text-xl font-semibold">Inspector Panel</h2>
             </div>
 
-            <div class="d-flex align-items-center position-relative">
-                <asp:Label ID="lblInspectorName" runat="server" CssClass="me-3 me-md-4 fw-bold" />
+            <div class="flex items-center relative">
+                <asp:Label ID="lblInspectorName" runat="server" CssClass="mr-4 lg:mr-6 font-bold text-sm lg:text-base" />
 
-                <div id="notificationBell" class="position-relative me-2 me-md-3" style="cursor:pointer;" onclick="toggleNotificationList(); markNotificationsAsRead();">
-                    <i class="fas fa-bell fs-5"></i>
+                <div id="notificationBell" class="relative cursor-pointer text-gray-300 hover:text-white transition-colors" onclick="toggleNotificationList(); markNotificationsAsRead();">
+                    <i class="fas fa-bell text-xl"></i>
+                    
+                    <span id="notificationCount" runat="server" class="absolute -top-1 -right-1.5 transform translate-x-1/2 -translate-y-1/2 bg-red-600 text-white rounded-full px-1 py-0.5 text-xs" style="display:none;">0</span>
 
-                    <!-- Badge for unread count -->
-                    <span id="notificationCount" runat="server" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none; font-size: 10px;">0</span>
-
-                    <!-- Notification Dropdown -->
-                   <div id="notificationList" class="position-absolute bg-white text-dark rounded shadow p-3" 
-                         style="margin-top: 15px; right: 0; width: 320px; max-height: 400px; overflow-y: auto; display: none; z-index: 1000; border-radius: 8px;">
-                        <h6 class="fw-bold mb-2">Notifications</h6>
+                    <div id="notificationList" class="absolute top-full right-0 mt-4 bg-white text-gray-800 rounded-lg shadow-xl p-4 w-80 max-h-96 overflow-y-auto" style="display: none; z-index: 1000;">
+                        <h6 class="font-bold text-lg mb-2">Notifications</h6>
                         <div id="notificationItems"></div>
                     </div>
-
                 </div>
             </div>
         </header>
 
-        <!-- Desktop Sidebar -->
-        <aside id="sidebarDesktop" class="d-none d-lg-flex flex-column text-white bg-black">
-            <ul class="nav flex-column mt-2">
-                <li class="nav-item border-bottom">
-                    <a class="nav-link text-white px-4 py-3" href="InspectorDashboard.aspx">
-                        <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+        <aside id="sidebarDesktop" class="hidden lg:flex flex-col w-[var(--sidebar-w)] h-[calc(100vh-var(--header-h))] fixed top-[var(--header-h)] left-0 bg-gray-900 text-white shadow-xl overflow-y-auto">
+            <ul class="flex flex-col mt-2">
+                <li class="border-b border-gray-800">
+                    <a class="block px-6 py-4 hover:bg-gray-800 transition-colors" href="InspectorDashboard.aspx">
+                        <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
                     </a>
                 </li>
-                <li class="nav-item border-bottom">
-                    <a class="nav-link text-white px-4 py-3" href="MyInspections.aspx">
-                        <i class="fas fa-search me-2"></i> Inspections
+                <li class="border-b border-gray-800">
+                    <a class="block px-6 py-4 hover:bg-gray-800 transition-colors" href="MyInspections.aspx">
+                        <i class="fas fa-search mr-2"></i> Inspections
                     </a>
                 </li>
-                <li class="nav-item border-bottom">
-                    <a class="nav-link text-white px-4 py-3" href="CreateBooking.aspx">
-                        <i class="fas fa-tasks me-2"></i> Assign Booking
+                <li class="border-b border-gray-800">
+                    <a class="block px-6 py-4 hover:bg-gray-800 transition-colors" href="CreateBooking.aspx">
+                        <i class="fas fa-tasks mr-2"></i> Assign Booking
                     </a>
                 </li>
             </ul>
 
             <asp:LinkButton ID="btnLogout" runat="server"
-                CssClass="btn btn-danger fw-bold w-75 mx-auto my-4 d-block"
+                CssClass="w-3/4 mx-auto my-6 block bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors"
                 OnClick="btnLogout_Click">
-                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
             </asp:LinkButton>
         </aside>
 
-        <!-- Mobile Sidebar -->
-        <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="sidebarMobile" aria-labelledby="sidebarMobileLabel" style="width: var(--sidebar-w);">
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title" id="sidebarMobileLabel">Menu</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-            </div>
-            <div class="offcanvas-body d-flex flex-column justify-content-between">
-                <ul class="nav flex-column">
-                    <li class="nav-item border-bottom">
-                        <a class="nav-link text-white px-2 py-3" href="InspectorDashboard.aspx">
-                            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item border-bottom">
-                        <a class="nav-link text-white px-2 py-3" href="MyInspections.aspx">
-                            <i class="fas fa-search me-2"></i> Inspections
-                        </a>
-                    </li>
-                    <li class="nav-item border-bottom">
-                        <a class="nav-link text-white px-2 py-3" href="CreateBooking.aspx">
-                            <i class="fas fa-tasks me-2"></i> Assign Booking
-                        </a>
-                    </li>
-                </ul>
+        <div id="mobileMenu" class="hidden fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-40 transition-opacity duration-300" onclick="this.classList.add('hidden')">
+            <div class="fixed top-0 left-0 w-[var(--sidebar-w)] h-full bg-gray-900 text-white p-4 shadow-xl flex flex-col justify-between" onclick="event.stopPropagation();">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h5 class="text-xl font-bold">Menu</h5>
+                        <button type="button" class="text-white hover:text-gray-400 focus:outline-none" onclick="document.getElementById('mobileMenu').classList.add('hidden');">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+                    <ul class="flex flex-col">
+                        <li class="border-b border-gray-800">
+                            <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="InspectorDashboard.aspx">
+                                <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="border-b border-gray-800">
+                            <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="MyInspections.aspx">
+                                <i class="fas fa-search mr-2"></i> Inspections
+                            </a>
+                        </li>
+                        <li class="border-b border-gray-800">
+                            <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="CreateBooking.aspx">
+                                <i class="fas fa-tasks mr-2"></i> Assign Booking
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
                 <asp:LinkButton ID="btnLogoutMobile" runat="server"
-                    CssClass="btn btn-danger fw-bold w-100 mt-3"
+                    CssClass="w-full mt-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors"
                     OnClick="btnLogout_Click">
-                    <i class="fas fa-sign-out-alt me-2"></i> Logout
+                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
                 </asp:LinkButton>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <main id="mainContent" class="flex-grow-1">
+        <main id="mainContent" class="flex-grow p-4 lg:p-8 mt-[var(--header-h)] lg:mt-0">
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </main>
 
-        <!-- Footer -->
-        <footer class="app-footer bg-dark text-white text-center py-3 position-fixed bottom-0" style="z-index: 1030;">
+        <footer id="footerDesktop" class="w-full bg-gray-900 text-gray-300 text-center py-4 text-sm fixed bottom-0 z-40">
             &copy; 2025 RRC Management System - Inspector
         </footer>
     </form>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
+        // Existing JavaScript for notifications remains the same, as it's not tied to CSS framework
         async function loadNotifications() {
             try {
                 const res = await fetch('GetNotificationInspector.aspx');
@@ -195,16 +151,16 @@
                 badge.style.display = (data.unread && data.unread > 0) ? 'inline-block' : 'none';
 
                 if (!data.notifications || data.notifications.length === 0) {
-                    list.innerHTML = "<div class='text-center text-muted small p-2'>No notifications.</div>";
+                    list.innerHTML = "<div class='text-center text-gray-400 text-sm p-2'>No notifications.</div>";
                     return;
                 }
 
                 list.innerHTML = data.notifications.map(item => `
-                    <a href="${item.url || '#'}" class="text-decoration-none text-dark d-block" onclick="event.stopPropagation();">
-                        <div class="border-bottom pb-2 mb-2 ${item.isRead ? 'read' : 'unread'}">
+                    <a href="${item.url || '#'}" class="text-decoration-none block" onclick="event.stopPropagation();">
+                        <div class="border-b border-gray-200 pb-2 mb-2 ${item.isRead ? 'text-gray-500 font-normal' : 'font-semibold bg-gray-50'} p-2 rounded-md">
                             <div>${item.title}</div>
-                            ${item.body ? `<div class="small mt-1 text-muted">${item.body}</div>` : ''}
-                            <div class="small text-muted">${item.date}</div>
+                            ${item.body ? `<div class="text-sm mt-1 text-gray-500">${item.body}</div>` : ''}
+                            <div class="text-xs text-gray-400">${item.date}</div>
                         </div>
                     </a>
                 `).join('');

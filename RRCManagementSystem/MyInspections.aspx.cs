@@ -3,7 +3,8 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
-using RRCManagementSystem.Helpers; // Required for AESHelper
+using System.Web.Script.Serialization; // For JSON serialization
+using RRCManagementSystem.Helpers; // For AESHelper
 
 namespace RRCManagementSystem
 {
@@ -21,9 +22,16 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // ✅ Return services as JSON for the SweetAlert dropdown
+            if (Request.QueryString["getServices"] == "1")
+            {
+                GetServicesAsJson();
+                return;
+            }
+
             if (!IsPostBack)
             {
-                // ✅ Handle query string when inspector marks an inspection as done
+                // ✅ Handle when inspector marks an inspection as done
                 if (Request.QueryString["done"] != null && int.TryParse(Request.QueryString["done"], out int inspectionId))
                 {
                     int inspectorId = Convert.ToInt32(Session["UserID"]);
@@ -31,26 +39,22 @@ namespace RRCManagementSystem
                         ? null
                         : Server.UrlDecode(Request.QueryString["findings"]).Trim();
 
-                    // Validate findings before saving
                     if (string.IsNullOrWhiteSpace(findings))
                     {
-                        // Redirect if no findings were provided
                         Response.Redirect("MyInspections.aspx?err=nofindings");
                         return;
                     }
 
                     try
                     {
-                        // Save the inspection status and findings
+                        // Save combined findings text
                         MarkInspectionAsDone(inspectionId, inspectorId, findings);
 
-                        // Redirect to clear query string and avoid duplicate submissions
                         Response.Redirect("MyInspections.aspx?marked=1");
                         return;
                     }
                     catch (Exception ex)
                     {
-                        // Optionally log the error
                         Response.Redirect("MyInspections.aspx?err=save&msg=" + Server.UrlEncode(ex.Message));
                         return;
                     }
@@ -68,7 +72,6 @@ namespace RRCManagementSystem
 
         /// <summary>
         /// Load all inspections assigned to the currently logged-in inspector
-        /// and decrypt all sensitive fields.
         /// </summary>
         private void LoadMyInspections()
         {
@@ -86,7 +89,7 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
-                // ✅ Add FullName column before populating it
+                // ✅ Add FullName column
                 if (!dt.Columns.Contains("FullName"))
                     dt.Columns.Add("FullName", typeof(string));
 
@@ -117,15 +120,14 @@ namespace RRCManagementSystem
                     if (row["LandmarkEnc"] != DBNull.Value)
                         row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
 
-                    // ✅ Build FullName safely
+                    // Build FullName safely
                     string first = row["FirstName"]?.ToString() ?? "";
                     string middle = row["MiddleName"]?.ToString() ?? "";
                     string last = row["LastName"]?.ToString() ?? "";
-
                     row["FullName"] = $"{first} {middle} {last}".Replace("  ", " ").Trim();
                 }
 
-                // ✅ Rename decrypted columns for UI compatibility
+                // ✅ Rename columns for display
                 dt.Columns["EmailEnc"].ColumnName = "Email";
                 dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
                 dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
@@ -135,15 +137,46 @@ namespace RRCManagementSystem
                 dt.Columns["CountryEnc"].ColumnName = "Country";
                 dt.Columns["LandmarkEnc"].ColumnName = "Landmark";
 
-                // ✅ Bind to Repeater
                 rptInspections.DataSource = dt;
                 rptInspections.DataBind();
             }
         }
 
+        /// <summary>
+        /// Return services as JSON for SweetAlert dropdown
+        /// </summary>
+        private void GetServicesAsJson()
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(@"
+        SELECT ServiceID, Name, ServiceType 
+        FROM Services 
+        WHERE Status = 'Active'
+        ORDER BY ServiceType ASC, Name ASC", conn))
+            {
+                conn.Open();
+                var reader = cmd.ExecuteReader();
+                var services = new System.Collections.Generic.List<object>();
+
+                while (reader.Read())
+                {
+                    services.Add(new
+                    {
+                        ServiceID = reader["ServiceID"],
+                        Name = reader["Name"].ToString(),
+                        ServiceType = reader["ServiceType"].ToString()
+                    });
+                }
+
+                var json = new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(services);
+                Response.ContentType = "application/json";
+                Response.Write(json);
+                Response.End();
+            }
+        }
 
         /// <summary>
-        /// Marks an inspection as completed and saves the inspector's findings.
+        /// Marks inspection as completed, saving findings as plain text
         /// </summary>
         private void MarkInspectionAsDone(int inspectionId, int inspectorId, string findings)
         {
@@ -160,10 +193,6 @@ namespace RRCManagementSystem
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
-
-                // Optional validation:
-                // int rows = (affectedParam.Value == DBNull.Value) ? 0 : (int)affectedParam.Value;
-                // if (rows == 0) throw new InvalidOperationException("Update failed or unauthorized.");
             }
         }
     }

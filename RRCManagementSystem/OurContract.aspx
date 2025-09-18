@@ -1,131 +1,106 @@
 ﻿<%@ Page Title="Our Contract" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="OurContract.aspx.cs" Inherits="RRCManagementSystem.OurContract" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style>
-        .page-title{
-            color:#0d6efd;
-            font-weight:700;
-            font-size:clamp(1.25rem,3.2vw,1.75rem);
-            line-height:1.2;
-        }
-        .page-wrap{
-            padding-top:clamp(.75rem,2vw,1.25rem);
-            padding-bottom:clamp(.75rem,2vw,1.5rem);
-        }
-        .card-shell{
-            border:none;border-radius:1rem;box-shadow:0 8px 20px rgba(0,0,0,.06);
-        }
-        .info-label{
-            color:#6c757d;
-        }
-        /* Responsive PDF area */
-        .pdf-wrap{
-            position:relative;
-            width:100%;
-            height:clamp(360px, 65vh, 720px); /* good on phones and desktops */
-            border-radius:.75rem;
-            overflow:hidden;
-        }
-        .pdf-frame{
-            width:100%;
-            height:100%;
-            border:0;
-            display:block;
-            background:#fff;
-        }
-        .pdf-fallback{
-            position:absolute; inset:0;
-            background-color:#f8f9fa;
-            border:2px dashed #ced4da;
-            display:none;
-            padding:1.25rem;
-            text-align:center;
-            align-items:center; justify-content:center;
-        }
-        .btn{ min-height:44px } /* comfy tap targets on mobile */
-
-        @media (prefers-reduced-motion: reduce){
-            .fade, .collapse { transition:none !important; }
-        }
-    </style>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-    <div class="container page-wrap">
-        <div class="card card-shell mx-auto p-3 p-sm-4" style="max-width:880px;">
-            <h2 class="page-title text-center mb-3">Your Contract</h2>
 
-            <asp:Label ID="lblMessage" runat="server" CssClass="text-danger text-center d-block mb-3" />
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Page Title -->
+        <h2 class="text-2xl md:text-3xl font-bold text-blue-600 text-center mb-6">
+            Your Contract
+        </h2>
 
-            <!-- Contract Details -->
-            <asp:Panel ID="pnlContract" runat="server" Visible="false">
-                <div class="row g-3 mb-3">
-                    <div class="col-12 col-sm-6">
-                        <strong>Start Date:</strong>
-                        <asp:Label ID="lblStartDate" runat="server" CssClass="ms-2 info-label d-inline-block" />
+        <!-- Message -->
+        <asp:Label ID="lblMessage" runat="server"
+            CssClass="block text-center text-red-600 font-medium mb-4" />
+
+        <!-- Contract Details Section -->
+        <asp:Panel ID="pnlContract" runat="server" Visible="false">
+            <div class="bg-white shadow-lg rounded-xl p-6 mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <span class="font-semibold text-gray-700">Start Date:</span>
+                        <asp:Label ID="lblStartDate" runat="server"
+                            CssClass="ml-2 text-gray-600" />
                     </div>
-                    <div class="col-12 col-sm-6">
-                        <strong>End Date:</strong>
-                        <asp:Label ID="lblEndDate" runat="server" CssClass="ms-2 info-label d-inline-block" />
+                    <div>
+                        <span class="font-semibold text-gray-700">End Date:</span>
+                        <asp:Label ID="lblEndDate" runat="server"
+                            CssClass="ml-2 text-gray-600" />
                     </div>
-                    <div class="col-12 col-sm-6">
-                        <strong>Uploaded:</strong>
-                        <asp:Label ID="lblUploaded" runat="server" CssClass="ms-2 info-label d-inline-block" />
+                    <div>
+                        <span class="font-semibold text-gray-700">Uploaded:</span>
+                        <asp:Label ID="lblUploaded" runat="server"
+                            CssClass="ml-2 text-gray-600" />
                     </div>
-                    <div class="col-12">
-                        <strong>Remarks:</strong>
-                        <asp:Label ID="lblRemarks" runat="server" CssClass="ms-2 info-label d-inline-block" />
+                    <div class="sm:col-span-2">
+                        <span class="font-semibold text-gray-700">Remarks:</span>
+                        <asp:Label ID="lblRemarks" runat="server"
+                            CssClass="ml-2 text-gray-600 break-words" />
                     </div>
                 </div>
 
-                <div class="d-grid gap-2 d-sm-flex mb-3">
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-3">
                     <asp:Button ID="btnDownload" runat="server"
                         Text="Download Contract"
-                        CssClass="btn btn-primary fw-bold flex-fill flex-sm-grow-0"
+                        CssClass="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition w-full sm:w-auto text-center"
                         OnClick="btnDownload_Click"
                         UseSubmitBehavior="false"
                         CausesValidation="false" />
-                    
+
                     <asp:Button ID="btnPreview" runat="server"
                         Text="Preview"
-                        CssClass="btn btn-outline-secondary fw-semibold flex-fill flex-sm-grow-0"
+                        CssClass="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg border border-gray-300 shadow-sm transition w-full sm:w-auto text-center"
                         OnClick="btnPreview_Click"
                         UseSubmitBehavior="false"
                         CausesValidation="false" />
 
-                    <!-- Optional: set NavigateUrl in code-behind if you want a direct open link -->
                     <asp:HyperLink ID="hlOpenNewTab" runat="server"
-                        CssClass="btn btn-outline-secondary fw-semibold flex-fill flex-sm-grow-0"
-                        Target="_blank" Visible="false" Text="Open in New Tab" />
+                        CssClass="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg border border-gray-300 shadow-sm transition w-full sm:w-auto text-center hidden"
+                        Target="_blank"
+                        Text="Open in New Tab" />
                 </div>
-            </asp:Panel>
+            </div>
+        </asp:Panel>
 
-            <!-- Preview -->
-            <asp:Panel ID="pnlPreview" runat="server" Visible="false" CssClass="mt-2">
-                <h5 class="text-success fw-semibold mb-2">📄 Contract Preview</h5>
+        <!-- Contract Preview Section -->
+        <asp:Panel ID="pnlPreview" runat="server" Visible="false">
+            <h3 class="text-lg md:text-xl font-semibold text-green-600 mb-3">
+                📄 Contract Preview
+            </h3>
 
-                <div class="pdf-wrap">
-                    <iframe id="pdfViewer" runat="server" class="pdf-frame" onerror="handlePDFError()"></iframe>
+            <!-- PDF Viewer Container -->
+            <div class="relative w-full h-[360px] md:h-[500px] lg:h-[650px] bg-gray-50 rounded-lg overflow-hidden shadow-inner">
+                <iframe id="pdfViewer" runat="server"
+                    class="w-full h-full bg-white"
+                    onerror="handlePDFError()"></iframe>
 
-                    <div id="fallbackMessage" class="pdf-fallback">
-                        <div>
-                            <h6 class="text-danger mb-2">⚠️ Unable to load PDF preview.</h6>
-                            <p class="mb-3">Please use the <strong>Download Contract</strong> button above to view your file.</p>
-                            <small class="text-muted d-block">Tip: Some mobile browsers block inline PDF preview.</small>
-                        </div>
-                    </div>
+                <!-- Fallback Message -->
+                <div id="fallbackMessage"
+                    class="absolute inset-0 hidden flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 p-4 text-center">
+                    <h4 class="text-red-600 font-semibold mb-2">⚠️ Unable to load PDF preview</h4>
+                    <p class="text-gray-700 mb-3">
+                        Please use the <strong>Download Contract</strong> button above to view your file.
+                    </p>
+                    <small class="text-gray-500 block">
+                        Tip: Some mobile browsers block inline PDF preview.
+                    </small>
                 </div>
-            </asp:Panel>
-        </div>
+            </div>
+        </asp:Panel>
     </div>
 
+    <!-- JavaScript for PDF Error Handling -->
     <script type="text/javascript">
         function handlePDFError() {
-            var frame = document.getElementById("pdfViewer");
-            var fallback = document.getElementById("fallbackMessage");
+            const frame = document.getElementById("pdfViewer");
+            const fallback = document.getElementById("fallbackMessage");
             if (frame) frame.style.display = "none";
-            if (fallback) fallback.style.display = "flex";
+            if (fallback) fallback.classList.remove("hidden");
         }
     </script>
 </asp:Content>
-    

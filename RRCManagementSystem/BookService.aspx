@@ -1,252 +1,174 @@
 ﻿<%@ Page Title="Book Service" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="BookService.aspx.cs" Inherits="RRCManagementSystem.BookService" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <style>
-        /* Fluid headings and spacing for all screen sizes */
-        .page-title {
-            font-weight: 700;
-            color: #0d6efd; /* Bootstrap primary */
-            font-size: clamp(1.25rem, 3.2vw, 1.75rem);
-            line-height: 1.2;
-        }
-        .page-wrap {
-            padding-top: clamp(0.75rem, 2vw, 1.25rem);
-            padding-bottom: clamp(0.75rem, 2vw, 1.5rem);
-        }
-
-        /* Card polish */
-        .booking-card {
-            border: none;
-            border-radius: 1rem;
-            box-shadow: 0 8px 20px rgba(0,0,0,.06);
-        }
-
-        /* Labels styled like read-only inputs for consistency */
-        .readonly-field {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: .5rem;
-            padding: .6rem .9rem;
-            min-height: 44px; /* comfy tap target */
-            display: block;
-            width: 100%;
-        }
-
-        /* Buttons span full width on mobile, auto on larger screens */
-        .responsive-btn {
-            width: 100%;
-        }
-        @media (min-width: 576px) {
-            .responsive-btn { width: auto; }
-        }
-
-        /* Textarea mobile comfort */
-        textarea.form-control {
-            min-height: 90px;
-        }
-
-        /* Respect reduced motion */
-        @media (prefers-reduced-motion: reduce) {
-            .modal,
-            .swal2-popup { transition: none !important; }
-        }
-    </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-    <div class="container page-wrap">
-        <div class="card booking-card mx-auto" style="max-width: 720px;">
-            <div class="card-body p-3 p-sm-4">
-                <h2 class="page-title text-center mb-3">📋 Confirm Your Booking</h2>
+    <div class="max-w-3xl mx-auto px-4 py-10">
+        <!-- Page Title -->
+        <h2 class="text-2xl md:text-3xl font-bold text-center text-blue-700 mb-6">
+            📋 Confirm Your Booking
+        </h2>
 
-                <asp:Label ID="lblMessage" runat="server" CssClass="text-success fw-semibold text-center d-block mb-3" />
+        <!-- Success Message -->
+        <asp:Label ID="lblMessage" runat="server"
+            CssClass="hidden text-green-600 text-center mb-4 font-medium" />
 
-                <asp:HiddenField ID="hfIsContract" runat="server" />
-                <asp:HiddenField ID="hfQuotationID" runat="server" />
+        <asp:HiddenField ID="hfIsContract" runat="server" />
+        <asp:HiddenField ID="hfQuotationID" runat="server" />
 
-                <div class="mb-3">
-    <label class="form-label">Quotation Code</label>
-    <asp:Label ID="lblQuotationCode" runat="server" CssClass="readonly-field" />
-</div>
+        <!-- Booking Card -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 space-y-5">
+            <!-- Quotation Code -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Quotation Code</label>
+                <asp:Label ID="lblQuotationCode" runat="server" 
+                    CssClass="block w-full rounded-lg bg-gray-50 border border-gray-200 px-4 py-2 text-gray-800" />
+            </div>
 
-                <!-- Services -->
-                <div class="mb-3">
-                    <label class="form-label">Service(s) to be Provided</label>
-                    <asp:Label ID="lblServices" runat="server" CssClass="readonly-field" />
+            <!-- Services -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Service(s) to be Provided</label>
+                <asp:Label ID="lblServices" runat="server"
+                    CssClass="block w-full rounded-lg bg-gray-50 border border-gray-200 px-4 py-2 text-gray-800" />
+            </div>
+
+            <!-- SQM -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Square Meters (SQM)</label>
+                <asp:Label ID="lblSQM" runat="server"
+                    CssClass="block w-full rounded-lg bg-gray-50 border border-gray-200 px-4 py-2 text-gray-800" />
+            </div>
+
+            <!-- Base Price -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Base Service Price (Based on SQM)</label>
+                <asp:Label ID="lblBasePrice" runat="server"
+                    CssClass="block w-full rounded-lg bg-gray-50 border border-gray-200 px-4 py-2 text-gray-800" />
+            </div>
+
+            <!-- Travel Expense -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Travel Expense</label>
+                <asp:Label ID="lblTravelExpense" runat="server"
+                    CssClass="block w-full rounded-lg bg-gray-50 border border-gray-200 px-4 py-2 text-gray-800" />
+            </div>
+
+            <!-- Miscellaneous -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Miscellaneous</label>
+                <asp:Label ID="lblMiscellaneous" runat="server"
+                    CssClass="block w-full rounded-lg bg-gray-50 border border-gray-200 px-4 py-2 text-gray-800" />
+            </div>
+
+            <!-- Total Price -->
+            <div>
+                <label class="block text-gray-700 font-semibold mb-1">Total Price</label>
+                <asp:Label ID="lblTotalPrice" runat="server"
+                    CssClass="block w-full rounded-lg bg-blue-50 border border-blue-200 px-4 py-2 text-blue-800 font-semibold" />
+            </div>
+
+            <!-- Preferred Schedule -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Preferred Schedule</label>
+                <asp:Label ID="lblSelectedDateTime" runat="server" Text="Not selected yet"
+                    CssClass="block w-full rounded-lg bg-gray-50 border border-gray-200 px-4 py-2 text-gray-800" />
+
+                <div class="mt-3">
+                    <button type="button" onclick="showDateTimeModal()"
+                        class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg transition">
+                        Select Date &amp; Time
+                    </button>
                 </div>
 
-                <!-- SQM -->
-                <div class="mb-3">
-                    <label class="form-label">Square Meters (SQM)</label>
-                    <asp:Label ID="lblSQM" runat="server" CssClass="readonly-field" />
-                </div>
+                <!-- Hidden fields for server -->
+                <asp:TextBox ID="txtDate" runat="server" CssClass="hidden" />
+                <asp:TextBox ID="txtTime" runat="server" CssClass="hidden" />
+            </div>
 
-               <div class="mb-3">
-    <label class="form-label">Base Service Price (Based on SQM)</label>
-    <asp:Label ID="lblBasePrice" runat="server" CssClass="readonly-field" />
-</div>
+            <!-- Additional Notes -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Additional Notes</label>
+                <asp:TextBox ID="txtNotes" runat="server" TextMode="MultiLine" Rows="3"
+                    CssClass="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring focus:ring-blue-200" />
+            </div>
 
-<!-- Travel Expense -->
-<div class="mb-3">
-    <label class="form-label">Travel Expense</label>
-    <asp:Label ID="lblTravelExpense" runat="server" CssClass="readonly-field" />
-</div>
+            <!-- Inspector -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Inspector Who Quoted</label>
+                <asp:Label ID="lblInspector" runat="server"
+                    CssClass="block w-full rounded-lg bg-gray-50 border border-gray-200 px-4 py-2 text-gray-800" />
+            </div>
 
-<!-- Miscellaneous -->
-<div class="mb-3">
-    <label class="form-label">Miscellaneous</label>
-    <asp:Label ID="lblMiscellaneous" runat="server" CssClass="readonly-field" />
-</div>
+            <!-- Submit Button -->
+            <asp:Button ID="btnBook" runat="server" Text="Book Now"
+                CssClass="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition"
+                OnClick="btnBook_Click" />
+        </div>
+    </div>
 
-<!-- Total Price -->
-<div class="mb-3">
-    <label class="form-label">Total Price</label>
-    <asp:Label ID="lblTotalPrice" runat="server" CssClass="readonly-field" />
-</div>
+    <!-- Date & Time Modal -->
+    <div class="hidden fixed inset-0 z-50 items-center justify-center bg-black/50 backdrop-blur-sm" id="dateTimeModal">
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
+            <h3 class="text-lg font-bold text-blue-700 mb-4">Select Preferred Schedule</h3>
 
-                <!-- Preferred Schedule -->
-                <div class="mb-3">
-                    <label class="form-label">Preferred Schedule</label>
-                    <asp:Label ID="lblSelectedDateTime" runat="server" CssClass="readonly-field" Text="Not selected yet" />
-                    <div class="mt-2 d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-primary responsive-btn" onclick="showDateTimeModal()">
-                            Select Date &amp; Time
-                        </button>
-                    </div>
-                    <!-- hidden fields actually posted -->
-                    <asp:TextBox ID="txtDate" runat="server" CssClass="d-none" />
-                    <asp:TextBox ID="txtTime" runat="server" CssClass="d-none" />
-                </div>
+            <!-- Date Picker -->
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-1">📅 Preferred Service Date</label>
+                <asp:TextBox ID="TextBox1" runat="server" TextMode="Date"
+                    CssClass="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring focus:ring-blue-200" />
+            </div>
 
-                <!-- Notes -->
-                <div class="mb-3">
-                    <label class="form-label">Additional Notes</label>
-                    <asp:TextBox ID="txtNotes" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="3" />
-                </div>
+            <!-- Time Picker -->
+            <div class="mb-4">
+                <label class="block text-gray-700 font-medium mb-1">⏰ Preferred Service Time</label>
+                <asp:TextBox ID="TextBox2" runat="server" TextMode="Time"
+                    CssClass="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring focus:ring-blue-200" />
+            </div>
 
-                <!-- Inspector -->
-                <div class="mb-4">
-                    <label class="form-label">Inspector Who Quoted</label>
-                    <asp:Label ID="lblInspector" runat="server" CssClass="readonly-field" />
-                </div>
-
-                <!-- Submit -->
-                <asp:Button ID="btnBook" runat="server" Text="Book Now" CssClass="btn btn-success w-100" OnClick="btnBook_Click" />
+            <!-- Modal Actions -->
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="hideDateTimeModal()"
+                    class="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition">
+                    Cancel
+                </button>
+                <button type="button" onclick="confirmDateTimeSave()"
+                    class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow transition">
+                    Save
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap Modal for Date & Time -->
-    <div class="modal fade" id="dateTimeModal" tabindex="-1" aria-labelledby="dateTimeModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="dateTimeModalLabel">Select Preferred Schedule</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">📅 Preferred Service Date</label>
-                        <asp:TextBox ID="TextBox1" runat="server" CssClass="form-control" TextMode="Date" />
-                    </div>
-                    <div class="mb-1">
-                        <label class="form-label">⏰ Preferred Service Time</label>
-                        <asp:TextBox ID="TextBox2" runat="server" CssClass="form-control" TextMode="Time" />
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-success" onclick="confirmDateTimeSave()">Save</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Page Scripts -->
     <script>
-        // Bootstrap modal instance
-        let dateTimeBsModal = null;
+        const modalEl = document.getElementById('dateTimeModal');
 
         function showDateTimeModal() {
-            const modalEl = document.getElementById('dateTimeModal');
-            if (!dateTimeBsModal) {
-                dateTimeBsModal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
-                // On each open, refresh limits and focus date
-                modalEl.addEventListener('shown.bs.modal', () => {
-                    setDateTimeLimits();
-                    const dateInput = document.getElementById('<%= TextBox1.ClientID %>');
-                    if (dateInput) dateInput.focus();
-                });
-            }
-            dateTimeBsModal.show();
+            modalEl.classList.remove('hidden', 'opacity-0');
+            modalEl.classList.add('flex');
         }
 
         function hideDateTimeModal() {
-            if (dateTimeBsModal) dateTimeBsModal.hide();
+            modalEl.classList.add('hidden');
+            modalEl.classList.remove('flex');
         }
 
-        // Set min/max for date + min for time when date is today
-        function setDateTimeLimits() {
-            const now = new Date();
-            const todayStr = now.toISOString().split("T")[0];
-
-            const modalDateInput = document.getElementById('<%= TextBox1.ClientID %>');
-            const modalTimeInput = document.getElementById('<%= TextBox2.ClientID %>');
-
-            if (!modalDateInput || !modalTimeInput) return;
-
-            // Min date = today
-            modalDateInput.setAttribute("min", todayStr);
-
-            // Max date = same day, 6 months ahead (adjust for end-of-month)
-            const maxDate = new Date(now);
-            const originalDay = maxDate.getDate();
-            maxDate.setMonth(maxDate.getMonth() + 6);
-            if (maxDate.getDate() !== originalDay) {
-                // Move to last day of previous month if overflowed
-                maxDate.setDate(0);
-            }
-            const maxDateStr = maxDate.toISOString().split("T")[0];
-            modalDateInput.setAttribute("max", maxDateStr);
-
-            // Min time if chosen date is today
-            function updateMinTime() {
-                const selectedStr = modalDateInput.value;
-                if (selectedStr === todayStr) {
-                    const hh = String(now.getHours()).padStart(2, '0');
-                    const mm = String(now.getMinutes()).padStart(2, '0');
-                    modalTimeInput.setAttribute("min", `${hh}:${mm}`);
-                } else {
-                    modalTimeInput.removeAttribute("min");
-                }
-            }
-
-            // Bind & trigger once
-            modalDateInput.removeEventListener("change", updateMinTime);
-            modalDateInput.addEventListener("change", updateMinTime);
-            updateMinTime();
-        }
-
+        // Apply selected date/time
         function applyDateTime() {
-            const modalDateInput = document.getElementById('<%= TextBox1.ClientID %>');
-            const modalTimeInput = document.getElementById('<%= TextBox2.ClientID %>');
+            const date = document.getElementById('<%= TextBox1.ClientID %>').value;
+            const time = document.getElementById('<%= TextBox2.ClientID %>').value;
             const label = document.getElementById('<%= lblSelectedDateTime.ClientID %>');
             const hiddenDate = document.getElementById('<%= txtDate.ClientID %>');
             const hiddenTime = document.getElementById('<%= txtTime.ClientID %>');
 
-            const selectedDate = modalDateInput?.value || "";
-            const selectedTime = modalTimeInput?.value || "";
-
-            if (selectedDate && selectedTime) {
-                // Nice readable format (YYYY-MM-DD HH:mm)
-                label.innerText = `${selectedDate} at ${selectedTime}`;
-                if (hiddenDate) hiddenDate.value = selectedDate;
-                if (hiddenTime) hiddenTime.value = selectedTime;
+            if (date && time) {
+                label.innerText = `${date} at ${time}`;
+                hiddenDate.value = date;
+                hiddenTime.value = time;
                 hideDateTimeModal();
             } else {
                 Swal.fire({
@@ -275,7 +197,7 @@
             });
         }
 
-        // Show SweetAlert if server set lblMessage
+        // Show SweetAlert if message exists
         window.addEventListener('load', function () {
             var msgLabel = document.getElementById('<%= lblMessage.ClientID %>');
             if (msgLabel && msgLabel.innerText.trim() !== "") {

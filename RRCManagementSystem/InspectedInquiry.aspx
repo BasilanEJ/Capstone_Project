@@ -167,12 +167,34 @@
                     </asp:TemplateField>
 
                
-                    <asp:TemplateField HeaderText="Address">
-                        <ItemTemplate>
-                            <%# Eval("StreetAndUnit") %>, <%# Eval("Barangay") %>, <%# Eval("City") %>, <%# Eval("Region") %>, <%# Eval("Country") %>
-                            <%# string.IsNullOrWhiteSpace(Eval("Landmark")?.ToString()) ? "" : " • (Landmark: " + Eval("Landmark") + ")" %>
-                        </ItemTemplate>
-                    </asp:TemplateField>
+                  <asp:TemplateField HeaderText="Address">
+    <ItemTemplate>
+        <%# 
+            (Eval("StreetAndUnit").ToString() + ", " + Eval("Barangay") + ", " + Eval("City") + ", " +
+             Eval("Region") + ", " + Eval("Country") + 
+             (string.IsNullOrWhiteSpace(Eval("Landmark")?.ToString()) ? "" : " • (Landmark: " + Eval("Landmark") + ")"))
+             .Length > 50 
+            ? (Eval("StreetAndUnit").ToString() + ", " + Eval("Barangay") + ", " + Eval("City") + ", " +
+               Eval("Region") + ", " + Eval("Country") + 
+               (string.IsNullOrWhiteSpace(Eval("Landmark")?.ToString()) ? "" : " • (Landmark: " + Eval("Landmark") + ")"))
+               .Substring(0, 50) + "..."
+            : (Eval("StreetAndUnit").ToString() + ", " + Eval("Barangay") + ", " + Eval("City") + ", " +
+               Eval("Region") + ", " + Eval("Country") + 
+               (string.IsNullOrWhiteSpace(Eval("Landmark")?.ToString()) ? "" : " • (Landmark: " + Eval("Landmark") + ")"))
+        %>
+        <asp:LinkButton ID="lnkViewAddress" runat="server" 
+            CssClass="text-primary ms-1"
+            CommandName="viewAddress"
+            CommandArgument='<%# 
+                Eval("StreetAndUnit").ToString() + ", " + Eval("Barangay") + ", " + Eval("City") + ", " + 
+                Eval("Region") + ", " + Eval("Country") + 
+                (string.IsNullOrWhiteSpace(Eval("Landmark")?.ToString()) ? "" : " • (Landmark: " + Eval("Landmark") + ")") 
+            %>'>
+            See more
+        </asp:LinkButton>
+    </ItemTemplate>
+</asp:TemplateField>
+
 
                 
                     <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled"
@@ -196,12 +218,21 @@
                         </ItemTemplate>
                     </asp:TemplateField>
 
-            
-                    <asp:TemplateField HeaderText="Findings">
-                        <ItemTemplate>
-                            <%#: Eval("Findings") %>
-                        </ItemTemplate>
-                    </asp:TemplateField>
+            <asp:TemplateField HeaderText="Findings">
+    <ItemTemplate>
+        <%# Eval("Findings") != null && Eval("Findings").ToString().Length > 50 
+            ? Eval("Findings").ToString().Substring(0, 50) + "..." 
+            : Eval("Findings") %>
+
+        <asp:LinkButton ID="lnkViewFindings" runat="server" 
+            CssClass="text-primary ms-1"
+            CommandName="viewFindings"
+            CommandArgument='<%# Eval("Findings") %>'>
+            See more
+        </asp:LinkButton>
+    </ItemTemplate>
+</asp:TemplateField>
+
 
                    
                     <asp:TemplateField HeaderText="Action">

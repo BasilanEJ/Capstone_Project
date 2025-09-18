@@ -48,13 +48,12 @@ namespace RRCManagementSystem
                 dt = dv.ToTable();
             }
 
-            //lblCount.Text = dt.Rows.Count == 0 ? "" : $"{dt.Rows.Count} item(s)";
             pnlEmpty.Visible = dt.Rows.Count == 0;
 
             gvCompleted.DataSource = dt;
             gvCompleted.DataBind();
 
-            // Save to ViewState if needed
+            // Save to ViewState for reuse
             ViewState["CurrentData"] = dt;
         }
 
@@ -147,11 +146,9 @@ namespace RRCManagementSystem
                     }
                 }
 
-
                 return dt;
             }
         }
-
 
         #endregion
 
@@ -184,41 +181,60 @@ namespace RRCManagementSystem
 
         protected void gvCompleted_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (!string.Equals(e.CommandName, "create", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(e.CommandName))
                 return;
 
-            if (!int.TryParse(e.CommandArgument?.ToString(), out int inspectionId))
+            // 🔹 Handle "See More" for Address
+            if (e.CommandName.Equals("viewAddress", StringComparison.OrdinalIgnoreCase))
+            {
+                string fullAddress = e.CommandArgument.ToString();
+                ScriptManager.RegisterStartupScript(this, GetType(), "ViewAddress",
+                    $"alert('Full Address:\\n\\n{fullAddress.Replace("'", "\\'")}');", true);
                 return;
+            }
 
-            var dt = LoadCompletedRows(inspectionId);
-            if (dt.Rows.Count == 0) return;
+            // 🔹 Handle "See More" for Findings
+            if (e.CommandName.Equals("viewFindings", StringComparison.OrdinalIgnoreCase))
+            {
+                string findings = e.CommandArgument.ToString();
+                ScriptManager.RegisterStartupScript(this, GetType(), "ViewFindings",
+                    $"alert('Full Findings:\\n\\n{findings.Replace("'", "\\'")}');", true);
+                return;
+            }
 
-            DataRow r = dt.Rows[0];
+            // 🔹 Handle "Create Client"
+            if (e.CommandName.Equals("create", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!int.TryParse(e.CommandArgument?.ToString(), out int inspectionId))
+                    return;
 
-            // existing prefill…
-            Session["Prefill_LastName"] = Safe(r["LastName"]);
-            Session["Prefill_FirstName"] = Safe(r["FirstName"]);
-            Session["Prefill_MiddleName"] = Safe(r["MiddleName"]);
-            Session["Prefill_Email"] = Safe(r["Email"]);
-            Session["Prefill_Contact"] = Safe(r["ContactNumber"]);
-            Session["Prefill_Street"] = Safe(r["StreetAndUnit"]);
-            Session["Prefill_Barangay"] = Safe(r["Barangay"]);
-            Session["Prefill_City"] = Safe(r["City"]);
-            Session["Prefill_Region"] = Safe(r["Region"]);
-            Session["Prefill_Country"] = string.IsNullOrWhiteSpace(Safe(r["Country"])) ? "Philippines" : Safe(r["Country"]);
-            Session["Prefill_Landmark"] = Safe(r["Landmark"]);
+                var dt = LoadCompletedRows(inspectionId);
+                if (dt.Rows.Count == 0) return;
 
-            // 🔴 ADD THESE 3 LINES
-            Session["Prefill_InspectionID"] = Safe(r["InspectionID"]);
-            Session["Prefill_InquiryCode"] = r.Table.Columns.Contains("InquiryCode") ? Safe(r["InquiryCode"]) : "";
-            Session["Prefill_Findings"] = r.Table.Columns.Contains("Findings") ? Safe(r["Findings"]) : "";
+                DataRow r = dt.Rows[0];
 
-            Response.Redirect("~/CreateCustomerAccount.aspx?prefill=1", false);
-            Context.ApplicationInstance.CompleteRequest();
+                // Prefill session data for CreateCustomerAccount
+                Session["Prefill_LastName"] = Safe(r["LastName"]);
+                Session["Prefill_FirstName"] = Safe(r["FirstName"]);
+                Session["Prefill_MiddleName"] = Safe(r["MiddleName"]);
+                Session["Prefill_Email"] = Safe(r["Email"]);
+                Session["Prefill_Contact"] = Safe(r["ContactNumber"]);
+                Session["Prefill_Street"] = Safe(r["StreetAndUnit"]);
+                Session["Prefill_Barangay"] = Safe(r["Barangay"]);
+                Session["Prefill_City"] = Safe(r["City"]);
+                Session["Prefill_Region"] = Safe(r["Region"]);
+                Session["Prefill_Country"] = string.IsNullOrWhiteSpace(Safe(r["Country"])) ? "Philippines" : Safe(r["Country"]);
+                Session["Prefill_Landmark"] = Safe(r["Landmark"]);
+
+                // Include extra fields
+                Session["Prefill_InspectionID"] = Safe(r["InspectionID"]);
+                Session["Prefill_InquiryCode"] = r.Table.Columns.Contains("InquiryCode") ? Safe(r["InquiryCode"]) : "";
+                Session["Prefill_Findings"] = r.Table.Columns.Contains("Findings") ? Safe(r["Findings"]) : "";
+
+                Response.Redirect("~/CreateCustomerAccount.aspx?prefill=1", false);
+                Context.ApplicationInstance.CompleteRequest();
+            }
         }
-
-
-
 
         #endregion
 
@@ -264,7 +280,7 @@ namespace RRCManagementSystem
                         row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
                 }
 
-                // ✅ Rename decrypted columns to match old UI
+                // ✅ Rename decrypted columns
                 dt.Columns["EmailEnc"].ColumnName = "Email";
                 dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
                 dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
@@ -277,8 +293,6 @@ namespace RRCManagementSystem
                 return dt;
             }
         }
-
-
 
         private static string Safe(object v) =>
             (v == null || v == DBNull.Value) ? "" : v.ToString();

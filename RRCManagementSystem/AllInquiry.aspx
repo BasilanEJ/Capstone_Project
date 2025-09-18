@@ -46,7 +46,22 @@
 
         <asp:BoundField DataField="Email" HeaderText="Client Email" />
         <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" />
-        <asp:BoundField DataField="Message" HeaderText="Message" />
+       <asp:TemplateField HeaderText="Message">
+    <ItemTemplate>
+        <%# Eval("Message") != null && Eval("Message").ToString().Length > 50 
+            ? Eval("Message").ToString().Substring(0, 50) + "..." 
+            : Eval("Message") %>
+
+        <asp:LinkButton ID="lnkViewMessage" runat="server"
+            CssClass="text-primary ms-1"
+            CommandName="viewMessage"
+            CommandArgument='<%# Eval("Message") %>'
+            Visible='<%# Eval("Message") != null && Eval("Message").ToString().Length > 50 %>'>
+            See more
+        </asp:LinkButton>
+    </ItemTemplate>
+</asp:TemplateField>
+
 
         <asp:TemplateField HeaderText="Photo">
             <ItemTemplate>

@@ -275,7 +275,7 @@ namespace RRCManagementSystem
             {
                 string fromEmail = ConfigurationManager.AppSettings["emailFrom"] ?? "rrctermiteandpestcontrol@gmail.com";
                 string appPassword = ConfigurationManager.AppSettings["emailPassword"] ?? "";
-                string resetLink = $"https://localhost:44341/ResetPassword.aspx?type=client&token={token}";
+                string resetLink = $"https://rrcmngmnt.com/ResetPassword.aspx?type=client&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
                 string body = $@"<!DOCTYPE html><html><head><meta charset='UTF-8'>

@@ -8,175 +8,171 @@
     <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /></title>
 
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- Font Awesome -->
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome (for icons) -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
-
-    <!-- Mobile-first tweaks -->
-    <style>
-        :root { --rrc-primary: #0d6efd; }
-
-        /* Make dropdown click areas comfy on touch */
-        .navbar .nav-link, .dropdown-item { padding: .6rem .9rem; }
-
-        /* Ensure the bell/badge anchors layout properly */
-        .nav-notif { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
-        #notifBadge { position: absolute; top: 4px; right: 2px; }
-
-        /* Offcanvas menu width & look */
-        @media (max-width: 991.98px) { .offcanvas-end { width: 85%; max-width: 360px; } }
-
-        /* Main container spacing on small screens */
-        main.container { padding-left: 1rem; padding-right: 1rem; }
-
-        /* Footer sticks to bottom elegantly */
-        body { background-color: #f7f7f9; }
-        footer { margin-top: auto; }
-
-        /* Floating chat button with safe-area support */
-        .chat-fab {
-            position: fixed;
-            right: calc(20px + env(safe-area-inset-right));
-            bottom: calc(20px + env(safe-area-inset-bottom));
-            width: 56px; height: 56px; border-radius: 50%;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-size: 22px; z-index: 1050; box-shadow: 0 8px 18px rgba(0,0,0,.18);
-        }
-
-        /* Toast position (mobile bottom-right) */
-        .toast-container { position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 1080; }
-
-        /* Reduce motion for users who prefer it */
-        @media (prefers-reduced-motion: reduce) { .offcanvas, .toast { transition: none !important; } }
-
-        /* ===== Footer responsive links ===== */
-        .footer-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
-        .footer-links a { margin: 0 5px; }
-        .footer-links .divider { margin: 0 5px; color: #ffffff; }
-
-        /* Mobile: stack vertically & hide dividers */
-        @media (max-width: 576px) {
-            .footer-links { flex-direction: column; gap: 4px; }
-            .footer-links .divider { display: none; }
-        }
-    </style>
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head>
-<body class="d-flex flex-column min-vh-100">
-    <form id="form1" runat="server" class="flex-grow-1 d-flex flex-column">
 
-        <!-- NAVBAR (offcanvas on mobile) -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-            <div class="container-fluid">
-                <a class="navbar-brand d-flex align-items-center gap-2" href="Home.aspx">
-                    <i class="fas fa-cogs"></i> <span>RRC Client</span>
-                </a>
+<body class="flex flex-col min-h-screen bg-gray-50 text-gray-800">
+    <form id="form1" runat="server" class="flex flex-col flex-grow">
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-controls="mobileNav" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+        <!-- NAVBAR -->
+        <nav class="bg-blue-700 text-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between items-center h-16">
+                    <!-- Logo / Brand -->
+                    <a href="Home.aspx" class="flex items-center space-x-2 text-lg font-bold hover:text-blue-200">
+                        <i class="fas fa-cogs"></i>
+                        <span>RRC Client</span>
+                    </a>
 
-                <!-- Desktop nav -->
-                <div class="collapse navbar-collapse d-none d-lg-flex" id="navbarNav">
-                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
-                        <li class="nav-item">
-                            <a class="nav-link" href="Home.aspx"><i class="fas fa-home me-1"></i> Home</a>
-                        </li>
+                    <!-- Desktop Menu -->
+                    <div class="hidden md:flex space-x-6 items-center">
+                        <a href="Home.aspx" class="hover:text-blue-200 transition flex items-center">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
 
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle nav-notif" href="#" id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-bell"></i>
-                                <span id="notifBadge" class="badge rounded-pill bg-danger d-none">0</span>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end p-0 overflow-hidden" aria-labelledby="notifDropdown" style="min-width: 280px;">
-                                <li class="px-3 py-2">
-                                    <div id="notifList" style="max-height: 320px; overflow-y: auto;"></div>
-                                </li>
-                            </ul>
-                        </li>
+                        <!-- Notifications -->
+                        <div class="relative">
+                            <button type="button" onclick="toggleDropdown('notifDropdown')"
+                                class="relative hover:text-blue-200 transition">
+                                <i class="fas fa-bell text-xl"></i>
+                                <span id="notifBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full hidden">0</span>
+                            </button>
 
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle me-2"></i>
-                                <asp:Label ID="lblClientName" runat="server" Text="My Profile" CssClass="d-inline"></asp:Label>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                                <li><a class="dropdown-item" href="Profile.aspx"><i class="fas fa-user me-2"></i> My Profile</a></li>
-                                <li><a class="dropdown-item" href="../Logout.aspx"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Offcanvas (mobile) -->
-                <div class="offcanvas offcanvas-end bg-primary text-white d-lg-none" tabindex="-1" id="mobileNav" aria-labelledby="mobileNavLabel">
-                    <div class="offcanvas-header">
-                        <h5 class="offcanvas-title d-flex align-items-center gap-2" id="mobileNavLabel">
-                            <i class="fas fa-cogs"></i> RRC Client
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-                    </div>
-                    <div class="offcanvas-body p-0">
-                        <ul class="navbar-nav">
-                            <li class="nav-item">
-                                <a class="nav-link text-white px-3 py-2" href="Home.aspx"><i class="fas fa-home me-2"></i> Home</a>
-                            </li>
-                            <li><hr class="dropdown-divider bg-light opacity-50"></li>
-                            <li class="nav-item px-3 py-2">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <span><i class="fas fa-bell me-2"></i> Notifications</span>
-                                    <span id="notifBadgeMobile" class="badge rounded-pill bg-danger d-none">0</span>
+                            <!-- Notification dropdown -->
+                            <div id="notifDropdown" class="hidden absolute right-0 mt-2 w-72 bg-white text-gray-800 rounded-lg shadow-lg overflow-hidden z-50">
+                                <div id="notifList" class="max-h-80 overflow-y-auto p-3 text-sm">
+                                    <!-- Notifications will be loaded here -->
+                                    <p class="text-center text-gray-500">No new notifications</p>
                                 </div>
-                                <div id="notifListMobile" class="mt-2 bg-white text-dark rounded-2 p-2" style="max-height: 280px; overflow-y: auto;"></div>
-                            </li>
-                            <li><hr class="dropdown-divider bg-light opacity-50"></li>
-                            <li class="nav-item">
-                                <a class="nav-link text-white px-3 py-2" href="Profile.aspx"><i class="fas fa-user me-2"></i> My Profile</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-white px-3 py-2" href="../Logout.aspx"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+                            </div>
+                        </div>
 
+                        <!-- Profile -->
+                        <div class="relative">
+                            <button type="button" onclick="toggleDropdown('profileDropdown')"
+                                class="flex items-center space-x-2 hover:text-blue-200 transition">
+                                <i class="fas fa-user-circle text-xl"></i>
+                                <asp:Label ID="lblClientName" runat="server" Text="My Profile"></asp:Label>
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </button>
+
+                            <!-- Profile Dropdown -->
+                            <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-40 bg-white text-gray-800 rounded-lg shadow-lg overflow-hidden z-50">
+                                <a href="Profile.aspx" class="block px-4 py-2 hover:bg-gray-100">
+                                    <i class="fas fa-user mr-2"></i> My Profile
+                                </a>
+                                <a href="../Logout.aspx" class="block px-4 py-2 hover:bg-gray-100">
+                                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Toggle Button -->
+                    <button type="button" class="md:hidden text-2xl" onclick="toggleMobileMenu()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Slide Over Menu -->
+            <div id="mobileMenu" class="fixed inset-0 bg-black/50 z-50 hidden">
+                <div class="absolute right-0 top-0 w-64 bg-blue-700 text-white h-full flex flex-col">
+                    <div class="flex justify-between items-center px-4 py-3 border-b border-blue-600">
+                        <span class="text-lg font-semibold flex items-center gap-2">
+                            <i class="fas fa-cogs"></i> RRC Client
+                        </span>
+                        <button type="button" onclick="toggleMobileMenu()" class="text-2xl hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <nav class="flex-1 p-4 space-y-3">
+                        <a href="Home.aspx" class="block px-3 py-2 rounded hover:bg-blue-600">
+                            <i class="fas fa-home mr-2"></i> Home
+                        </a>
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <span><i class="fas fa-bell mr-2"></i> Notifications</span>
+                                <span id="notifBadgeMobile" class="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full hidden">0</span>
+                            </div>
+                            <div id="notifListMobile" class="mt-2 bg-white text-gray-800 rounded p-2 max-h-72 overflow-y-auto text-sm">
+                                <!-- Notifications will load here -->
+                                <p class="text-center text-gray-500">No new notifications</p>
+                            </div>
+                        </div>
+                        <a href="Profile.aspx" class="block px-3 py-2 rounded hover:bg-blue-600">
+                            <i class="fas fa-user mr-2"></i> My Profile
+                        </a>
+                        <a href="../Logout.aspx" class="block px-3 py-2 rounded hover:bg-blue-600">
+                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                        </a>
+                    </nav>
+                </div>
             </div>
         </nav>
 
         <!-- MAIN CONTENT -->
-        <main class="container py-4 flex-grow-1">
+        <main class="flex-grow max-w-7xl mx-auto w-full px-4 py-6">
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </main>
+
     </form>
 
     <!-- FOOTER -->
-    <footer class="bg-primary text-white text-center py-3">
-        <div class="footer-links">
-             <a href="Home.aspx" class="text-white text-decoration-underline">Home</a>
-            <span class="divider">|</span>
-            <a href="AboutUs.aspx" class="text-white text-decoration-underline">About Us</a>
-            <span class="divider">|</span>
-            <a href="PrivacyPolicy.aspx" class="text-white text-decoration-underline">Privacy Policy</a>
+    <footer class="bg-blue-700 text-white text-center py-4 mt-auto">
+        <div class="flex flex-wrap justify-center space-x-3 text-sm">
+            <a href="Home.aspx" class="hover:underline">Home</a>
+            <span>|</span>
+            <a href="AboutUs.aspx" class="hover:underline">About Us</a>
+            <span>|</span>
+            <a href="PrivacyPolicy.aspx" class="hover:underline">Privacy Policy</a>
         </div>
-        <div class="mt-2">
-            &copy; <%= DateTime.Now.Year %> RRC Management System. All Rights Reserved.
-        </div>
+        <div class="mt-2 text-xs">&copy; <%= DateTime.Now.Year %> RRC Management System. All Rights Reserved.</div>
     </footer>
 
-    <!-- CHAT BUTTON -->
-    <!-- <a href="ChatWithAdmin.aspx" class="btn btn-primary chat-fab" aria-label="Open chat">
+    <!-- Floating Chat Button
+    <a href="ChatWithAdmin.aspx"
+       class="fixed bottom-5 right-5 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg w-14 h-14 flex items-center justify-center text-2xl z-50"
+       aria-label="Open chat">
         <i class="fab fa-facebook-messenger"></i>
     </a>  -->
 
-    <!-- Toast container -->
-    <div id="toastContainer" class="toast-container"></div>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 space-y-3 z-50"></div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+    <!-- Tailwind Scripts -->
     <script>
+        // Toggle dropdown menus
+        function toggleDropdown(id) {
+            document.querySelectorAll('[id$="Dropdown"]').forEach(drop => {
+                if (drop.id !== id) drop.classList.add('hidden');
+            });
+            const dropdown = document.getElementById(id);
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function (e) {
+            const dropdowns = document.querySelectorAll('[id$="Dropdown"]');
+            dropdowns.forEach(drop => {
+                if (!drop.contains(e.target) && !drop.previousElementSibling.contains(e.target)) {
+                    drop.classList.add('hidden');
+                }
+            });
+        });
+
+        // Mobile Menu
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
+        }
+
+        // ===== Notifications =====
         let lastNotifCount = 0;
 
         function refreshNotifications() {
@@ -189,84 +185,63 @@
                     const [notifCount, notifHtml] = data.split('|||');
                     const count = parseInt(notifCount || '0', 10);
 
-                    // Desktop dropdown content
+                    // Desktop
                     const list = document.getElementById('notifList');
-                    if (list) list.innerHTML = notifHtml || '';
+                    if (list) list.innerHTML = notifHtml || '<p class="text-center text-gray-500">No notifications</p>';
 
-                    // Mobile panel content
+                    // Mobile
                     const listMobile = document.getElementById('notifListMobile');
-                    if (listMobile) listMobile.innerHTML = notifHtml || '';
+                    if (listMobile) listMobile.innerHTML = notifHtml || '<p class="text-center text-gray-500">No notifications</p>';
 
-                    // Badges (desktop + mobile)
+                    // Badges
                     const badge = document.getElementById('notifBadge');
                     const badgeMobile = document.getElementById('notifBadgeMobile');
 
                     if (badge) {
-                        badge.classList.toggle('d-none', count <= 0);
+                        badge.classList.toggle('hidden', count <= 0);
                         badge.textContent = count;
                     }
                     if (badgeMobile) {
-                        badgeMobile.classList.toggle('d-none', count <= 0);
+                        badgeMobile.classList.toggle('hidden', count <= 0);
                         badgeMobile.textContent = count;
                     }
 
+                    // Toast for new notifications
                     if (count > lastNotifCount) showToast('🔔 You have a new notification!');
                     lastNotifCount = count;
                 })
                 .catch(error => console.error('Notification error:', error));
         }
 
+        // ===== Toast Notifications =====
         function showToast(message) {
             const container = document.getElementById('toastContainer');
-            const id = 't' + Date.now();
             const toast = document.createElement('div');
-            toast.className = 'toast align-items-center show';
-            toast.id = id;
-            toast.setAttribute('role', 'status');
-            toast.ariaLive = 'polite';
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body bg-dark text-white rounded-2">${message}</div>
-                </div>`;
+            toast.className = 'bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in';
+            toast.textContent = message;
+
             container.appendChild(toast);
+
             setTimeout(() => {
-                toast.classList.remove('show');
-                toast.addEventListener('transitionend', () => toast.remove(), { once: true });
-                // Fallback remove for reduce-motion
-                setTimeout(() => toast.remove(), 300);
+                toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+                toast.addEventListener('transitionend', () => toast.remove());
             }, 4000);
         }
 
-        function markNotificationsAsRead() {
-            fetch('GetNotifications.aspx?action=markread', { method: 'POST' })
-                .then(response => {
-                    if (response.ok) {
-                        const badge = document.getElementById('notifBadge');
-                        const badgeMobile = document.getElementById('notifBadgeMobile');
-                        if (badge) badge.classList.add('d-none');
-                        if (badgeMobile) badgeMobile.classList.add('d-none');
-                    }
-                })
-                .catch(error => console.error('Mark read error:', error));
-        }
-
-        // Mark as read when dropdown opens (desktop)
-        document.addEventListener('shown.bs.dropdown', (e) => {
-            if (e.target && e.target.id === 'notifDropdown') markNotificationsAsRead();
-        });
-
-        // Also mark as read when mobile offcanvas is opened (since list is visible there)
-        const mobileNav = document.getElementById('mobileNav');
-        if (mobileNav) {
-            mobileNav.addEventListener('shown.bs.offcanvas', () => {
-                // If user scrolls to notifications, we can mark immediately for simplicity
-                markNotificationsAsRead();
-            });
-        }
-
-        // Poll every 30s
+        // Poll every 30 seconds
         setInterval(refreshNotifications, 30000);
         window.addEventListener('load', refreshNotifications);
     </script>
+
+    <style>
+        /* Toast animation */
+        @keyframes fade-in {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out;
+        }
+    </style>
 </body>
 </html>
