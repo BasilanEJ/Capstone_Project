@@ -91,31 +91,28 @@ namespace RRCManagementSystem
                     while (reader.Read())
                     {
                         DateTime schedDate = Convert.ToDateTime(reader["ScheduledDate"]);
-
                         TimeSpan startTime = reader.IsDBNull(reader.GetOrdinal("StartTime"))
                             ? TimeSpan.Zero
                             : reader.GetTimeSpan(reader.GetOrdinal("StartTime"));
 
                         string time = DateTime.Today.Add(startTime).ToString("h:mm tt");
-
                         DayOfWeek day = schedDate.DayOfWeek;
-
                         string client = $"{reader["LastName"]}, {reader["FirstName"]}";
 
-                        // 🔹 Decrypt the address fields
+                        // Decrypt the address fields
                         string street = AESHelper.DecryptField(reader["StreetEnc"].ToString());
                         string barangay = AESHelper.DecryptField(reader["BarangayEnc"].ToString());
                         string city = AESHelper.DecryptField(reader["CityEnc"].ToString());
-
                         string address = $"{street}, {barangay}, {city}";
 
                         string groupName = reader["GroupName"] == DBNull.Value ? "Unassigned" : reader["GroupName"].ToString();
 
-                        string modalContent = $"{client}<br/>{time}<br/>{address}<br/><strong>Team:</strong> {groupName}"
-                            .Replace("'", "\\'");
+                        // Build the modal content string and handle single quotes
+                        string modalContent = $"{client}<br/>{time}<br/>{address}<br/><strong>Team:</strong> {groupName}".Replace("'", "\\'");
 
+                        // Corrected line: This is the complete, correct string for the clickable div.
                         string clickableDiv = $@"
-<div onclick=""showBookingDetails('{modalContent}')""
+<div onclick=""showBookingModal('{modalContent}')""
      style='cursor:pointer; padding:6px; border-radius:6px; transition:0.2s;'
      onmouseover=""this.style.backgroundColor='#e2e6ea'""
      onmouseout=""this.style.backgroundColor='transparent'"">
@@ -127,8 +124,6 @@ namespace RRCManagementSystem
 
                         calendarData[day].Add(clickableDiv);
                     }
-
-
                 }
             }
 

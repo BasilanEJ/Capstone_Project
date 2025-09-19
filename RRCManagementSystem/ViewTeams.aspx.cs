@@ -79,8 +79,7 @@ namespace RRCManagementSystem
             }
             else
             {
-                lblMessage.Text = "⚠️ Please select a valid date!";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                ShowMessage("⚠️ Please select a valid date!", "text-red-600");
             }
         }
 
@@ -101,6 +100,15 @@ namespace RRCManagementSystem
                         var dtTeams = new DataTable();
                         dtTeams.Load(reader);
 
+                        // If no teams are found, display a message and stop.
+                        if (dtTeams.Rows.Count == 0)
+                        {
+                            rptTeams.DataSource = null;
+                            rptTeams.DataBind();
+                            ShowMessage("No teams found for the selected date.", "text-gray-500");
+                            return;
+                        }
+
                         // RS2: Members
                         var dtMembers = new DataTable();
                         dtMembers.Load(reader);
@@ -111,7 +119,7 @@ namespace RRCManagementSystem
 
                         var assignedCounts = dtAssigned.AsEnumerable()
                             .ToDictionary(r => r.Field<int>("TeamID"),
-                                          r => r.Field<int>("AssignmentsCount"));
+                                            r => r.Field<int>("AssignmentsCount"));
 
                         // Project: add derived "Status" and attach members table
                         var teamsWithMembers = dtTeams.AsEnumerable()
@@ -121,26 +129,24 @@ namespace RRCManagementSystem
                                 GroupName = team.Field<string>("GroupName"),
                                 Status = (assignedCounts.ContainsKey(team.Field<int>("TeamID")) &&
                                           assignedCounts[team.Field<int>("TeamID")] >= 2)
-                                         ? "Unavailable"
-                                         : "Available",
+                                             ? "Unavailable"
+                                             : "Available",
                                 Employees = dtMembers.AsEnumerable()
                                     .Where(m => m.Field<int>("TeamID") == team.Field<int>("TeamID"))
-                                    .CopyToDataTableOrNull()
+                                    .CopyToDataTableOrNull() // Bind to a DataTable
                             })
                             .ToList();
 
                         rptTeams.DataSource = teamsWithMembers;
                         rptTeams.DataBind();
 
-                        lblMessage.Text = $"✅ Teams loaded for {targetDate:yyyy-MM-dd}.";
-                        lblMessage.ForeColor = System.Drawing.Color.Green;
+                        ShowMessage($"✅ Teams loaded for {targetDate:yyyy-MM-dd}.", "text-green-600");
                     }
                 }
             }
             catch (Exception ex)
             {
-                lblMessage.Text = $"❌ Error loading teams: {ex.Message}";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                ShowMessage($"❌ Error loading teams: {ex.Message}", "text-red-600");
             }
         }
 
@@ -164,6 +170,13 @@ namespace RRCManagementSystem
                     phNoMembers.Visible = true;
                 }
             }
+        }
+
+        private void ShowMessage(string message, string cssClass)
+        {
+            lblMessage.Text = message;
+            lblMessage.CssClass = $"block text-center text-xl font-bold mt-8 {cssClass}";
+            lblMessage.Visible = true;
         }
     }
 

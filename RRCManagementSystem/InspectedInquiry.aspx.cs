@@ -14,7 +14,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // ✅ Admin-only
+            // ✅ Admin-only access check
             if (Session["UserID"] == null || Session["Role"] == null ||
                 !string.Equals(Session["Role"].ToString(), "Admin", StringComparison.OrdinalIgnoreCase))
             {
@@ -26,18 +26,17 @@ namespace RRCManagementSystem
             {
                 ViewState["SortExpression"] = "ScheduledDate";
                 ViewState["SortDirection"] = "DESC";
-                gvCompleted.Columns[0].Visible = false;
+                gvCompleted.Columns[0].Visible = false; // Hide InspectionID column
                 BindCompleted();
             }
         }
 
         #region Data Binding
-
         private void BindCompleted()
         {
             var dt = GetCompletedData();
 
-            // Apply sorting based on ViewState
+            // Sorting based on ViewState
             string sortExp = (ViewState["SortExpression"] as string) ?? "ScheduledDate";
             string sortDir = (ViewState["SortDirection"] as string) ?? "DESC";
 
@@ -52,9 +51,9 @@ namespace RRCManagementSystem
 
             gvCompleted.DataSource = dt;
             gvCompleted.DataBind();
-
-            // Save to ViewState for reuse
             ViewState["CurrentData"] = dt;
+
+            lblCount.Text = $"Total: {dt.Rows.Count} record(s)";
         }
 
         private DataTable GetCompletedData()
@@ -66,22 +65,19 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
-                // ✅ Add FullName column dynamically
+                // Add FullName column if missing
                 if (!dt.Columns.Contains("FullName"))
                     dt.Columns.Add("FullName", typeof(string));
 
-                // ✅ Decrypt and rename columns
+                // Decrypt sensitive fields
                 foreach (DataRow row in dt.Rows)
                 {
-                    // Decrypt Email
                     if (row["EmailEnc"] != DBNull.Value)
                         row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
 
-                    // Decrypt Contact
                     if (row["ContactEnc"] != DBNull.Value)
                         row["ContactEnc"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
 
-                    // Decrypt Address
                     if (row["StreetEnc"] != DBNull.Value)
                         row["StreetEnc"] = AESHelper.DecryptField(row["StreetEnc"].ToString());
 
@@ -104,10 +100,10 @@ namespace RRCManagementSystem
                     string first = row["FirstName"]?.ToString() ?? "";
                     string middle = row["MiddleName"]?.ToString() ?? "";
                     string last = row["LastName"]?.ToString() ?? "";
-                    row["FullName"] = $"{last}, {first} {middle}".Replace("  ", " ").Trim();
+                    row["FullName"] = $"{last}, {first} {middle}".Trim();
                 }
 
-                // ✅ Rename columns to match old UI
+                // Rename decrypted columns to match UI
                 dt.Columns["EmailEnc"].ColumnName = "Email";
                 dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
                 dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
@@ -117,10 +113,11 @@ namespace RRCManagementSystem
                 dt.Columns["CountryEnc"].ColumnName = "Country";
                 dt.Columns["LandmarkEnc"].ColumnName = "Landmark";
 
-                // ✅ Add column to check if email exists
+                // Add HasAccount column if missing
                 if (!dt.Columns.Contains("HasAccount"))
                     dt.Columns.Add("HasAccount", typeof(bool));
 
+                // Check if client already has an account
                 using (var checkConn = new SqlConnection(_cs))
                 {
                     checkConn.Open();
@@ -129,9 +126,7 @@ namespace RRCManagementSystem
                         string email = row["Email"].ToString();
                         if (!string.IsNullOrWhiteSpace(email))
                         {
-                            // 🔹 Compute SHA-256 hash for search
                             string emailHash = AESHelper.ComputeSHA256WithPepper(email);
-
                             using (var cmd = new SqlCommand("SELECT COUNT(1) FROM Clients WHERE EmailHash = @EmailHash", checkConn))
                             {
                                 cmd.Parameters.AddWithValue("@EmailHash", emailHash);
@@ -149,11 +144,9 @@ namespace RRCManagementSystem
                 return dt;
             }
         }
-
         #endregion
 
         #region Grid Events
-
         protected void gvCompleted_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
             gvCompleted.PageIndex = e.NewPageIndex;
@@ -167,7 +160,6 @@ namespace RRCManagementSystem
 
             if (string.Equals(currentExp, e.SortExpression, StringComparison.OrdinalIgnoreCase))
             {
-                // toggle direction
                 ViewState["SortDirection"] = currentDir.Equals("ASC", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC";
             }
             else
@@ -181,33 +173,12 @@ namespace RRCManagementSystem
 
         protected void gvCompleted_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (string.IsNullOrEmpty(e.CommandName))
-                return;
-
-            // 🔹 Handle "See More" for Address
-            if (e.CommandName.Equals("viewAddress", StringComparison.OrdinalIgnoreCase))
-            {
-                string fullAddress = e.CommandArgument.ToString();
-                ScriptManager.RegisterStartupScript(this, GetType(), "ViewAddress",
-                    $"alert('Full Address:\\n\\n{fullAddress.Replace("'", "\\'")}');", true);
-                return;
-            }
-
-            // 🔹 Handle "See More" for Findings
-            if (e.CommandName.Equals("viewFindings", StringComparison.OrdinalIgnoreCase))
-            {
-                string findings = e.CommandArgument.ToString();
-                ScriptManager.RegisterStartupScript(this, GetType(), "ViewFindings",
-                    $"alert('Full Findings:\\n\\n{findings.Replace("'", "\\'")}');", true);
-                return;
-            }
-
-            // 🔹 Handle "Create Client"
             if (e.CommandName.Equals("create", StringComparison.OrdinalIgnoreCase))
             {
                 if (!int.TryParse(e.CommandArgument?.ToString(), out int inspectionId))
                     return;
 
+                // Load details for prefill
                 var dt = LoadCompletedRows(inspectionId);
                 if (dt.Rows.Count == 0) return;
 
@@ -226,7 +197,6 @@ namespace RRCManagementSystem
                 Session["Prefill_Country"] = string.IsNullOrWhiteSpace(Safe(r["Country"])) ? "Philippines" : Safe(r["Country"]);
                 Session["Prefill_Landmark"] = Safe(r["Landmark"]);
 
-                // Include extra fields
                 Session["Prefill_InspectionID"] = Safe(r["InspectionID"]);
                 Session["Prefill_InquiryCode"] = r.Table.Columns.Contains("InquiryCode") ? Safe(r["InquiryCode"]) : "";
                 Session["Prefill_Findings"] = r.Table.Columns.Contains("Findings") ? Safe(r["Findings"]) : "";
@@ -236,10 +206,75 @@ namespace RRCManagementSystem
             }
         }
 
+        protected void gvCompleted_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                var row = (DataRowView)e.Row.DataItem;
+
+                // === Address Handling ===
+                string street = row["StreetAndUnit"]?.ToString() ?? "";
+                string barangay = row["Barangay"]?.ToString() ?? "";
+                string city = row["City"]?.ToString() ?? "";
+                string region = row["Region"]?.ToString() ?? "";
+                string country = row["Country"]?.ToString() ?? "";
+                string landmark = row["Landmark"]?.ToString() ?? "";
+
+                // Build full address
+                string fullAddress = $"{street}, {barangay}, {city}, {region}, {country}";
+                if (!string.IsNullOrWhiteSpace(landmark))
+                    fullAddress += $" • (Landmark: {landmark})";
+
+                var litAddress = (Literal)e.Row.FindControl("litAddress");
+
+                // ✅ Use full address length instead of partial components
+                if (fullAddress.Length > 50)
+                {
+                    string preview = fullAddress.Substring(0, 50) + "...";
+                    litAddress.Text = $"{preview} <br/><a href='#' class='text-blue-500 hover:text-blue-700 font-semibold' " +
+                                      $"onclick='openModal(\"Full Address\", \"{fullAddress.Replace("\"", "&quot;")}\"); return false;'>See more</a>";
+                }
+                else
+                {
+                    litAddress.Text = fullAddress;
+                }
+
+                // === Findings Handling ===
+                string findings = row["Findings"]?.ToString() ?? "";
+                var litFindings = (Literal)e.Row.FindControl("litFindings");
+
+                if (findings.Length > 50)
+                {
+                    string preview = findings.Substring(0, 50) + "...";
+                    litFindings.Text = $"{preview} <br/><a href='#' class='text-blue-500 hover:text-blue-700 font-semibold' " +
+                                       $"onclick='openModal(\"Full Findings\", \"{findings.Replace("\"", "&quot;")}\"); return false;'>See more</a>";
+                }
+                else
+                {
+                    litFindings.Text = findings;
+                }
+
+                // === Action Button Styling ===
+                LinkButton btnCreate = (LinkButton)e.Row.FindControl("btnCreate");
+                bool hasAccount = row.Row.Table.Columns.Contains("HasAccount") && Convert.ToBoolean(row["HasAccount"]);
+
+                if (hasAccount)
+                {
+                    btnCreate.Text = "<i class='fa fa-check-circle mr-2'></i>Already Created";
+                    btnCreate.Enabled = false;
+                    btnCreate.CssClass = "inline-flex items-center bg-green-600 text-white font-semibold py-2 px-3 rounded-full opacity-80 cursor-not-allowed";
+                }
+                else
+                {
+                    btnCreate.Text = "<i class='fa fa-user-plus mr-2'></i>Create Client";
+                    btnCreate.Enabled = true;
+                    btnCreate.CssClass = "inline-flex items-center bg-blue-600 text-white font-semibold py-2 px-3 rounded-full hover:bg-blue-700 transition-colors";
+                }
+            }
+        }
         #endregion
 
         #region Helpers
-
         private DataTable LoadCompletedRows(int inspectionId)
         {
             using (var conn = new SqlConnection(_cs))
@@ -252,7 +287,7 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
-                // ✅ Decrypt encrypted fields
+                // Decrypt fields
                 foreach (DataRow row in dt.Rows)
                 {
                     if (row["EmailEnc"] != DBNull.Value)
@@ -280,7 +315,7 @@ namespace RRCManagementSystem
                         row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
                 }
 
-                // ✅ Rename decrypted columns
+                // Rename decrypted columns
                 dt.Columns["EmailEnc"].ColumnName = "Email";
                 dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
                 dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
@@ -296,7 +331,6 @@ namespace RRCManagementSystem
 
         private static string Safe(object v) =>
             (v == null || v == DBNull.Value) ? "" : v.ToString();
-
         #endregion
     }
 }

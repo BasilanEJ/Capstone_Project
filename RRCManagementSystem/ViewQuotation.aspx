@@ -3,79 +3,91 @@
     Inherits="RRCManagementSystem.ViewQuotation" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-  <style>
-    .inquiry-header { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #004085; }
-    .inquiry-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-    .inquiry-table th, .inquiry-table td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
-    .inquiry-table th { background-color: #e9ecef; color: #333; }
-    .filters-bar{ display:flex; justify-content:center; align-items:flex-end; gap:20px; margin:20px 0; flex-wrap:wrap; }
-    .filters-bar .form-group{ display:flex; flex-direction:column; min-width:200px }
-    .filters-bar label{ font-weight:600; margin-bottom:6px; color:#343a40; font-size:15px }
-    .filters-bar input, .filters-bar select{ padding:10px; font-size:15px; border-radius:6px; border:1px solid #ced4da; }
-    .btn-primary-sm{ background-color:#007bff;color:#fff;border:none;padding:9px 18px;font-size:15px;cursor:pointer;border-radius:6px; }
-    .btn-primary-sm:hover{ background-color:#0056b3; }
-    .btn-outline-sm{ background:#fff;color:#007bff;border:1px solid #007bff;padding:9px 18px;font-size:15px;cursor:pointer;border-radius:6px; }
-    .muted{color:#6c757d}
-    .badge-pill{display:inline-block;padding:3px 10px;border-radius:999px;background:#f8f9fa;border:1px solid #dee2e6;font-size:12px}
-  </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
-  <h2 class="inquiry-header">📑 View Quotations</h2>
-  <div class="filters-bar">
-    <div class="form-group">
-      <label for="<%= txtDateFrom.ClientID %>">Date From</label>
-      <asp:TextBox ID="txtDateFrom" runat="server" TextMode="Date" />
+    <style>
+        .table-grid {
+            border-collapse: collapse;
+        }
+
+        .table-grid th, .table-grid td {
+            border: 1px solid #e2e8f0; /* slato-200 */
+        }
+    </style>
+
+    <div class="container mx-auto p-4 md:p-8">
+        <h2 class="text-center text-3xl font-bold text-slate-900 mb-6">📑 View Quotations</h2>
+
+        <!-- Filters Bar -->
+        <div class="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-6 mb-8 p-4 bg-gray-50 rounded-lg shadow-sm">
+            <div class="flex flex-col flex-grow">
+                <label for="<%= txtDateFrom.ClientID %>" class="font-semibold text-slate-700 mb-1 text-sm">Date From</label>
+                <asp:TextBox ID="txtDateFrom" runat="server" TextMode="Date" CssClass="w-full px-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div class="flex flex-col flex-grow">
+                <label for="<%= txtDateTo.ClientID %>" class="font-semibold text-slate-700 mb-1 text-sm">Date To</label>
+                <asp:TextBox ID="txtDateTo" runat="server" TextMode="Date" CssClass="w-full px-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div class="flex flex-col flex-grow">
+                <label for="<%= ddlInspector.ClientID %>" class="font-semibold text-slate-700 mb-1 text-sm">Inspector</label>
+                <asp:DropDownList ID="ddlInspector" runat="server" CssClass="w-full px-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div class="flex flex-row gap-2 mt-auto">
+                <asp:Button ID="btnSearch" runat="server" CssClass="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm cursor-pointer hover:bg-blue-700 transition-colors" Text="Search" OnClick="btnSearch_Click" />
+                <asp:Button ID="btnReset" runat="server" CssClass="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded-lg font-bold text-sm cursor-pointer hover:bg-gray-100 transition-colors" Text="Reset" OnClick="btnReset_Click" />
+            </div>
+            <asp:Label ID="lblMessage" runat="server" CssClass="text-slate-500 text-sm mt-2 md:mt-0" />
+        </div>
+
+        <!-- Quotation Data -->
+        <div class="overflow-x-auto shadow-lg rounded-lg">
+            <asp:GridView ID="gvQuotations" runat="server"
+                AutoGenerateColumns="False"
+                CssClass="min-w-full bg-white table-auto rounded-lg table-grid"
+                DataKeyNames="PendingQuotationID"
+                AllowPaging="true" PageSize="10"
+                OnPageIndexChanging="gvQuotations_PageIndexChanging"
+                HeaderStyle-CssClass="bg-blue-600 text-white uppercase text-xs leading-normal font-bold"
+                RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-100 transition-colors">
+                <Columns>
+                    <asp:BoundField DataField="PendingQuotationID" HeaderText="Quote #" Visible="False" />
+                    <asp:BoundField DataField="QuotationCode" HeaderText="Quotation Code" HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center" />
+                    <asp:BoundField DataField="CreatedAt" HeaderText="Created" DataFormatString="{0:yyyy-MM-dd HH:mm}" HtmlEncode="false" HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center" />
+                    <asp:BoundField DataField="ClientName" HeaderText="Client" HeaderStyle-CssClass="py-3 px-6 text-left" ItemStyle-CssClass="py-3 px-6 text-left" />
+                    <asp:BoundField DataField="InspectorName" HeaderText="Inspector" HeaderStyle-CssClass="py-3 px-6 text-left" ItemStyle-CssClass="py-3 px-6 text-left" />
+                    <asp:BoundField DataField="ServiceNames" HeaderText="Services" HeaderStyle-CssClass="py-3 px-6 text-left" ItemStyle-CssClass="py-3 px-6 text-left" />
+                    <asp:BoundField DataField="SQM" HeaderText="SQM" HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center" />
+                    <asp:BoundField DataField="BasePrice" HeaderText="Base Price (₱)" DataFormatString="{0:N2}" HtmlEncode="false" HeaderStyle-CssClass="py-3 px-6 text-right" ItemStyle-CssClass="py-3 px-6 text-right" />
+                    <asp:BoundField DataField="TravelExpense" HeaderText="Travel Expense (₱)" DataFormatString="{0:N2}" HtmlEncode="false" HeaderStyle-CssClass="py-3 px-6 text-right" ItemStyle-CssClass="py-3 px-6 text-right" />
+                    <asp:BoundField DataField="Miscellaneous" HeaderText="Miscellaneous (₱)" DataFormatString="{0:N2}" HtmlEncode="false" HeaderStyle-CssClass="py-3 px-6 text-right" ItemStyle-CssClass="py-3 px-6 text-right" />
+                    <asp:BoundField DataField="Price" HeaderText="Total Price (₱)" DataFormatString="{0:N2}" HtmlEncode="false" HeaderStyle-CssClass="py-3 px-6 text-right" ItemStyle-CssClass="py-3 px-6 text-right font-bold text-green-700" />
+
+                    <asp:TemplateField HeaderText="Contract?">
+                        <ItemTemplate>
+                            <span class="inline-block px-2 py-1 text-xs font-semibold rounded-full border border-gray-300 text-slate-600">
+                                <%# Convert.ToBoolean(Eval("IsContract")) ? "Yes" : "No" %>
+                            </span>
+                        </ItemTemplate>
+                        <HeaderStyle CssClass="py-3 px-6 text-center" />
+                        <ItemStyle CssClass="py-3 px-6 text-center" />
+                    </asp:TemplateField>
+                    <asp:TemplateField HeaderText="Status">
+                        <ItemTemplate>
+                            <span class="inline-block px-2 py-1 text-xs font-semibold rounded-full border border-gray-300
+                                <%# Eval("Status").ToString() == "Converted" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700" %>">
+                                <%# Eval("Status") %>
+                            </span>
+                        </ItemTemplate>
+                        <HeaderStyle CssClass="py-3 px-6 text-center" />
+                        <ItemStyle CssClass="py-3 px-6 text-center" />
+                    </asp:TemplateField>
+                </Columns>
+                <EmptyDataTemplate>
+                    <div class="text-center text-slate-500 py-6">No quotations found for the selected filters.</div>
+                </EmptyDataTemplate>
+                <PagerStyle CssClass="bg-gray-100 text-blue-600 font-bold text-lg p-2" />
+            </asp:GridView>
+        </div>
     </div>
-    <div class="form-group">
-      <label for="<%= txtDateTo.ClientID %>">Date To</label>
-      <asp:TextBox ID="txtDateTo" runat="server" TextMode="Date" />             
-    </div>
-    <div class="form-group">
-      <label for="<%= ddlInspector.ClientID %>">Inspector</label>
-      <asp:DropDownList ID="ddlInspector" runat="server" />
-    </div>
-    <div class="form-group" style="flex-direction:row; gap:10px;">
-      <asp:Button ID="btnSearch" runat="server" CssClass="btn-primary-sm" Text="Search" OnClick="btnSearch_Click" />
-      <asp:Button ID="btnReset"  runat="server" CssClass="btn-outline-sm" Text="Reset" OnClick="btnReset_Click" />
-    </div>
-    <asp:Label ID="lblMessage" runat="server" CssClass="muted" />
-  </div>
-
-<asp:GridView ID="gvQuotations" runat="server"
-    AutoGenerateColumns="False"
-    CssClass="inquiry-table"
-    DataKeyNames="PendingQuotationID"
-    AllowPaging="true" PageSize="10"
-    OnPageIndexChanging="gvQuotations_PageIndexChanging">
-
-    <Columns>
-     <asp:BoundField DataField="PendingQuotationID" HeaderText="Quote #"   Visible="False"/>
-        <asp:BoundField DataField="QuotationCode" HeaderText="Quotation Code" />
-
-      <asp:BoundField DataField="CreatedAt" HeaderText="Created" DataFormatString="{0:yyyy-MM-dd HH:mm}" HtmlEncode="false" />
-      <asp:BoundField DataField="ClientName" HeaderText="Client" />
-      <asp:BoundField DataField="InspectorName" HeaderText="Inspector" />
-      <asp:BoundField DataField="ServiceNames" HeaderText="Services" />
-      <asp:BoundField DataField="SQM" HeaderText="SQM" />
-      <asp:BoundField DataField="BasePrice" HeaderText="Base Price (₱)" DataFormatString="{0:N2}" HtmlEncode="false" />
-      <asp:BoundField DataField="TravelExpense" HeaderText="Travel Expense (₱)" DataFormatString="{0:N2}" HtmlEncode="false" />
-      <asp:BoundField DataField="Miscellaneous" HeaderText="Miscellaneous (₱)" DataFormatString="{0:N2}" HtmlEncode="false" />
-      <asp:BoundField DataField="Price" HeaderText="Total Price (₱)" DataFormatString="{0:N2}" HtmlEncode="false" />
-
-      <asp:TemplateField HeaderText="Contract?">
-        <ItemTemplate>
-          <span class="badge-pill"><%# Convert.ToBoolean(Eval("IsContract")) ? "Yes" : "No" %></span>
-        </ItemTemplate>
-      </asp:TemplateField>
-      <asp:TemplateField HeaderText="Status">
-        <ItemTemplate>
-          <span class="badge-pill" style='<%# Eval("Status").ToString() == "Converted" ? "background-color:#28a745;color:white;" : "background-color:#ffc107;color:#212529;" %>'>
-            <%# Eval("Status") %>
-          </span>
-        </ItemTemplate>
-      </asp:TemplateField>
-    </Columns>
-    <EmptyDataTemplate>
-      <div class="muted">No quotations found for the selected filters.</div>
-    </EmptyDataTemplate>
-  </asp:GridView>
-</asp:Content>                                                                                                                          
+</asp:Content>

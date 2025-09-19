@@ -1,257 +1,216 @@
-﻿    <%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Admin.master.cs" Inherits="RRCManagementSystem.Admin" %>
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Admin.master.cs" Inherits="RRCManagementSystem.Admin" %>
 
-    <!DOCTYPE html>
-    <html lang="en">
-    <head runat="server">
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
-        <title><asp:ContentPlaceHolder ID="PageTitle" runat="server" /> | RRC Termite & Pest Control</title>
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
+    <title><asp:ContentPlaceHolder ID="PageTitle" runat="server" /> | RRC Termite & Pest Control</title>
 
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 
-        <style>
-            body { margin: 0; font-family: 'Arial', sans-serif; background-color: #f4f4f4; }
-            .header {
-                display: flex; align-items: center; justify-content: space-between;
-                background-color: #004085; color: white; padding: 15px 20px;
-                position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    <style>
+        :root {
+            --sidebar-width: 260px;
+        }
+
+        #content {
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(0);
+        }
+
+        @media (max-width: 1023px) {
+            #content {
+                margin-left: 0;
             }
-            .logo-container { display: flex; align-items: center; }
-            .logo {
-    height: 50px;
-    margin-right: 15px;
-    filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 6px #fff);
-    border-radius: 4px; /* optional, makes it softer */
-}
-
-            .header h1 { margin: 0; font-size: 20px; }
-            .sidebar {
-                position: fixed; top: 70px; left: 0; width: 260px; height: calc(100% - 70px);
-                background-color: #1f2937; color: white; overflow-y: auto;
-                transition: left 0.3s ease; padding-top: 20px;
+            #sidebar {
+                transform: translateX(-100%);
             }
-            .sidebar_menu { list-style: none; margin: 0; padding: 0; }
-            .sidebar_menu li { border-bottom: 1px solid #374151; }
-            .sidebar_menu li a {
-                display: flex; align-items: center; padding: 12px 20px;
-                color: white; text-decoration: none; transition: background-color 0.3s;
+            #sidebar.open {
+                transform: translateX(0);
             }
-            .sidebar_menu li a:hover { background-color: #4b5563; }
-            .sidebar_menu li a i { margin-right: 10px; }
-            .logout-button {
-                display: block; text-align: left; padding: 12px 20px;
-                color: white; background-color: #dc3545; border: none;
-                width: 100%; cursor: pointer; transition: background-color 0.3s;
-            }
-            .logout-button:hover { background-color: #c82333; }
-            .content { margin-left: 260px; margin-top: 70px; padding: 30px; transition: margin-left 0.3s ease; }
-            .burger-menu {
-                display: none; position: fixed; top: 15px; left: 20px; font-size: 24px;
-                color: white; background: none; border: none; cursor: pointer; z-index: 1001;
-            }
-            .chat-client-button {
-                color: #fff; padding: 8px 15px; border-radius: 4px;
-                text-decoration: none; font-weight: bold; display: flex;
-                align-items: center; gap: 8px;
-            }
-            .chat-client-button:hover { background-color: #e0a800; color: #fff; }
-            .chat-client-button i { font-size: 25px; }
-            .admin-info { color: #fff; display: flex; align-items: center; font-weight: 600; font-size: 14px; }
-            .admin-info i { margin-right: 6px; font-size: 18px; }
-            .admin-name-label { color: #fff; }
+        }
+    </style>
 
-            @media (max-width: 992px) {
-                .sidebar { left: -260px; }
-                .sidebar.open { left: 0; }
-                .burger-menu { display: block; }
-                .content { margin-left: 0; }
-            }
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+</head>
 
-            .sidebar_menu li a.active {
-    background-color: #2563eb; /* or any highlight color */
-    font-weight: bold;
-}
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <form id="form1" runat="server">
+        <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="false" />
 
-        </style>
+        <header class="bg-blue-800 text-white shadow-md fixed w-full top-0 left-0 z-50 px-4 py-3 flex items-center justify-between lg:justify-start">
+            <button id="burgerMenu" class="block lg:hidden text-2xl text-white mr-4 focus:outline-none">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="flex items-center flex-grow">
+                <img src="\images\logorrc.png" class="h-10 w-10 mr-4 rounded-lg shadow-sm" alt="RRC Logo" />
+                <h1 class="text-xl font-bold hidden md:block">Admin Dashboard</h1>
+            </div>
 
-        <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-    </head>
-
-    <body>
-        <form id="form1" runat="server">
-            <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="false" />
-            <!-- Header -->
-            <header class="header">
-                <div class="logo-container">
-                    <img src="\images\logorrc.png" class="logo" alt="RRC Logo" />
-
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center text-sm font-semibold">
+                    <i class="fas fa-user-circle text-lg mr-2"></i>
+                    <asp:Label ID="lblAdminName" runat="server" CssClass="text-white" />
                 </div>
+            </div>
+        </header>
 
-               <div style="display: flex; align-items: center; gap: 10px;">
-                <!--<a href="../ChatWithClient.aspx" class="chat-client-button" title="Chat with Clients"
-                   onclick="window.location.href=this.href; return false;">
-                    <i class="fab fa-facebook-messenger"></i>
-                </a>  -->
+        <div class="flex">
+            <nav id="sidebar" class="bg-gray-800 text-gray-300 fixed h-full top-16 z-40 overflow-y-auto">
+                <ul class="flex flex-col py-4">
+                    <%
+                        List<string> allowed = Session["AllowedModules"] as List<string>;
+                        string currentPath = Request.Url.AbsolutePath.ToLower();
+                        if (allowed != null)
+                        {
+                    %>
+                        <% if (allowed.Contains("Dashboard")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("dashboard.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/Dashboard.aspx") %>'>
+                                    <i class="fas fa-tachometer-alt mr-3"></i> Dashboard
+                                </a>
+                            </li>
+                        <% } %>
 
-                    <div class="admin-info">
-                        <i class="fas fa-user-circle"></i>
-                        <asp:Label ID="lblAdminName" runat="server" CssClass="admin-name-label" />
-                    </div>
-                    <button id="burgerMenu" class="burger-menu"><i class="fas fa-bars"></i></button>
+                        <% if (allowed.Contains("ManageBooking")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("managebooking.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageBooking.aspx") %>'>
+                                    <i class="fas fa-book mr-3"></i> Bookings
+                                </a>
+                            </li>
+                        <% } %>
+
+                        <% if (allowed.Contains("ManageClient")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageclient.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageClient.aspx") %>'>
+                                    <i class="fas fa-users mr-3"></i> Clients
+                                </a>
+                            </li>
+                        <% } %>
+                        
+                        <% if (allowed.Contains("Sales&Transaction")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("salesandtransactions.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'>
+                                    <i class="fas fa-receipt mr-3"></i> Sales & Transactions
+                                </a>
+                            </li>
+                        <% } %>
+
+                        <% if (allowed.Contains("ManageEmployees")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageemployee.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageEmployee.aspx") %>'>
+                                    <i class="fas fa-user-tie mr-3"></i> Manage Employees
+                                </a>
+                            </li>
+                        <% } %>
+
+                        <% if (allowed.Contains("ManageItem")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageitem.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageItem.aspx") %>'>
+                                    <i class="fas fa-boxes mr-3"></i> Manage Items
+                                </a>
+                            </li>
+                        <% } %>
+                        
+                        <% if (allowed.Contains("ManageEquipment")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageequipment.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageEquipment.aspx") %>'>
+                                    <i class="fas fa-tools mr-3"></i> Manage Equipment
+                                </a>
+                            </li>
+                        <% } %>
+
+                        <% if (allowed.Contains("ManageServices")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageservices.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageServices.aspx") %>'>
+                                    <i class="fas fa-bug mr-3"></i> Manage Services
+                                </a>
+                            </li>
+                        <% } %>
+                        
+                        <% if (allowed.Contains("ManageSupplier")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("managesupplier.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageSupplier.aspx") %>'>
+                                    <i class="fas fa-box mr-3"></i> Manage Supplier
+                                </a>
+                            </li>
+                        <% } %>
+                        
+                        <% if (allowed.Contains("AdminReports")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("adminreports.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/AdminReports.aspx") %>'>
+                                    <i class="fas fa-chart-bar mr-3"></i> Reports
+                                </a>
+                            </li>
+                        <% } %>
+                        
+                        <% if (allowed.Contains("ManageInquiry")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageinquiry.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'>
+                                    <i class="fas fa-file-alt mr-3"></i> Manage Inquiry
+                                </a>
+                            </li>
+                        <% } %>
+
+                        <% if (allowed.Contains("CreateCustomerAccount")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("createcustomeraccount.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
+                                    <i class="fas fa-user-plus mr-3"></i> Create Customer Account
+                                </a>
+                            </li>
+                        <% } %>
+
+                        <% if (allowed.Contains("AdminGuide")) { %>
+                            <li>
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("adminguide.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/AdminGuide.aspx") %>'>
+                                    <i class="fas fa-book-open mr-3"></i> Admin Guide
+                                </a>
+                            </li>
+                        <% } %>
+                    <%
+                        }
+                        else
+                        {
+                    %>
+                        <li class="py-3 px-6 text-red-500 font-semibold">
+                            <i class="fas fa-exclamation-triangle mr-2"></i> Session permissions not loaded
+                        </li>
+                    <%
+                        }
+                    %>
+                </ul>
+
+                <div class="p-4 mt-auto">
+                    <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="w-full text-left py-3 px-6 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </asp:LinkButton>
                 </div>
-            </header>
+            </nav>
 
-<!-- Sidebar -->
-<!-- Sidebar -->
-<nav class="sidebar">
-    <ul class="sidebar_menu">
-        <%
-            List<string> allowed = Session["AllowedModules"] as List<string>;
-            if (allowed != null)
-            {
-        %>
-            <% if (allowed.Contains("Dashboard")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("Dashboard.aspx") %>' href='<%= ResolveUrl("~/Dashboard.aspx") %>'>
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("ManageBooking")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageBooking.aspx") %>' href='<%= ResolveUrl("~/ManageBooking.aspx") %>'>
-                        <i class="fas fa-book"></i> Bookings
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("ManageClient")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageClient.aspx") %>' href='<%= ResolveUrl("~/ManageClient.aspx") %>'>
-                        <i class="fas fa-users"></i> Clients
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("Sales&Transaction")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("SalesAndTransactions.aspx") %>' href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'>
-                        <i class="fas fa-receipt"></i> Sales & Transactions
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("ManageEmployees")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageEmployee.aspx") %>' href='<%= ResolveUrl("~/ManageEmployee.aspx") %>'>
-                        <i class="fas fa-user-tie"></i> Manage Employees
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("ManageItem")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageItem.aspx") %>' href='<%= ResolveUrl("~/ManageItem.aspx") %>'>
-                        <i class="fas fa-boxes"></i> Manage Items
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("ManageEquipment")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageEquipment.aspx") %>' href='<%= ResolveUrl("~/ManageEquipment.aspx") %>'>
-                        <i class="fas fa-tools"></i> Manage Equipment
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("ManageServices")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageServices.aspx") %>' href='<%= ResolveUrl("~/ManageServices.aspx") %>'>
-                        <i class="fas fa-bug"></i> Manage Services
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("ManageSupplier")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageSupplier.aspx") %>' href='<%= ResolveUrl("~/ManageSupplier.aspx") %>'>
-                        <i class="fas fa-box"></i> Manage Supplier
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("AdminReports")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("AdminReports.aspx") %>' href='<%= ResolveUrl("~/AdminReports.aspx") %>'>
-                        <i class="fas fa-chart-bar"></i> Reports
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("ManageInquiry")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("ManageInquiry.aspx") %>' href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'>
-                        <i class="fas fa-file-alt"></i> Manage Inquiry
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("CreateCustomerAccount")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("CreateCustomerAccount.aspx") %>' href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
-                        <i class="fas fa-user-plus"></i> Create Customer Account
-                    </a>
-                </li>
-            <% } %>
-
-            <% if (allowed.Contains("AdminGuide")) { %>
-                <li>
-                    <a class='<%= GetActiveClass("AdminGuide.aspx") %>' href='<%= ResolveUrl("~/AdminGuide.aspx") %>'>
-                        <i class="fas fa-book-open"></i> Admin Guide
-                    </a>
-                </li>
-            <% } %>
-        <%
-            }
-            else
-            {
-        %>
-            <li style="color:red; padding:12px;">⚠ Session permissions not loaded</li>
-        <%
-            }
-        %>
-
-        <!-- Always visible Logout -->
-        <li>
-            <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="logout-button">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </asp:LinkButton>
-        </li>
-    </ul>
-</nav>
-
-
-
-
-            <!-- Main Content -->
-            <main class="content">
+            <main id="content" class="flex-1 p-8 pt-20 lg:pt-8 min-h-screen">
                 <asp:ContentPlaceHolder ID="MainContent" runat="server" />
             </main>
-        </form>
+        </div>
+    </form>
 
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                let burgerMenu = document.getElementById("burgerMenu");
-                let sidebar = document.querySelector(".sidebar");
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let burgerMenu = document.getElementById("burgerMenu");
+            let sidebar = document.getElementById("sidebar");
 
-                burgerMenu.addEventListener("click", function () {
-                    sidebar.classList.toggle("open");
-                });
+            burgerMenu.addEventListener("click", function () {
+                sidebar.classList.toggle("open");
             });
-        </script>
-    </body>
-    </html>
+        });
+    </script>
+</body>
+</html>

@@ -1,261 +1,177 @@
-﻿<%@ Page Title="Inspected Inquiries" Language="C#" MasterPageFile="~/Admin.Master" 
-    AutoEventWireup="true" CodeBehind="InspectedInquiry.aspx.cs" 
-    Inherits="RRCManagementSystem.InspectedInquiry" %>
+﻿<%@ Page Title="Inspected Inquiries" Language="C#" MasterPageFile="~/Admin.Master"
+AutoEventWireup="true" CodeBehind="InspectedInquiry.aspx.cs"
+Inherits="RRCManagementSystem.InspectedInquiry" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8fafc;
+    }
 
-    <style>
-        /* Page Title */
-        .inquiry-header {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            color: #004085;
-        }
+    .table-grid {
+        border-collapse: collapse;
+    }
 
-        /* Table styling */
-        .inquiry-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-        .inquiry-table th,
-        .inquiry-table td {
-            border: 1px solid #dee2e6;
-            padding: 10px;
-            vertical-align: middle;
-        }
-        .inquiry-table th {
-            background-color: #e9ecef;
-            color: #333;
-            font-weight: 600;
-            white-space: nowrap;
-            text-align: center;
-        }
-        .inquiry-table td {
-            text-align: left;
-        }
-        .inquiry-table tr:hover {
-            background-color: #f8f9fa;
-            transition: background 0.2s ease-in-out;
-        }
+    .table-grid th, .table-grid td {
+        border: 1px solid #e2e8f0; /* slate-200 */
+    }
 
-        /* Status Badges */
-        .badge-pill {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .badge-completed {
-            background-color: #28a745;
-            color: #fff;
-        }
-        .badge-pending {
-            background-color: #ffc107;
-            color: #212529;
-        }
+    /* === Modal Fade Animation === */
+    .modal-overlay {
+        transition: opacity 0.3s ease-in-out;
+    }
+    .modal-open {
+        opacity: 1 !important;
+        pointer-events: auto;
+    }
+    .modal-closed {
+        opacity: 0;
+        pointer-events: none;
+    }
+</style>
 
-        /* Action buttons */
-        .btn-primary-sm,
-        .btn-disabled-sm {
-            display: inline-block;
-            width: 130px;
-            text-align: center;
-            padding: 8px 0;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 6px;
-        }
-        .btn-primary-sm {
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-primary-sm:hover {
-            background-color: #0056b3;
-        }
-        .btn-disabled-sm {
-            background-color: #28a745;
-            color: #fff;
-            border: none;
-            cursor: default;
-        }
+<div class="container mx-auto p-4 md:p-8">
+    <h2 class="text-center text-3xl font-bold text-slate-900 mb-6">✅ Inspected Inquiries</h2>
 
-        /* Action column centering */
-        .inquiry-table td.action-cell {
-            text-align: center;
-            vertical-align: middle;
-            width: 160px;
-        }
-
-        /* Muted text for small details */
-        .muted {
-            color: #6c757d;
-            font-size: 14px;
-        }
-
-        /* Pager styling */
-        .gv-pager {
-            padding: 10px;
-            text-align: center;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-        }
-        .gv-pager a,
-        .gv-pager span {
-            margin: 0 3px;
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-weight: 600;
-            text-decoration: none;
-            font-size: 14px;
-        }
-        .gv-pager a {
-            color: #007bff;
-        }
-        .gv-pager span {
-            background: #007bff;
-            color: #fff;
-        }
-    </style>
-
-    <div class="container-fluid py-4">
-        <!-- Page Header -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="inquiry-header">✅ Inspected Inquiries (Completed w/ Findings)</h2>
-            <asp:Label ID="lblCount" runat="server" CssClass="text-muted"></asp:Label>
-        </div>
-
-        <!-- Empty State Panel -->
-        <asp:Panel ID="pnlEmpty" runat="server" Visible="false" CssClass="alert alert-info">
-            No completed inspections with findings yet.
-        </asp:Panel>
-
-        <!-- GridView -->
-        <div class="table-responsive">
-            <asp:GridView ID="gvCompleted" runat="server"
-                CssClass="inquiry-table"
-                AutoGenerateColumns="False"
-                DataKeyNames="InspectionID"
-                AllowPaging="True" PageSize="10"
-                AllowSorting="True"
-                OnRowCommand="gvCompleted_RowCommand"
-                OnPageIndexChanging="gvCompleted_PageIndexChanging"
-                OnSorting="gvCompleted_Sorting">
-
-                <Columns>
-                  
-                    <asp:BoundField DataField="InspectionID" HeaderText="Inspection #" Visible="False" />
-
-                  
-                    <asp:BoundField DataField="InquiryCode" HeaderText="Reference Code" SortExpression="InquiryCode">
-                        <ItemStyle CssClass="fw-bold text-primary text-center" />
-                    </asp:BoundField>
-
-                    <asp:TemplateField HeaderText="Client">
-                        <ItemTemplate>
-                            <div><strong><%# Eval("FullName") %></strong></div>
-                            <div class="muted"><%# Eval("Email") %></div>
-                            <div class="muted"><%# Eval("ContactNumber") %></div>
-                        </ItemTemplate>
-                    </asp:TemplateField>
-
-               
-                  <asp:TemplateField HeaderText="Address">
-    <ItemTemplate>
-        <%# 
-            (Eval("StreetAndUnit").ToString() + ", " + Eval("Barangay") + ", " + Eval("City") + ", " +
-             Eval("Region") + ", " + Eval("Country") + 
-             (string.IsNullOrWhiteSpace(Eval("Landmark")?.ToString()) ? "" : " • (Landmark: " + Eval("Landmark") + ")"))
-             .Length > 50 
-            ? (Eval("StreetAndUnit").ToString() + ", " + Eval("Barangay") + ", " + Eval("City") + ", " +
-               Eval("Region") + ", " + Eval("Country") + 
-               (string.IsNullOrWhiteSpace(Eval("Landmark")?.ToString()) ? "" : " • (Landmark: " + Eval("Landmark") + ")"))
-               .Substring(0, 50) + "..."
-            : (Eval("StreetAndUnit").ToString() + ", " + Eval("Barangay") + ", " + Eval("City") + ", " +
-               Eval("Region") + ", " + Eval("Country") + 
-               (string.IsNullOrWhiteSpace(Eval("Landmark")?.ToString()) ? "" : " • (Landmark: " + Eval("Landmark") + ")"))
-        %>
-        <asp:LinkButton ID="lnkViewAddress" runat="server" 
-            CssClass="text-primary ms-1"
-            CommandName="viewAddress"
-            CommandArgument='<%# 
-                Eval("StreetAndUnit").ToString() + ", " + Eval("Barangay") + ", " + Eval("City") + ", " + 
-                Eval("Region") + ", " + Eval("Country") + 
-                (string.IsNullOrWhiteSpace(Eval("Landmark")?.ToString()) ? "" : " • (Landmark: " + Eval("Landmark") + ")") 
-            %>'>
-            See more
-        </asp:LinkButton>
-    </ItemTemplate>
-</asp:TemplateField>
-
-
-                
-                    <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled"
-                        DataFormatString="{0:yyyy-MM-dd hh:mm tt}" HtmlEncode="false">
-                        <ItemStyle CssClass="text-center nowrap" />
-                    </asp:BoundField>
-
-                    
-                    <asp:TemplateField HeaderText="Status">
-                        <ItemStyle CssClass="text-center" />
-                        <ItemTemplate>
-                            <span class='<%# Eval("InspectionStatus").ToString() == "Completed" ? "badge-pill badge-completed" : "badge-pill badge-pending" %>'>
-                                <%# Eval("InspectionStatus") %>
-                            </span>
-                        </ItemTemplate>
-                    </asp:TemplateField>
-
-                    <asp:TemplateField HeaderText="Remarks">
-                        <ItemTemplate>
-                            (<%# Eval("Remarks") %>)
-                        </ItemTemplate>
-                    </asp:TemplateField>
-
-            <asp:TemplateField HeaderText="Findings">
-    <ItemTemplate>
-        <%# Eval("Findings") != null && Eval("Findings").ToString().Length > 50 
-            ? Eval("Findings").ToString().Substring(0, 50) + "..." 
-            : Eval("Findings") %>
-
-        <asp:LinkButton ID="lnkViewFindings" runat="server" 
-            CssClass="text-primary ms-1"
-            CommandName="viewFindings"
-            CommandArgument='<%# Eval("Findings") %>'>
-            See more
-        </asp:LinkButton>
-    </ItemTemplate>
-</asp:TemplateField>
-
-
-                   
-                    <asp:TemplateField HeaderText="Action">
-                        <ItemStyle CssClass="action-cell" />
-                        <ItemTemplate>
-                            <asp:LinkButton ID="btnCreate" runat="server"
-                                CssClass='<%# (bool)Eval("HasAccount") ? "btn-disabled-sm" : "btn-primary-sm" %>'
-                                CommandName="create"
-                                CommandArgument='<%# Eval("InspectionID") %>'
-                                Enabled='<%# !(bool)Eval("HasAccount") %>'>
-                                <%# (bool)Eval("HasAccount") ? "Already Created" : "Create Client" %>
-                            </asp:LinkButton>
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-
-                <EmptyDataTemplate>
-                    <div class="muted">No inspected inquiries found.</div>
-                </EmptyDataTemplate>
-
-                <PagerStyle CssClass="gv-pager" />
-            </asp:GridView>
-        </div>
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+        <h2 class="text-xl md:text-2xl font-bold text-slate-900 mb-2 md:mb-0">Completed with Findings</h2>
+        <asp:Label ID="lblCount" runat="server" CssClass="text-sm font-medium text-slate-500"></asp:Label>
     </div>
 
+    <asp:Panel ID="pnlEmpty" runat="server" Visible="false" CssClass="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded-lg relative text-center">
+        No completed inspections with findings yet.
+    </asp:Panel>
+
+    <div class="overflow-x-auto shadow-lg rounded-lg">
+        <asp:GridView ID="gvCompleted" runat="server"
+            CssClass="min-w-full bg-white table-auto rounded-lg table-grid"
+            AutoGenerateColumns="False"
+            DataKeyNames="InspectionID"
+            AllowPaging="True" PageSize="10"
+            AllowSorting="True"
+            OnRowCommand="gvCompleted_RowCommand"
+            OnPageIndexChanging="gvCompleted_PageIndexChanging"
+            OnSorting="gvCompleted_Sorting"
+            OnRowDataBound="gvCompleted_RowDataBound"
+            HeaderStyle-CssClass="bg-blue-600 text-white uppercase text-xs leading-normal font-bold"
+            RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-100 transition-colors">
+
+            <Columns>
+                <asp:BoundField DataField="InspectionID" HeaderText="Inspection #" Visible="False" />
+
+                <asp:BoundField DataField="InquiryCode" HeaderText="Reference Code" SortExpression="InquiryCode"
+                    HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center font-bold text-blue-600" />
+
+                <asp:TemplateField HeaderText="Client">
+                    <HeaderStyle CssClass="py-3 px-6 text-left" />
+                    <ItemStyle CssClass="py-3 px-6 text-left" />
+                    <ItemTemplate>
+                        <div class="font-bold text-slate-800"><%# Eval("FullName") %></div>
+                        <div class="text-sm text-slate-500"><%# Eval("Email") %></div>
+                        <div class="text-sm text-slate-500"><%# Eval("ContactNumber") %></div>
+                    </ItemTemplate>
+                </asp:TemplateField>
+
+                <asp:TemplateField HeaderText="Address">
+                    <HeaderStyle CssClass="py-3 px-6 text-left" />
+                    <ItemStyle CssClass="py-3 px-6 text-left" />
+                    <ItemTemplate>
+                        <asp:Literal ID="litAddress" runat="server"></asp:Literal>
+                    </ItemTemplate>
+                </asp:TemplateField>
+
+                <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled"
+                    DataFormatString="{0:yyyy-MM-dd hh:mm tt}" HtmlEncode="false"
+                    HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center text-sm text-slate-800" />
+
+                <asp:TemplateField HeaderText="Status">
+                    <HeaderStyle CssClass="py-3 px-6 text-center" />
+                    <ItemStyle CssClass="py-3 px-6 text-center" />
+                    <ItemTemplate>
+                        <span class='inline-block px-3 py-1 text-xs font-semibold rounded-full
+                            <%# Eval("InspectionStatus").ToString() == "Completed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700" %>'>
+                            <%# Eval("InspectionStatus") %>
+                        </span>
+                    </ItemTemplate>
+                </asp:TemplateField>
+
+                <asp:TemplateField HeaderText="Remarks">
+                    <HeaderStyle CssClass="py-3 px-6 text-left" />
+                    <ItemStyle CssClass="py-3 px-6 text-left text-sm text-slate-800" />
+                    <ItemTemplate>
+                        <%# Eval("Remarks") %>
+                    </ItemTemplate>
+                </asp:TemplateField>
+
+                <asp:TemplateField HeaderText="Findings">
+                    <HeaderStyle CssClass="py-3 px-6 text-left" />
+                    <ItemStyle CssClass="py-3 px-6 text-left text-sm text-slate-800" />
+                    <ItemTemplate>
+                        <asp:Literal ID="litFindings" runat="server"></asp:Literal>
+                    </ItemTemplate>
+                </asp:TemplateField>
+
+                <asp:TemplateField HeaderText="Action">
+                    <HeaderStyle CssClass="py-3 px-6 text-center" />
+                    <ItemStyle CssClass="py-3 px-6 text-center" />
+                    <ItemTemplate>
+                        <asp:LinkButton ID="btnCreate" runat="server"
+                            CommandName="create"
+                            CommandArgument='<%# Eval("InspectionID") %>'>
+                        </asp:LinkButton>
+                    </ItemTemplate>
+                </asp:TemplateField>
+            </Columns>
+            <EmptyDataTemplate>
+                <div class="text-center text-slate-500 py-6">No inspected inquiries found.</div>
+            </EmptyDataTemplate>
+
+            <PagerStyle CssClass="bg-gray-100 text-blue-600 font-bold text-lg p-2 text-center" />
+        </asp:GridView>
+    </div>
+</div>
+
+
+<div id="infoModal" class="modal-overlay fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center modal-closed">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full m-4 relative" onclick="event.stopPropagation();">
+        <div class="bg-blue-600 text-white p-4 flex items-center justify-between rounded-t-lg">
+            <h5 class="font-bold text-lg" id="infoModalLabel"></h5>
+            <button onclick="closeModal('infoModal')" class="text-white hover:text-gray-200 transition-colors" aria-label="Close">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+        <div class="p-6 text-slate-800" id="modal-content"></div>
+        <div class="bg-gray-100 p-4 flex justify-end rounded-b-lg">
+            <button onclick="closeModal('infoModal')" class="bg-gray-400 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500 transition-colors">Close</button>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    function openModal(title, content) {
+        const modal = document.getElementById('infoModal');
+        modal.querySelector('#infoModalLabel').innerText = title;
+        modal.querySelector('#modal-content').innerHTML = content;
+        modal.classList.remove('modal-closed');
+        modal.classList.add('modal-open');
+
+        // Close modal when clicking outside
+        modal.onclick = function () {
+            closeModal('infoModal');
+        };
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('modal-open');
+        modal.classList.add('modal-closed');
+    }
+</script>
 </asp:Content>

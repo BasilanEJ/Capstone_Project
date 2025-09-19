@@ -1,92 +1,51 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ManageInquiry.aspx.cs" Inherits="RRCManagementSystem.ManageInquiry" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+</asp:Content>
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f6fa;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
+    <div class="container mx-auto px-4 py-12">
+        <h2 class="text-3xl text-center mb-8 font-semibold text-gray-800">📨 Manage Inquiries</h2>
 
-        .page-title {
-            text-align: center;
-            font-size: 28px;
-            font-weight: 600;
-            color: #2c3e50;
-            margin: 30px 0 20px;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 10px;
-        }
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
 
-        .links-container {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 30px;
-            padding: 40px 20px;
-        }
+            <div class="w-full">
+                <a href="AllInquiry.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-list text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">All Inquiries</h5>
+                    </div>
+                </a>
+            </div>
 
-        .dash-card {
-            background-color: #ffffff;
-            border: 1px solid #dfe6ed;
-            border-radius: 12px;
-            width: 260px;
-            height: 180px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: #2c3e50;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
+            <div class="w-full">
+                <a href="CreateInquiry.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-plus-circle text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">Create Inquiry</h5>
+                    </div>
+                </a>
+            </div>
 
-        .dash-card:hover {
-            box-shadow: 0 4px 14px rgba(0,0,0,0.12);
-            transform: translateY(-5px);
-            background-color: #f9fbff;
-        }
+            <div class="w-full">
+                <a href="ViewQuotation.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-file-invoice text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">View Quotations</h5>
+                    </div>
+                </a>
+            </div>
 
-        .dash-card i {
-            font-size: 36px;
-            margin-bottom: 12px;
-            color: #2980b9;
-        }
+            <div class="w-full">
+                <a href="InspectedInquiry.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-clipboard-check text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">Inquiry Inspected</h5>
+                    </div>
+                </a>
+            </div>
 
-        .dash-card-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-    </style>
-
-   <h2 class="page-title">📨 Manage Inquiries</h2>
-
-<div class="links-container">
-    <a href="AllInquiry.aspx" class="dash-card">
-        <i class="fas fa-list"></i>
-        <div class="dash-card-title">All Inquiries</div>
-    </a>
-
-    <a href="CreateInquiry.aspx" class="dash-card">
-        <i class="fas fa-plus-circle"></i>
-        <div class="dash-card-title">Create Inquiry</div>
-    </a>
-
-    <a href="ViewQuotation.aspx" class="dash-card">
-        <i class="fas fa-file-invoice"></i>
-        <div class="dash-card-title">View Quotations</div>
-    </a>
-
-    <!-- ✅ New Card for Inquiry Inspected -->
-    <a href="InspectedInquiry.aspx" class="dash-card">
-        <i class="fas fa-clipboard-check"></i>
-        <div class="dash-card-title">Inquiry Inspected</div>
-    </a>
-</div>
-
+        </div>
+    </div>
 </asp:Content>

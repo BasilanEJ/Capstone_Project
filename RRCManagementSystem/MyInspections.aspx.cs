@@ -151,7 +151,7 @@ namespace RRCManagementSystem
             using (var cmd = new SqlCommand(@"
         SELECT ServiceID, Name, ServiceType 
         FROM Services 
-        WHERE Status = 'Active'
+        WHERE Status = 'Available'
         ORDER BY ServiceType ASC, Name ASC", conn))
             {
                 conn.Open();

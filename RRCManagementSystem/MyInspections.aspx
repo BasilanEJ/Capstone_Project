@@ -59,69 +59,91 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        function markDoneWithFindings(inspectionId) {
-            // Fetch the services list dynamically
-            fetch('MyInspections.aspx?getServices=1')
-                .then(response => response.json())
-                .then(services => {
-                    // Build dropdown options grouped by ServiceType
-                    let optionsHtml = '<select id="serviceDropdown" class="swal2-select" style="width:100%;">';
-                    optionsHtml += '<option value="">-- Select a service --</option>';
+<script>
+    function markDoneWithFindings(inspectionId) {
+        // Fetch all services dynamically
+        fetch('MyInspections.aspx?getServices=1')
+            .then(response => response.json())
+            .then(services => {
+                // Build grouped dropdown
+                let optionsHtml = `
+                    <select id="serviceDropdown" class="w-full p-2 rounded-md border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200 text-gray-700">
+                        <option value="">-- Select a service --</option>
+                `;
 
-                    let currentGroup = '';
-                    services.forEach(service => {
-                        if (service.ServiceType !== currentGroup) {
-                            if (currentGroup !== '') {
-                                optionsHtml += '</optgroup>'; // close previous group
-                            }
-                            currentGroup = service.ServiceType;
-                            optionsHtml += `<optgroup label="${currentGroup}">`;
+                let currentGroup = '';
+                services.forEach(service => {
+                    if (service.ServiceType !== currentGroup) {
+                        if (currentGroup !== '') {
+                            optionsHtml += '</optgroup>'; // close previous group
                         }
-                        optionsHtml += `<option value="${service.Name}">${service.Name}</option>`;
-                    });
-                    if (currentGroup !== '') {
-                        optionsHtml += '</optgroup>'; // close last group
+                        currentGroup = service.ServiceType;
+                        optionsHtml += `<optgroup label="${currentGroup}">`;
                     }
-                    optionsHtml += '</select>';
-
-                    Swal.fire({
-                        title: 'Mark as Done?',
-                        html: `
-                        <label style="font-weight:bold;">Describe your findings:</label>
-                        <textarea id="findingsInput" class="swal2-textarea" placeholder="Describe your findings..."></textarea>
-                        <br>
-                        <label style="font-weight:bold;">Select Service:</label>
-                        ${optionsHtml}
-                    `,
-                        focusConfirm: false,
-                        showCancelButton: true,
-                        confirmButtonColor: '#198754',
-                        cancelButtonColor: '#d33',
-                        confirmButtonText: 'Yes, Mark Done',
-                        preConfirm: () => {
-                            const findings = document.getElementById('findingsInput').value.trim();
-                            const serviceName = document.getElementById('serviceDropdown').value;
-
-                            if (!findings) {
-                                Swal.showValidationMessage('Findings are required.');
-                                return false;
-                            }
-                            if (!serviceName) {
-                                Swal.showValidationMessage('Please select a service.');
-                                return false;
-                            }
-
-                            return { findings, serviceName };
-                        }
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            const combinedText = `[Service: ${result.value.serviceName}] - ${result.value.findings}`;
-                            const encoded = encodeURIComponent(combinedText);
-                            window.location.href = `MyInspections.aspx?done=${inspectionId}&findings=${encoded}`;
-                        }
-                    });
+                    optionsHtml += `<option value="${service.Name}">${service.Name}</option>`;
                 });
-        }
-    </script>
+                if (currentGroup !== '') {
+                    optionsHtml += '</optgroup>'; // close last group
+                }
+                optionsHtml += '</select>';
+
+                // Build the SweetAlert modal
+                Swal.fire({
+                    title: '<span class="text-xl md:text-2xl font-bold text-gray-800">Mark as Done?</span>',
+                    html: `
+                        <div class="space-y-4 text-left">
+                            <!-- Findings Textarea -->
+                            <div>
+                                <label for="findingsInput" class="block text-sm font-semibold text-gray-700 mb-1">Describe your findings:</label>
+                                <textarea 
+                                    id="findingsInput" 
+                                    class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:ring focus:ring-blue-200 resize-none" 
+                                    placeholder="Describe your findings..." 
+                                    rows="4"></textarea>
+                            </div>
+
+                            <!-- Service Dropdown -->
+                            <div>
+                                <label for="serviceDropdown" class="block text-sm font-semibold text-gray-700 mb-1">Select Service:</label>
+                                ${optionsHtml}
+                            </div>
+                        </div>
+                    `,
+                    focusConfirm: false,
+                    showCancelButton: true,
+                    width: '95%', // Full width on mobile
+                    customClass: {
+                        popup: 'rounded-xl shadow-lg bg-white max-w-md w-full md:w-[500px]', // Responsive
+                        confirmButton: 'px-6 py-2 text-white font-semibold rounded-md bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300',
+                        cancelButton: 'px-6 py-2 text-white font-semibold rounded-md bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300'
+                    },
+                    confirmButtonText: '<i class="fas fa-check-circle mr-2"></i> Yes, Mark Done',
+                    cancelButtonText: '<i class="fas fa-times mr-2"></i> Cancel',
+                    preConfirm: () => {
+                        const findings = document.getElementById('findingsInput').value.trim();
+                        const serviceName = document.getElementById('serviceDropdown').value;
+
+                        if (!findings) {
+                            Swal.showValidationMessage('Findings are required.');
+                            return false;
+                        }
+                        if (!serviceName) {
+                            Swal.showValidationMessage('Please select a service.');
+                            return false;
+                        }
+
+                        return { findings, serviceName };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const combinedText = `[Service: ${result.value.serviceName}] - ${result.value.findings}`;
+                        const encoded = encodeURIComponent(combinedText);
+                        window.location.href = `MyInspections.aspx?done=${inspectionId}&findings=${encoded}`;
+                    }
+                });
+            });
+    }
+</script>
+
+
 </asp:Content>

@@ -1,87 +1,59 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="SalesAndTransactions.aspx.cs" Inherits="RRCManagementSystem.SalesAndTransactions" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- FontAwesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <!-- SweetAlert2 CSS is kept as a separate library -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
+</asp:Content>
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f6fa;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
+    <!-- Main container with Tailwind utilities for padding and centering -->
+    <div class="container mx-auto px-4 py-12">
+        <h2 class="text-3xl text-center mb-8 font-semibold text-gray-800">💰 Sales & Transactions</h2>
 
-        .page-title {
-            text-align: center;
-            font-size: 28px;
-            font-weight: 600;
-            color: #2c3e50;
-            margin: 30px 0 20px;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 10px;
-        }
+        <!-- Grid layout for cards with gap -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
 
-        .sales-links-container {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 20px;
-            padding: 30px 20px;
-        }
+            <!-- <a href="ViewSales.aspx" class="sales-card">
+                 <i class="fas fa-chart-line"></i>
+                 <div class="sales-card-title">View Sales Summary</div>
+             </a> -->
 
-        .sales-card {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            width: 280px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: #2c3e50;
-        }
+            <div class="w-full">
+                <a href="TransactionHistory.aspx" class="block">
+                    <!-- The card styling uses Tailwind classes. Note the blue color applied to the icon for consistency. -->
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-receipt text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">Transaction History</h5>
+                    </div>
+                </a>
+            </div>
 
-        .sales-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transform: translateY(-3px);
-            background-color: #f9fbff;
-        }
+            <div class="w-full">
+                <a href="ManagePayment.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-credit-card text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">Manage Payment</h5>
+                    </div>
+                </a>
+            </div>
 
-        .sales-card i {
-            font-size: 28px;
-            margin-bottom: 10px;
-            color: #27ae60;
-        }
+            <!-- New link converted to Tailwind CSS -->
+            <div class="w-full">
+                <a href="ViewPaymentBalance.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-wallet text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">View Payment Balances</h5>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
 
-        .sales-card-title {
-            font-size: 16px;
-            font-weight: 600;
-        }
-    </style>
-
-    <h2 class="page-title">💰 Sales & Transactions</h2>
-
-   <div class="sales-links-container">
-   <!--  <a href="ViewSales.aspx" class="sales-card">
-         <i class="fas fa-chart-line"></i>
-         <div class="sales-card-title">View Sales Summary</div>
-     </a> -->
-
-   <a href="TransactionHistory.aspx" class="sales-card">
-       <i class="fas fa-receipt"></i>
-       <div class="sales-card-title">Transaction History</div>
-   </a>
-
-   <a href="ManagePayment.aspx" class="sales-card">
-       <i class="fas fa-credit-card"></i>
-       <div class="sales-card-title">Manage Payment</div>
-   </a>
-
-   <!-- ✅ New link -->
-   <a href="ViewPaymentBalance.aspx" class="sales-card">
-       <i class="fas fa-wallet"></i>
-       <div class="sales-card-title">View Payment Balances</div>
-   </a>
-</div>
-
+    <!-- SweetAlert2 JS is kept as a separate library -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script>
+        // Your existing script for SweetAlert remains the same
+    </script>
 </asp:Content>

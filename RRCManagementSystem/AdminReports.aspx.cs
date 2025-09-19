@@ -9,7 +9,7 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
-using RRCManagementSystem.Helpers; // keep if you actually have PdfWatermark
+using RRCManagementSystem.Helpers;
 
 namespace RRCManagementSystem
 {
@@ -25,42 +25,57 @@ namespace RRCManagementSystem
                 txtToDate.Text = DateTime.Now.ToString("yyyy-MM-dd");
                 txtTeamDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
 
-                LoadReports();
-                LoadUserAccounts();
-                LoadTeamReports();
-                LoadSales(DateTime.Parse(txtFromDate.Text), DateTime.Parse(txtToDate.Text));
+                // Load all data on initial page load
+                LoadAllReportData();
+
+                // Set the initial active tab and panel
+                SetActiveTab("btnTabUsers");
+                pnlUsers.Visible = true;
             }
         }
 
         // ---------------------- UI actions ----------------------
+
+        protected void TabButton_Click(object sender, EventArgs e)
+        {
+            Button clickedButton = (Button)sender;
+            HideAllPanels();
+            SetActiveTab(clickedButton.ID);
+
+            // Re-load data for the specific panel that was clicked
+            LoadSpecificReport(clickedButton.ID);
+
+            AddAuditLog(Convert.ToInt32(Session["UserID"]), $"Switched to {clickedButton.Text} Report Tab");
+        }
+
         protected void btnFilter_Click(object sender, EventArgs e)
         {
-            LoadReports();
-            LoadTeamReports();
+            LoadAllReportData();
             AddAuditLog(Convert.ToInt32(Session["UserID"]), "Filtered Admin Reports");
         }
 
         protected void btnTeamDateApply_Click(object sender, EventArgs e)
         {
-            LoadTeamReports();
+            // Retrieve the dates from the text boxes
+            var from = DateTime.Parse(txtFromDate.Text).Date;
+            var to = DateTime.Parse(txtToDate.Text).Date;
+            var teamDate = DateTime.TryParse(txtTeamDate.Text, out var d) ? d.Date : DateTime.Today;
+
+            // Call the method with all required parameters
+            LoadTeamReports(from, to, teamDate);
+
             AddAuditLog(Convert.ToInt32(Session["UserID"]), "Applied Team Availability Date in Reports");
         }
 
         protected void btnExportPDF_Click(object sender, EventArgs e)
         {
-            // Refresh data so the export matches the current filters
-            LoadReports();
-            LoadTeamReports();
-
-            var doc = new iTextSharp.text.Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
+            LoadAllReportData(); // Refresh data to ensure all grids are up-to-date before export
+            
+            var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
             using (var ms = new MemoryStream())
             {
                 PdfWriter writer = PdfWriter.GetInstance(doc, ms);
-
-                // <<< attach watermark (drawn over content)
                 writer.PageEvent = new PdfWatermark();
-
-                // Optional encryption (same as you used before)
                 string userPassword = Session["Password"]?.ToString() ?? "default123";
                 writer.SetEncryption(
                     Encoding.UTF8.GetBytes(userPassword),
@@ -68,10 +83,8 @@ namespace RRCManagementSystem
                     PdfWriter.ALLOW_PRINTING,
                     PdfWriter.ENCRYPTION_AES_128
                 );
-
                 doc.Open();
 
-                // Add each grid as a new section/page
                 AddGridToPDF(doc, gvUserAccounts, "👤 User Accounts");
                 AddGridToPDF(doc, gvInquiries, "📬 Inquiries");
                 AddGridToPDF(doc, gvApprovedClients, "✅ Approved Clients");
@@ -83,10 +96,9 @@ namespace RRCManagementSystem
                 AddGridToPDF(doc, gvInspections, "🔍 Inspection Details");
                 AddGridToPDF(doc, gvTeamsSummary, "👥 Team Summary");
                 AddGridToPDF(doc, gvTeamMembers, "👨‍👩‍👧‍👦 Team Members");
-
+                
                 doc.Close();
 
-                // Return the file
                 Response.Clear();
                 Response.ContentType = "application/pdf";
                 Response.AddHeader("content-disposition", $"attachment;filename=All_Reports_{DateTime.Now:yyyyMMdd}.pdf");
@@ -96,68 +108,66 @@ namespace RRCManagementSystem
                 Response.SuppressContent = true;
                 HttpContext.Current.ApplicationInstance.CompleteRequest();
             }
-
             AddAuditLog(Convert.ToInt32(Session["UserID"]), "Exported All Reports to PDF");
         }
-
+        
         protected void btnExportTeamsSummary_Click(object sender, EventArgs e)
         {
-            if (gvTeamsSummary.Rows.Count > 0)
-                ExportGridViewToPDF(gvTeamsSummary, "Team_Summary_Report");
+            if (gvTeamsSummary.Rows.Count > 0) ExportGridViewToPDF(gvTeamsSummary, "Team_Summary_Report");
         }
-
+        
         protected void btnExportTeamMembers_Click(object sender, EventArgs e)
         {
-            if (gvTeamMembers.Rows.Count > 0)
-                ExportGridViewToPDF(gvTeamMembers, "Team_Members_Report");
+            if (gvTeamMembers.Rows.Count > 0) ExportGridViewToPDF(gvTeamMembers, "Team_Members_Report");
         }
-
+        
         protected void btnExportUsers_Click(object sender, EventArgs e)
         {
             if (gvUserAccounts.Rows.Count > 0) ExportGridViewToPDF(gvUserAccounts, "Users_Report");
         }
-
+        
         protected void btnExportSales_Click(object sender, EventArgs e)
         {
             if (gvSales.Rows.Count > 0) ExportGridViewToPDF(gvSales, "Sales_Report");
         }
-
+        
         protected void btnExportInquiries_Click(object sender, EventArgs e)
         {
             if (gvInquiries.Rows.Count > 0) ExportGridViewToPDF(gvInquiries, "Inquiry_Report");
         }
-
+        
         protected void btnExportClients_Click(object sender, EventArgs e)
         {
             if (gvApprovedClients.Rows.Count > 0) ExportGridViewToPDF(gvApprovedClients, "ApprovedClients_Report");
         }
-
+        
         protected void btnExportInventorySnapshots_Click(object sender, EventArgs e)
         {
             if (gvInventorySnapshots.Rows.Count > 0) ExportGridViewToPDF(gvInventorySnapshots, "InventorySnapshots_Report");
         }
-
+        
         protected void btnExportInventory_Click(object sender, EventArgs e)
         {
             if (gvInventory.Rows.Count > 0) ExportGridViewToPDF(gvInventory, "Inventory_Report");
         }
-
+        
         protected void btnExportEquipment_Click(object sender, EventArgs e)
         {
             if (gvEquipment.Rows.Count > 0) ExportGridViewToPDF(gvEquipment, "Equipment_Report");
         }
-
+        
         protected void btnExportBookings_Click(object sender, EventArgs e)
         {
             if (gvBookings.Rows.Count > 0) ExportGridViewToPDF(gvBookings, "Bookings_Report");
         }
-
+        
         protected void btnExportInspections_Click(object sender, EventArgs e)
         {
             if (gvInspections.Rows.Count > 0) ExportGridViewToPDF(gvInspections, "Inspections_Report");
         }
+        
+        // ---------------------- Panel and Tab Logic ----------------------
 
-        // Hide all panels
         private void HideAllPanels()
         {
             pnlUsers.Visible = false;
@@ -165,117 +175,43 @@ namespace RRCManagementSystem
             pnlClients.Visible = false;
             pnlInventorySnapshots.Visible = false;
             pnlInventory.Visible = false;
+            pnlEquipment.Visible = false;
             pnlSales.Visible = false;
             pnlBookings.Visible = false;
             pnlInspections.Visible = false;
             pnlTeams.Visible = false;
-            pnlEquipment.Visible = false; // <-- make sure this is included
-        }
-
-        // User Accounts Tab
-        protected void btnTabUsers_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlUsers.Visible = true;
-            SetActiveTab("btnTabUsers");
-        }
-
-        // Inquiries Tab
-        protected void btnTabInquiries_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlInquiries.Visible = true;
-            SetActiveTab("btnTabInquiries");
-        }
-
-        // Clients Tab
-        protected void btnTabClients_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlClients.Visible = true;
-            SetActiveTab("btnTabClients");
-        }
-
-        // Inventory Snapshots Tab
-        protected void btnTabInventorySnapshots_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlInventorySnapshots.Visible = true;
-            SetActiveTab("btnTabInventorySnapshots");
-        }
-
-        // Inventory Tab
-        protected void btnTabInventory_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlInventory.Visible = true;
-            SetActiveTab("btnTabInventory");
-        }
-
-        // Sales Tab
-        protected void btnTabSales_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlSales.Visible = true;
-            SetActiveTab("btnSales");
-        }
-
-        // Bookings Tab
-        protected void btnTabBookings_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlBookings.Visible = true;
-            SetActiveTab("btnTabBookings");
-        }
-
-        // Inspections Tab
-        protected void btnTabInspections_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlInspections.Visible = true;
-            SetActiveTab("btnTabInspections");
-        }
-
-        // Teams Tab
-        protected void btnTabTeams_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlTeams.Visible = true;
-            SetActiveTab("btnTabTeams");
-        }
-
-        // Equipment Tab (if you added it)
-        protected void btnTabEquipment_Click(object sender, EventArgs e)
-        {
-            HideAllPanels();
-            pnlEquipment.Visible = true;
-            SetActiveTab("btnTabEquipment");
         }
 
         private void SetActiveTab(string activeButtonID)
         {
-            // List all tab buttons
-            var buttons = new[] { btnTabUsers, btnTabInquiries, btnTabClients, btnTabInventorySnapshots, btnTabInventory, btnTabEquipment, btnTabSales, btnTabBookings, btnTabInspections, btnTabTeams };
+            btnTabUsers.CssClass = "folder-tab";
+            btnTabInquiries.CssClass = "folder-tab";
+            btnTabClients.CssClass = "folder-tab";
+            btnTabInventorySnapshots.CssClass = "folder-tab";
+            btnTabInventory.CssClass = "folder-tab";
+            btnTabEquipment.CssClass = "folder-tab";
+            btnTabSales.CssClass = "folder-tab";
+            btnTabBookings.CssClass = "folder-tab";
+            btnTabInspections.CssClass = "folder-tab";
+            btnTabTeams.CssClass = "folder-tab";
 
-            // Loop through each button and set CSS class
-            foreach (var btn in buttons)
+            Button activeButton = (Button)ReportsUpdatePanel.FindControl(activeButtonID);
+            if (activeButton != null)
             {
-                btn.CssClass = "tab-btn"; // default style
-                if (btn.ID == activeButtonID)
-                {
-                    btn.CssClass += " active"; // add active style
-                }
+                activeButton.CssClass += " active-tab";
             }
         }
+        
+        // ---------------------- Data Loaders ----------------------
 
-
-        // ---------------------- Loaders (SP-based) ----------------------
-        private void LoadReports()
+        private void LoadAllReportData()
         {
             var from = DateTime.Parse(txtFromDate.Text).Date;
             var to = DateTime.Parse(txtToDate.Text).Date;
+            var teamDate = DateTime.TryParse(txtTeamDate.Text, out var d) ? d.Date : DateTime.Today;
 
             LoadSummaryCounts(from, to);
+            LoadUserAccounts();
             LoadInquiries(from, to);
             LoadApprovedClients(from, to);
             LoadInventorySnapshots(from, to);
@@ -284,8 +220,59 @@ namespace RRCManagementSystem
             LoadBookings(from, to);
             LoadInspections(from, to);
             LoadSales(from, to);
+            LoadTeamReports(from, to, teamDate);
         }
 
+        private void LoadSpecificReport(string tabId)
+        {
+            var from = DateTime.Parse(txtFromDate.Text).Date;
+            var to = DateTime.Parse(txtToDate.Text).Date;
+
+            switch (tabId)
+            {
+                case "btnTabUsers":
+                    pnlUsers.Visible = true;
+                    LoadUserAccounts();
+                    break;
+                case "btnTabInquiries":
+                    pnlInquiries.Visible = true;
+                    LoadInquiries(from, to);
+                    break;
+                case "btnTabClients":
+                    pnlClients.Visible = true;
+                    LoadApprovedClients(from, to);
+                    break;
+                case "btnTabInventorySnapshots":
+                    pnlInventorySnapshots.Visible = true;
+                    LoadInventorySnapshots(from, to);
+                    break;
+                case "btnTabInventory":
+                    pnlInventory.Visible = true;
+                    LoadInventory();
+                    break;
+                case "btnTabEquipment":
+                    pnlEquipment.Visible = true;
+                    LoadEquipment();
+                    break;
+                case "btnTabSales":
+                    pnlSales.Visible = true;
+                    LoadSales(from, to);
+                    break;
+                case "btnTabBookings":
+                    pnlBookings.Visible = true;
+                    LoadBookings(from, to);
+                    break;
+                case "btnTabInspections":
+                    pnlInspections.Visible = true;
+                    LoadInspections(from, to);
+                    break;
+                case "btnTabTeams":
+                    pnlTeams.Visible = true;
+                    LoadTeamReports(from, to, DateTime.TryParse(txtTeamDate.Text, out var d) ? d.Date : DateTime.Today);
+                    break;
+            }
+        }
+        
         private void LoadSummaryCounts(DateTime from, DateTime to)
         {
             using (var con = new SqlConnection(cs))
@@ -294,7 +281,6 @@ namespace RRCManagementSystem
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add(new SqlParameter("@FromDate", SqlDbType.Date) { Value = from });
                 cmd.Parameters.Add(new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
-
                 con.Open();
                 using (var r = cmd.ExecuteReader())
                 {
@@ -312,23 +298,14 @@ namespace RRCManagementSystem
         private void LoadUserAccounts()
         {
             var dt = ExecToTable("dbo.spReports_UserAccounts");
-
-            // Decrypt emails in code before binding
             foreach (DataRow row in dt.Rows)
             {
                 if (row["Email"] != DBNull.Value)
                 {
-                    try
-                    {
-                        row["Email"] = AESHelper.DecryptEmail(row["Email"].ToString());
-                    }
-                    catch
-                    {
-                        row["Email"] = "[Decryption Error]";
-                    }
+                    try { row["Email"] = AESHelper.DecryptEmail(row["Email"].ToString()); }
+                    catch { row["Email"] = "[Decryption Error]"; }
                 }
             }
-
             gvUserAccounts.DataSource = dt;
             gvUserAccounts.DataBind();
         }
@@ -338,46 +315,28 @@ namespace RRCManagementSystem
             var dt = ExecToTable("dbo.spReports_Inquiries",
                 new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
                 new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
-
-            // 🔐 Decrypt sensitive data
             foreach (DataRow row in dt.Rows)
             {
-                // Email
                 if (row["EmailEnc"] != DBNull.Value)
                 {
-                    try
-                    {
-                        row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
-                    }
-                    catch
-                    {
-                        row["EmailEnc"] = "[Decryption Error]";
-                    }
+                    try { row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString()); }
+                    catch { row["EmailEnc"] = "[Decryption Error]"; }
                 }
-
-                // Contact
                 if (row["ContactEnc"] != DBNull.Value)
                 {
                     row["ContactEnc"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
                 }
-
-                // Address Parts
                 string street = row["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(row["StreetEnc"].ToString()) : "";
                 string barangay = row["BarangayEnc"] != DBNull.Value ? AESHelper.DecryptField(row["BarangayEnc"].ToString()) : "";
                 string city = row["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CityEnc"].ToString()) : "";
                 string region = row["RegionEnc"] != DBNull.Value ? AESHelper.DecryptField(row["RegionEnc"].ToString()) : "";
                 string country = row["CountryEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CountryEnc"].ToString()) : "";
                 string landmark = row["LandmarkEnc"] != DBNull.Value ? AESHelper.DecryptField(row["LandmarkEnc"].ToString()) : "";
-
-                // Combine into a single Address column
                 row["StreetEnc"] = $"{street}, {barangay}, {city}, {region}, {country}, {landmark}".Trim(',', ' ');
             }
-
-            // Rename columns for GridView display
             dt.Columns["EmailEnc"].ColumnName = "Email";
             dt.Columns["ContactEnc"].ColumnName = "Contact";
             dt.Columns["StreetEnc"].ColumnName = "Address";
-
             gvInquiries.DataSource = dt;
             gvInquiries.DataBind();
         }
@@ -387,36 +346,22 @@ namespace RRCManagementSystem
             var dt = ExecToTable("dbo.spReports_ApprovedClients",
                 new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
                 new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
-
-            // 🔐 Decrypt sensitive fields
             foreach (DataRow row in dt.Rows)
             {
-                // Email
                 if (row["EmailEnc"] != DBNull.Value)
                 {
-                    try
-                    {
-                        row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
-                    }
-                    catch
-                    {
-                        row["EmailEnc"] = "[Decryption Error]";
-                    }
+                    try { row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString()); }
+                    catch { row["EmailEnc"] = "[Decryption Error]"; }
                 }
-
-                // Address
                 string street = row["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(row["StreetEnc"].ToString()) : "";
                 string barangay = row["BarangayEnc"] != DBNull.Value ? AESHelper.DecryptField(row["BarangayEnc"].ToString()) : "";
                 string city = row["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CityEnc"].ToString()) : "";
                 string region = row["RegionEnc"] != DBNull.Value ? AESHelper.DecryptField(row["RegionEnc"].ToString()) : "";
                 string country = row["CountryEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CountryEnc"].ToString()) : "";
-
                 row["StreetEnc"] = $"{street}, {barangay}, {city}, {region}, {country}".Trim(',', ' ', '\t');
             }
-
             dt.Columns["EmailEnc"].ColumnName = "Email";
             dt.Columns["StreetEnc"].ColumnName = "Address";
-
             gvApprovedClients.DataSource = dt;
             gvApprovedClients.DataBind();
         }
@@ -438,17 +383,14 @@ namespace RRCManagementSystem
         private void LoadEquipment()
         {
             DateTime reportDate = DateTime.Today;
-
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("dbo.spReports_EquipmentAvailableOnDate", con))
             using (var da = new SqlDataAdapter(cmd))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@Date", reportDate);
-
                 var dt = new DataTable();
                 da.Fill(dt);
-
                 gvEquipment.DataSource = dt;
                 gvEquipment.DataBind();
             }
@@ -469,7 +411,6 @@ namespace RRCManagementSystem
             var dt = ExecToTable("dbo.spReports_Inspections",
                 new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
                 new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
-
             foreach (DataRow row in dt.Rows)
             {
                 string street = row["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(row["StreetEnc"].ToString()) : "";
@@ -477,12 +418,9 @@ namespace RRCManagementSystem
                 string city = row["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CityEnc"].ToString()) : "";
                 string region = row["RegionEnc"] != DBNull.Value ? AESHelper.DecryptField(row["RegionEnc"].ToString()) : "";
                 string country = row["CountryEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CountryEnc"].ToString()) : "";
-
                 row["StreetEnc"] = $"{street}, {barangay}, {city}, {region}, {country}".Trim(',', ' ');
             }
-
             dt.Columns["StreetEnc"].ColumnName = "ClientAddress";
-
             gvInspections.DataSource = dt;
             gvInspections.DataBind();
         }
@@ -492,29 +430,21 @@ namespace RRCManagementSystem
             var dt = ExecToTable("dbo.spReports_Sales",
                 new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
                 new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
-
             if (!dt.Columns.Contains("TransactionIDFormatted"))
                 dt.Columns.Add("TransactionIDFormatted", typeof(string));
-
             foreach (DataRow row in dt.Rows)
             {
                 row["TransactionIDFormatted"] = PrettyId("Transaction", row["TransactionID"]);
             }
-
             gvSales.DataSource = dt;
             gvSales.DataBind();
-
             decimal total = 0;
             foreach (DataRow row in dt.Rows) total += row.Field<decimal>("Amount");
             lblSalesSummary.Text = $"Total Sales: ₱{total:N2} ({dt.Rows.Count} transactions)";
         }
 
-        private void LoadTeamReports()
+        private void LoadTeamReports(DateTime from, DateTime to, DateTime teamDate)
         {
-            var from = DateTime.Parse(txtFromDate.Text).Date;
-            var to = DateTime.Parse(txtToDate.Text).Date;
-            var teamDate = DateTime.TryParse(txtTeamDate.Text, out var d) ? d.Date : DateTime.Today;
-
             LoadTeamsSummary(from, to, teamDate);
             LoadTeamMembers();
         }
@@ -533,8 +463,9 @@ namespace RRCManagementSystem
             gvTeamMembers.DataSource = ExecToTable("dbo.spReports_TeamMembers");
             gvTeamMembers.DataBind();
         }
-
+        
         // ---------------------- Helpers ----------------------
+
         private DataTable ExecToTable(string procName, params SqlParameter[] parameters)
         {
             var dt = new DataTable();
@@ -554,19 +485,16 @@ namespace RRCManagementSystem
         private void AddGridToPDF(Document doc, GridView grid, string title)
         {
             if (grid.Rows.Count == 0) return;
-
             doc.NewPage();
             doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
             doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
             doc.Add(new Paragraph(" "));
-
             int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
             PdfPTable table = new PdfPTable(visibleCols)
             {
                 WidthPercentage = 100,
                 SpacingBefore = 10f
             };
-
             if (grid.HeaderRow != null)
             {
                 foreach (TableCell hc in grid.HeaderRow.Cells)
@@ -581,17 +509,15 @@ namespace RRCManagementSystem
                     table.AddCell(headerCell);
                 }
             }
-
             foreach (GridViewRow row in grid.Rows)
             {
                 for (int c = 0; c < row.Cells.Count; c++)
                 {
                     string text = GetCellText(row.Cells[c]);
+                    int align = Element.ALIGN_LEFT;
                     string header = (grid.HeaderRow != null && c < grid.HeaderRow.Cells.Count)
                                     ? (grid.HeaderRow.Cells[c].Text ?? "").ToLower()
                                     : "";
-
-                    int align = Element.ALIGN_LEFT;
                     if (header.Contains("quantity") || header.Contains("price") || header.Contains("amount") ||
                         header.Contains("sqm") || header.Contains("ml"))
                         align = Element.ALIGN_RIGHT;
@@ -599,7 +525,6 @@ namespace RRCManagementSystem
                         align = Element.ALIGN_CENTER;
                     else if (int.TryParse(text, out _))
                         align = Element.ALIGN_CENTER;
-
                     PdfPCell bodyCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
                     {
                         HorizontalAlignment = align,
@@ -608,7 +533,6 @@ namespace RRCManagementSystem
                     table.AddCell(bodyCell);
                 }
             }
-
             doc.Add(table);
         }
 
@@ -650,16 +574,11 @@ namespace RRCManagementSystem
         private void ExportGridViewToPDF(GridView grid, string title)
         {
             if (grid.Rows.Count == 0) return;
-
-            var doc = new iTextSharp.text.Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
+            var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
             using (var ms = new MemoryStream())
             {
                 var writer = PdfWriter.GetInstance(doc, ms);
-
-                // <<< attach watermark (drawn over content)
                 writer.PageEvent = new PdfWatermark();
-
-                // Optional encryption
                 string userPassword = "default123";
                 writer.SetEncryption(
                     Encoding.UTF8.GetBytes(userPassword),
@@ -667,24 +586,20 @@ namespace RRCManagementSystem
                     PdfWriter.ALLOW_PRINTING,
                     PdfWriter.ENCRYPTION_AES_128
                 );
-
                 doc.Open();
-
                 doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
                 doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
                 doc.Add(new Paragraph(" "));
-
                 int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
                 var table = new PdfPTable(visibleCols) { WidthPercentage = 100, SpacingBefore = 10f };
-
                 if (grid.HeaderRow != null)
                 {
                     foreach (TableCell hc in grid.HeaderRow.Cells)
                     {
                         string headerText = HttpUtility.HtmlDecode(hc.Text ?? "").Trim();
                         var headerCell = new PdfPCell(new Phrase(
-                                headerText,
-                                FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
+                            headerText,
+                            FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
                         {
                             BackgroundColor = BaseColor.DARK_GRAY,
                             HorizontalAlignment = Element.ALIGN_CENTER,
@@ -693,13 +608,11 @@ namespace RRCManagementSystem
                         table.AddCell(headerCell);
                     }
                 }
-
                 foreach (GridViewRow row in grid.Rows)
                 {
                     for (int c = 0; c < row.Cells.Count; c++)
                     {
                         string text = GetCellText(row.Cells[c]);
-
                         int align = Element.ALIGN_LEFT;
                         string header = (grid.HeaderRow != null && c < grid.HeaderRow.Cells.Count)
                                         ? (grid.HeaderRow.Cells[c].Text ?? "").ToLower()
@@ -711,7 +624,6 @@ namespace RRCManagementSystem
                             align = Element.ALIGN_CENTER;
                         else if (int.TryParse(text, out _))
                             align = Element.ALIGN_CENTER;
-
                         var bodyCell = new PdfPCell(new Phrase(text, FontFactory.GetFont("Arial", 11)))
                         {
                             HorizontalAlignment = align,
@@ -720,10 +632,8 @@ namespace RRCManagementSystem
                         table.AddCell(bodyCell);
                     }
                 }
-
                 doc.Add(table);
                 doc.Close();
-
                 Response.Clear();
                 Response.ContentType = "application/pdf";
                 Response.AddHeader("content-disposition", $"attachment;filename={title.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf");
@@ -734,7 +644,7 @@ namespace RRCManagementSystem
                 HttpContext.Current.ApplicationInstance.CompleteRequest();
             }
         }
-
+        
         private void AddAuditLog(int adminId, string action)
         {
             try

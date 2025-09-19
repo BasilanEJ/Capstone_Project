@@ -1,201 +1,74 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AddEmployees.aspx.cs" Inherits="RRCManagementSystem.AddEmployees" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="container mx-auto py-10 px-4 flex justify-center items-start">
+        <div class="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
+            <h2 class="text-center text-3xl font-extrabold text-blue-800 mb-6">Add New Employee</h2>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f3f4f6;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-
-        .card {
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            padding: 20px;
-        }
-
-        .card-header {
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 20px;
-        }
-
-        .page-title {
-            font-size: 24px;
-            color: #333;
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            font-weight: bold;
-            margin-bottom: 8px;
-            display: block;
-            color: #333;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: #007bff;
-            outline: none;
-        }
-
-        .error-message {
-            color: #dc3545;
-            font-size: 14px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 20px;
-            background-color: #007bff;
-            color: #fff;
-            font-size: 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn:hover {
-            background-color: #0056b3;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        #imagePreview {
-            display: none;
-            width: 120px;
-            height: 120px;
-            margin: 10px auto;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 2px solid #ddd;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-
-            .page-title {
-                font-size: 20px;
-            }
-
-            .btn {
-                font-size: 14px;
-            }
-        }
-    </style>
-
-    <div class="container">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <h2 class="page-title">Add New Employee</h2>
+            <div class="mb-4">
+                <asp:Label ID="lblMessage" runat="server" CssClass="block text-center text-sm font-medium text-red-600" />
             </div>
 
-            <div class="card-body">
-                <asp:Label ID="lblMessage" runat="server" CssClass="error-message"></asp:Label>
+            <div class="mb-6 flex flex-col items-center">
+                <label for="<%= fuProfilePicture.ClientID %>" class="text-sm font-semibold text-gray-700 mb-2">Profile Picture (JPG, JPEG, PNG only)</label>
+                <img id="imagePreview" alt="Profile Preview" class="h-32 w-32 object-cover rounded-full mb-4 border-2 border-gray-300 hidden shadow-md" />
+                <asp:FileUpload ID="fuProfilePicture" runat="server" CssClass="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600 transition-colors" accept="image/*" onchange="validateFile(); previewImage(event);" />
+            </div>
 
-             <div class="form-group">
-    <label for="txtLastName">Last Name:</label>
-    <asp:TextBox ID="txtLastName" runat="server" CssClass="form-control" placeholder="Enter last name" required></asp:TextBox>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <label for="<%= txtLastName.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
+                    <asp:TextBox ID="txtLastName" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Enter last name" required oninput="this.value=this.value.replace(/[^a-zA-Z\s.-]/g,'')"></asp:TextBox>
+                </div>
+                <div>
+                    <label for="<%= txtFirstName.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
+                    <asp:TextBox ID="txtFirstName" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Enter first name" required oninput="this.value=this.value.replace(/[^a-zA-Z\s.-]/g,'')"></asp:TextBox>
+                </div>
+                <div>
+                    <label for="<%= txtMiddleName.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Middle Name <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <asp:TextBox ID="txtMiddleName" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Enter middle name" oninput="this.value=this.value.replace(/[^a-zA-Z\s.-]/g,'')"></asp:TextBox>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label for="<%= txtEmail.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                    <asp:TextBox ID="txtEmail" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" TextMode="Email" placeholder="Enter email address" required></asp:TextBox>
+                </div>
+                <div>
+                    <label for="<%= txtPhone.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                    <asp:TextBox ID="txtPhone" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Enter 11-digit Phone Number" required oninput="this.value=this.value.replace(/[^0-9]/g,'')"></asp:TextBox>
+                    <span id="phoneError" class="block text-xs text-red-500 mt-1 hidden"></span>
+                </div>
+            </div>
+<div class="mb-6">
+    <label for="<%= ddlPosition.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Position</label>
+    <asp:DropDownList ID="ddlPosition" runat="server" CssClass="block w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+        <asp:ListItem Text="Select Position" Value="" />
+        <asp:ListItem Text="IT" Value="IT" />
+        <asp:ListItem Text="Technician" Value="Technician" />
+        <asp:ListItem Text="Inspector" Value="Inspector" />
+    </asp:DropDownList>
 </div>
 
-<div class="form-group">
-    <label for="txtFirstName">First Name:</label>
-    <asp:TextBox ID="txtFirstName" runat="server" CssClass="form-control" placeholder="Enter first name" required></asp:TextBox>
-</div>
-
-<div class="form-group">
-    <label for="txtMiddleName">Middle Name <span class="text-muted">(optional)</span>:</label>
-    <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-control" placeholder="Enter middle name (optional)"></asp:TextBox>
-</div>
-
-
-                <div class="form-group">
-                    <label for="txtEmail">Email:</label>
-                    <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" placeholder="Enter email address" required></asp:TextBox>
-                </div>
-
-                <div class="form-group">
-                    <label for="txtPhone">Phone Number</label>
-                    <asp:TextBox ID="txtPhone" runat="server" CssClass="form-control"
-                        placeholder="Enter 11-digit Phone Number" required
-                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11)">
-                    </asp:TextBox>
-                    <small id="phoneError" style="color: red; display: none;">Phone number must start with 09 and be 11 digits long.</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="ddlPosition">Position:</label>
-                    <asp:DropDownList ID="ddlPosition" runat="server" CssClass="form-control">
-                        <asp:ListItem Text="Select Position" Value="" />
-                        <asp:ListItem Text="IT" Value="IT" />
-                        <asp:ListItem Text="Technician" Value="Technician" />
-                        <asp:ListItem Text="Inspector" Value="Inspector" />
-                    </asp:DropDownList>
-                </div>
-
-                <div class="form-group">
-                    <label for="fuProfilePicture">Profile Picture (JPG, JPEG, PNG only):</label>
-                    <asp:FileUpload ID="fuProfilePicture" runat="server" accept="image/*" onchange="validateFile(); previewImage(event);" />
-                    <img id="imagePreview" alt="Profile Preview" />
-                </div>
-
-                <!-- SweetAlert Confirm Button -->
-                <div class="form-group text-center">
-               <asp:Button ID="btnSubmit" runat="server" Text="Add Employee"
-    CssClass="btn"
-    OnClick="btnSubmit_Click"
-    OnClientClick="return showConfirm(this);" 
-    UseSubmitBehavior="false" />
-
-
-
-                </div>
+            <div class="text-center">
+                <asp:Button ID="btnSubmit" runat="server" Text="Add Employee"
+                    CssClass="w-full py-3 px-4 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                    OnClientClick="return showConfirm();" />
             </div>
         </div>
     </div>
 
-    <script>
+    <script type="text/javascript">
         // Profile Picture Validation
         function validateFile() {
             var fileInput = document.getElementById('<%= fuProfilePicture.ClientID %>');
             var filePath = fileInput.value;
             var allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
-
             if (!allowedExtensions.exec(filePath)) {
                 Swal.fire({
                     icon: 'error',
@@ -203,6 +76,7 @@
                     text: 'Only JPG, JPEG, and PNG files are allowed.'
                 });
                 fileInput.value = '';
+                document.getElementById('imagePreview').style.display = 'none';
                 return false;
             }
         }
@@ -222,9 +96,9 @@
         }
 
         // SweetAlert Confirmation before submit
-        function showConfirm(button) {
-            if (window.event) {
-                window.event.preventDefault();
+        function showConfirm() {
+            if (!validateForm()) {
+                return false;
             }
 
             Swal.fire({
@@ -232,43 +106,69 @@
                 text: 'Are you sure you want to add this employee?',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#007bff',
-                cancelButtonColor: '#d33',
+                confirmButtonColor: '#2563eb', // Tailwind's blue-600
+                cancelButtonColor: '#ef4444',  // Tailwind's red-500
                 confirmButtonText: 'Yes, add it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    button.disabled = true;
-                    // ✅ Explicitly trigger the correct ASP.NET postback
+                    // This will trigger the server-side OnClick event for the ASP.NET Button
                     __doPostBack('<%= btnSubmit.UniqueID %>', '');
-        }
-    });
-
+                }
+            });
             return false;
         }
 
+        // Client-side form validation
+        function validateForm() {
+            var lastName = document.getElementById('<%= txtLastName.ClientID %>').value;
+            var firstName = document.getElementById('<%= txtFirstName.ClientID %>').value;
+            var email = document.getElementById('<%= txtEmail.ClientID %>').value;
+            var phone = document.getElementById('<%= txtPhone.ClientID %>').value;
+            var position = document.getElementById('<%= ddlPosition.ClientID %>').value;
 
-    // Attach the event properly on page load
-    document.addEventListener("DOMContentLoaded", function () {
-        var btn = document.getElementById('<%= btnSubmit.ClientID %>');
-        btn.addEventListener('click', showConfirm);
-    });
+            // 1. Validate Required Name Fields (Last Name and First Name)
+            if (lastName.trim() === "" || firstName.trim() === "") {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Incomplete Form',
+                    text: 'Last Name and First Name are required fields.'
+                });
+                return false;
+            }
 
+            // 2. Validate Phone Number (exactly 11 digits)
+            var phonePattern = /^\d{11}$/;
+            var phoneError = document.getElementById("phoneError");
+            if (!phonePattern.test(phone)) {
+                phoneError.textContent = 'Phone number must be exactly 11 digits.';
+                phoneError.style.display = 'block';
+                return false;
+            } else {
+                phoneError.style.display = 'none';
+            }
 
-        // Phone Number Validation
-        document.addEventListener("DOMContentLoaded", function () {
-            var phoneInput = document.getElementById('<%= txtPhone.ClientID %>');
-            var errorLabel = document.getElementById("phoneError");
+            // 3. Validate Email (has @ and is a valid format, or is 'N/A')
+            var emailPattern = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+            if (email.toLowerCase() !== 'n/a' && !emailPattern.test(email)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Email',
+                    text: 'Please enter a valid email address or type "N/A".'
+                });
+                return false;
+            }
 
-            phoneInput.addEventListener("input", function () {
-                var phonePattern = /^09\d{9}$/;
+            // 4. Validate Position (is selected)
+            if (position === "") {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Incomplete Form',
+                    text: 'Please select an employee position.'
+                });
+                return false;
+            }
 
-                if (!phonePattern.test(phoneInput.value)) {
-                    errorLabel.style.display = "block";
-                } else {
-                    errorLabel.style.display = "none";
-                }
-            });
-        });
+            return true;
+        }
     </script>
-
 </asp:Content>

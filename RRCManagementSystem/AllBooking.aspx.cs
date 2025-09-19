@@ -187,14 +187,7 @@ namespace RRCManagementSystem
 
                 if (completedFlag == 1)
                 {
-                    string script = @"Swal.fire({
-                        icon: 'success',
-                        title: 'Marked Completed!',
-                        text: 'Operation 1 was successfully marked as completed.',
-                        showConfirmButton: false,
-                        timer: 2000
-                    });";
-                    ClientScript.RegisterStartupScript(this.GetType(), "CompleteSuccess", script, true);
+                    // The redirection in btnHiddenCompleteOp1_Click handles the SweetAlert.
                 }
                 else
                 {
@@ -222,38 +215,77 @@ namespace RRCManagementSystem
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
 
+            // Get status values from the DataItem
             string bookingStatus = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
-            int statusCol = 7;
-
-            if (bookingStatus == "Assigned") e.Row.Cells[statusCol].CssClass = "status-assigned";
-            else if (bookingStatus == "Pending") e.Row.Cells[statusCol].CssClass = "status-pending";
-            else if (bookingStatus == "Cancelled") e.Row.Cells[statusCol].CssClass = "status-cancelled";
-            else if (bookingStatus == "Completed") e.Row.Cells[statusCol].CssClass = "status-completed";
-            else if (bookingStatus == "Rejected") e.Row.Cells[statusCol].CssClass = "status-rejected";
-
+            string op1Status = DataBinder.Eval(e.Row.DataItem, "Op1Status")?.ToString();
             bool isContract = false;
             var isContractObj = DataBinder.Eval(e.Row.DataItem, "IsContract");
             if (isContractObj != null && isContractObj != DBNull.Value)
                 isContract = Convert.ToBoolean(isContractObj);
 
-            string op1Status = DataBinder.Eval(e.Row.DataItem, "Op1Status")?.ToString();
-
+            // Find controls within the row
             var lblOp1 = (Label)e.Row.FindControl("lblOp1Status");
             var btnOp1 = (Button)e.Row.FindControl("btnTriggerCompleteOp1");
             var btnEdit = (Button)e.Row.FindControl("btnEdit");
 
-            if (lblOp1 != null) lblOp1.Visible = isContract;
+            // 1. Apply status color styling to the Booking Status column
+            int statusCol = 7;
+            Label statusLabel = e.Row.Cells[statusCol].Controls.Count > 0 ? e.Row.Cells[statusCol].Controls[0] as Label : null;
+            if (statusLabel != null)
+            {
+                e.Row.Cells[statusCol].CssClass = "py-3 px-6 text-center font-semibold";
+                switch (bookingStatus?.ToLower())
+                {
+                    case "assigned":
+                        e.Row.Cells[statusCol].CssClass += " text-blue-500";
+                        break;
+                    case "pending":
+                    case "ongoing":
+                        e.Row.Cells[statusCol].CssClass += " text-yellow-500";
+                        break;
+                    case "cancelled":
+                    case "rejected":
+                        e.Row.Cells[statusCol].CssClass += " text-red-500";
+                        break;
+                    case "completed":
+                    case "confirmed":
+                    case "approved":
+                        e.Row.Cells[statusCol].CssClass += " text-green-500";
+                        break;
+                    default:
+                        // No extra styling
+                        break;
+                }
+            }
+
+            // 2. Hide/show Op1-related controls based on contract type
+            if (lblOp1 != null)
+            {
+                lblOp1.Visible = isContract;
+                // Apply color to Op1 status label
+                if (isContract && !string.IsNullOrEmpty(op1Status))
+                {
+                    if (string.Equals(op1Status, "Completed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        lblOp1.CssClass += " text-green-500";
+                    }
+                }
+            }
 
             if (btnOp1 != null)
                 btnOp1.Visible = isContract
-                                 && string.Equals(bookingStatus, "Assigned", StringComparison.OrdinalIgnoreCase)
-                                 && !string.Equals(op1Status, "Completed", StringComparison.OrdinalIgnoreCase);
+                               && string.Equals(bookingStatus, "Assigned", StringComparison.OrdinalIgnoreCase)
+                               && !string.Equals(op1Status, "Completed", StringComparison.OrdinalIgnoreCase);
 
-            // --- Permission check for Edit button ---
+            // 3. Permission check for Edit button
             int userId = Convert.ToInt32(Session["UserID"]);
             if (btnEdit != null)
             {
                 btnEdit.Enabled = HasEditPermission(userId, "ManageBooking");
+                if (!btnEdit.Enabled)
+                {
+                    btnEdit.CssClass += " opacity-50 cursor-not-allowed";
+                }
             }
         }
 

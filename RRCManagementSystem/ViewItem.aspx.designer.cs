@@ -15,13 +15,13 @@ namespace RRCManagementSystem
     {
 
         /// <summary>
-        /// lblMessage control.
+        /// divRestockNotice control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblMessage;
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl divRestockNotice;
 
         /// <summary>
         /// lblRestockNotice control.
@@ -51,21 +51,12 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.GridView gvItems;
 
         /// <summary>
-        /// hiddenItemId control.
+        /// lblMessage control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hiddenItemId;
-
-        /// <summary>
-        /// btnDeleteHidden control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnDeleteHidden;
+        protected global::System.Web.UI.WebControls.Label lblMessage;
     }
 }

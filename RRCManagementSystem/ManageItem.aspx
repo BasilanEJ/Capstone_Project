@@ -1,85 +1,49 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ManageItem.aspx.cs" Inherits="RRCManagementSystem.ManageItem" %>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
+</asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f6fa;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
+    <div class="container mx-auto px-4 py-12">
+        <h2 class="text-3xl text-center mb-8 font-semibold text-gray-800">📦 Manage Items</h2>
 
-        .page-title {
-            text-align: center;
-            font-size: 28px;
-            font-weight: 600;
-            color: #2c3e50;
-            margin: 30px 0 20px;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 10px;
-        }
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
 
-        .item-links-container {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 30px;
-            padding: 40px 20px;
-        }
+            <div class="w-full">
+                <a href="ViewItem.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-list text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">View Items</h5>
+                    </div>
+                </a>
+            </div>
 
-        .item-card {
-            background-color: #ffffff;
-            border: 1px solid #dfe6ed;
-            border-radius: 12px;
-            width: 260px;
-            height: 180px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: #2c3e50;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
+            <div class="w-full">
+                <a href="AddItem.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-plus text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">Add Item</h5>
+                    </div>
+                </a>
+            </div>
 
-        .item-card:hover {
-            box-shadow: 0 4px 14px rgba(0,0,0,0.12);
-            transform: translateY(-5px);
-            background-color: #f9fbff;
-        }
+            <div class="w-full">
+                <a href="TotalStocks.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-clipboard-list text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">Total Stocks for this day</h5>
+                    </div>
+                </a>
+            </div>
 
-        .item-card i {
-            font-size: 36px;
-            margin-bottom: 12px;
-            color: #2980b9;
-        }
-
-        .item-card-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-    </style>
-
-    <h2 class="page-title">📦 Manage Items</h2>
-
-    <div class="item-links-container">
-        <a href="ViewItem.aspx" class="item-card">
-            <i class="fas fa-list"></i>
-            <div class="item-card-title">View Items</div>
-        </a>
-        <a href="AddItem.aspx" class="item-card">
-            <i class="fas fa-plus"></i>
-            <div class="item-card-title">Add Item</div>
-        </a>
-        <a href="TotalStocks.aspx" class="item-card">
-            <i class="fas fa-clipboard-list"></i> 
-            <div class="item-card-title">Total Stocks for this day</div>
-        </a>
+        </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
+    <script>
+        // Your existing script for SweetAlert remains the same
+    </script>
 </asp:Content>
