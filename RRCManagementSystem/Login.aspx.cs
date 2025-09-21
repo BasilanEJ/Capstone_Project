@@ -149,7 +149,16 @@ namespace RRCManagementSystem
                                 }
                             }
 
-                            // Status check
+                            /* ===============================
+                               STATUS CHECK
+                               =============================== */
+                            if (status.Equals("Deleted", StringComparison.OrdinalIgnoreCase))
+                            {
+                                // Treat deleted account as not found
+                                lblMessage.Text = "⚠ Account not found.";
+                                return;
+                            }
+
                             if (!status.Equals("Active", StringComparison.OrdinalIgnoreCase) &&
                                 !status.Equals("Available", StringComparison.OrdinalIgnoreCase))
                             {
@@ -157,7 +166,9 @@ namespace RRCManagementSystem
                                 return;
                             }
 
-                            // Lockout check
+                            /* ===============================
+                               LOCKOUT CHECK
+                               =============================== */
                             if (lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
                             {
                                 pnlCaptcha.Visible = true;
@@ -176,7 +187,9 @@ namespace RRCManagementSystem
                                 }
                             }
 
-                            // Password check using Argon2
+                            /* ===============================
+                               PASSWORD CHECK USING ARGON2
+                               =============================== */
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
                                 ResetFailedLogin(userID);   // SP
@@ -240,8 +253,8 @@ namespace RRCManagementSystem
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
 
-                    // 1. Compute SHA-256 hash of the email for lookup
-                    string clientEmailHash = AESHelper.ComputeSHA256WithPepper(email); // Use with pepper for extra security
+                    // Compute SHA-256 hash of the email for lookup with pepper
+                    string clientEmailHash = AESHelper.ComputeSHA256WithPepper(email);
                     cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = clientEmailHash;
 
                     conn.Open();
@@ -254,7 +267,7 @@ namespace RRCManagementSystem
                             int clientId = Convert.ToInt32(reader["ClientID"]);
                             string name = reader["Name"]?.ToString() ?? "";
 
-                            // 2. Decrypt EmailEnc
+                            // Decrypt EmailEnc
                             string decryptedClientEmail = string.Empty;
                             if (reader["EmailEnc"] != DBNull.Value)
                             {
@@ -268,14 +281,24 @@ namespace RRCManagementSystem
                                 }
                             }
 
-                            // 3. Validate account status
+                            /* ===============================
+                               CLIENT STATUS CHECK
+                               =============================== */
+                            if (status.Equals("Deleted", StringComparison.OrdinalIgnoreCase))
+                            {
+                                lblMessage.Text = "⚠ Account not found.";
+                                return;
+                            }
+
                             if (!status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                             {
                                 lblMessage.Text = "⚠ Your account is not approved yet.";
                                 return;
                             }
 
-                            // 4. Validate password using Argon2
+                            /* ===============================
+                               CLIENT PASSWORD CHECK
+                               =============================== */
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
                                 // ✅ Login success
@@ -283,7 +306,6 @@ namespace RRCManagementSystem
                                 Session["ClientName"] = name;
                                 Session["Email"] = decryptedClientEmail;
 
-                                // Add to audit logs
                                 AddAuditLog(null, $"Client {name} logged in.");
 
                                 Response.Redirect("Home.aspx", false);
@@ -302,7 +324,6 @@ namespace RRCManagementSystem
                         }
                     }
                 }
-
             }
             catch (Exception ex)
             {
@@ -310,7 +331,7 @@ namespace RRCManagementSystem
             }
         }
 
-        // ======== CAPTCHA Validation ========
+        /* ======== CAPTCHA Validation ======== */
         private bool IsCaptchaValid()
         {
             string response = Request.Form["g-recaptcha-response"];
@@ -324,7 +345,7 @@ namespace RRCManagementSystem
             }
         }
 
-        // ======== IP Tracking ========
+        /* ======== IP Tracking ======== */
         private int GetFailedIPAttempts(string ip, int windowMinutes)
         {
             using (var conn = new SqlConnection(connectionString))

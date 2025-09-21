@@ -1,141 +1,55 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AddEquipment.aspx.cs" Inherits="RRCManagementSystem.AddEquipment" %>
+﻿<%@ Page Title="Add Equipment" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AddEquipment.aspx.cs" Inherits="RRCManagementSystem.AddEquipment" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <!-- ✅ SweetAlert2 CDN -->
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- SweetAlert2 CDN for modern alerts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-
-    <!-- ✅ INTERNAL CSS -->
-    <style>
-        .container {
-            margin-top: 40px;
-            padding: 20px;
-            background-color: #f9f9f9;
-        }
-
-        .card {
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            background-color: #ffffff;
-        }
-
-        .card-header {
-            background-color: #007bff;
-            color: #ffffff;
-            font-size: 20px;
-            font-weight: bold;
-            padding: 15px 20px;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-            border-bottom: 1px solid #ccc;
-            text-align: center;
-        }
-
-        .card-body {
-            padding: 25px;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 10px 14px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            font-size: 14px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        .btn-primary {
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-        }
-
-        .btn-primary:hover {
-            background-color: #0056b3;
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: #fff;
-            border: none;
-        }
-
-        .btn-secondary:hover {
-            background-color: #5a6268;
-            transform: translateY(-1px);
-        }
-
-        .error-message {
-            color: red;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        #imagePreview {
-            display: none;
-            width: 120px;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            margin-top: 10px;
-        }
-    </style>
-
-    <!-- ✅ CONTENT -->
-    <div class="container">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <h2 class="page-title">Add New Equipment</h2>
+    <!-- Main content container with modern Tailwind styling -->
+    <div class="mx-auto max-w-md my-8 p-6 bg-white rounded-xl shadow-lg">
+        <div class="rounded-xl border border-gray-200 shadow-md overflow-hidden">
+            <!-- Card Header -->
+            <div class="bg-blue-600 text-white p-4 text-center">
+                <h2 class="text-xl font-bold"><i class="fas fa-tools mr-2"></i> Add New Equipment</h2>
             </div>
-            <div class="card-body">
-                <asp:Label ID="lblMessage" runat="server" CssClass="error-message"></asp:Label>
+            
+            <!-- Card Body -->
+            <div class="p-6">
+                <asp:Label ID="lblMessage" runat="server" CssClass="block text-center text-red-500 font-semibold mb-4"></asp:Label>
 
                 <!-- Equipment ID -->
-                <div class="form-group">
-                    <label for="txtEquipmentID">Equipment ID:</label>
-                    <asp:TextBox ID="txtEquipmentID" runat="server" CssClass="form-control" placeholder="Enter Equipment ID" required></asp:TextBox>
+                <div class="mb-4">
+                    <label for="txtEquipmentID" class="block font-semibold text-gray-700 mb-2">Equipment ID:</label>
+                    <asp:TextBox ID="txtEquipmentID" runat="server" CssClass="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="Enter Equipment ID" required></asp:TextBox>
                 </div>
 
                 <!-- Equipment Name -->
-                <div class="form-group">
-                    <label for="txtEquipmentName">Equipment Name:</label>
-                    <asp:TextBox ID="txtEquipmentName" runat="server" CssClass="form-control" placeholder="Enter Equipment Name" required></asp:TextBox>
+                <div class="mb-4">
+                    <label for="txtEquipmentName" class="block font-semibold text-gray-700 mb-2">Equipment Name:</label>
+                    <asp:TextBox ID="txtEquipmentName" runat="server" CssClass="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="Enter Equipment Name" required></asp:TextBox>
                 </div>
 
                 <!-- Status -->
-                <div class="form-group">
-                    <label for="ddlStatus">Status:</label>
-                    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-control">
+                <div class="mb-4">
+                    <label for="ddlStatus" class="block font-semibold text-gray-700 mb-2">Status:</label>
+                    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
                         <asp:ListItem Text="Select Status" Value="" />
                         <asp:ListItem Text="Available" Value="Available" />
                         <asp:ListItem Text="Unavailable" Value="Unavailable" />
@@ -144,27 +58,32 @@
                 </div>
 
                 <!-- Equipment Image -->
-                <div class="form-group">
-                    <label for="fuEquipmentImage">Equipment Image (JPG, JPEG, PNG only):</label>
-                    <asp:FileUpload ID="fuEquipmentImage" runat="server" accept="image/*" onchange="validateImage(this); previewImage(event);" />
-                    <img id="imagePreview" src="#" alt="Equipment Image Preview" />
+                <div class="mb-4">
+                    <label for="fuEquipmentImage" class="block font-semibold text-gray-700 mb-2">Equipment Image (JPG, JPEG, PNG only):</label>
+                    <asp:FileUpload ID="fuEquipmentImage" runat="server" accept="image/*" onchange="validateImage(this); previewImage(event);" CssClass="block w-full text-sm text-gray-500
+                                                                                                        file:mr-4 file:py-2 file:px-4
+                                                                                                        file:rounded-full file:border-0
+                                                                                                        file:text-sm file:font-semibold
+                                                                                                        file:bg-blue-50 file:text-blue-700
+                                                                                                        hover:file:bg-blue-100" />
+                    <img id="imagePreview" src="#" alt="Equipment Image Preview" class="mt-4 hidden w-32 h-32 object-cover rounded-lg border border-gray-300 shadow-sm" />
                 </div>
 
                 <!-- Buttons -->
-                <div class="form-group text-center">
+                <div class="flex justify-center space-x-4">
                     <asp:Button ID="btnSubmit" runat="server" Text="Add Equipment"
-                        CssClass="btn btn-primary" UseSubmitBehavior="false"
-                        OnClientClick="return showConfirmAdd();" OnClick="btnSubmit_Click" />
+                        CssClass="w-full md:w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        UseSubmitBehavior="false" OnClientClick="return showConfirmAdd();" OnClick="btnSubmit_Click" />
 
                     <asp:Button ID="btnCancel" runat="server" Text="Cancel"
-                        CssClass="btn btn-secondary" UseSubmitBehavior="false"
-                        OnClientClick="return showConfirmCancel();" />
+                        CssClass="w-full md:w-1/2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                        UseSubmitBehavior="false" OnClientClick="return showConfirmCancel();" />
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ✅ JAVASCRIPT -->
+    <!-- JAVASCRIPT -->
     <script>
         function previewImage(event) {
             var file = event.target.files[0];
@@ -173,7 +92,8 @@
                 reader.onload = function (e) {
                     var imgPreview = document.getElementById("imagePreview");
                     imgPreview.src = e.target.result;
-                    imgPreview.style.display = "block";
+                    imgPreview.classList.remove("hidden");
+                    imgPreview.classList.add("block");
                 };
                 reader.readAsDataURL(file);
             }
@@ -189,7 +109,8 @@
                     text: 'Only JPG, JPEG, and PNG files are allowed.'
                 });
                 input.value = '';
-                document.getElementById("imagePreview").style.display = "none";
+                document.getElementById("imagePreview").classList.add("hidden");
+                document.getElementById("imagePreview").classList.remove("block");
                 return false;
             }
         }
@@ -206,8 +127,15 @@
                 confirmButtonText: 'Yes, add it'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    document.getElementById('<%= btnSubmit.ClientID %>').disabled = true;
-                    __doPostBack('<%= btnSubmit.UniqueID %>', '');
+                    // Check for form validity before postback
+                    var form = document.querySelector('form');
+                    if (form.checkValidity()) {
+                        document.getElementById('<%= btnSubmit.ClientID %>').disabled = true;
+                        __doPostBack('<%= btnSubmit.UniqueID %>', '');
+                    } else {
+                        // Display native browser validation messages
+                        form.reportValidity();
+                    }
                 }
             });
             return false;
@@ -231,5 +159,4 @@
             return false;
         }
     </script>
-
 </asp:Content>

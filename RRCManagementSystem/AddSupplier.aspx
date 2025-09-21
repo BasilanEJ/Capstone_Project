@@ -1,284 +1,118 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AddSupplier.aspx.cs" Inherits="RRCManagementSystem.AddSupplier" %>
+﻿<%@ Page Title="Add Supplier" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="AddSupplier.aspx.cs" Inherits="RRCManagementSystem.AddSupplier" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <style>
-        /* Main container styling */
-        .container {
-            padding: 20px;
-            background-color: #f4f4f4;
-            min-height: calc(100vh - 100px);
-        }
-
-        /* Card styling */
-        .card {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            max-width: 700px;
-            margin: 0 auto;
-            overflow: hidden;
-        }
-
-        .card-header {
-            background-color: #004085;
-            color: #fff;
-            padding: 15px 20px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .card-body {
-            padding: 20px;
-        }
-
-        /* Form group styling */
-        .form-group {
-            margin: 15px;
-            margin-right: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #333;
-        }
-
-        /* Uniform form control styling */
-        .form-control {
-            width: 100%;
-            padding: 10px 12px;
-            font-size: 14px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .form-control:focus {
-            border-color: #004085;
-            box-shadow: 0 0 5px rgba(0, 64, 133, 0.3);
-            outline: none;
-        }
-
-        /* Submit button styling */
-        .btn-submit {
-            background-color: #004085;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            margin-top: 10px;
-        }
-
-        .btn-submit:hover {
-            background-color: #003366;
-        }
-
-        /* Alert message with icon styling */
-        .alert-message {
-            display: block;
-            margin-top: 15px;
-            padding: 10px 15px;
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        .alert-message i {
-            margin-right: 10px;
-            font-size: 16px;
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .card {
-                margin: 20px;
-            }
-
-            .btn-submit {
-                width: 100%;
-            }
-        }
-    </style>
-
-    <!-- FontAwesome for icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
-
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- SweetAlert2 CDN for modern alerts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <script type="text/javascript">
-        function confirmAddSupplier(btn) {
-            var isValid = true;
-
-            // Validate Contact Number
-            if (!validateContactNumber()) {
-                isValid = false;
-            }
-
-            // Validate Email
-            if (!validateEmail()) {
-                isValid = false;
-            }
-
-            if (!isValid) {
-                // Prevent form submission if validation fails
-                return false;
-            }
-
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "Do you want to add this supplier?",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#004085',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, add it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    __doPostBack(btn.name, '');
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
                 }
-            });
-            return false; // Prevent normal postback
-        }
-
-        function validateContactNumber() {
-            var contactNumber = document.getElementById('<%= txtContactNumber.ClientID %>').value;
-            var errorMessage = "";
-            var regex = /^09\d{8,9}$/;  // Starts with 09 and followed by 8 or 9 digits.
-
-            if (!regex.test(contactNumber)) {
-                errorMessage = "<i class='fas fa-exclamation-circle'></i>Contact number must start with '09' and be 9 or 11 digits long.";
-            }
-
-            if (errorMessage !== "") {
-                document.getElementById('<%= lblMessage.ClientID %>').innerHTML = errorMessage;
-                document.getElementById('<%= lblMessage.ClientID %>').style.display = 'block'; // Show the error message
-                return false; // Validation failed
-            } else {
-                document.getElementById('<%= lblMessage.ClientID %>').style.display = 'none'; // Hide the error message
-                return true; // Validation passed
-            }
-        }
-
-        function validateEmail() {
-            var email = document.getElementById('<%= txtEmail.ClientID %>').value;
-            var errorMessage = "";
-            var regex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$/;
-
-            if (!regex.test(email)) {
-                errorMessage = "<i class='fas fa-exclamation-circle'></i>Email must be in the form of 'xxx@gmail.com', 'xxx@yahoo.com', or 'xxx@outlook.com'.";
-            }
-
-            if (errorMessage !== "") {
-                document.getElementById('<%= lblMessage.ClientID %>').innerHTML = errorMessage;
-                document.getElementById('<%= lblMessage.ClientID %>').style.display = 'block'; // Show the error message
-                return false; // Validation failed
-            } else {
-                document.getElementById('<%= lblMessage.ClientID %>').style.display = 'none'; // Hide the error message
-                return true; // Validation passed
             }
         }
     </script>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <div class="container mt-4">
-        <div class="card">
-            <div class="card-header">
-                <strong>Add New Supplier</strong>
+    <div class="container mx-auto p-4 sm:p-6 md:p-8">
+        <div class="bg-white rounded-xl shadow-md max-w-2xl mx-auto overflow-hidden">
+            <div class="bg-blue-800 text-white p-4 md:p-6 font-bold text-lg md:text-xl">
+                <i class="fas fa-truck-moving mr-2"></i> Add New Supplier
             </div>
-            <div class="card-body">
+            <div class="p-4 md:p-6">
                 <!-- Supplier Name -->
-                <div class="form-group">
-                    <label for="txtName">Supplier Name *</label>
-                    <asp:TextBox ID="txtName" runat="server" CssClass="form-control" placeholder="Enter supplier name" />
+                <div class="mb-4">
+                    <label for="txtName" class="block font-semibold text-gray-700 mb-2">Supplier Name *</label>
+                    <asp:TextBox ID="txtName" runat="server" CssClass="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter supplier name" />
                 </div>
 
                 <!-- Address -->
-                <div class="form-group">
-                    <label for="txtAddress">Address *</label>
-                    <asp:TextBox ID="txtAddress" runat="server" CssClass="form-control" placeholder="Enter address" />
+                <div class="mb-4">
+                    <label for="txtAddress" class="block font-semibold text-gray-700 mb-2">Address *</label>
+                    <asp:TextBox ID="txtAddress" runat="server" CssClass="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter address" />
                 </div>
 
                 <!-- Contact Number -->
-                <div class="form-group">
-                    <label for="txtContactNumber">Contact Number *</label>
-                    <asp:TextBox 
-                        ID="txtContactNumber" 
-                        runat="server" 
-                        CssClass="form-control" 
-                        placeholder="Enter contact number" 
-                        onkeypress="return isNumberKey(event);" 
+                <div class="mb-4">
+                    <label for="txtContactNumber" class="block font-semibold text-gray-700 mb-2">Contact Number *</label>
+                    <asp:TextBox
+                        ID="txtContactNumber"
+                        runat="server"
+                        CssClass="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter contact number"
+                        onkeypress="return isNumberKey(event);"
                         maxlength="11" onblur="validateContactNumber();" />
-
+                    
                     <!-- Required Field Validator -->
-                    <asp:RequiredFieldValidator 
-                        ID="rfvContactNumber" 
-                        runat="server" 
-                        ControlToValidate="txtContactNumber" 
-                        ForeColor="Red" 
+                    <asp:RequiredFieldValidator
+                        ID="rfvContactNumber"
+                        runat="server"
+                        ControlToValidate="txtContactNumber"
+                        ForeColor="red"
                         ErrorMessage="Contact number is required." />
 
                     <!-- Regular Expression Validator -->
-                    <asp:RegularExpressionValidator 
-                        ID="revContactNumber" 
-                        runat="server" 
-                        ControlToValidate="txtContactNumber" 
-                        ForeColor="Red" 
-                        ValidationExpression="^09\d{8,9}$" 
+                    <asp:RegularExpressionValidator
+                        ID="revContactNumber"
+                        runat="server"
+                        ControlToValidate="txtContactNumber"
+                        ForeColor="red"
+                        ValidationExpression="^09\d{8,9}$"
                         ErrorMessage="Contact number must start with '09' and be 9 or 11 digits long." Visible="false" />
                 </div>
 
                 <script type="text/javascript">
                     function isNumberKey(evt) {
                         var charCode = (evt.which) ? evt.which : evt.keyCode;
-                        // Only allow numbers (48-57) and backspace (8)
                         return (charCode >= 48 && charCode <= 57 || charCode === 8);
                     }
                 </script>
 
                 <!-- Email -->
-                <div class="form-group">
-                    <label for="txtEmail">Email</label>
-                    <asp:TextBox 
-                        ID="txtEmail" 
-                        runat="server" 
-                        CssClass="form-control" 
+                <div class="mb-4">
+                    <label for="txtEmail" class="block font-semibold text-gray-700 mb-2">Email</label>
+                    <asp:TextBox
+                        ID="txtEmail"
+                        runat="server"
+                        CssClass="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Enter email" onblur="validateEmail();" />
                     
                     <!-- Required Field Validator -->
-                    <asp:RequiredFieldValidator 
-                        ID="rfvEmail" 
-                        runat="server" 
-                        ControlToValidate="txtEmail" 
-                        ForeColor="Red" 
+                    <asp:RequiredFieldValidator
+                        ID="rfvEmail"
+                        runat="server"
+                        ControlToValidate="txtEmail"
+                        ForeColor="red"
                         ErrorMessage="Email is required." />
 
                     <!-- Regular Expression Validator -->
-                    <asp:RegularExpressionValidator 
-                        ID="revEmail" 
-                        runat="server" 
-                        ControlToValidate="txtEmail" 
-                        ForeColor="Red" 
-                        ValidationExpression="^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$" 
+                    <asp:RegularExpressionValidator
+                        ID="revEmail"
+                        runat="server"
+                        ControlToValidate="txtEmail"
+                        ForeColor="red"
+                        ValidationExpression="^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$"
                         ErrorMessage="Email must be in the form of 'xxx@gmail.com', 'xxx@yahoo.com', or 'xxx@outlook.com.'" Visible="false" />
                 </div>
 
                 <!-- Company Name -->
-                <div class="form-group">
-                    <label for="txtCompanyName">Company Name</label>
-                    <asp:TextBox ID="txtCompanyName" runat="server" CssClass="form-control" placeholder="Enter company name (optional)" />
+                <div class="mb-4">
+                    <label for="txtCompanyName" class="block font-semibold text-gray-700 mb-2">Company Name</label>
+                    <asp:TextBox ID="txtCompanyName" runat="server" CssClass="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter company name (optional)" />
                 </div>
 
                 <!-- Business Type -->
-                <div class="form-group">
-                    <label for="ddlBusinessType">Business Type</label>
-                    <asp:DropDownList ID="ddlBusinessType" runat="server" CssClass="form-control">
+                <div class="mb-4">
+                    <label for="ddlBusinessType" class="block font-semibold text-gray-700 mb-2">Business Type</label>
+                    <asp:DropDownList ID="ddlBusinessType" runat="server" CssClass="form-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <asp:ListItem Text="Select Business Type" Value="" />
                         <asp:ListItem Text="Pest Control Products" Value="Pest Control Products" />
                         <asp:ListItem Text="PPE Materials" Value="PPE Materials" />
@@ -289,9 +123,9 @@
                 </div>
 
                 <!-- Status -->
-                <div class="form-group">
-                    <label for="ddlStatus">Status</label>
-                    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-control">
+                <div class="mb-6">
+                    <label for="ddlStatus" class="block font-semibold text-gray-700 mb-2">Status</label>
+                    <asp:DropDownList ID="ddlStatus" runat="server" CssClass="form-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <asp:ListItem Text="Select Status" Value="" />
                         <asp:ListItem Text="Active" Value="Active" />
                         <asp:ListItem Text="Inactive" Value="Inactive" />
@@ -299,17 +133,86 @@
                 </div>
 
                 <!-- SweetAlert-triggering button -->
-                <asp:Button 
-                    ID="btnSubmit" 
-                    runat="server" 
-                    Text="Add Supplier" 
-                    CssClass="btn-submit"
+                <asp:Button
+                    ID="btnSubmit"
+                    runat="server"
+                    Text="Add Supplier"
+                    CssClass="w-full bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     UseSubmitBehavior="false"
-                    OnClientClick="return confirmAddSupplier(this);" 
+                    OnClientClick="return confirmAddSupplier(this);"
                     OnClick="btnSubmit_Click" />
 
-                <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" style="display:none;"></asp:Label>
+                <asp:Label ID="lblMessage" runat="server" CssClass="alert-message mt-4 bg-red-100 text-red-700 border border-red-200 rounded-lg p-3" style="display:none;"></asp:Label>
             </div>
         </div>
     </div>
+
+    <script type="text/javascript">
+        function confirmAddSupplier(btn) {
+            var isValid = true;
+            // You can add additional checks here before the Swal.fire prompt
+            if (!validateContactNumber() || !validateEmail()) {
+                isValid = false;
+            }
+
+            if (!isValid) {
+                return false;
+            }
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to add this supplier?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#1D4ED8',
+                cancelButtonColor: '#4B5563',
+                confirmButtonText: 'Yes, add it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack(btn.name, '');
+                }
+            });
+            return false;
+        }
+
+        function validateContactNumber() {
+            var contactNumber = document.getElementById('<%= txtContactNumber.ClientID %>').value;
+            var errorMessage = "";
+            var regex = /^09\d{8,9}$/;
+            var messageLabel = document.getElementById('<%= lblMessage.ClientID %>');
+
+            if (!regex.test(contactNumber)) {
+                errorMessage = "<i class='fas fa-exclamation-circle mr-2'></i>Contact number must start with '09' and be 9 or 11 digits long.";
+            }
+
+            if (errorMessage !== "") {
+                messageLabel.innerHTML = errorMessage;
+                messageLabel.style.display = 'block';
+                return false;
+            } else {
+                messageLabel.style.display = 'none';
+                return true;
+            }
+        }
+
+        function validateEmail() {
+            var email = document.getElementById('<%= txtEmail.ClientID %>').value;
+            var errorMessage = "";
+            var regex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$/;
+            var messageLabel = document.getElementById('<%= lblMessage.ClientID %>');
+
+            if (!regex.test(email)) {
+                errorMessage = "<i class='fas fa-exclamation-circle mr-2'></i>Email must be in the form of 'xxx@gmail.com', 'xxx@yahoo.com', or 'xxx@outlook.com.'";
+            }
+
+            if (errorMessage !== "") {
+                messageLabel.innerHTML = errorMessage;
+                messageLabel.style.display = 'block';
+                return false;
+            } else {
+                messageLabel.style.display = 'none';
+                return true;
+            }
+        }
+    </script>
 </asp:Content>

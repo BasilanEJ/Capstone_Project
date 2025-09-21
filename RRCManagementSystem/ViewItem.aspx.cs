@@ -26,7 +26,6 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // Restrict SuperAdmin or Inspector from accessing this page
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -35,25 +34,23 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // ✅ Check CanView permission
             if (!HasPermission(userId, "ManageItem", "CanView"))
             {
                 Response.Redirect("~/Unauthorized.aspx");
                 return;
             }
 
-            // ✅ Load permissions for actions
             canAdd = HasPermission(userId, "ManageItem", "CanAdd");
             canEdit = HasPermission(userId, "ManageItem", "CanEdit");
             canDelete = HasPermission(userId, "ManageItem", "CanDelete");
 
             if (!IsPostBack)
             {
-                gvItems.RowDataBound += gvItems_RowDataBound;
                 LoadItems();
             }
         }
 
+        // ================== Permissions ==================
         private bool HasPermission(int adminId, string moduleName, string permission)
         {
             try
@@ -77,6 +74,7 @@ namespace RRCManagementSystem
             }
         }
 
+        // ================== Load Items ==================
         private void LoadItems(string typeFilter = "All")
         {
             try
@@ -99,9 +97,10 @@ namespace RRCManagementSystem
                         gvItems.DataSource = dt;
                         gvItems.DataBind();
 
+                        // Show "No items found" message if the table is empty
                         lblMessage.Text = dt.Rows.Count == 0 ? "⚠ No items found." : "";
+                        lblMessage.Visible = dt.Rows.Count == 0;
 
-                        // ✅ Restock alert logic
                         string restockMsg = "";
                         foreach (DataRow row in dt.Rows)
                         {
@@ -118,15 +117,28 @@ namespace RRCManagementSystem
                             }
                         }
 
-                        lblRestockNotice.Text = !string.IsNullOrEmpty(restockMsg)
-                            ? $"<strong>⚠ Restocking Reminder:</strong><br/>{restockMsg}"
-                            : "";
+                        // Check if any restock messages were generated
+                        bool showRestockNotice = !string.IsNullOrEmpty(restockMsg);
+
+                        // If messages exist, set the label text and show the container div
+                        if (showRestockNotice)
+                        {
+                            lblRestockNotice.Text = $"<strong>⚠️ Restocking Reminder:</strong><br/>{restockMsg}";
+                            divRestockNotice.Visible = true;
+                        }
+                        else
+                        {
+                            // If no messages, hide the entire container div
+                            divRestockNotice.Visible = false;
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
                 lblMessage.Text = "⚠ Error loading items: " + ex.Message;
+                lblMessage.Visible = true;
+                divRestockNotice.Visible = false; // Always hide the notice on error
             }
         }
 
@@ -141,27 +153,55 @@ namespace RRCManagementSystem
             LoadItems(ddlType.SelectedValue);
         }
 
+        // ================== GridView Commands ==================
         protected void gvItems_RowCommand(object sender, GridViewCommandEventArgs e)
         {
+            // The CommandArgument is already the integer ItemID
+            int itemId = Convert.ToInt32(e.CommandArgument);
+
             if (e.CommandName == "EditItem")
             {
                 if (!canEdit)
                 {
-                    lblMessage.Text = "❌ You do not have permission to edit items.";
+                    ShowSweetAlert("Error", "❌ You do not have permission to edit items.", "error");
                     return;
                 }
 
-                int itemId = Convert.ToInt32(e.CommandArgument);
                 string encodedId = EncodeID(itemId.ToString());
                 Response.Redirect($"EditItem.aspx?ItemID={encodedId}");
             }
+            else if (e.CommandName == "AddStocks")
+            {
+                if (!canAdd)
+                {
+                    ShowSweetAlert("Error", "❌ You do not have permission to add stocks.", "error");
+                    return;
+                }
+
+                hiddenItemId.Value = itemId.ToString();
+                ScriptManager.RegisterStartupScript(this, GetType(), "ShowAddStockModal", $"showAddStockModal({itemId});", true);
+            }
+            else if (e.CommandName == "DeleteItem")
+            {
+                if (!canDelete)
+                {
+                    ShowSweetAlert("Error", "❌ You do not have permission to delete items.", "error");
+                    return;
+                }
+
+                // The hidden field is already set by the OnClientClick
+                // We do nothing here, the postback is handled by btnConfirmDelete_Click
+            }
         }
 
+        // ================== GridView Row Styling ==================
         protected void gvItems_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType == DataControlRowType.DataRow)
             {
                 int quantity = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "Quantity"));
+                int itemId = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "ItemID"));
+
                 Label lblQuantity = (Label)e.Row.FindControl("lblQuantity");
 
                 if (lblQuantity != null)
@@ -178,86 +218,153 @@ namespace RRCManagementSystem
                 var btnAddWrapper = e.Row.FindControl("btnAddWrapper") as System.Web.UI.HtmlControls.HtmlGenericControl;
                 var btnDeleteWrapper = e.Row.FindControl("btnDeleteWrapper") as System.Web.UI.HtmlControls.HtmlGenericControl;
 
-                // ✅ Apply styles and tooltips if user has no permission
                 if (!canEdit && btnEditWrapper != null)
                 {
-                    btnEditWrapper.Attributes["style"] += "opacity:0.5; pointer-events:none;";
+                    btnEditWrapper.Attributes["class"] += " link-button-disabled";
                     btnEditWrapper.Attributes["title"] = "You do not have permission to edit.";
                 }
                 if (!canAdd && btnAddWrapper != null)
                 {
-                    btnAddWrapper.Attributes["style"] += "opacity:0.5; pointer-events:none;";
+                    btnAddWrapper.Attributes["class"] += " link-button-disabled";
                     btnAddWrapper.Attributes["title"] = "You do not have permission to add stocks.";
                 }
                 if (!canDelete && btnDeleteWrapper != null)
                 {
-                    btnDeleteWrapper.Attributes["style"] += "opacity:0.5; pointer-events:none;";
+                    btnDeleteWrapper.Attributes["class"] += " link-button-disabled";
                     btnDeleteWrapper.Attributes["title"] = "You do not have permission to delete.";
+                }
+
+                LinkButton btnAdd = (LinkButton)e.Row.FindControl("btnAddStocks");
+                if (btnAdd != null)
+                {
+                    btnAdd.OnClientClick = $"showAddStockModal({itemId}); return false;";
+                }
+
+                LinkButton btnDelete = (LinkButton)e.Row.FindControl("btnDelete");
+                if (btnDelete != null)
+                {
+                    // Set the client-side click event to call your JavaScript function.
+                    // This prevents the default postback and handles the SweetAlert.
+                    btnDelete.OnClientClick = $"confirmDelete('{hiddenItemId.ClientID}', '{itemId}'); return false;";
                 }
             }
         }
 
-        protected void btnAddStock_Click(object sender, EventArgs e)
+        // ================== Add Stocks Logic ==================
+        protected void btnConfirmAddStock_Click(object sender, EventArgs e)
         {
             if (!canAdd)
             {
-                lblMessage.Text = "❌ You do not have permission to add stocks.";
+                ShowSweetAlert("Error", "❌ You do not have permission to add stocks.", "error");
                 return;
             }
 
-            // ✅ Your add stock logic here
-        }
-
-        protected void btnDeleteHidden_Click(object sender, EventArgs e)
-        {
-            if (!canDelete)
-            {
-                lblMessage.Text = "❌ You do not have permission to delete items.";
-                return;
-            }
-
-            if (int.TryParse(hiddenItemId.Value, out int itemId))
+            if (int.TryParse(hiddenItemId.Value, out int itemId) &&
+                int.TryParse(txtAddQuantity.Text, out int quantity) &&
+                quantity > 0)
             {
                 try
                 {
-                    using (var con = new SqlConnection(connectionString))
-                    using (var cmd = new SqlCommand("dbo.spInventory_Delete", con))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.AddWithValue("@ItemID", itemId);
-
-                        con.Open();
-                        var affected = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
-
-                        string script = @"
-<script>
-    Swal.fire({
-        icon: '" + (affected > 0 ? "success" : "warning") + @"',
-        title: '" + (affected > 0 ? "Deleted!" : "Not Found") + @"',
-        text: '" + (affected > 0 ? "Stocks have been successfully deleted." : "Item was not found.") + @"',
-        confirmButtonColor: '#28a745'
-    });
-</script>";
-                        ClientScript.RegisterStartupScript(this.GetType(), "deleteResult", script);
-                    }
-
+                    AddStock(itemId, quantity);
                     LoadItems(ddlType.SelectedValue);
+                    txtAddQuantity.Text = "";
+                    ShowSweetAlert("Success", "Stocks added successfully!", "success");
                 }
                 catch (Exception ex)
                 {
-                    lblMessage.Text = "❌ Delete failed: " + ex.Message;
+                    ShowSweetAlert("Error", "❌ Error adding stocks: " + ex.Message, "error");
                 }
             }
             else
             {
-                lblMessage.Text = "❌ Invalid Item ID.";
+                ShowSweetAlert("Error", "❌ Invalid Item ID or Quantity.", "error");
             }
         }
 
+        private void AddStock(int itemId, int quantity)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInventory_AddStock", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ItemID", itemId);
+                cmd.Parameters.AddWithValue("@AddQty", quantity);
+
+                SqlParameter newQuantityParam = new SqlParameter("@NewQuantity", SqlDbType.Int)
+                {
+                    Direction = ParameterDirection.Output
+                };
+                cmd.Parameters.Add(newQuantityParam);
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // ================== Delete Logic ==================
+        protected void btnConfirmDelete_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Debug.WriteLine("btnConfirmDelete_Click triggered");
+
+            if (!int.TryParse(hiddenItemId.Value, out int itemId))
+            {
+                ShowSweetAlert("Error", "Invalid Item ID.", "error");
+                return;
+            }
+
+            DeleteItem(itemId);
+            LoadItems(ddlType.SelectedValue);
+
+            ShowSweetAlert("Deleted!", "Item deleted successfully.", "success");
+        }
+
+
+
+
+        private void DeleteItem(int itemId)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInventory_Delete", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ItemID", itemId);
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // ================== Register dynamic postback for SweetAlert ==================
+        protected override void Render(HtmlTextWriter writer)
+        {
+            foreach (GridViewRow row in gvItems.Rows)
+            {
+                if (row.RowType == DataControlRowType.DataRow)
+                {
+                    string itemId = gvItems.DataKeys[row.RowIndex].Value.ToString();
+                    ClientScript.RegisterForEventValidation(btnConfirmDelete.UniqueID, itemId);
+                }
+            }
+            base.Render(writer);
+        }
+
+
+
+
+        // ================== SweetAlert Helper ==================
+        private void ShowSweetAlert(string title, string message, string icon)
+        {
+            string script = $"Swal.fire({{title: '{title}', text: '{message}', icon: '{icon}'}});";
+            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert", script, true);
+        }
+
+        // ================== Encode ID ==================
         public static string EncodeID(string id)
         {
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(id);
-            return Convert.ToBase64String(bytes).Replace("=", "").Replace("+", "-").Replace("/", "_");
+            return Convert.ToBase64String(bytes)
+                .Replace("=", "")
+                .Replace("+", "-")
+                .Replace("/", "_");
         }
     }
 }

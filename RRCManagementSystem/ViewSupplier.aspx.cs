@@ -2,8 +2,9 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Net.Configuration;   // <-- for SmtpSection
+using System.Net.Configuration;
 using System.Net.Mail;
+using System.Web.UI;
 
 namespace RRCManagementSystem
 {
@@ -22,7 +23,8 @@ namespace RRCManagementSystem
             }
 
             string role = Convert.ToString(Session["Role"]);
-            // 🔐 Deny SuperAdmin & Inspector per your pattern
+
+            // 🔐 Deny SuperAdmin & Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
                 Response.Redirect("~/Login.aspx");
@@ -30,6 +32,7 @@ namespace RRCManagementSystem
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
+
             // 🔐 Must have CanView for ManageSupplier
             if (!HasPermission(userId, "ManageSupplier", "CanView"))
             {
@@ -39,7 +42,7 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                // cache edit/delete permissions in ViewState for quick checks
+                // Cache edit/delete permissions in ViewState
                 ViewState["CanEdit"] = HasPermission(userId, "ManageSupplier", "CanEdit");
                 ViewState["CanDelete"] = HasPermission(userId, "ManageSupplier", "CanDelete");
 
@@ -47,6 +50,9 @@ namespace RRCManagementSystem
             }
         }
 
+        /// <summary>
+        /// Checks if the current user has permission for a specific action on a module.
+        /// </summary>
         private bool HasPermission(int adminId, string moduleName, string which)
         {
             try
@@ -58,6 +64,7 @@ namespace RRCManagementSystem
                     cmd.Parameters.AddWithValue("@UserID", adminId);
                     cmd.Parameters.AddWithValue("@ModuleName", moduleName);
                     cmd.Parameters.AddWithValue("@Permission", which);
+
                     conn.Open();
                     object result = cmd.ExecuteScalar();
                     return result != null && result != DBNull.Value && Convert.ToBoolean(result);
@@ -69,6 +76,9 @@ namespace RRCManagementSystem
             }
         }
 
+        /// <summary>
+        /// Loads active suppliers and binds them to the GridView.
+        /// </summary>
         private void LoadSuppliers()
         {
             try
@@ -83,18 +93,18 @@ namespace RRCManagementSystem
 
                     gvSuppliers.DataSource = dt;
                     gvSuppliers.DataBind();
-                    lblMessage.Text = string.Empty;
                 }
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "⚠ Error loading suppliers: " + ex.Message;
+                // Display error using SweetAlert
+                ClientScript.RegisterStartupScript(this.GetType(), "loadError",
+                    $"showAlert('Error!', 'Error loading suppliers: {ex.Message.Replace("'", "\\'")}', 'error');", true);
             }
         }
 
         /// <summary>
-        /// Handles GridView commands for Edit / Archive (and optionally OpenEmailForm if you still raise it server-side).
-        /// If you're opening the email modal purely on the client, OpenEmailForm won't reach here.
+        /// Handles GridView commands for Edit, Archive, or optional Email.
         /// </summary>
         protected void gvSuppliers_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
         {
@@ -102,12 +112,7 @@ namespace RRCManagementSystem
             {
                 if (e.CommandName == "OpenEmailForm")
                 {
-                    // If you still raise this command server-side, populate the panel here:
-                    string email = Convert.ToString(e.CommandArgument);
-                    hfSupplierEmail.Value = email;
-                    hfSupplierName.Value = ""; // optional if you also pass name
-                    lblSendTo.Text = "Sending to: " + email;
-                    pnlSendEmail.Visible = true;
+                    // This command is handled by the client-side JavaScript now
                     return;
                 }
 
@@ -128,13 +133,14 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "⚠ Command error: " + ex.Message;
+                // Display error using SweetAlert
+                ClientScript.RegisterStartupScript(this.GetType(), "commandError",
+                    $"showAlert('Error!', 'Command error: {ex.Message.Replace("'", "\\'")}', 'error');", true);
             }
         }
 
         /// <summary>
-        /// Send email using Web.config <system.net><mailSettings><smtp> (SmtpSection).
-        /// Expects hfSupplierEmail/hfSupplierName set from client-side before postback.
+        /// Sends email to the selected supplier using SMTP settings from Web.config.
         /// </summary>
         protected void btnSendEmail_Click(object sender, EventArgs e)
         {
@@ -143,7 +149,8 @@ namespace RRCManagementSystem
 
             if (string.IsNullOrWhiteSpace(toEmail))
             {
-                lblMessage.Text = "⚠ No recipient selected.";
+                ClientScript.RegisterStartupScript(this.GetType(), "emailError",
+                    "showAlert('Error!', 'No recipient selected.', 'error');", true);
                 return;
             }
 
@@ -152,23 +159,24 @@ namespace RRCManagementSystem
 
             if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body))
             {
-                lblMessage.Text = "⚠ Please enter both subject and message.";
+                ClientScript.RegisterStartupScript(this.GetType(), "emailError",
+                    "showAlert('Error!', 'Please enter both subject and message.', 'error');", true);
                 return;
             }
 
             try
             {
-                // Read SMTP config directly from Web.config <system.net><mailSettings>
+                // Load SMTP configuration from Web.config
                 var smtpSection = (SmtpSection)ConfigurationManager.GetSection("system.net/mailSettings/smtp");
                 if (smtpSection == null)
                 {
-                    lblMessage.Text = "⚠ SMTP configuration not found in Web.config.";
+                    ClientScript.RegisterStartupScript(this.GetType(), "emailError",
+                        "showAlert('Error!', 'SMTP configuration not found in Web.config.', 'error');", true);
                     return;
                 }
 
                 using (var mail = new MailMessage())
                 {
-                    // From address from <smtp from="...">
                     mail.From = new MailAddress(smtpSection.From, "RRC Management System");
                     mail.To.Add(toEmail);
                     mail.Subject = subject;
@@ -177,7 +185,8 @@ namespace RRCManagementSystem
 
                     using (var smtp = new SmtpClient())
                     {
-                        // NOTE: SmtpClient auto-binds to <mailSettings>. These are optional if you want to be explicit.
+                        // The following lines are commented out in your original code,
+                        // so I will keep them commented out here.
                         // smtp.Host = smtpSection.Network.Host;
                         // smtp.Port = smtpSection.Network.Port;
                         // smtp.EnableSsl = smtpSection.Network.EnableSsl;
@@ -187,10 +196,12 @@ namespace RRCManagementSystem
                     }
                 }
 
-                lblMessage.ForeColor = System.Drawing.Color.Green;
-                lblMessage.Text = $"✅ Email sent to {(string.IsNullOrEmpty(toName) ? toEmail : toName + " <" + toEmail + ">")}";
+                // Display success message using SweetAlert
+                string recipientDisplay = string.IsNullOrEmpty(toName) ? toEmail : $"{toName} <{toEmail}>";
+                ClientScript.RegisterStartupScript(this.GetType(), "emailSuccess",
+                    $"showAlert('Success!', 'Email sent to {recipientDisplay}.', 'success');", true);
 
-                // Clear and hide panel
+                // Clear form and hide panel
                 txtSubject.Text = "";
                 txtMessageBody.Text = "";
                 hfSupplierEmail.Value = "";
@@ -199,22 +210,31 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
-                lblMessage.ForeColor = System.Drawing.Color.Red;
-                lblMessage.Text = "⚠ Error sending email: " + ex.Message;
+                // Display error using SweetAlert
+                ClientScript.RegisterStartupScript(this.GetType(), "emailFail",
+                    $"showAlert('Error!', 'Error sending email: {ex.Message.Replace("'", "\\'")}', 'error');", true);
             }
         }
 
+        /// <summary>
+        /// Cancels the email send operation and clears fields.
+        /// This button now also handles the client-side confirmation.
+        /// </summary>
         protected void btnCancelEmail_Click(object sender, EventArgs e)
         {
-            // Just hide panel & clear fields
             pnlSendEmail.Visible = false;
             txtSubject.Text = "";
             txtMessageBody.Text = "";
             hfSupplierEmail.Value = "";
             hfSupplierName.Value = "";
-            lblMessage.Text = "❌ Email sending cancelled.";
+
+            ClientScript.RegisterStartupScript(this.GetType(), "cancelEmail",
+                "showAlert('Cancelled', 'Email sending cancelled.', 'info');", true);
         }
 
+        /// <summary>
+        /// Archives the selected supplier by calling stored procedure.
+        /// </summary>
         private void ArchiveSupplier(int supplierID)
         {
             try
@@ -225,8 +245,8 @@ namespace RRCManagementSystem
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@SupplierID", supplierID);
-                    conn.Open();
 
+                    conn.Open();
                     using (var rdr = cmd.ExecuteReader())
                     {
                         if (rdr.Read())
@@ -234,13 +254,24 @@ namespace RRCManagementSystem
                     }
                 }
 
-                lblMessage.Text = (archived == 1)
-                    ? "✅ Supplier archived successfully."
-                    : "⚠ Supplier not found or already archived.";
+                if (archived == 1)
+                {
+                    // Display success using SweetAlert
+                    ClientScript.RegisterStartupScript(this.GetType(), "archiveSuccess",
+                        "showAlert('Success!', 'Supplier archived successfully.', 'success');", true);
+                }
+                else
+                {
+                    // Display warning using SweetAlert
+                    ClientScript.RegisterStartupScript(this.GetType(), "archiveWarning",
+                        "showAlert('Warning', 'Supplier not found or already archived.', 'warning');", true);
+                }
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "⚠ Error archiving supplier: " + ex.Message;
+                // Display error using SweetAlert
+                ClientScript.RegisterStartupScript(this.GetType(), "archiveError",
+                    $"showAlert('Error!', 'Error archiving supplier: {ex.Message.Replace("'", "\\'")}', 'error');", true);
             }
         }
     }

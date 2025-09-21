@@ -10,6 +10,7 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
 
+         
             <div class="w-full">
                 <a href="AllInquiry.aspx" class="block">
                     <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
@@ -19,6 +20,7 @@
                 </a>
             </div>
 
+            
             <div class="w-full">
                 <a href="CreateInquiry.aspx" class="block">
                     <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
@@ -28,6 +30,7 @@
                 </a>
             </div>
 
+         
             <div class="w-full">
                 <a href="ViewQuotation.aspx" class="block">
                     <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
@@ -37,11 +40,22 @@
                 </a>
             </div>
 
+          
             <div class="w-full">
                 <a href="InspectedInquiry.aspx" class="block">
                     <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
                         <i class="fas fa-clipboard-check text-3xl text-blue-600 mb-4"></i>
                         <h5 class="text-xl font-semibold text-gray-800">Inquiry Inspected</h5>
+                    </div>
+                </a>
+            </div>
+
+       
+            <div class="w-full">
+                <a href="ArchivedInquiries.aspx" class="block">
+                    <div class="bg-white shadow-lg rounded-xl p-6 h-full flex flex-col justify-center items-center text-center transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
+                        <i class="fas fa-archive text-3xl text-blue-600 mb-4"></i>
+                        <h5 class="text-xl font-semibold text-gray-800">Archived Inquiries</h5>
                     </div>
                 </a>
             </div>

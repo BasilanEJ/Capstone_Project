@@ -26,7 +26,7 @@ namespace RRCManagementSystem
         }
 
         /* =========================
-           Data binding via SP
+           Load Data for Archived Admins
            ========================= */
         private void LoadArchivedAdmins(string keyword)
         {
@@ -46,7 +46,6 @@ namespace RRCManagementSystem
                 {
                     da.Fill(dt);
 
-                    // 🔹 Decrypt each email before binding
                     foreach (DataRow row in dt.Rows)
                     {
                         if (row["Email"] != DBNull.Value && !string.IsNullOrEmpty(row["Email"].ToString()))
@@ -74,10 +73,12 @@ namespace RRCManagementSystem
             }
         }
 
+
         protected void btnSearch_Click(object sender, EventArgs e)
         {
             LoadArchivedAdmins(txtSearch.Text);
         }
+
 
         protected void gvArchivedAdmins_RowCommand(object sender, GridViewCommandEventArgs e)
         {
@@ -118,23 +119,34 @@ namespace RRCManagementSystem
 
                     if (rows > 0)
                     {
-                        Response.Redirect("ViewAdmin.aspx?restored=1", false);
-                        Context.ApplicationInstance.CompleteRequest();
-                        return;
+                        // ✅ SweetAlert shows first, then redirect after 3 seconds
+                        string script = @"
+                            Swal.fire({
+                                title: 'Restore Successful!',
+                                text: 'The admin account has been restored.',
+                                icon: 'success',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.href = 'ViewAdmin.aspx';
+                            });";
+
+                        ScriptManager.RegisterStartupScript(this, GetType(), "RestoreAlert", script, true);
                     }
                     else
                     {
                         lblMessage.Text = "⚠ Admin not found or not in Archived status.";
+                        LoadArchivedAdmins(txtSearch.Text); // Reload only if no success
                     }
                 }
                 catch (Exception ex)
                 {
                     lblMessage.Text = "⚠ Error restoring admin: " + ex.Message;
+                    LoadArchivedAdmins(txtSearch.Text); // Reload only if there is an error
                 }
             }
-
-            LoadArchivedAdmins(txtSearch.Text);
         }
+
 
         private void DeleteAdmin(int userID)
         {
@@ -151,22 +163,32 @@ namespace RRCManagementSystem
 
                     if (rows > 0)
                     {
-                        Response.Redirect("ViewAdmin.aspx?deleted=1", false);
-                        Context.ApplicationInstance.CompleteRequest();
-                        return;
+                        // ✅ SweetAlert shows first, then redirect after 3 seconds
+                        string script = @"
+                            Swal.fire({
+                                title: 'Delete Successful!',
+                                text: 'The admin account has been permanently deleted.',
+                                icon: 'success',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.href = 'ViewAdmin.aspx';
+                            });";
+
+                        ScriptManager.RegisterStartupScript(this, GetType(), "DeleteAlert", script, true);
                     }
                     else
                     {
                         lblMessage.Text = "⚠ Admin could not be deleted (must be Role=Admin and Status=Archived).";
+                        LoadArchivedAdmins(txtSearch.Text); // Reload only if no success
                     }
                 }
                 catch (Exception ex)
                 {
                     lblMessage.Text = "⚠ Error deleting admin: " + ex.Message;
+                    LoadArchivedAdmins(txtSearch.Text); // Reload only if there is an error
                 }
             }
-
-            LoadArchivedAdmins(txtSearch.Text);
         }
 
         protected void gvArchivedAdmins_PageIndexChanging(object sender, GridViewPageEventArgs e)
@@ -174,6 +196,7 @@ namespace RRCManagementSystem
             gvArchivedAdmins.PageIndex = e.NewPageIndex;
             LoadArchivedAdmins(txtSearch.Text);
         }
+
 
         protected override void Render(System.Web.UI.HtmlTextWriter writer)
         {

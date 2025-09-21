@@ -82,14 +82,16 @@
                                 CommandArgument='<%# Eval("InquiryID") %>' />
                         </ItemTemplate>
                     </asp:TemplateField>
-                    <asp:TemplateField HeaderText="Delete" HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center">
-                        <ItemTemplate>
-                            <button type="button" class="px-4 py-2 bg-red-500 text-white font-bold rounded-md hover:bg-red-600 transition-colors text-sm"
-                                onclick='confirmDelete(<%# Eval("InquiryID") %>)'>
-                                Delete
-                            </button>
-                        </ItemTemplate>
-                    </asp:TemplateField>
+                   <asp:TemplateField HeaderText="Archive" HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center">
+    <ItemTemplate>
+        <button type="button" 
+                class="px-4 py-2 bg-yellow-500 text-white font-bold rounded-md hover:bg-yellow-600 transition-colors text-sm"
+                onclick='confirmArchive(<%# Eval("InquiryID") %>)'>
+            Archive
+        </button>
+    </ItemTemplate>
+</asp:TemplateField>
+
                 </Columns>
             </asp:GridView>
         </div>
@@ -216,22 +218,23 @@
             });
         }
 
-        function confirmDelete(inquiryId) {
+        function confirmArchive(inquiryId) {
             Swal.fire({
-                title: 'Delete this inquiry?',
-                text: "This action cannot be undone.",
+                title: 'Archive this inquiry?',
+                text: "You can restore this later from the Archived Inquiries page.",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'Yes, delete it',
+                confirmButtonText: 'Yes, archive it',
                 cancelButtonText: 'Cancel',
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d'
+                confirmButtonColor: '#f59e0b',  // Yellow
+                cancelButtonColor: '#6c757d'    // Gray
             }).then((result) => {
                 if (result.isConfirmed) {
                     document.getElementById('<%= hfDeleteInquiryID.ClientID %>').value = inquiryId;
-                    document.getElementById('<%= btnDeleteHidden.ClientID %>').click();
-                }
-            });
+            document.getElementById('<%= btnDeleteHidden.ClientID %>').click();
         }
+    });
+        }
+
     </script>
 </asp:Content>

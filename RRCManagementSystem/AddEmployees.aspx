@@ -2,6 +2,16 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Optional: Add a transition for a smoother hover effect */
+        .file-input-label {
+            transition: color 0.3s ease;
+        }
+
+        .file-input-label:hover {
+            color: #1d4ed8; /* blue-700 */
+        }
+    </style>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
@@ -14,7 +24,7 @@
             </div>
 
             <div class="mb-6 flex flex-col items-center">
-                <label for="<%= fuProfilePicture.ClientID %>" class="text-sm font-semibold text-gray-700 mb-2">Profile Picture (JPG, JPEG, PNG only)</label>
+                <label for="<%= fuProfilePicture.ClientID %>" class="text-sm font-semibold text-gray-700 mb-2 file-input-label cursor-pointer">Profile Picture (JPG, JPEG, PNG only)</label>
                 <img id="imagePreview" alt="Profile Preview" class="h-32 w-32 object-cover rounded-full mb-4 border-2 border-gray-300 hidden shadow-md" />
                 <asp:FileUpload ID="fuProfilePicture" runat="server" CssClass="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600 transition-colors" accept="image/*" onchange="validateFile(); previewImage(event);" />
             </div>
@@ -45,20 +55,20 @@
                     <span id="phoneError" class="block text-xs text-red-500 mt-1 hidden"></span>
                 </div>
             </div>
-<div class="mb-6">
-    <label for="<%= ddlPosition.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Position</label>
-    <asp:DropDownList ID="ddlPosition" runat="server" CssClass="block w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-        <asp:ListItem Text="Select Position" Value="" />
-        <asp:ListItem Text="IT" Value="IT" />
-        <asp:ListItem Text="Technician" Value="Technician" />
-        <asp:ListItem Text="Inspector" Value="Inspector" />
-    </asp:DropDownList>
-</div>
+            <div class="mb-6">
+                <label for="<%= ddlPosition.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Position</label>
+                <asp:DropDownList ID="ddlPosition" runat="server" CssClass="block w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                    <asp:ListItem Text="IT" Value="IT" />
+                    <asp:ListItem Text="Technician" Value="Technician" />
+                </asp:DropDownList>
+            </div>
 
             <div class="text-center">
                 <asp:Button ID="btnSubmit" runat="server" Text="Add Employee"
                     CssClass="w-full py-3 px-4 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                    OnClientClick="return showConfirm();" />
+                    OnClick="btnSubmit_Click" />
+                
+                <asp:Button ID="btnHiddenSubmit" runat="server" style="display: none;" OnClick="btnSubmit_Click" />
             </div>
         </div>
     </div>
@@ -95,29 +105,6 @@
             }
         }
 
-        // SweetAlert Confirmation before submit
-        function showConfirm() {
-            if (!validateForm()) {
-                return false;
-            }
-
-            Swal.fire({
-                title: 'Add Employee?',
-                text: 'Are you sure you want to add this employee?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#2563eb', // Tailwind's blue-600
-                cancelButtonColor: '#ef4444',  // Tailwind's red-500
-                confirmButtonText: 'Yes, add it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // This will trigger the server-side OnClick event for the ASP.NET Button
-                    __doPostBack('<%= btnSubmit.UniqueID %>', '');
-                }
-            });
-            return false;
-        }
-
         // Client-side form validation
         function validateForm() {
             var lastName = document.getElementById('<%= txtLastName.ClientID %>').value;
@@ -126,17 +113,11 @@
             var phone = document.getElementById('<%= txtPhone.ClientID %>').value;
             var position = document.getElementById('<%= ddlPosition.ClientID %>').value;
 
-            // 1. Validate Required Name Fields (Last Name and First Name)
             if (lastName.trim() === "" || firstName.trim() === "") {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Incomplete Form',
-                    text: 'Last Name and First Name are required fields.'
-                });
+                Swal.fire({ icon: 'warning', title: 'Incomplete Form', text: 'Last Name and First Name are required fields.' });
                 return false;
             }
 
-            // 2. Validate Phone Number (exactly 11 digits)
             var phonePattern = /^\d{11}$/;
             var phoneError = document.getElementById("phoneError");
             if (!phonePattern.test(phone)) {
@@ -146,29 +127,50 @@
             } else {
                 phoneError.style.display = 'none';
             }
-
-            // 3. Validate Email (has @ and is a valid format, or is 'N/A')
+            
             var emailPattern = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
             if (email.toLowerCase() !== 'n/a' && !emailPattern.test(email)) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Invalid Email',
-                    text: 'Please enter a valid email address or type "N/A".'
-                });
+                Swal.fire({ icon: 'warning', title: 'Invalid Email', text: 'Please enter a valid email address or type "N/A".' });
                 return false;
             }
 
-            // 4. Validate Position (is selected)
             if (position === "") {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Incomplete Form',
-                    text: 'Please select an employee position.'
-                });
+                Swal.fire({ icon: 'warning', title: 'Incomplete Form', text: 'Please select an employee position.' });
                 return false;
             }
 
             return true;
         }
+
+        // We now handle the button click with a client-side event listener.
+        document.addEventListener('DOMContentLoaded', function () {
+            var mainButton = document.getElementById('<%= btnSubmit.ClientID %>');
+            if (mainButton) {
+                mainButton.addEventListener('click', function (e) {
+                    // Prevent the default postback triggered by the ASP.NET button.
+                    e.preventDefault();
+
+                    // Run client-side validation first.
+                    if (validateForm()) {
+                        // If validation passes, show the SweetAlert confirmation.
+                        Swal.fire({
+                            title: 'Add Employee?',
+                            text: 'Are you sure you want to add this employee?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonColor: '#2563eb', // Tailwind's blue-600
+                            cancelButtonColor: '#ef4444', // Tailwind's red-500
+                            confirmButtonText: 'Yes, add it!'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // If confirmed, manually trigger the postback.
+                                // We use a hidden button to do this cleanly.
+                                document.getElementById('<%= btnHiddenSubmit.ClientID %>').click();
+                            }
+                        });
+                    }
+                });
+            }
+        });
     </script>
 </asp:Content>

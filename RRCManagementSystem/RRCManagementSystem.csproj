@@ -137,6 +137,7 @@
     <Content Include="ApproveRescheduleRequests.aspx" />
     <Content Include="ArchivedAdmins.aspx" />
     <Content Include="ArchivedClients.aspx" />
+    <Content Include="ArchivedInquiries.aspx" />
     <Content Include="ArchivedSuperUser.aspx" />
     <Content Include="ArchiveEmployee.aspx" />
     <Content Include="AssignBooking.aspx" />
@@ -460,6 +461,13 @@
     </Compile>
     <Compile Include="ArchivedClients.aspx.designer.cs">
       <DependentUpon>ArchivedClients.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ArchivedInquiries.aspx.cs">
+      <DependentUpon>ArchivedInquiries.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ArchivedInquiries.aspx.designer.cs">
+      <DependentUpon>ArchivedInquiries.aspx</DependentUpon>
     </Compile>
     <Compile Include="ArchivedSuperUser.aspx.cs">
       <DependentUpon>ArchivedSuperUser.aspx</DependentUpon>

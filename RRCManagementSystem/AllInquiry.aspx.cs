@@ -298,18 +298,44 @@ namespace RRCManagementSystem
 
             try
             {
-                DeleteInquiry(inquiryId);
-                LoadInquiries();
+                // Soft delete by setting status to Archived
+                ArchiveInquiry(inquiryId);
+                LoadInquiries(); // Refresh GridView
 
-                ScriptManager.RegisterStartupScript(this, GetType(), "DeletedOK",
-                    "Swal.fire('Deleted','Inquiry has been removed.','success');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "ArchivedOK",
+                    "Swal.fire('Archived','Inquiry has been moved to archived list.','success');", true);
             }
             catch (Exception ex)
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "DeletedErr",
-                    $"Swal.fire('Error','Failed to delete inquiry: {ex.Message.Replace("'", "\\'")}','error');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "ArchivedErr",
+                    $"Swal.fire('Error','Failed to archive inquiry: {ex.Message.Replace("'", "\\'")}','error');", true);
             }
         }
+
+
+        private void ArchiveInquiry(int inquiryId)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("spInquiry_Archive", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                // Pass parameter to stored procedure
+                cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+
+                conn.Open();
+
+                // Execute and get number of affected rows
+                int rows = Convert.ToInt32(cmd.ExecuteScalar());
+
+                if (rows == 0)
+                {
+                    throw new InvalidOperationException("Inquiry not found or already archived.");
+                }
+            }
+        }
+
+
 
         private void DeleteInquiry(int inquiryId)
         {

@@ -8,8 +8,8 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <style>
-        /* Custom styles to handle specific component behaviors not covered by Tailwind */
-        .page-title { font-size: 2.25rem; } /* text-4xl in Tailwind */
+        /* Custom styles for components */
+        .page-title { font-size: 2.25rem; }
         .metric-card {
             transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -17,22 +17,55 @@
         .metric-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); }
         .metric-value { font-size: 2.5rem; font-weight: bold; }
         
-        /* * Important: Calendar table styles
-         * Ensures consistent cell size and styling across different browsers and content sizes.
-         */
         .custom-calendar-table td, .custom-calendar-table th {
             min-width: 140px;
             vertical-align: top;
-            border: 1px solid #e5e7eb; /* gray-200 */
+            border: 1px solid #e5e7eb;
             padding: 0.5rem;
-            height: 140px; /* Provides a minimum height for empty cells */
+            height: 140px;
         }
-        .custom-calendar-table td:hover { background-color: #f3f4f6; /* gray-100 */ }
+        .custom-calendar-table td:hover { background-color: #f3f4f6; }
+
+        /* Enhanced loading state styling */
+        .loading-container {
+            position: relative;
+            min-height: 150px; /* Adjust height to prevent content shifting */
+        }
+        .loading-overlay {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 10;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-
     <div class="container mx-auto px-4 py-8">
         <header class="text-center mb-10">
             <h1 class="page-title font-bold text-gray-800">Admin Dashboard</h1>
@@ -85,15 +118,21 @@
             </div>
         </div>
         <script>
+            const bookingModal = document.getElementById('bookingDetailsModal');
             function showBookingModal(details) {
                 document.getElementById('bookingDetailsContent').innerHTML = details;
-                document.getElementById('bookingDetailsModal').classList.remove('hidden');
-                document.getElementById('bookingDetailsModal').classList.add('flex');
+                bookingModal.classList.remove('hidden');
+                bookingModal.classList.add('flex');
             }
             function hideBookingModal() {
-                document.getElementById('bookingDetailsModal').classList.add('hidden');
-                document.getElementById('bookingDetailsModal').classList.remove('flex');
+                bookingModal.classList.add('hidden');
+                bookingModal.classList.remove('flex');
             }
+            bookingModal.addEventListener('click', (e) => {
+                if (e.target === bookingModal) {
+                    hideBookingModal();
+                }
+            });
         </script>
 
         <section class="mb-10">
@@ -118,11 +157,18 @@
         </section>
 
         <hr class="my-10 border-gray-300" />
-
+        
         <span id="blockchainSection"></span>
-        <asp:UpdatePanel ID="upBlockchain" runat="server" UpdateMode="Conditional" ChildrenAsTriggers="true">
-            <ContentTemplate>
-                <section class="text-center py-8">
+        <section class="text-center py-8 loading-container" id="blockchainContainer">
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="flex flex-col items-center">
+                    <div class="spinner mb-2"></div>
+                    <span class="text-blue-600 font-bold">Verifying blockchain, please wait...</span>
+                </div>
+            </div>
+
+            <asp:UpdatePanel ID="upBlockchain" runat="server" UpdateMode="Conditional" ChildrenAsTriggers="true">
+                <ContentTemplate>
                     <h3 class="text-2xl font-semibold text-gray-800 mb-4">Blockchain Sales Transparency</h3>
                     <div class="my-6">
                         <asp:Button ID="btnVerifyBlockchain" runat="server"
@@ -132,23 +178,27 @@
                             CausesValidation="false"
                             UseSubmitBehavior="false" />
                     </div>
-                    <asp:UpdateProgress ID="upProgress" runat="server" AssociatedUpdatePanelID="upBlockchain">
-                        <ProgressTemplate>
-                            <div class="text-center text-blue-600 font-bold mb-3">
-                                <i class="fas fa-spinner fa-spin mr-2"></i> Verifying blockchain, please wait...
-                            </div>
-                        </ProgressTemplate>
-                    </asp:UpdateProgress>
                     <asp:Label ID="lblVerificationResult" runat="server" CssClass="text-lg font-bold mt-4 block" />
-                </section>
-            </ContentTemplate>
-            <Triggers>
-                <asp:AsyncPostBackTrigger ControlID="btnVerifyBlockchain" EventName="Click" />
-            </Triggers>
-        </asp:UpdatePanel>
+                </ContentTemplate>
+                <Triggers>
+                    <asp:AsyncPostBackTrigger ControlID="btnVerifyBlockchain" EventName="Click" />
+                </Triggers>
+            </asp:UpdatePanel>
+        </section>
 
         <script type="text/javascript">
-            Sys.WebForms.PageRequestManager.getInstance().add_endRequest(function () {
+            var prm = Sys.WebForms.PageRequestManager.getInstance();
+            var loadingOverlay = document.getElementById('loadingOverlay');
+            var blockchainSection = document.getElementById('blockchainContainer');
+
+            prm.add_beginRequest(function (sender, args) {
+                loadingOverlay.classList.add('visible');
+                blockchainSection.style.minHeight = blockchainSection.offsetHeight + 'px';
+            });
+            prm.add_endRequest(function (sender, args) {
+                loadingOverlay.classList.remove('visible');
+                blockchainSection.style.minHeight = '';
+
                 var anchor = document.getElementById("blockchainSection");
                 if (anchor) {
                     anchor.scrollIntoView({ behavior: "smooth" });
@@ -169,8 +219,8 @@
                 </div>
             </div>
         </div>
-
         <script>
+            const jsonModal = document.getElementById('jsonModal');
             function openJsonModal(jsonStr) {
                 try {
                     const parsedJson = JSON.parse(jsonStr);
@@ -178,13 +228,18 @@
                 } catch (e) {
                     document.getElementById('jsonModalBody').textContent = 'Invalid JSON data.';
                 }
-                document.getElementById('jsonModal').classList.remove('hidden');
-                document.getElementById('jsonModal').classList.add('flex');
+                jsonModal.classList.remove('hidden');
+                jsonModal.classList.add('flex');
             }
             function closeJsonModal() {
-                document.getElementById('jsonModal').classList.add('hidden');
-                document.getElementById('jsonModal').classList.remove('flex');
+                jsonModal.classList.add('hidden');
+                jsonModal.classList.remove('flex');
             }
+            jsonModal.addEventListener('click', (e) => {
+                if (e.target === jsonModal) {
+                    closeJsonModal();
+                }
+            });
         </script>
 
         <input type="hidden" id="salesDataJson" value='<%= salesDataJson %>' />
@@ -217,7 +272,7 @@
                         datasets: [{
                             label: 'Sales (₱)',
                             data: salesData.data,
-                            backgroundColor: 'rgba(59, 130, 246, 0.8)', /* blue-500 */
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
                             borderColor: 'rgb(59, 130, 246)',
                             borderWidth: 2,
                             tension: currentChartType === 'line' ? 0.3 : 0,
