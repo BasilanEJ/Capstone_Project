@@ -492,7 +492,6 @@
     </Compile>
     <Compile Include="AuditLogs.aspx.cs">
       <DependentUpon>AuditLogs.aspx</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="AuditLogs.aspx.designer.cs">
       <DependentUpon>AuditLogs.aspx</DependentUpon>

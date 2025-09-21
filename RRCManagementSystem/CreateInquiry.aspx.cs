@@ -45,9 +45,13 @@ namespace RRCManagementSystem
                     Response.Redirect("~/Unauthorized.aspx");
                     return;
                 }
+
+                // Load regions only once on initial page load
+                LoadRegions();
             }
         }
 
+        /* ========================= SAVE BUTTON CLICK ========================= */
         protected void btnSave_Click(object sender, EventArgs e)
         {
             int userId = Convert.ToInt32(Session["UserID"]);
@@ -117,8 +121,8 @@ namespace RRCManagementSystem
                 // =========================================
                 string street = (txtStreet.Text ?? "").Trim();
                 string barangay = (txtBarangay.Text ?? "").Trim();
-                string city = (txtCity.Text ?? "").Trim();
-                string region = (txtRegion.Text ?? "").Trim();
+                string city = (ddlCity.SelectedValue ?? "").Trim();
+                string region = (ddlRegion.SelectedValue ?? "").Trim();
                 string country = (txtCountry.Text ?? "").Trim();
                 string landmark = (txtLandmark.Text ?? "").Trim();
 
@@ -184,6 +188,7 @@ namespace RRCManagementSystem
             }
         }
 
+        /* ========================= SQL SAVE ========================= */
         private int InsertInquiry_SP(
             string emailHash, string emailEnc, string contactEnc, string message, string photoPath,
             string firstName, string middleName, string lastName,
@@ -231,7 +236,96 @@ namespace RRCManagementSystem
             }
         }
 
-        // ===== Domain allow-list (unchanged) =====
+        /* ========================= REGION & CITY ========================= */
+        protected void ddlRegion_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            LoadCities(ddlRegion.SelectedValue);
+        }
+
+        private void LoadRegions()
+        {
+            ddlRegion.Items.Clear();
+            ddlRegion.Items.Add(new ListItem("-- Select Region --", ""));
+            ddlRegion.Items.Add(new ListItem("NCR - National Capital Region", "NCR"));
+            ddlRegion.Items.Add(new ListItem("Region I - Ilocos Region", "Region I"));
+            ddlRegion.Items.Add(new ListItem("Region II - Cagayan Valley", "Region II"));
+            ddlRegion.Items.Add(new ListItem("Region III - Central Luzon", "Region III"));
+            ddlRegion.Items.Add(new ListItem("Region IV-A - CALABARZON", "Region IV-A"));
+            ddlRegion.Items.Add(new ListItem("Region IV-B - MIMAROPA", "Region IV-B"));
+            ddlRegion.Items.Add(new ListItem("Region V - Bicol Region", "Region V"));
+            ddlRegion.Items.Add(new ListItem("Region VI - Western Visayas", "Region VI"));
+            ddlRegion.Items.Add(new ListItem("Region VII - Central Visayas", "Region VII"));
+        }
+
+        private void LoadCities(string selectedRegion)
+        {
+            ddlCity.Items.Clear();
+            ddlCity.Items.Add(new ListItem("-- Select City --", ""));
+            if (selectedRegion == "NCR")
+            {
+                ddlCity.Items.Add(new ListItem("Quezon City", "Quezon City"));
+                ddlCity.Items.Add(new ListItem("Manila", "Manila"));
+                ddlCity.Items.Add(new ListItem("Makati", "Makati"));
+                ddlCity.Items.Add(new ListItem("Caloocan", "Caloocan"));
+                ddlCity.Items.Add(new ListItem("Las Piñas", "Las Piñas"));
+                ddlCity.Items.Add(new ListItem("Pasig", "Pasig"));
+                ddlCity.Items.Add(new ListItem("Taguig", "Taguig"));
+                ddlCity.Items.Add(new ListItem("Valenzuela", "Valenzuela"));
+                ddlCity.Items.Add(new ListItem("Pasay", "Pasay"));
+                ddlCity.Items.Add(new ListItem("Marikina", "Marikina"));
+                ddlCity.Items.Add(new ListItem("Muntinlupa", "Muntinlupa"));
+                ddlCity.Items.Add(new ListItem("Navotas", "Navotas"));
+                ddlCity.Items.Add(new ListItem("San Juan", "San Juan"));
+                ddlCity.Items.Add(new ListItem("Pateros", "Pateros"));
+            }
+            else if (selectedRegion == "Region I")
+            {
+                ddlCity.Items.Add(new ListItem("Vigan", "Vigan"));
+                ddlCity.Items.Add(new ListItem("San Fernando", "San Fernando"));
+                ddlCity.Items.Add(new ListItem("Dagupan", "Dagupan"));
+            }
+            else if (selectedRegion == "Region II")
+            {
+                ddlCity.Items.Add(new ListItem("Tuguegarao", "Tuguegarao"));
+                ddlCity.Items.Add(new ListItem("Ilagan", "Ilagan"));
+            }
+            else if (selectedRegion == "Region III")
+            {
+                ddlCity.Items.Add(new ListItem("San Fernando", "San Fernando"));
+                ddlCity.Items.Add(new ListItem("Angeles", "Angeles"));
+            }
+            else if (selectedRegion == "Region IV-A")
+            {
+                ddlCity.Items.Add(new ListItem("Cavite", "Cavite"));
+                ddlCity.Items.Add(new ListItem("Batangas", "Batangas"));
+            }
+            else if (selectedRegion == "Region IV-B")
+            {
+                ddlCity.Items.Add(new ListItem("Puerto Princesa", "Puerto Princesa"));
+                ddlCity.Items.Add(new ListItem("Calapan", "Calapan"));
+            }
+            else if (selectedRegion == "Region V")
+            {
+                ddlCity.Items.Add(new ListItem("Legazpi", "Legazpi"));
+                ddlCity.Items.Add(new ListItem("Naga", "Naga"));
+            }
+            else if (selectedRegion == "Region VI")
+            {
+                ddlCity.Items.Add(new ListItem("Iloilo City", "Iloilo City"));
+                ddlCity.Items.Add(new ListItem("Bacolod", "Bacolod"));
+            }
+            else if (selectedRegion == "Region VII")
+            {
+                ddlCity.Items.Add(new ListItem("Cebu City", "Cebu City"));
+                ddlCity.Items.Add(new ListItem("Dumaguete", "Dumaguete"));
+            }
+            else
+            {
+                ddlCity.Items.Add(new ListItem("No Cities Available", ""));
+            }
+        }
+
+        /* ========================= VALIDATION HELPERS ========================= */
         private static readonly HashSet<string> AllowedExactDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "gmail.com",
@@ -264,49 +358,110 @@ namespace RRCManagementSystem
             return false;
         }
 
-        // === Email Sending (unchanged) ===
-        private void SendConfirmationEmail(string toEmail, string inquiryCode)
+        private static bool IsValidEmail(string email)
+            => Regex.IsMatch(email ?? "", @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+
+        /* ========================= EMAIL CONFIRMATION ========================= */
+        private bool SendConfirmationEmail(string toEmail, string inquiryCode)
         {
-            string fromEmail = ConfigurationManager.AppSettings["emailFrom"];
-            string appPassword = ConfigurationManager.AppSettings["emailPassword"];
-
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-
-            using (var mail = new MailMessage())
+            try
             {
-                mail.From = new MailAddress(fromEmail, "RRC Management System", Encoding.UTF8);
-                mail.To.Add(new MailAddress(toEmail));
-                mail.ReplyToList.Add(new MailAddress("rrctermiteandpestcontrol@gmail.com"));
+                // Fetch credentials from App.config or Web.config for improved security
+                string fromEmail = ConfigurationManager.AppSettings["emailFrom"] ?? "rrctermiteandpestcontrol@gmail.com";
+                string appPassword = ConfigurationManager.AppSettings["emailPassword"] ?? "";
 
-                mail.Subject = $"RRC Inquiry Received - Ref {inquiryCode}";
-                mail.SubjectEncoding = Encoding.UTF8;
+                string subject = $"RRC Inquiry Received - Ref {inquiryCode}";
 
-                mail.Body =
-$@"Thank you for contacting R.R.C. Termite & Pest Control!
+                // Professional HTML body for the inquiry confirmation email
+                string body = $@"
+<!DOCTYPE html PUBLIC ""-//W3C//DTD XHTML 1.0 Transitional//EN"" ""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"">
+<html xmlns=""http://www.w3.org/1999/xhtml"">
+<head>
+    <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Inquiry Received - RRC Management System</title>
+    <style type=""text/css"">
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin: 0; padding: 0; background-color: #f4f7fa; }}
+        table {{ border-collapse: collapse; }}
+        a {{ text-decoration: none; }}
+        .inquiry-code {{ font-size: 24px; font-weight: bold; color: #2b6cb0; word-break: break-all; }}
+        .content-box {{ background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); padding: 30px; }}
+        .footer {{ font-size: 12px; color: #718096; margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; }}
+    </style>
+</head>
+<body style=""margin: 0; padding: 0; background-color: #f4f7fa;"">
+    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"">
+        <tr>
+            <td align=""center"" style=""padding: 20px;"">
+                <table role=""presentation"" width=""600"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""max-width: 600px; width: 100%;"">
+                    <tr>
+                        <td align=""center"" style=""padding-bottom: 20px;"">
+                            <h1 style=""color: #2b6cb0; font-size: 28px; margin: 0;"">RRC Management System</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=""padding: 30px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);"">
+                            <h2 style=""color: #2d3748; font-size: 24px; margin: 0 0 15px;"">Inquiry Received</h2>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">Thank you for contacting R.R.C. Termite & Pest Control!</p>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">We have received your inquiry. Your reference code is:</p>
+                            <p align=""center"" style=""margin: 0; text-align: center; font-size: 24px; font-weight: bold; color: #2b6cb0; padding: 10px 0; word-break: break-all;"">{inquiryCode}</p>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">Please keep this code so we can quickly find your record. We will get back to you as soon as possible.</p>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 25px 0 0;"">—</p>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0;"">RRC Termite & Pest Control</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align=""center"" style=""padding-top: 20px;"">
+                            <p style=""font-size: 12px; color: #718096; margin: 0; text-align: center;"">
+                                If you did not make this inquiry, you can safely ignore this email.
+                                <br/><br/>
+                                &copy; 2024 RRC Management System. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
 
-We received your inquiry. Your reference code is: {inquiryCode}
-Please keep this code so we can quickly find your record.
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-We'll get back to you as soon as possible.
-
-—
-RRC Termite & Pest Control
-rrctermiteandpestcontrol@gmail.com";
-                mail.BodyEncoding = Encoding.UTF8;
-                mail.IsBodyHtml = false;
-
-                using (var smtp = new SmtpClient("smtp.gmail.com", 587))
+                using (var mail = new MailMessage())
                 {
-                    smtp.UseDefaultCredentials = false;
-                    smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
-                    smtp.EnableSsl = true;
-                    smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
-                    smtp.Timeout = 20000;
-                    smtp.Send(mail);
+                    mail.From = new MailAddress(fromEmail, "RRC Management System", Encoding.UTF8);
+                    mail.To.Add(new MailAddress(toEmail));
+                    mail.ReplyToList.Add(new MailAddress("rrctermiteandpestcontrol@gmail.com"));
+
+                    mail.Subject = subject;
+                    mail.SubjectEncoding = Encoding.UTF8;
+
+                    mail.Body = body;
+                    mail.BodyEncoding = Encoding.UTF8;
+                    mail.IsBodyHtml = true;
+
+                    using (var smtp = new SmtpClient("smtp.gmail.com", 587))
+                    {
+                        smtp.UseDefaultCredentials = false;
+                        smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
+                        smtp.EnableSsl = true;
+                        smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+                        smtp.Timeout = 20000;
+                        smtp.Send(mail);
+                    }
                 }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Email error: " + ex.Message);
+                return false;
             }
         }
 
+
+        /* ========================= MISC HELPERS ========================= */
         private bool HasPermission(int userId, string moduleName, string permissionColumn)
         {
             string perm = (permissionColumn == "CanView" || permissionColumn == "CanAdd" ||
@@ -340,9 +495,6 @@ rrctermiteandpestcontrol@gmail.com";
 
             return true;
         }
-
-        private static bool IsValidEmail(string email)
-            => Regex.IsMatch(email ?? "", @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 
         private void ShowSwal(string title, string text, string icon)
         {

@@ -64,6 +64,8 @@
 </head>
 <body class="bg-light">
     <form id="form1" runat="server" class="d-flex flex-column min-vh-100">
+        <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="true" />
+
 
         <!-- Header -->
         <header class="bg-dark text-white d-flex align-items-center px-4 justify-content-between" style="height: 60px; position: fixed; top: 0; left: 0; width: 100%; z-index: 1050;">

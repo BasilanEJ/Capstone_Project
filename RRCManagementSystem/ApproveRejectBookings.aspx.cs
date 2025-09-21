@@ -95,64 +95,91 @@
                 }
             }
 
-            protected void gvBookings_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
+        protected void gvBookings_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
+        {
+            if (!int.TryParse(e.CommandArgument.ToString(), out int bookingID))
             {
-                if (!int.TryParse(e.CommandArgument.ToString(), out int bookingID))
-                {
-                    lblMessage.Text = "⚠️ Invalid Booking ID.";
-                    lblMessage.ForeColor = System.Drawing.Color.Red;
-                    return;
-                }
-
-                int adminId = Convert.ToInt32(Session["UserID"]);
-
-                if (e.CommandName == "Approve")
-                {
-                    if (SetBookingStatus(bookingID, "Approved"))
-                    {
-                        // Pull essentials for AssignBooking
-                        var info = GetBookingBasics(bookingID);
-                        Session["BookingID"] = bookingID;
-                        Session["Price"] = info.Price;
-                        Session["SQM"] = info.SQM;
-                        Session["ServiceName"] = info.ServiceNames;
-                        Session["ScheduledDate"] = info.ScheduledDate;
-
-                        lblMessage.Text = $"✅ Booking {bookingID} approved! Redirecting to assign team...";
-                        lblMessage.ForeColor = System.Drawing.Color.Green;
-
-                        // audit
-                        AddAuditLog(adminId, $"Approved booking ID: {bookingID}");
-
-                        Response.AddHeader("REFRESH", "1.5;URL=AssignBooking.aspx?BookingID=" + bookingID);
-                    }
-                    else
-                    {
-                        lblMessage.Text = $"❌ Failed to approve booking {bookingID}.";
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                    }
-                }
-                else if (e.CommandName == "Reject")
-                {
-                    if (SetBookingStatus(bookingID, "Rejected"))
-                    {
-                        lblMessage.Text = $"⚠️ Booking {bookingID} rejected.";
-                        lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
-
-                        // audit
-                        AddAuditLog(adminId, $"Rejected booking ID: {bookingID}");
-
-                        LoadPendingBookings();
-                    }
-                    else
-                    {
-                        lblMessage.Text = $"❌ Failed to reject booking {bookingID}.";
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                    }
-                }
+                lblMessage.Text = "⚠️ Invalid Booking ID.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return;
             }
 
-            private bool SetBookingStatus(int bookingID, string status)
+            int adminId = Convert.ToInt32(Session["UserID"]);
+
+            if (e.CommandName == "Approve")
+            {
+                // Update status to Approved
+                if (ApproveBookingAndInsertBalance(bookingID, adminId))
+                {
+                    // Pull essentials for AssignBooking
+                    var info = GetBookingBasics(bookingID);
+                    Session["BookingID"] = bookingID;
+                    Session["Price"] = info.Price;
+                    Session["SQM"] = info.SQM;
+                    Session["ServiceName"] = info.ServiceNames;
+                    Session["ScheduledDate"] = info.ScheduledDate;
+
+                    lblMessage.Text = $"✅ Booking {bookingID} approved! Redirecting to assign team...";
+                    lblMessage.ForeColor = System.Drawing.Color.Green;
+
+                    // Audit log
+                    AddAuditLog(adminId, $"Approved booking ID: {bookingID} and balance initialized.");
+
+                    Response.AddHeader("REFRESH", "1.5;URL=AssignBooking.aspx?BookingID=" + bookingID);
+                }
+                else
+                {
+                    lblMessage.Text = $"❌ Failed to approve booking {bookingID}.";
+                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                }
+            }
+            else if (e.CommandName == "Reject")
+            {
+                if (SetBookingStatus(bookingID, "Rejected"))
+                {
+                    lblMessage.Text = $"⚠️ Booking {bookingID} rejected.";
+                    lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
+
+                    AddAuditLog(adminId, $"Rejected booking ID: {bookingID}");
+
+                    LoadPendingBookings();
+                }
+                else
+                {
+                    lblMessage.Text = $"❌ Failed to reject booking {bookingID}.";
+                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                }
+            }
+        }
+
+        private bool ApproveBookingAndInsertBalance(int bookingID, int adminId)
+        {
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spBooking_ApproveAndInsertBalance", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                    cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = adminId;
+
+                    con.Open();
+                    object result = cmd.ExecuteScalar(); // Returns 1 if success
+
+                    return result != null && Convert.ToInt32(result) == 1;
+                }
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = $"⚠️ Error approving booking: {ex.Message}";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return false;
+            }
+        }
+
+
+
+        private bool SetBookingStatus(int bookingID, string status)
             {
                 try
                 {

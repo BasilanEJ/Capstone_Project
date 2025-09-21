@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Net.Mail;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using RRCManagementSystem.Helpers;
 
 namespace RRCManagementSystem
 {
@@ -213,45 +214,42 @@ namespace RRCManagementSystem
                     {
                         if (r.Read())
                         {
-                            // Expected: Email, ServiceNames, NewScheduledDate
-                            email = r["Email"] as string;
+                            // Decrypt the email
+                            var encryptedEmail = r["EmailEnc"] as string;
+                            email = AESHelper.DecryptEmail(encryptedEmail);
+
                             service = r["ServiceNames"] as string ?? "(No Service)";
                             if (r["NewScheduledDate"] != DBNull.Value)
                                 newDate = Convert.ToDateTime(r["NewScheduledDate"]);
 
-                            // If your SP already returns ScheduleID/BookingID, read them here:
+                            // If SP returns IDs
                             if (HasColumn(r, "ScheduleID")) scheduleId = Convert.ToInt32(r["ScheduleID"]);
                             if (HasColumn(r, "BookingID")) bookingId = Convert.ToInt32(r["BookingID"]);
                         }
                     }
                 }
 
-                // If SP didn’t include IDs, look them up quickly
-                if (scheduleId == 0 || bookingId == 0)
+                // Send email
+                if (!string.IsNullOrEmpty(email))
                 {
-                    LookupScheduleAndBookingIdsByRequest(requestId, out scheduleId, out bookingId);
+                    SendApprovalEmail(email, service, newDate ?? DateTime.MinValue);
                 }
 
-                // Send email (best-effort)
-                try { SendApprovalEmail(email, service, newDate ?? DateTime.MinValue); } catch { /* ignore mail errors */ }
-
-                // ✅ SweetAlert then redirect to AssignBooking.aspx (with IDs in query string)
-                var url = "AssignBooking.aspx";
-                if (scheduleId > 0 || bookingId > 0)
+                // ✅ Redirect after approval
+                string url = "AssignBooking.aspx";
+                if (bookingId > 0 || scheduleId > 0)
                 {
                     url += $"?{(bookingId > 0 ? "BookingID=" + bookingId : "")}" +
                            $"{(bookingId > 0 && scheduleId > 0 ? "&" : "")}" +
                            $"{(scheduleId > 0 ? "ScheduleID=" + scheduleId : "")}";
                 }
 
-                string js = $@"
-                    Swal.fire('✅ Approved', 'The request has been approved and rescheduled.', 'success')
-                        .then(function() {{
-                            window.location = '{url}';
-                        }});";
-                ScriptManager.RegisterStartupScript(this, GetType(), "showApprovedAndRedirect", js, true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "showApprovedAndRedirect", $@"
+            Swal.fire('✅ Approved', 'The request has been approved and rescheduled.', 'success')
+                .then(function() {{
+                    window.location = '{url}';
+                }});", true);
 
-                // Keep the grid fresh if user cancels the dialog somehow
                 LoadRescheduleRequests();
             }
             catch (Exception ex)
@@ -260,6 +258,7 @@ namespace RRCManagementSystem
                 lblMessage.ForeColor = System.Drawing.Color.Red;
             }
         }
+
 
         private void HandleReject(int requestId, string reason)
         {
@@ -279,13 +278,27 @@ namespace RRCManagementSystem
                     {
                         if (r.Read())
                         {
-                            email = r["Email"]?.ToString();
+                            // ✅ Decrypt the email here
+                            var encryptedEmail = r["EmailEnc"] as string;
+                            email = AESHelper.DecryptEmail(encryptedEmail);
+
                             service = r["ServiceNames"]?.ToString() ?? "(No Service)";
                         }
                     }
                 }
 
-                try { SendRejectionEmail(email, service, reason); } catch { /* ignore */ }
+                // Send rejection email if decrypted email is valid
+                if (!string.IsNullOrEmpty(email))
+                {
+                    try
+                    {
+                        SendRejectionEmail(email, service, reason);
+                    }
+                    catch
+                    {
+                        // Ignore email send errors but do not break process
+                    }
+                }
 
                 ScriptManager.RegisterStartupScript(this, GetType(),
                     "showRejected",
@@ -336,21 +349,92 @@ namespace RRCManagementSystem
             }
         }
 
+        private string BuildHtmlEmail(string title, string message, string highlightColor)
+        {
+            return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 30px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            background-color: {highlightColor};
+            text-align: center;
+            padding: 20px;
+        }}
+        .header h1 {{
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+        }}
+        .content {{
+            padding: 20px;
+            color: #333333;
+            font-size: 16px;
+        }}
+        .content p {{
+            line-height: 1.6;
+        }}
+        .footer {{
+            background: #f4f4f4;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #777777;
+        }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>{title}</h1>
+        </div>
+        <div class='content'>
+            {message}
+            <p style='margin-top:30px;'>Thank you,<br><strong>RRC Management Team</strong></p>
+        </div>
+        <div class='footer'>
+            <p>© {DateTime.Now.Year} RRC Management. All rights reserved.</p>
+            <p>123 RRC Street, City, Country</p>
+        </div>
+    </div>
+</body>
+</html>";
+        }
+
+
+
         private void SendApprovalEmail(string toEmail, string serviceName, DateTime newDate)
         {
             if (string.IsNullOrWhiteSpace(toEmail)) return;
 
             string subject = "✅ Reschedule Approved - RRC Management";
-            string body =
-$@"Hello,
 
-Your reschedule request for '{serviceName}' has been approved.
-New date: {newDate:yyyy-MM-dd}.
+            string message = $@"
+        <p>Hello,</p>
+        <p>We are pleased to inform you that your reschedule request for 
+        <strong>{serviceName}</strong> has been approved.</p>
+        <p><strong>New Date:</strong> {newDate:dddd, MMMM dd, yyyy}</p>
+        <p>You can view the details in your account.</p>";
 
-Thank you,
-RRC Management Team";
+            string htmlBody = BuildHtmlEmail("Reschedule Approved", message, "#2563eb");
 
-            SendEmail(toEmail, subject, body);
+            SendEmail(toEmail, subject, htmlBody);
         }
 
         private void SendRejectionEmail(string toEmail, string serviceName, string reason)
@@ -358,29 +442,43 @@ RRC Management Team";
             if (string.IsNullOrWhiteSpace(toEmail)) return;
 
             string subject = "❌ Reschedule Rejected - RRC Management";
-            string body =
-$@"Hello,
 
-Your reschedule request for '{serviceName}' has been rejected.
-Reason: {reason}
+            string message = $@"
+        <p>Hello,</p>
+        <p>We regret to inform you that your reschedule request for 
+        <strong>{serviceName}</strong> has been rejected.</p>
+        <p><strong>Reason:</strong> {reason}</p>
+        <p>If you have any questions, please contact our support team.</p>";
 
-Thank you,
-RRC Management Team";
+            string htmlBody = BuildHtmlEmail("Reschedule Rejected", message, "#dc2626");
 
-            SendEmail(toEmail, subject, body);
+            SendEmail(toEmail, subject, htmlBody);
         }
 
-        private void SendEmail(string toEmail, string subject, string body)
+
+        private void SendEmail(string toEmail, string subject, string htmlBody)
         {
             using (var mail = new MailMessage())
             {
-                mail.From = new MailAddress(ConfigurationManager.AppSettings["emailFrom"]);
+                // FROM email must be from your domain to avoid spam
+                string fromEmail = ConfigurationManager.AppSettings["emailFrom"];
+                mail.From = new MailAddress(fromEmail, "RRC Management");
+
                 mail.To.Add(toEmail);
                 mail.Subject = subject;
-                mail.Body = body;
+                mail.Body = htmlBody;
+                mail.IsBodyHtml = true; // <-- Enable HTML design
 
-                using (var smtp = new SmtpClient()) { smtp.Send(mail); }
+                // Additional headers for deliverability
+                mail.ReplyToList.Add(new MailAddress(fromEmail));
+                mail.Priority = MailPriority.High;
+
+                using (var smtp = new SmtpClient())
+                {
+                    smtp.Send(mail);
+                }
             }
         }
+
     }
 }

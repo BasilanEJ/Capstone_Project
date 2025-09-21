@@ -273,21 +273,82 @@ namespace RRCManagementSystem
         {
             try
             {
+                // Fetch credentials from App.config or Web.config for improved security
                 string fromEmail = ConfigurationManager.AppSettings["emailFrom"] ?? "rrctermiteandpestcontrol@gmail.com";
                 string appPassword = ConfigurationManager.AppSettings["emailPassword"] ?? "";
+
+                // The reset link is now for the client role
                 string resetLink = $"https://rrcmngmnt.com/ResetPassword.aspx?type=client&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
-                string body = $@"<!DOCTYPE html><html><head><meta charset='UTF-8'>
-<style>body{{background:#f9f9f9;font-family:Arial}}.container{{max-width:600px;margin:30px auto;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.05);padding:20px 30px}}
-h3{{color:#2a4fa7}}.button{{display:inline-block;padding:12px 20px;background:#add8e6;color:#000;text-decoration:none;border-radius:5px;font-weight:bold}}</style>
-</head><body><div class='container'>
-<h3>Welcome to RRC Management System</h3>
-<p>You have been registered as a <strong>Client</strong>.</p>
-<p>Click the button below to set your password (valid for 1 hour):</p>
-<p><a href='{resetLink}' class='button'>Set Password</a></p>
-</div></body></html>";
+                // Updated HTML body with a professional, table-based layout and inline CSS for email client compatibility.
+                // The role is now hardcoded as "Client" as per the new logic.
+                string body = $@"
+<!DOCTYPE html PUBLIC ""-//W3C//DTD XHTML 1.0 Transitional//EN"" ""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"">
+<html xmlns=""http://www.w3.org/1999/xhtml"">
+<head>
+    <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Set Your Password - RRC Management System</title>
+    <style type=""text/css"">
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin: 0; padding: 0; background-color: #f4f7fa; }}
+        table {{ border-collapse: collapse; }}
+        a {{ text-decoration: none; }}
+        .button {{
+            background-color: #2b6cb0;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 12px 24px;
+            border-radius: 6px;
+            display: inline-block;
+        }}
+        .link-text {{ color: #2b6cb0; text-decoration: underline; word-break: break-all; }}
+        .content-box {{ background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); padding: 30px; }}
+        .header {{ background-color: #1a202c; padding: 20px 0; }}
+        .footer {{ font-size: 12px; color: #718096; margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; }}
+    </style>
+</head>
+<body style=""margin: 0; padding: 0; background-color: #f4f7fa;"">
+    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"">
+        <tr>
+            <td align=""center"" style=""padding: 20px;"">
+                <table role=""presentation"" width=""600"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""max-width: 600px; width: 100%;"">
+                    <tr>
+                        <td align=""center"" style=""padding-bottom: 20px;"">
+                            <h1 style=""color: #2b6cb0; font-size: 28px; margin: 0;"">RRC Management System</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=""padding: 30px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);"">
+                            <h2 style=""color: #2d3748; font-size: 24px; margin: 0 0 15px;"">Welcome to RRC Management System</h2>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">Hello,</p>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">You have been registered as a <strong>Client</strong>. To get started, you'll need to set your password.</p>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px;"">Please click the button below to continue:</p>
+                            <p align=""center"" style=""margin: 0; text-align: center;"">
+                                <a href=""{resetLink}"" class=""button"" style=""background-color: #2b6cb0; color: #ffffff; font-size: 16px; font-weight: bold; padding: 12px 24px; border-radius: 6px; display: inline-block;"">Set Password</a>
+                            </p>
+                            <p style=""color: #4a5568; font-size: 14px; line-height: 1.6; margin: 30px 0 15px; text-align: center;"">If the button does not work, you can copy and paste the following URL into your browser:</p>
+                            <p style=""text-align: center; font-size: 14px; margin: 0;""><a href=""{resetLink}"" class=""link-text"" style=""color: #2b6cb0; text-decoration: underline; word-break: break-all;"">{resetLink}</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align=""center"" style=""padding-top: 20px;"">
+                            <p style=""font-size: 12px; color: #718096; margin: 0; text-align: center;"">
+                                This link will expire in 1 hour. If you did not request this, you can safely ignore this email.
+                                <br/><br/>
+                                &copy; 2024 RRC Management System. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
 
+                // Specify TLS 1.2 for better security and compatibility.
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
                 using (var mail = new MailMessage())
@@ -302,17 +363,21 @@ h3{{color:#2a4fa7}}.button{{display:inline-block;padding:12px 20px;background:#a
                     {
                         smtp.UseDefaultCredentials = false;
                         smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
-                        smtp.EnableSsl = true; // STARTTLS
+                        smtp.EnableSsl = true;
                         smtp.Send(mail);
                     }
                 }
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                // Log the exception to help with debugging and not just swallow the error.
+                System.Diagnostics.Debug.WriteLine("Email error: " + ex.Message);
                 return false;
             }
         }
+
+
 
         private void ShowSweetAlert(string title, string message, string icon)
         {

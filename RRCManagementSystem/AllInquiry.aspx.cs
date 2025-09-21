@@ -35,7 +35,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         protected void gvInquiries_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName == "viewMessage")
@@ -45,7 +44,6 @@ namespace RRCManagementSystem
                     $"Swal.fire({{ title: 'Full Message', text: '{fullMessage}', icon: 'info', confirmButtonText: 'Close' }});", true);
             }
         }
-
 
         private void BindInspectors()
         {
@@ -74,7 +72,7 @@ namespace RRCManagementSystem
                     throw new InvalidOperationException("Missing form data.");
 
                 int inspectorId = int.Parse(parts[0]);
-                DateTime scheduleLocal = DateTime.Parse(parts[1]); // browser local (PHT)
+                DateTime scheduleLocal = DateTime.Parse(parts[1]);
                 string remarks = parts[2];
                 string firstName = parts[3];
                 string middleName = parts[4];
@@ -123,17 +121,15 @@ namespace RRCManagementSystem
                 conn.Open();
                 da.Fill(dt);
 
-                // ===== Decrypt sensitive fields before binding =====
+                // ===== Decrypt sensitive fields =====
                 foreach (DataRow row in dt.Rows)
                 {
-                    // Decrypt email and contact
                     if (row["EmailEnc"] != DBNull.Value)
                         row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
 
                     if (row["ContactEnc"] != DBNull.Value)
                         row["ContactEnc"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
 
-                    // Decrypt address fields
                     if (row["StreetEnc"] != DBNull.Value)
                         row["StreetEnc"] = AESHelper.DecryptField(row["StreetEnc"].ToString());
 
@@ -153,7 +149,7 @@ namespace RRCManagementSystem
                         row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
                 }
 
-                // ✅ Rename columns to match old UI so GridView binds correctly
+                // Rename columns for GridView binding
                 dt.Columns["EmailEnc"].ColumnName = "Email";
                 dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
                 dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
@@ -163,19 +159,17 @@ namespace RRCManagementSystem
                 dt.Columns["CountryEnc"].ColumnName = "Country";
                 dt.Columns["LandmarkEnc"].ColumnName = "Landmark";
 
-                // Bind to GridView
                 gvInquiries.DataSource = dt;
                 gvInquiries.DataBind();
             }
         }
-
 
         private int GetSystemSettingInt(string settingName)
         {
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spSystemSetting_Get", conn))
             {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@SettingName", SqlDbType.NVarChar, 100).Value = settingName;
 
                 conn.Open();
@@ -213,7 +207,6 @@ namespace RRCManagementSystem
                     string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName;
                 cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = lastName ?? "";
 
-                // Encrypt address fields before saving
                 cmd.Parameters.Add("@StreetAndUnit", SqlDbType.NVarChar, 255).Value =
                     string.IsNullOrWhiteSpace(street) ? (object)DBNull.Value : AESHelper.EncryptField(street);
 
@@ -237,7 +230,6 @@ namespace RRCManagementSystem
             }
         }
 
-        // INSPECTOR-ONLY VERSION
         private void AssignInspector(int inquiryId, int inspectorUserId, DateTime scheduleLocalPHT, string remarks)
         {
             int? createdInspectionId = null;
@@ -298,9 +290,8 @@ namespace RRCManagementSystem
 
             try
             {
-                // Soft delete by setting status to Archived
                 ArchiveInquiry(inquiryId);
-                LoadInquiries(); // Refresh GridView
+                LoadInquiries();
 
                 ScriptManager.RegisterStartupScript(this, GetType(), "ArchivedOK",
                     "Swal.fire('Archived','Inquiry has been moved to archived list.','success');", true);
@@ -312,43 +303,20 @@ namespace RRCManagementSystem
             }
         }
 
-
         private void ArchiveInquiry(int inquiryId)
         {
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("spInquiry_Archive", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-
-                // Pass parameter to stored procedure
                 cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
 
                 conn.Open();
-
-                // Execute and get number of affected rows
                 int rows = Convert.ToInt32(cmd.ExecuteScalar());
-
                 if (rows == 0)
                 {
                     throw new InvalidOperationException("Inquiry not found or already archived.");
                 }
-            }
-        }
-
-
-
-        private void DeleteInquiry(int inquiryId)
-        {
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.spInquiry_Delete", conn))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
-
-                conn.Open();
-                int rows = Convert.ToInt32(cmd.ExecuteScalar());
-                if (rows == 0)
-                    throw new InvalidOperationException("Inquiry not found.");
             }
         }
 
@@ -362,7 +330,6 @@ namespace RRCManagementSystem
                 string inquiryId = drv["InquiryID"].ToString();
                 string inquiryCode = drv["InquiryCode"].ToString();
 
-                // ✅ Use final renamed columns here
                 btnAssign.Attributes["data-fn"] = SafeAttr(drv["FirstName"]);
                 btnAssign.Attributes["data-mn"] = SafeAttr(drv["MiddleName"]);
                 btnAssign.Attributes["data-ln"] = SafeAttr(drv["LastName"]);
@@ -377,8 +344,6 @@ namespace RRCManagementSystem
                 btnAssign.OnClientClick = $"showAssignModal(this, {inquiryId}); return false;";
             }
         }
-
-
 
         private static string SafeAttr(object val)
         {

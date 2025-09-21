@@ -1,4 +1,4 @@
-﻿<%@ Page Title="View Suppliers" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ViewSupplier.aspx.cs" Inherits="RRCManagementSystem.ViewSupplier" %>
+﻿<%@ Page Title="View Suppliers" Language="C#" MasterPageFile="~/Admin.Master" AutoEventWireup="true" CodeBehind="ViewSupplier.aspx.cs" Inherits="RRCManagementSystem.ViewSupplier" Async="true" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <!-- Tailwind CSS CDN -->

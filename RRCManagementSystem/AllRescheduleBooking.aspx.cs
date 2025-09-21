@@ -24,16 +24,15 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
-            // 🔐 Keep whatever access rule you intend here
+            // 🔐 Permission check
             if (role == "SuperAdmin" || role == "Inspector")
             {
-                // Response.Redirect("~/Login.aspx");
-                // return;
+                // Allow for now, add restrictions if needed
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔐 CanView permission for ManageBooking
+            // Check permission for ManageBooking
             if (!HasViewPermission(userId, "ManageBooking"))
             {
                 lblMessage.Text = "❌ You do not have permission to view reschedules.";
@@ -44,8 +43,8 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                LoadRescheduleBookings(); // loads and caches DataTable
-                BindFiltered();           // initial bind (no filters)
+                LoadRescheduleBookings();
+                BindFiltered();  // Initial bind with no filters
             }
         }
 
@@ -84,7 +83,7 @@ namespace RRCManagementSystem
                         var dt = new DataTable();
                         da.Fill(dt);
 
-                        // Normalize ScheduledDate column (DateTime)
+                        // Ensure ScheduledDate is DateTime
                         if (dt.Columns.Contains("ScheduledDate") && dt.Columns["ScheduledDate"].DataType != typeof(DateTime))
                         {
                             dt.Columns["ScheduledDate"].ColumnName = "ScheduledDateRaw";
@@ -97,13 +96,13 @@ namespace RRCManagementSystem
                             dt.Columns.Remove("ScheduledDateRaw");
                         }
 
-                        // Cache and bind
+                        // Cache data in session
                         Session[CacheKey] = dt;
                         gvReschedules.DataSource = dt;
                         gvReschedules.DataBind();
                     }
                 }
-                lblMessage.Text = string.Empty;
+                lblMessage.Text = "";
             }
             catch (Exception ex)
             {
@@ -112,7 +111,6 @@ namespace RRCManagementSystem
             }
         }
 
-        // 🔎 Apply filters and bind (now includes BookingCode)
         private void BindFiltered()
         {
             var dt = Session[CacheKey] as DataTable;
@@ -123,8 +121,8 @@ namespace RRCManagementSystem
                 if (dt == null) return;
             }
 
-            string search = (txtSearch.Text ?? string.Empty).Trim();
-            string status = ddlFilterStatus.SelectedValue?.Trim() ?? string.Empty;
+            string search = (txtSearch.Text ?? "").Trim();
+            string status = ddlFilterStatus.SelectedValue?.Trim() ?? "";
 
             DateTime from, to;
             bool hasFrom = DateTime.TryParseExact(txtFrom.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out from);
@@ -136,12 +134,7 @@ namespace RRCManagementSystem
             if (!string.IsNullOrEmpty(search))
             {
                 string s = search.Replace("'", "''");
-                filter += $" AND (" +
-                          $"BookingCode LIKE '%{s}%' " + // ✅ search by booking code
-                          $"OR Convert(BookingID, 'System.String') LIKE '%{s}%' " +
-                          $"OR ClientName LIKE '%{s}%' " +
-                          $"OR ServiceName LIKE '%{s}%' " +
-                          $"OR Convert(OperationNumber, 'System.String') LIKE '%{s}%')";
+                filter += $" AND (BookingCode LIKE '%{s}%' OR ClientName LIKE '%{s}%' OR ServiceName LIKE '%{s}%' OR Convert(OperationNumber, 'System.String') LIKE '%{s}%')";
             }
 
             if (!string.IsNullOrEmpty(status))
@@ -151,21 +144,13 @@ namespace RRCManagementSystem
             }
 
             if (hasFrom && hasTo)
-            {
                 filter += $" AND ScheduledDate >= #{from:MM/dd/yyyy}# AND ScheduledDate < #{to.AddDays(1):MM/dd/yyyy}#";
-            }
             else if (hasFrom)
-            {
                 filter += $" AND ScheduledDate >= #{from:MM/dd/yyyy}#";
-            }
             else if (hasTo)
-            {
                 filter += $" AND ScheduledDate < #{to.AddDays(1):MM/dd/yyyy}#";
-            }
 
             dv.RowFilter = filter;
-
-            gvReschedules.PageIndex = 0;
             gvReschedules.DataSource = dv;
             gvReschedules.DataBind();
         }
@@ -174,32 +159,33 @@ namespace RRCManagementSystem
 
         protected void btnReset_Click(object sender, EventArgs e)
         {
-            txtSearch.Text = string.Empty;
+            txtSearch.Text = "";
             ddlFilterStatus.SelectedIndex = 0;
-            txtFrom.Text = string.Empty;
-            txtTo.Text = string.Empty;
+            txtFrom.Text = "";
+            txtTo.Text = "";
             BindFiltered();
         }
 
         protected void gvReschedules_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
             gvReschedules.PageIndex = e.NewPageIndex;
-            BindFiltered();
+            BindFiltered();  // Keep filters after changing page
         }
 
         protected void gvReschedules_RowDataBound(object sender, GridViewRowEventArgs e)
         {
-            if (e.Row.RowType != DataControlRowType.DataRow) return;
-
-            string status = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
-            var ddlStatus = (DropDownList)e.Row.FindControl("ddlStatus");
-            if (ddlStatus != null && !string.IsNullOrEmpty(status))
+            if (e.Row.RowType == DataControlRowType.DataRow)
             {
-                var li = ddlStatus.Items.FindByValue(status);
-                if (li != null)
+                string status = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
+                var ddlStatus = (DropDownList)e.Row.FindControl("ddlStatus");
+                if (ddlStatus != null && !string.IsNullOrEmpty(status))
                 {
-                    ddlStatus.ClearSelection();
-                    li.Selected = true;
+                    var li = ddlStatus.Items.FindByValue(status);
+                    if (li != null)
+                    {
+                        ddlStatus.ClearSelection();
+                        li.Selected = true;
+                    }
                 }
             }
         }

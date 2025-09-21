@@ -1,120 +1,56 @@
 ﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="ResetPassword.aspx.cs" Inherits="RRCManagementSystem.ResetPassword" %>
 
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html xmlns="http://www.w3.org/1999/xhtml" class="h-full">
 <head runat="server">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
     <title>Reset Password - RRC Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
+        body {
             font-family: 'Poppins', sans-serif;
             color: #333;
         }
-
-        body {
-            background: url('images/logo.jpg') no-repeat center center fixed;
-            background-size: cover;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .login-container {
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            width: 400px;
-            padding: 40px 30px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            border: 1px solid #ddd;
-            transition: transform 0.3s ease;
-        }
-
-        .login-container:hover {
-            transform: translateY(-5px);
-        }
-
-        h2 {
-            color: #333;
-            font-size: 26px;
-            margin-bottom: 25px;
-        }
-
-        .input {
-            width: 100%;
-            padding: 14px 12px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            font-size: 15px;
-            background: #f9f9f9;
-            color: #333;
-        }
-
-        .input::placeholder {
-            color: #999;
-        }
-
-        .input:focus {
-            background: #fff;
-            border-color: #007bff;
-            outline: none;
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 14px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 15px;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        .btn-submit:hover {
-            background-color: #0056b3;
-            transform: translateY(-2px);
-        }
-
-        .validation-message {
-            font-size: 13px;
-            margin-bottom: 10px;
-            text-align: left;
-            width: 100%;
-            color: #555;
-        }
-
-        .checkbox-container {
-            width: 100%;
-            text-align: left;
-            font-size: 13px;
-            margin-bottom: 20px;
-        }
-
-        @media screen and (max-width: 480px) {
-            .login-container {
-                width: 90%;
-                padding: 30px 20px;
-            }
+        .bg-image {
+            background-image: url('images/logo.jpg');
         }
     </style>
+</head>
+
+<body class="h-full flex items-center justify-center bg-cover bg-center bg-fixed bg-image">
+    <form id="form1" runat="server">
+        <div class="login-container bg-white p-10 md:p-14 rounded-2xl shadow-2xl flex flex-col items-center text-center border border-gray-200 w-11/12 max-w-lg transition-transform hover:translate-y-[-5px]">
+            <h2 class="text-3xl font-semibold text-gray-800 mb-6">Reset Password</h2>
+
+            <div class="w-full mb-3">
+                <asp:TextBox ID="txtNewPassword" runat="server" CssClass="input block w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" TextMode="Password"
+                             placeholder="Enter new password" onkeyup="validatePasswordStrength(this.value)" />
+                <span id="passwordStrengthMsg" class="validation-message text-xs text-gray-500 mt-1 block text-left"></span>
+            </div>
+
+            <div class="w-full mb-3">
+                <asp:TextBox ID="txtConfirmPassword" runat="server" CssClass="input block w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" TextMode="Password"
+                             placeholder="Confirm new password" onkeyup="validatePasswordMatch()" />
+                <span id="passwordMatchMsg" class="validation-message text-xs text-gray-500 mt-1 block text-left"></span>
+            </div>
+
+            <div class="checkbox-container w-full text-left text-xs text-gray-700 mb-5">
+                <input type="checkbox" onclick="togglePasswords()" class="mr-1" /> Show Passwords
+            </div>
+
+            <asp:Button ID="btnResetPassword" runat="server" Text="Reset Password" CssClass="btn-submit w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-300"
+                        OnClick="btnResetPassword_Click" />
+            <asp:Literal ID="ltScript" runat="server" />
+        </div>
+    </form>
 
     <script>
         function validatePasswordStrength(password) {
-            const specialCharRegex = /[!@#$%^&*(),.?\":{}|<>]/;
+            const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
             const strengthMsg = document.getElementById("passwordStrengthMsg");
 
             if (password.length < 8) {
@@ -161,29 +97,5 @@
             pass2.type = type;
         }
     </script>
-</head>
-
-<body>
-    <form id="form1" runat="server">
-        <div class="login-container">
-            <h2>Reset Password</h2>
-
-            <asp:TextBox ID="txtNewPassword" runat="server" CssClass="input" TextMode="Password"
-                placeholder="Enter new password" onkeyup="validatePasswordStrength(this.value)" />
-            <span id="passwordStrengthMsg" class="validation-message"></span>
-
-            <asp:TextBox ID="txtConfirmPassword" runat="server" CssClass="input" TextMode="Password"
-                placeholder="Confirm new password" onkeyup="validatePasswordMatch()" />
-            <span id="passwordMatchMsg" class="validation-message"></span>
-
-            <div class="checkbox-container">
-                <input type="checkbox" onclick="togglePasswords()" /> Show Passwords
-            </div>
-
-            <asp:Button ID="btnResetPassword" runat="server" Text="Reset Password" CssClass="btn-submit"
-                OnClick="btnResetPassword_Click" />
-            <asp:Literal ID="ltScript" runat="server" />
-        </div>
-    </form>
 </body>
 </html>

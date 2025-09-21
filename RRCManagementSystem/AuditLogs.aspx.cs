@@ -4,9 +4,25 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Web.UI.WebControls;
+using System.Collections.Generic;
 
 namespace RRCManagementSystem
 {
+    // =========================
+    // Serializable Class Here
+    // =========================
+    [Serializable]
+    public class AuditLogEntry
+    {
+        public int LogID { get; set; }
+        public string AdminName { get; set; }
+        public string Action { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+
+    // =========================
+    // Main Page Code Behind
+    // =========================
     public partial class AuditLogs : System.Web.UI.Page
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
@@ -15,27 +31,27 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
+                // Initial data load on first page visit
                 LoadAuditLogs();
             }
         }
 
         protected void btnFilter_Click(object sender, EventArgs e)
         {
+            // Reloads data and rebinds the GridView when the Filter button is clicked
             LoadAuditLogs();
         }
 
         private void LoadAuditLogs()
         {
-            // Parse dates from the HTML5 date inputs (yyyy-MM-dd)
             DateTime fromDate, toDate;
             bool hasFrom = DateTime.TryParse(txtFrom.Text.Trim(), out fromDate);
             bool hasTo = DateTime.TryParse(txtTo.Text.Trim(), out toDate);
 
-            // Guard: if both provided, ensure range is valid
             if (hasFrom && hasTo && fromDate.Date > toDate.Date)
             {
                 lblMessage.Text = "“From Date” must be earlier than or equal to “To Date”.";
-                rptYears.Visible = false;
+                gvLogs.Visible = false;
                 lblNoData.Visible = true;
                 lblNoData.Text = "⚠ Invalid date range.";
                 return;
@@ -43,82 +59,63 @@ namespace RRCManagementSystem
 
             DataTable allLogs = new DataTable();
 
-            // ✅ Call stored procedure instead of inline SQL
+            // Fetch logs from DB using the stored procedure
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spAuditLogs_List", conn))
             using (var da = new SqlDataAdapter(cmd))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-
-                var pFrom = cmd.Parameters.Add("@From", SqlDbType.Date);
-                pFrom.Value = hasFrom ? (object)fromDate.Date : DBNull.Value;
-
-                var pTo = cmd.Parameters.Add("@To", SqlDbType.Date);
-                pTo.Value = hasTo ? (object)toDate.Date : DBNull.Value;
-
+                cmd.Parameters.AddWithValue("@From", hasFrom ? (object)fromDate.Date : DBNull.Value);
+                cmd.Parameters.AddWithValue("@To", hasTo ? (object)toDate.Date : DBNull.Value);
                 da.Fill(allLogs);
             }
 
-            // Group (same as before)
-            var groupedLogs = allLogs.AsEnumerable()
-                .GroupBy(r => new { Year = r.Field<DateTime>("Timestamp").Year, Month = r.Field<DateTime>("Timestamp").Month })
-                .Select(g =>
-                {
-                    DataTable subTable = g.Any() ? g.CopyToDataTable() : allLogs.Clone();
-                    return new
-                    {
-                        Year = g.Key.Year,
-                        Month = g.Key.Month,
-                        MonthName = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMMM"),
-                        Logs = subTable
-                    };
-                })
-                .ToList();
-
-            var finalGroup = groupedLogs
-                .GroupBy(x => x.Year)
-                .Select(y => new { Year = y.Key, Months = y.ToList() })
-                .Where(y => y.Months.Any(m => m.Logs != null && m.Logs.Rows.Count > 0))
-                .ToList();
-
-            if (finalGroup.Count == 0)
+            // Convert DataTable to a list of objects
+            List<AuditLogEntry> logEntries = allLogs.AsEnumerable().Select(r => new AuditLogEntry
             {
-                rptYears.Visible = false;
+                LogID = r.Field<int>("LogID"),
+                AdminName = r.Field<string>("AdminName"),
+                Action = r.Field<string>("Action"),
+                Timestamp = r.Field<DateTime>("Timestamp")
+            }).ToList();
+
+            // Store the data in ViewState for subsequent postbacks (like paging)
+            ViewState["AuditLogsData"] = logEntries;
+
+            // Bind the data directly to the GridView
+            if (logEntries.Count == 0)
+            {
+                gvLogs.Visible = false;
                 lblNoData.Visible = true;
                 lblNoData.Text = "⚠ No audit logs found for the selected date range.";
             }
             else
             {
-                rptYears.Visible = true;
+                gvLogs.Visible = true;
                 lblNoData.Visible = false;
-                rptYears.DataSource = finalGroup;
-                rptYears.DataBind();
+                gvLogs.DataSource = logEntries;
+                gvLogs.DataBind();
             }
 
-            // clear any old message
             lblMessage.Text = "";
         }
 
-        protected void rptYears_ItemDataBound(object sender, RepeaterItemEventArgs e)
+        protected void gvLogs_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
-            if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
-            {
-                dynamic yearGroup = e.Item.DataItem;
-                var rptMonths = (Repeater)e.Item.FindControl("rptMonths");
-                rptMonths.DataSource = yearGroup.Months;
-                rptMonths.DataBind();
-            }
-        }
+            // Set the new page index for the GridView
+            gvLogs.PageIndex = e.NewPageIndex;
 
-        protected void rptMonths_ItemDataBound(object sender, RepeaterItemEventArgs e)
-        {
-            if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
+            // Retrieve the data from ViewState and rebind the GridView
+            var logEntries = ViewState["AuditLogsData"] as List<AuditLogEntry>;
+            if (logEntries != null)
             {
-                dynamic monthGroup = e.Item.DataItem;
-                var gvLogs = (GridView)e.Item.FindControl("gvLogs");
-                gvLogs.DataSource = monthGroup.Logs;
+                gvLogs.DataSource = logEntries;
                 gvLogs.DataBind();
             }
         }
+
+        // The repeater-related methods are removed as they are no longer needed.
+        // protected void rptYears_ItemDataBound(...)
+        // protected void rptMonths_ItemDataBound(...)
     }
 }

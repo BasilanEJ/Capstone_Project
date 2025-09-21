@@ -193,75 +193,91 @@ namespace RRCManagementSystem
         }
 
 
-        private void SendConfirmationEmail(string toEmail, string inquiryCode)
+        private bool SendConfirmationEmail(string toEmail, string inquiryCode)
         {
-            // Gmail account used to send emails
-            string fromEmail = ConfigurationManager.AppSettings["emailFrom"];       // Your Gmail address
-            string appPassword = ConfigurationManager.AppSettings["emailPassword"]; // Gmail App Password
-
-            // Use modern TLS only
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-
-            using (var mail = new MailMessage())
+            try
             {
-                mail.From = new MailAddress(fromEmail, "RRC Management System", Encoding.UTF8);
-                mail.To.Add(new MailAddress(toEmail));
-                // Where replies should go (can be same Gmail or a support alias)
-                mail.ReplyToList.Add(new MailAddress("rrctermiteandpestcontrol@gmail.com"));
+                string fromEmail = ConfigurationManager.AppSettings["emailFrom"] ?? "rrctermiteandpestcontrol@gmail.com";
+                string appPassword = ConfigurationManager.AppSettings["emailPassword"] ?? "";
 
-                // Plain hyphen for broad compatibility
-                mail.Subject = $"RRC Inquiry Received - Ref {inquiryCode}";
-                mail.SubjectEncoding = Encoding.UTF8;
+                string subject = $"RRC Inquiry Received - Ref {inquiryCode}";
 
-                mail.Body =
-$@"Thank you for contacting R.R.C. Termite & Pest Control!
+                // HTML email body
+                string body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
+        .container {{ max-width: 600px; margin: 30px auto; background: #fff; border-radius: 8px; padding: 20px;
+                      box-shadow: 0 2px 8px rgba(0,0,0,0.05); }}
+        .header {{ background: #2563eb; color: #fff; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content p {{ font-size: 16px; color: #333; line-height: 1.5; }}
+        .code {{ font-size: 20px; font-weight: bold; color: #2563eb; text-align: center; padding: 10px 0; }}
+        .footer {{ font-size: 12px; color: #777; text-align: center; padding-top: 15px; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h2>RRC Management System</h2>
+        </div>
+        <div class='content'>
+            <p>Hi,</p>
+            <p>We have received your inquiry. Your reference code is:</p>
+            <p class='code'>{inquiryCode}</p>
+            <p>Please keep this code safe so we can quickly find your record.</p>
+            <p>Thank you for reaching out to RRC Termite & Pest Control.</p>
+        </div>
+        <div class='footer'>
+            <p>If you did not make this inquiry, you can safely ignore this email.</p>
+            <p>© {DateTime.Now.Year} RRC Management System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
 
-We received your inquiry. Your reference code is: {inquiryCode}
-Please keep this code so we can quickly find your record.
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-We'll get back to you as soon as possible.
-
-—
-RRC Termite & Pest Control
-rrctermiteandpestcontrol@gmail.com";
-                mail.BodyEncoding = Encoding.UTF8;
-                mail.IsBodyHtml = false;
-                mail.HeadersEncoding = Encoding.UTF8;
-
-                using (var smtp = new SmtpClient("smtp.gmail.com", 587))
+                using (var mail = new MailMessage())
                 {
-                    smtp.UseDefaultCredentials = false;
-                    smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
-                    smtp.EnableSsl = true;                       // STARTTLS on 587
-                    smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
-                    smtp.Timeout = 20000;
+                    mail.From = new MailAddress(fromEmail, "RRC Management System", Encoding.UTF8);
+                    mail.To.Add(new MailAddress(toEmail));
+                    mail.Subject = subject;
+                    mail.SubjectEncoding = Encoding.UTF8;
+                    mail.Body = body;
+                    mail.BodyEncoding = Encoding.UTF8;
+                    mail.IsBodyHtml = true;
 
-                    try
+                    using (var smtp = new SmtpClient("smtp.gmail.com", 587))
                     {
-                        smtp.Send(mail);
-                    }
-                    catch (SmtpFailedRecipientException ex)
-                    {
-                        ShowSweetAlert("Email Error",
-                            $"Recipient rejected ({ex.FailedRecipient}).\nStatus: {ex.StatusCode}\nDetails: {ex.Message}",
-                            "warning");
-                    }
-                    catch (SmtpException ex)
-                    {
-                        var more = ex.InnerException?.Message ?? "";
-                        ShowSweetAlert("Email Error",
-                            $"SMTP failed (Status {ex.StatusCode}): {ex.Message}" + (string.IsNullOrEmpty(more) ? "" : " / " + more),
-                            "warning");
-                    }
-                    catch (Exception ex)
-                    {
-                        ShowSweetAlert("Email Error",
-                            "We saved your inquiry but failed to send confirmation: " + ex.Message,
-                            "warning");
+                        smtp.UseDefaultCredentials = false;
+                        smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
+                        smtp.EnableSsl = true;
+                        smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+
+                        try
+                        {
+                            smtp.Send(mail);
+                            return true; // ✅ SUCCESS
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log the error
+                            System.Diagnostics.Debug.WriteLine("Email sending failed: " + ex.Message);
+                            return false; // ❌ FAILED
+                        }
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Critical error while sending email: " + ex.Message);
+                return false; // ❌ FAILED
+            }
         }
+
 
         private void ShowSweetAlert(string title, string message, string icon)
         {

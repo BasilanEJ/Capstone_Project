@@ -4,7 +4,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.Web.UI;
-using System.Web.UI.WebControls; // For RadioButtonList
 
 namespace RRCManagementSystem
 {
@@ -24,6 +23,7 @@ namespace RRCManagementSystem
             }
         }
 
+        // -------------------- Load Quotation --------------------
         private void LoadQuotation()
         {
             int clientId = Convert.ToInt32(Session["ClientID"]);
@@ -39,29 +39,29 @@ namespace RRCManagementSystem
                 {
                     if (reader.Read())
                     {
-                        // ✅ Quotation Code
+                        // Quotation Code
                         lblQuotationCode.Text = SafeGetString(reader, "QuotationCode", "N/A");
 
-                        // ✅ Service & SQM
+                        // Service & SQM
                         lblServices.Text = SafeGetString(reader, "ServiceNames", "N/A");
                         lblSQM.Text = SafeGetString(reader, "SQM", "0");
 
-                        // ✅ Extract values
+                        // Extract pricing values
                         decimal totalPrice = SafeGetDecimal(reader, "Price");
                         decimal travel = SafeGetDecimal(reader, "TravelExpense");
                         decimal misc = SafeGetDecimal(reader, "Miscellaneous");
 
-                        // ✅ Calculate Base Service Price
+                        // Calculate Base Service Price
                         decimal baseServicePrice = totalPrice - (travel + misc);
                         if (baseServicePrice < 0) baseServicePrice = 0;
 
-                        // ✅ Assign values to UI
+                        // Assign values to UI
                         lblBasePrice.Text = $"₱{baseServicePrice:N2}";
                         lblTravelExpense.Text = $"₱{travel:N2}";
                         lblMiscellaneous.Text = $"₱{misc:N2}";
                         lblTotalPrice.Text = $"₱{totalPrice:N2}";
 
-                        // ✅ Contract detection
+                        // Contract detection
                         bool isContractCol = SafeGetBool(reader, "IsContract", false);
                         string serviceType = SafeGetString(reader, "ServiceType", null);
                         bool isTermiteType = string.Equals(serviceType, "Termite Control", StringComparison.OrdinalIgnoreCase);
@@ -70,7 +70,7 @@ namespace RRCManagementSystem
                         hfIsContract.Value = isContractFinal ? "True" : "False";
                         hfQuotationID.Value = SafeGetString(reader, "PendingQuotationID", null);
 
-                        // ✅ Inspector
+                        // Inspector
                         lblInspector.Text = SafeGetString(reader, "InspectorName", "N/A");
                         btnBook.Enabled = true;
                     }
@@ -86,8 +86,10 @@ namespace RRCManagementSystem
             }
         }
 
+        // -------------------- Booking Submission --------------------
         protected void btnBook_Click(object sender, EventArgs e)
         {
+            // Validate selected date/time
             if (string.IsNullOrWhiteSpace(txtDate.Text) || string.IsNullOrWhiteSpace(txtTime.Text))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "missing",
@@ -95,6 +97,7 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // Parse selected date & time
             DateTime selectedDateTime;
             if (!DateTime.TryParse($"{txtDate.Text} {txtTime.Text}", CultureInfo.CurrentCulture, DateTimeStyles.None, out selectedDateTime) &&
                 !DateTime.TryParse($"{txtDate.Text} {txtTime.Text}", CultureInfo.GetCultureInfo("en-PH"), DateTimeStyles.None, out selectedDateTime))
@@ -104,6 +107,7 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // Ensure date/time is in the future
             if (selectedDateTime < DateTime.Now)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "pastDate",
@@ -111,6 +115,7 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // Validate quotation ID
             int quotationId;
             if (!int.TryParse(hfQuotationID.Value, out quotationId) || quotationId <= 0)
             {
@@ -119,6 +124,7 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // Ensure session is valid
             if (Session["ClientID"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -128,7 +134,7 @@ namespace RRCManagementSystem
             int clientId = Convert.ToInt32(Session["ClientID"]);
             string notes = string.IsNullOrWhiteSpace(txtNotes.Text) ? null : txtNotes.Text.Trim();
 
-            // Booking process
+            // Output values from SP
             int newBookingId = 0;
             string newBookingCode = null;
 
@@ -142,6 +148,20 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@StartTime", SqlDbType.Time).Value = selectedDateTime.TimeOfDay;
                 cmd.Parameters.Add("@Notes", SqlDbType.NVarChar, 500).Value = (object)notes ?? DBNull.Value;
 
+                // Determine if it's a contract or non-contract and set PaymentPlan accordingly
+                bool isContract = hfIsContract.Value == "True";
+                if (isContract)
+                {
+                    // Contract services can have 50-25-25, 70-30, or 100. Default to 50-25-25
+                    cmd.Parameters.Add("@PaymentPlan", SqlDbType.NVarChar, 20).Value = "50-25-25";
+                }
+                else
+                {
+                    // Non-contract services must be "100"
+                    cmd.Parameters.Add("@PaymentPlan", SqlDbType.NVarChar, 20).Value = "100";
+                }
+
+                // OUTPUT Parameters
                 var pIdOut = cmd.Parameters.Add("@BookingID", SqlDbType.Int);
                 pIdOut.Direction = ParameterDirection.Output;
 
@@ -153,22 +173,36 @@ namespace RRCManagementSystem
                     conn.Open();
                     cmd.ExecuteNonQuery();
 
+                    // Get output values
                     if (pIdOut.Value != DBNull.Value) newBookingId = Convert.ToInt32(pIdOut.Value);
                     if (pCodeOut.Value != DBNull.Value) newBookingCode = pCodeOut.Value as string;
+
+                    // Debug logs
+                    System.Diagnostics.Debug.WriteLine("BookingID OUT: " + newBookingId);
+                    System.Diagnostics.Debug.WriteLine("BookingCode OUT: " + newBookingCode);
                 }
                 catch (SqlException ex)
                 {
+                    // Sanitize error message for SweetAlert
+                    string safeMessage = ex.Message
+                        .Replace("'", "\\'")
+                        .Replace("\"", "\\\"")
+                        .Replace("\r", "")
+                        .Replace("\n", " ");
+
                     ScriptManager.RegisterStartupScript(this, GetType(), "sqlErr",
-                        "Swal.fire('Error', 'Failed to create booking: " + ex.Message.Replace("'", "\\'") + "', 'error');", true);
+                        $"Swal.fire('Error', 'Failed to create booking: {safeMessage}', 'error');", true);
                     return;
                 }
             }
 
+            // Final validation: Was the booking successfully created?
             if (newBookingId > 0)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "booked",
                     $"Swal.fire('Success', 'Your service has been booked! (Code: {newBookingCode})', 'success');", true);
 
+                // Reset fields
                 txtDate.Text = "";
                 txtTime.Text = "";
                 txtNotes.Text = "";
@@ -180,7 +214,7 @@ namespace RRCManagementSystem
             }
         }
 
-        // ---------- Helper Methods ----------
+        // -------------------- Helper Methods --------------------
         private static int SafeOrdinal(IDataRecord r, string column)
         {
             try { return r.GetOrdinal(column); } catch { return -1; }

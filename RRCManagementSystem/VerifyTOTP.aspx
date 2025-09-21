@@ -1,144 +1,57 @@
 ﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="VerifyTOTP.aspx.cs" Inherits="RRCManagementSystem.VerifyTOTP" %>
 
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html xmlns="http://www.w3.org/1999/xhtml" class="h-full">
 <head runat="server">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
     <title>2FA Verification - RRC Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
+        body {
             font-family: 'Poppins', sans-serif;
             color: #333;
         }
-
-        body {
-            background: url('images/logo.jpg') no-repeat center center fixed;
-            background-size: cover;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .login-container {
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            width: 400px;
-            padding: 40px 30px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            border: 1px solid #ddd;
-            transition: transform 0.3s ease;
-        }
-
-        .login-container:hover {
-            transform: translateY(-5px);
-        }
-
-        .logo {
-            width: 200px;
-            margin-bottom: 20px;
-        }
-
-        h2 {
-            color: #333;
-            font-size: 26px;
-            margin-bottom: 25px;
-        }
-
-        #otp-inputs {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .otp-box {
-            width: 45px;
-            height: 50px;
-            text-align: center;
-            font-size: 22px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background: #f9f9f9;
-            color: #333;
-            outline: none;
-        }
-
-        .otp-box:focus {
-            background: #fff;
-            border-color: #007bff;
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            background-color: #28a745;
-            color: #fff;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn-login:hover {
-            background-color: #218838;
-        }
-
-        .message {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #ff4d4f;
-        }
-
-        .g-recaptcha {
-            margin-bottom: 20px;
-        }
-
-        @media screen and (max-width: 480px) {
-            .login-container {
-                width: 90%;
-                padding: 30px 20px;
-            }
+        .bg-image {
+            background-image: url('images/logo.jpg');
         }
     </style>
 </head>
 
-<body>
+<body class="h-full flex items-center justify-center bg-cover bg-center bg-fixed bg-image">
     <form id="form1" runat="server" autocomplete="off">
         <asp:ScriptManager ID="ScriptManager1" runat="server" />
-        <div class="login-container">
-            <img src="images/logorrc.png" alt="RRC Logo" class="logo" />
-            <h2>Verify Code</h2>
+        <div class="login-container bg-white p-10 md:p-14 rounded-2xl shadow-2xl flex flex-col items-center text-center border border-gray-200 w-11/12 max-w-lg transition-transform hover:translate-y-[-5px]">
+            <img src="images/logorrc.png" alt="RRC Logo" class="w-48 mb-5" />
+            <h2 class="text-3xl font-semibold text-gray-800 mb-6">Two-Factor Verification</h2>
 
             <asp:HiddenField ID="txtTOTP" runat="server" />
 
-            <div id="otp-inputs">
-                <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 0)" onkeydown="handleBackspace(event, 0)" onpaste="return false;" />
-                <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 1)" onkeydown="handleBackspace(event, 1)" onpaste="return false;" />
-                <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 2)" onkeydown="handleBackspace(event, 2)" onpaste="return false;" />
-                <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 3)" onkeydown="handleBackspace(event, 3)" onpaste="return false;" />
-                <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 4)" onkeydown="handleBackspace(event, 4)" onpaste="return false;" />
-                <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 5)" onkeydown="handleBackspace(event, 5)" onpaste="return false;" />
+            <div id="otp-inputs" class="flex gap-2 justify-center mb-5">
+                <input type="text" maxlength="1" class="otp-box w-12 h-14 text-center text-2xl rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" oninput="moveNext(this, 0)" onkeydown="handleBackspace(event, 0)" onpaste="return false;" />
+                <input type="text" maxlength="1" class="otp-box w-12 h-14 text-center text-2xl rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" oninput="moveNext(this, 1)" onkeydown="handleBackspace(event, 1)" onpaste="return false;" />
+                <input type="text" maxlength="1" class="otp-box w-12 h-14 text-center text-2xl rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" oninput="moveNext(this, 2)" onkeydown="handleBackspace(event, 2)" onpaste="return false;" />
+                <input type="text" maxlength="1" class="otp-box w-12 h-14 text-center text-2xl rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" oninput="moveNext(this, 3)" onkeydown="handleBackspace(event, 3)" onpaste="return false;" />
+                <input type="text" maxlength="1" class="otp-box w-12 h-14 text-center text-2xl rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" oninput="moveNext(this, 4)" onkeydown="handleBackspace(event, 4)" onpaste="return false;" />
+                <input type="text" maxlength="1" class="otp-box w-12 h-14 text-center text-2xl rounded-lg border border-gray-300 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" oninput="moveNext(this, 5)" onkeydown="handleBackspace(event, 5)" onpaste="return false;" />
             </div>
 
-            <!-- Google reCAPTCHA -->
-            <asp:Panel ID="pnlCaptcha" runat="server" Visible="false">
+            <asp:Button ID="btnVerifyTOTP" runat="server" Text="Verify Code" CssClass="btn-primary w-full py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-300 mb-2" OnClick="btnVerifyTOTP_Click" />
+
+            <div class="divider relative w-full text-center my-5">
+                <span class="bg-white px-2 text-sm text-gray-600">OR</span>
+            </div>
+
+            <asp:Button ID="btnSendEmailCode" runat="server" Text="Send Code to Email" CssClass="btn-secondary w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-300 mb-5" OnClick="btnSendEmailCode_Click" />
+
+            <asp:Label ID="lblInfo" runat="server" CssClass="info-message text-sm text-blue-600 mt-2" />
+            <asp:Label ID="lblMessage" runat="server" CssClass="message text-sm text-red-500 mt-2" />
+
+            <asp:Panel ID="pnlCaptcha" runat="server" Visible="false" CssClass="mt-5">
                 <div class="g-recaptcha" data-sitekey="6Ld6VrcrAAAAAGnZnUl3beqIS2JViuw5O5s0WlBh"></div>
             </asp:Panel>
-
-            <asp:Button ID="btnVerifyTOTP" runat="server" Text="Verify" CssClass="btn-login" OnClick="btnVerifyTOTP_Click" />
-            <asp:Label ID="lblMessage" runat="server" CssClass="message" />
         </div>
     </form>
 
@@ -146,6 +59,7 @@
         const boxes = document.querySelectorAll('.otp-box');
         const hiddenField = document.getElementById('<%= txtTOTP.ClientID %>');
 
+        // Move to next box automatically when typing
         function moveNext(input, index) {
             input.value = input.value.replace(/[^0-9]/g, '');
             if (input.value && index < boxes.length - 1) {
@@ -154,18 +68,21 @@
             updateHiddenField();
         }
 
+        // Move back on backspace
         function handleBackspace(e, index) {
             if (e.key === "Backspace" && !boxes[index].value && index > 0) {
                 boxes[index - 1].focus();
             }
         }
 
+        // Combine values into hidden field
         function updateHiddenField() {
             let val = '';
             boxes.forEach(box => val += box.value);
             hiddenField.value = val;
         }
 
+        // Autofocus first box on page load
         window.onload = function () {
             boxes[0].focus();
         };

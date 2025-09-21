@@ -2,8 +2,9 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using System.Net.Configuration;
+using System.Net;
 using System.Net.Mail;
+using System.Threading.Tasks;
 using System.Web.UI;
 
 namespace RRCManagementSystem
@@ -140,96 +141,161 @@ namespace RRCManagementSystem
         }
 
         /// <summary>
-        /// Sends email to the selected supplier using SMTP settings from Web.config.
+        /// Sends a customized HTML email to the selected supplier.
         /// </summary>
-        protected void btnSendEmail_Click(object sender, EventArgs e)
+        private async Task SendSupplierEmail(string toEmail, string subject, string body)
+        {
+            try
+            {
+                // Fetch credentials from App.config or Web.config
+                string fromEmail = ConfigurationManager.AppSettings["emailFrom"] ?? "defaultsender@example.com";
+                string appPassword = ConfigurationManager.AppSettings["emailPassword"] ?? "";
+
+                // A professional HTML template that wraps the user-provided message body
+                string htmlBody = $@"
+<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>{subject}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            margin: 0;
+            padding: 0;
+            background-color: #f0f4f8;
+            color: #333;
+        }}
+        .email-container {{
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }}
+        .header {{
+            background-color: #17398A;
+            color: #ffffff;
+            padding: 24px;
+            text-align: center;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }}
+        .content {{
+            padding: 32px 24px;
+        }}
+        .content h2 {{
+            color: #17398A;
+            font-size: 22px;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }}
+        .content p {{
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+        }}
+        .footer {{
+            background-color: #e6eef5;
+            color: #666;
+            text-align: center;
+            padding: 24px;
+            font-size: 12px;
+            border-top: 1px solid #d4e0eb;
+        }}
+        .footer p {{
+            margin: 0;
+        }}
+    </style>
+</head>
+<body>
+    <div role=""article"" aria-label=""Email"" lang=""en"">
+        <div class=""email-container"">
+            <div class=""header"">
+                <h1>RRC Management System</h1>
+            </div>
+            <div class=""content"">
+                <h2>{subject}</h2>
+                <p>{body}</p>
+                <p>—<br>RRC Management System</p>
+            </div>
+            <div class=""footer"">
+                <p>This email was sent from the RRC Management System.<br>
+                &copy; 2024 RRC Management System. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+
+                using (var mail = new MailMessage())
+                {
+                    mail.From = new MailAddress(fromEmail, "RRC Management System");
+                    mail.To.Add(toEmail);
+                    mail.Subject = subject;
+                    mail.Body = htmlBody;
+                    mail.IsBodyHtml = true;
+
+                    using (var smtp = new SmtpClient("smtp.gmail.com", 587))
+                    {
+                        smtp.UseDefaultCredentials = false;
+                        smtp.Credentials = new NetworkCredential(fromEmail, appPassword);
+                        smtp.EnableSsl = true;
+                        smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+                        smtp.Timeout = 20000;
+                        await smtp.SendMailAsync(mail);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log and rethrow or handle as needed
+                throw new Exception("Error sending email: " + ex.Message, ex);
+            }
+        }
+
+        /// <summary>
+        /// Sends email to the selected supplier.
+        /// </summary>
+        protected async void btnSendEmail_Click(object sender, EventArgs e)
         {
             string toEmail = hfSupplierEmail.Value?.Trim();
             string toName = hfSupplierName.Value?.Trim();
-
-            if (string.IsNullOrWhiteSpace(toEmail))
-            {
-                ClientScript.RegisterStartupScript(this.GetType(), "emailError",
-                    "showAlert('Error!', 'No recipient selected.', 'error');", true);
-                return;
-            }
-
             string subject = txtSubject.Text.Trim();
             string body = txtMessageBody.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body))
+            if (string.IsNullOrWhiteSpace(toEmail) || string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(body))
             {
                 ClientScript.RegisterStartupScript(this.GetType(), "emailError",
-                    "showAlert('Error!', 'Please enter both subject and message.', 'error');", true);
+                    "showAlert('Error!', 'Please enter recipient, subject, and message.', 'error');", true);
                 return;
             }
 
             try
             {
-                // Load SMTP configuration from Web.config
-                var smtpSection = (SmtpSection)ConfigurationManager.GetSection("system.net/mailSettings/smtp");
-                if (smtpSection == null)
-                {
-                    ClientScript.RegisterStartupScript(this.GetType(), "emailError",
-                        "showAlert('Error!', 'SMTP configuration not found in Web.config.', 'error');", true);
-                    return;
-                }
+                await SendSupplierEmail(toEmail, subject, body);
 
-                using (var mail = new MailMessage())
-                {
-                    mail.From = new MailAddress(smtpSection.From, "RRC Management System");
-                    mail.To.Add(toEmail);
-                    mail.Subject = subject;
-                    mail.Body = body;
-                    mail.IsBodyHtml = false;
-
-                    using (var smtp = new SmtpClient())
-                    {
-                        // The following lines are commented out in your original code,
-                        // so I will keep them commented out here.
-                        // smtp.Host = smtpSection.Network.Host;
-                        // smtp.Port = smtpSection.Network.Port;
-                        // smtp.EnableSsl = smtpSection.Network.EnableSsl;
-                        // smtp.Credentials = new System.Net.NetworkCredential(smtpSection.Network.UserName, smtpSection.Network.Password);
-
-                        smtp.Send(mail);
-                    }
-                }
-
-                // Display success message using SweetAlert
                 string recipientDisplay = string.IsNullOrEmpty(toName) ? toEmail : $"{toName} <{toEmail}>";
                 ClientScript.RegisterStartupScript(this.GetType(), "emailSuccess",
                     $"showAlert('Success!', 'Email sent to {recipientDisplay}.', 'success');", true);
-
-                // Clear form and hide panel
-                txtSubject.Text = "";
-                txtMessageBody.Text = "";
-                hfSupplierEmail.Value = "";
-                hfSupplierName.Value = "";
-                pnlSendEmail.Visible = false;
             }
             catch (Exception ex)
             {
-                // Display error using SweetAlert
                 ClientScript.RegisterStartupScript(this.GetType(), "emailFail",
                     $"showAlert('Error!', 'Error sending email: {ex.Message.Replace("'", "\\'")}', 'error');", true);
             }
-        }
 
-        /// <summary>
-        /// Cancels the email send operation and clears fields.
-        /// This button now also handles the client-side confirmation.
-        /// </summary>
-        protected void btnCancelEmail_Click(object sender, EventArgs e)
-        {
-            pnlSendEmail.Visible = false;
+            // Clear form fields
             txtSubject.Text = "";
             txtMessageBody.Text = "";
             hfSupplierEmail.Value = "";
             hfSupplierName.Value = "";
-
-            ClientScript.RegisterStartupScript(this.GetType(), "cancelEmail",
-                "showAlert('Cancelled', 'Email sending cancelled.', 'info');", true);
         }
 
         /// <summary>

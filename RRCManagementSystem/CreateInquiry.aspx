@@ -18,14 +18,17 @@
 
         <div class="bg-white border border-gray-200 rounded-xl p-6 md:p-8 max-w-4xl mx-auto shadow-lg mt-8 mb-10">
 
-            <!-- Contact Info Section -->
             <div class="font-bold text-blue-600 mt-4 mb-2">Contact Info</div>
             <div class="h-px bg-slate-200 my-2"></div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+             
                 <div>
-                    <label for="<%= txtEmail.ClientID %>" class="block font-semibold text-slate-700 mb-1">Email <span class="text-red-500">*</span></label>
-                    <asp:TextBox ID="txtEmail" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label for="<%= txtEmail.ClientID %>" class="block font-semibold text-slate-700 mb-1">
+                        Email <span class="text-red-500">*</span>
+                    </label>
+                    <asp:TextBox ID="txtEmail" runat="server"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <asp:RequiredFieldValidator runat="server"
                         ControlToValidate="txtEmail"
                         ValidationGroup="inq"
@@ -39,9 +42,13 @@
                         ValidationExpression="^[A-Za-z0-9._%+\-]+@((?:gmail|yahoo|ymail|rocketmail|outlook|hotmail|live|msn|icloud|me|mac|protonmail|proton|zoho|zohomail)\.com|(?:[A-Za-z0-9-]+\.)+edu\.ph|(?:[A-Za-z0-9-]+\.)+gov\.ph)$" />
                 </div>
 
+              
                 <div>
-                    <label for="<%= txtContact.ClientID %>" class="block font-semibold text-slate-700 mb-1">Contact Number <span class="text-red-500">*</span></label>
-                    <asp:TextBox ID="txtContact" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" MaxLength="11" />
+                    <label for="<%= txtContact.ClientID %>" class="block font-semibold text-slate-700 mb-1">
+                        Contact Number <span class="text-red-500">*</span>
+                    </label>
+                    <asp:TextBox ID="txtContact" runat="server" MaxLength="11"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <asp:RequiredFieldValidator runat="server"
                         ControlToValidate="txtContact"
                         ValidationGroup="inq"
@@ -56,21 +63,25 @@
                     <div class="text-slate-500 text-xs mt-1">Format: 11 digits (e.g., 09xxxxxxxxx)</div>
                 </div>
 
+              
                 <div class="col-span-1 md:col-span-2">
                     <label for="<%= txtMessage.ClientID %>" class="block font-semibold text-slate-700 mb-1">Message</label>
-                    <asp:TextBox ID="txtMessage" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" MaxLength="255" />
+                    <asp:TextBox ID="txtMessage" runat="server" MaxLength="255"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <div class="text-slate-500 text-xs mt-1">Optional — up to 255 characters</div>
                 </div>
             </div>
 
-            <!-- Optional Info Section -->
+         
             <div class="font-bold text-blue-600 mt-6 mb-2">Optional Info</div>
             <div class="h-px bg-slate-200 my-2"></div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          
                 <div>
                     <label for="<%= txtFirstName.ClientID %>" class="block font-semibold text-slate-700 mb-1">First Name</label>
-                    <asp:TextBox ID="txtFirstName" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <asp:TextBox ID="txtFirstName" runat="server"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <asp:RegularExpressionValidator runat="server"
                         ControlToValidate="txtFirstName"
                         ValidationGroup="inq"
@@ -79,9 +90,11 @@
                         CssClass="text-red-500 text-sm mt-1 block" Display="Dynamic" />
                 </div>
 
+              
                 <div>
                     <label for="<%= txtMiddleName.ClientID %>" class="block font-semibold text-slate-700 mb-1">Middle Name</label>
-                    <asp:TextBox ID="txtMiddleName" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <asp:TextBox ID="txtMiddleName" runat="server"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <asp:RegularExpressionValidator runat="server"
                         ControlToValidate="txtMiddleName"
                         ValidationGroup="inq"
@@ -92,7 +105,8 @@
 
                 <div>
                     <label for="<%= txtLastName.ClientID %>" class="block font-semibold text-slate-700 mb-1">Last Name</label>
-                    <asp:TextBox ID="txtLastName" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <asp:TextBox ID="txtLastName" runat="server"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <asp:RegularExpressionValidator runat="server"
                         ControlToValidate="txtLastName"
                         ValidationGroup="inq"
@@ -101,46 +115,77 @@
                         CssClass="text-red-500 text-sm mt-1 block" Display="Dynamic" />
                 </div>
 
+              
                 <div>
                     <label for="<%= txtCountry.ClientID %>" class="block font-semibold text-slate-700 mb-1">Country</label>
-                    <asp:TextBox ID="txtCountry" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" Text="Philippines" />
+                    <asp:TextBox ID="txtCountry" runat="server" Text="Philippines"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
 
-                <div>
-                    <label for="<%= txtRegion.ClientID %>" class="block font-semibold text-slate-700 mb-1">Region</label>
-                    <asp:TextBox ID="txtRegion" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
+            
+                <div class="md:col-span-2">
+             <asp:UpdatePanel ID="UpdatePanel1" runat="server" class="md:col-span-2">
+    <ContentTemplate>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Region *</label>
+                <asp:DropDownList ID="ddlRegion" runat="server"
+                    AutoPostBack="true"
+                    OnSelectedIndexChanged="ddlRegion_SelectedIndexChanged"
+                    CssClass="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500 outline-none">
+                </asp:DropDownList>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">City *</label>
+                <asp:DropDownList ID="ddlCity" runat="server"
+                    CssClass="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500 outline-none">
+                </asp:DropDownList>
+            </div>
+        </div>
+    </ContentTemplate>
+    <Triggers>
+        <asp:AsyncPostBackTrigger ControlID="ddlRegion" EventName="SelectedIndexChanged" />
+    </Triggers>
+</asp:UpdatePanel>
 
-                <div>
-                    <label for="<%= txtCity.ClientID %>" class="block font-semibold text-slate-700 mb-1">City</label>
-                    <asp:TextBox ID="txtCity" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
                 </div>
 
                 <div>
                     <label for="<%= txtBarangay.ClientID %>" class="block font-semibold text-slate-700 mb-1">Barangay</label>
-                    <asp:TextBox ID="txtBarangay" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <asp:TextBox ID="txtBarangay" runat="server"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
 
                 <div>
                     <label for="<%= txtStreet.ClientID %>" class="block font-semibold text-slate-700 mb-1">Street &amp; Unit</label>
-                    <asp:TextBox ID="txtStreet" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <asp:TextBox ID="txtStreet" runat="server"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
 
                 <div class="col-span-1 md:col-span-2">
                     <label for="<%= txtLandmark.ClientID %>" class="block font-semibold text-slate-700 mb-1">Landmark</label>
-                    <asp:TextBox ID="txtLandmark" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <asp:TextBox ID="txtLandmark" runat="server"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
 
+              
                 <div class="col-span-1 md:col-span-2">
                     <label for="<%= fuPhoto.ClientID %>" class="block font-semibold text-slate-700 mb-1">Photo (Optional)</label>
-                    <asp:FileUpload ID="fuPhoto" runat="server" CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg file:bg-blue-600 file:text-white file:px-4 file:py-2 file:rounded-md file:border-0 file:cursor-pointer file:hover:bg-blue-700 file:transition-colors file:mr-4" />
+                    <asp:FileUpload ID="fuPhoto" runat="server"
+                        CssClass="w-full px-4 py-2 border border-slate-300 rounded-lg file:bg-blue-600 file:text-white file:px-4 file:py-2 file:rounded-md file:border-0 file:cursor-pointer file:hover:bg-blue-700 file:transition-colors file:mr-4" />
                     <div class="text-slate-500 text-xs mt-1">Allowed: .jpg, .jpeg, .png — Max: 5 MB</div>
                 </div>
             </div>
 
             <div class="flex flex-col sm:flex-row-reverse gap-3 sm:gap-4 justify-end mt-6">
-                <a href="AllInquiry.aspx" class="bg-gray-500 text-white px-6 py-3 rounded-xl font-bold text-sm cursor-pointer hover:bg-gray-600 transition-colors text-center w-full sm:w-auto">Back to All Inquiries</a>
-                <asp:Button ID="btnSave" runat="server" CssClass="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm cursor-pointer hover:bg-blue-700 transition-colors w-full sm:w-auto" Text="Save Inquiry"
+                <a href="AllInquiry.aspx"
+                   class="bg-gray-500 text-white px-6 py-3 rounded-xl font-bold text-sm cursor-pointer hover:bg-gray-600 transition-colors text-center w-full sm:w-auto">
+                   Back to All Inquiries
+                </a>
+                <asp:Button ID="btnSave" runat="server"
+                    CssClass="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm cursor-pointer hover:bg-blue-700 transition-colors w-full sm:w-auto"
+                    Text="Save Inquiry"
                     OnClick="btnSave_Click"
                     ValidationGroup="inq"
                     UseSubmitBehavior="false"
@@ -149,7 +194,7 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    
     <script>
         (function () {
             const contact = document.getElementById('<%= txtContact.ClientID %>');
@@ -159,6 +204,7 @@
                     this.value = this.value.replace(/\D/g, '').slice(0, 11);
                 });
             }
+
             ['<%= txtFirstName.ClientID %>', '<%= txtMiddleName.ClientID %>', '<%= txtLastName.ClientID %>']
                 .forEach(id => {
                     const el = document.getElementById(id);
@@ -220,3 +266,5 @@
         }
     </script>
 </asp:Content>
+
+

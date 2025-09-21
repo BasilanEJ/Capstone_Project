@@ -284,67 +284,82 @@ namespace RRCManagementSystem
         {
             try
             {
+                // Use CultureInfo to correctly format the role for a professional appearance.
                 TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
                 string formattedRole = textInfo.ToTitleCase((role ?? "").ToLower());
                 string resetLink = $"https://rrcmngmnt.com/ResetAdminPassword.aspx?type=admin&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
+                // Updated HTML body with a professional, table-based layout and inline CSS for email client compatibility.
                 string body = $@"
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html PUBLIC ""-//W3C//DTD XHTML 1.0 Transitional//EN"" ""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"">
+<html xmlns=""http://www.w3.org/1999/xhtml"">
 <head>
-  <meta charset='UTF-8'>
-  <style>
-    body {{
-      background-color: #f9f9f9;
-      font-family: Arial, sans-serif;
-      color: #333;
-      line-height: 1.6;
-      margin: 0;
-      padding: 0;
-    }}
-    .container {{
-      max-width: 600px;
-      margin: 30px auto;
-      background: #ffffff;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      padding: 20px 30px;
-    }}
-    h3 {{ color: #2a4fa7; margin-bottom: 10px; }}
-    p {{ margin: 10px 0; }}
-    .button {{
-      display: inline-block;
-      padding: 12px 20px;
-      background-color: #add8e6;
-      color: #000000;
-      text-decoration: none;
-      border-radius: 5px;
-      font-weight: bold;
-      margin-top: 15px;
-    }}
-    .footer {{
-      font-size: 12px;
-      color: #777;
-      margin-top: 25px;
-      border-top: 1px solid #eee;
-      padding-top: 10px;
-    }}
-  </style>
+    <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Set Your Password - RRC Management System</title>
+    <style type=""text/css"">
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin: 0; padding: 0; background-color: #f4f7fa; }}
+        table {{ border-collapse: collapse; }}
+        a {{ text-decoration: none; }}
+        .button {{
+            background-color: #2b6cb0;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 12px 24px;
+            border-radius: 6px;
+            display: inline-block;
+        }}
+        .link-text {{ color: #2b6cb0; text-decoration: underline; word-break: break-all; }}
+        .content-box {{ background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); padding: 30px; }}
+        .header {{ background-color: #1a202c; padding: 20px 0; }}
+        .footer {{ font-size: 12px; color: #718096; margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; }}
+    </style>
 </head>
-<body>
-  <div class='container'>
-    <h3>Welcome to RRC Management System</h3>
-    <p>You have been invited as a <strong>{formattedRole}</strong>.</p>
-    <p>Click the button below to set your password:</p>
-    <p><a href='{resetLink}' class='button'>Set Password</a></p>
-    <p class='footer'>This link will expire in 1 hour. If you did not request this, you can ignore this email.</p>
-  </div>
+<body style=""margin: 0; padding: 0; background-color: #f4f7fa;"">
+    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"">
+        <tr>
+            <td align=""center"" style=""padding: 20px;"">
+                <table role=""presentation"" width=""600"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""max-width: 600px; width: 100%;"">
+                    <tr>
+                        <td align=""center"" style=""padding-bottom: 20px;"">
+                            <h1 style=""color: #2b6cb0; font-size: 28px; margin: 0;"">RRC Management System</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style=""padding: 30px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);"">
+                            <h2 style=""color: #2d3748; font-size: 24px; margin: 0 0 15px;"">Welcome to RRC Management System</h2>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">Hello,</p>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">You have been invited to join the RRC Management System as a <strong>{formattedRole}</strong>. To get started, you'll need to set your password.</p>
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px;"">Please click the button below to continue:</p>
+                            <p align=""center"" style=""margin: 0; text-align: center;"">
+                                <a href=""{resetLink}"" class=""button"" style=""background-color: #2b6cb0; color: #ffffff; font-size: 16px; font-weight: bold; padding: 12px 24px; border-radius: 6px; display: inline-block;"">Set Password</a>
+                            </p>
+                            <p style=""color: #4a5568; font-size: 14px; line-height: 1.6; margin: 30px 0 15px; text-align: center;"">If the button does not work, you can copy and paste the following URL into your browser:</p>
+                            <p style=""text-align: center; font-size: 14px; margin: 0;""><a href=""{resetLink}"" class=""link-text"" style=""color: #2b6cb0; text-decoration: underline; word-break: break-all;"">{resetLink}</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align=""center"" style=""padding-top: 20px;"">
+                            <p style=""font-size: 12px; color: #718096; margin: 0; text-align: center;"">
+                                This link will expire in 1 hour. If you did not request this, you can safely ignore this email.
+                                <br/><br/>
+                                &copy; 2024 RRC Management System. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>";
 
                 using (var mail = new MailMessage())
                 {
+                    // NOTE: Using a professional domain email (e.g., support@rrcmngmnt.com)
+                    // is highly recommended to improve deliverability and avoid spam filters.
                     mail.From = new MailAddress("rrctermiteandpestcontrol@gmail.com", "RRC Management System");
                     mail.To.Add(toEmail);
                     mail.Subject = subject;
@@ -353,9 +368,12 @@ namespace RRCManagementSystem
 
                     using (var smtp = new SmtpClient("smtp.gmail.com", 587))
                     {
+                        // NOTE: The credentials should be stored in a secure location,
+                        // like a configuration file (as you noted in your comment),
+                        // and not hardcoded here.
                         smtp.Credentials = new NetworkCredential(
                             "rrctermiteandpestcontrol@gmail.com",
-                            "pktz jwzp tbvx qheq" // TODO: Move to Web.config
+                            "pktz jwzp tbvx qheq"
                         );
                         smtp.EnableSsl = true;
                         smtp.Send(mail);
@@ -365,10 +383,14 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
+                // Logging the full exception in a real application is a better practice
+                // to help with debugging.
                 System.Diagnostics.Debug.WriteLine("Email error: " + ex.Message);
                 return false;
             }
         }
+
+
 
         private void ShowSuccess(string message, bool redirect)
         {
