@@ -259,13 +259,18 @@ namespace RRCManagementSystem
             // Reset UI & KPI defaults
             lblServiceName.Text = "";
             lblPaymentPlan.Text = "";
-            lblPrice.Text = "";
             hiddenCheckoutURL.Value = "";
             hiddenReference.Value = "";
             litNextDue.Text = "—";
 
             _kpiNext = _kpiTotal = _kpiPaid = _kpiRemain = "₱0.00";
             lblNextInstallment.Text = lblTotalPrice.Text = lblAlreadyPaid.Text = lblRemaining.Text = "₱0.00";
+
+            // Reset breakdown labels
+            lblBasePrice.Text = "₱0.00";
+            lblTravelExpense.Text = "₱0.00";
+            lblMiscellaneous.Text = "₱0.00";
+            Label1.Text = "₱0.00"; // Total Price
 
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.usp_Payment_ClientLatestAssignedInfo", con))
@@ -276,26 +281,40 @@ namespace RRCManagementSystem
                 con.Open();
                 using (var reader = cmd.ExecuteReader(CommandBehavior.SingleRow))
                 {
+                    // ---------------- NO BOOKING FOUND ----------------
                     if (!reader.Read())
                     {
-                        // No booking found
-                        lblPrice.Text = "No approved booking found.";
+                        lblMessage.Text = "No approved booking found.";
+                        lblMessage.CssClass = "text-gray-600";
+
                         hfPayPalAmount.Value = "0.00";
                         hfPayPalBookingID.Value = "0";
                         hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
                         hiddenCheckoutURL.Value = string.Empty;
                         hiddenReference.Value = string.Empty;
 
+                        hfMinRequired.Value = "0.00";
+
                         paymentPlanContainer.Visible = false;
                         ddlPlanChoice.Enabled = true;
                         return;
                     }
 
-                    // Read booking info
+                    // ---------------- READ BOOKING INFO ----------------
                     string serviceName = reader["ServiceName"]?.ToString() ?? "";
-                    decimal fullPrice = reader["Price"] == DBNull.Value ? 0m : Convert.ToDecimal(reader["Price"], CultureInfo.InvariantCulture);
+                    decimal fullPrice = reader["Price"] == DBNull.Value ? 0m :
+                        Convert.ToDecimal(reader["Price"], CultureInfo.InvariantCulture);
+
+                    // TravelExpense and Miscellaneous (safe defaults)
+                    decimal travelExpense = reader["TravelExpense"] == DBNull.Value ? 0m :
+                        Convert.ToDecimal(reader["TravelExpense"], CultureInfo.InvariantCulture);
+
+                    decimal miscellaneous = reader["Miscellaneous"] == DBNull.Value ? 0m :
+                        Convert.ToDecimal(reader["Miscellaneous"], CultureInfo.InvariantCulture);
+
                     string dbPlanRaw = reader["PaymentPlan"]?.ToString() ?? "";
                     int bookingId = Convert.ToInt32(reader["BookingID"], CultureInfo.InvariantCulture);
+
                     bool isContractDb = reader["IsContract"] != DBNull.Value &&
                                         Convert.ToBoolean(reader["IsContract"], CultureInfo.InvariantCulture);
 
@@ -312,7 +331,7 @@ namespace RRCManagementSystem
 
                     lblServiceName.Text = serviceName;
 
-                    // Determine effective plan (UI > DB > default)
+                    // Determine effective plan: UI > DB > Default
                     string effectivePlan = !string.IsNullOrWhiteSpace(uiPlan) ? uiPlan : dbPlan;
                     if (string.IsNullOrWhiteSpace(effectivePlan))
                         effectivePlan = isContractDb ? "50-25-25" : "100";
@@ -331,14 +350,14 @@ namespace RRCManagementSystem
                     // Show/hide plan selector for contract
                     paymentPlanContainer.Visible = isContract;
 
-                    // Compute totals
+                    // ---------------- CALCULATE TOTALS ----------------
                     int saleId = GetSaleIdByBooking(bookingId);
                     decimal totalPaid = saleId > 0 ? GetTotalPaidBySaleId(saleId) : 0m;
 
                     // Lock plan after first payment
                     ddlPlanChoice.Enabled = (totalPaid == 0m);
 
-                    // Amounts
+                    // Next installment and remaining balance
                     decimal nextAmount = CalculateNextInstallment(isContract, fullPrice, totalPaid, effectivePlan);
                     decimal remaining = Math.Max(0m, fullPrice - totalPaid);
 
@@ -356,19 +375,19 @@ namespace RRCManagementSystem
                     lblAlreadyPaid.Text = _kpiPaid;
                     lblRemaining.Text = _kpiRemain;
 
-                    // Compute next due date
+                    // ---------------- DUE DATE CALCULATION ----------------
                     var paidDates = saleId > 0 ? GetSuccessfulTransactionDatesBySale(saleId) : new List<DateTime>();
                     var approvalDate = GetBookingApprovalDate(bookingId);
                     var nextDue = ComputeNextDueDate(effectivePlan, approvalDate, paidDates);
 
                     if (remaining <= 0m)
                     {
-                        lblPrice.Text = "Fully Paid";
                         litNextDue.Text = "All installments paid";
 
                         hfPayPalAmount.Value = "0.00";
                         hfPayPalBookingID.Value = bookingId.ToString(CultureInfo.InvariantCulture);
                         hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
+                        hfMinRequired.Value = "0.00";
 
                         hiddenCheckoutURL.Value = string.Empty;
                         hiddenReference.Value = string.Empty;
@@ -385,19 +404,29 @@ namespace RRCManagementSystem
                         litNextDue.Text = FormatDueLabel(nextDue);
                     }
 
-                    // Display next installment summary
-                    lblPrice.Text =
-                        "₱" + nextAmount.ToString("N2") + " (Next installment)\n" +
-                        "Total Price: ₱" + fullPrice.ToString("N2") + "\n" +
-                        "Already Paid: ₱" + totalPaid.ToString("N2") + "\n" +
-                        "Remaining Balance: ₱" + remaining.ToString("N2");
+                    // ---------------- PRICING BREAKDOWN ----------------
+                    decimal baseServicePrice = fullPrice - (travelExpense + miscellaneous);
+                    if (baseServicePrice < 0) baseServicePrice = 0; // Prevent negative
 
-                    // Hidden fields for PayPal
+                    lblBasePrice.Text = $"₱{baseServicePrice:N2}";
+                    lblTravelExpense.Text = $"₱{travelExpense:N2}";
+                    lblMiscellaneous.Text = $"₱{miscellaneous:N2}";
+                    Label1.Text = $"₱{fullPrice:N2}"; // Total Price
+
+                    // ---------------- PAYPAL CONFIGURATION ----------------
                     hfPayPalBookingID.Value = bookingId.ToString(CultureInfo.InvariantCulture);
+
+                    // By default, the minimum required amount is the next installment
                     hfPayPalAmount.Value = nextAmount.ToString("0.00", CultureInfo.InvariantCulture);
+                    hfMinRequired.Value = nextAmount.ToString("0.00", CultureInfo.InvariantCulture);
+
                     hfPayPalClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
 
-                    // Notification
+                    // Update the front-end label dynamically for minimum required
+                    ScriptManager.RegisterStartupScript(this, GetType(), "updateMinReq",
+                        $"document.getElementById('minRequiredAmount').innerText = '₱{nextAmount:N2}';", true);
+
+                    // ---------------- NOTIFICATION ----------------
                     EnqueuePaymentDueNotification(
                         clientId: clientId,
                         bookingId: bookingId,
@@ -408,11 +437,21 @@ namespace RRCManagementSystem
                         nextAmount: nextAmount
                     );
 
-                    // Refresh PayMongo checkout URL asynchronously
-                    GenerateCheckoutURL(clientId, bookingId, isContract, fullPrice, totalPaid, effectivePlan);
+                    // ---------------- PAYMONGO CHECKOUT URL ----------------
+                    // Grab custom amount from the TextBox if provided
+                    decimal customAmountFromTextbox = 0m;
+                    if (!string.IsNullOrWhiteSpace(txtCustomAmount.Text))
+                    {
+                        decimal.TryParse(txtCustomAmount.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out customAmountFromTextbox);
+                    }
+
+                    // Pass the custom amount to GenerateCheckoutURL
+                    GenerateCheckoutURL(clientId, bookingId, isContract, fullPrice, totalPaid, effectivePlan, customAmountFromTextbox);
                 }
             }
         }
+
+
 
 
         // ======= Canonical total via SaleID =============================================
@@ -573,35 +612,93 @@ namespace RRCManagementSystem
             switch (selectedPlan)
             {
                 case "50-25-25":
-                    if (totalPaid == 0m) return Math.Round(fullPrice * 0.50m, 2, MidpointRounding.AwayFromZero);
-                    if (totalPaid < Math.Round(fullPrice * 0.75m, 2, MidpointRounding.AwayFromZero))
-                        return Math.Round(fullPrice * 0.25m, 2, MidpointRounding.AwayFromZero);
+                    decimal firstThreshold = Math.Round(fullPrice * 0.50m, 2, MidpointRounding.AwayFromZero); // 50% stage
+                    decimal secondThreshold = Math.Round(fullPrice * 0.75m, 2, MidpointRounding.AwayFromZero); // 75% stage
+
+                    // If nothing has been paid yet, first installment is 50%
+                    if (totalPaid == 0m)
+                        return firstThreshold;
+
+                    // If total paid is between first and second threshold
+                    if (totalPaid < secondThreshold)
+                    {
+                        // Calculate how much beyond the first payment the client has already paid
+                        decimal alreadyPaidBeyondFirst = totalPaid - firstThreshold;
+
+                        // Standard second payment is 25%
+                        decimal requiredSecondPayment = Math.Round(fullPrice * 0.25m, 2, MidpointRounding.AwayFromZero);
+
+                        // Deduct extra paid amount from the second required payment
+                        decimal remainingSecondPayment = requiredSecondPayment - alreadyPaidBeyondFirst;
+
+                        // Make sure it never goes negative
+                        return remainingSecondPayment < 0 ? 0 : remainingSecondPayment;
+                    }
+
+                    // Final stage: total remaining balance
                     return Math.Round(fullPrice - totalPaid, 2, MidpointRounding.AwayFromZero);
 
                 case "70-30":
-                    return (totalPaid == 0m)
-                        ? Math.Round(fullPrice * 0.70m, 2, MidpointRounding.AwayFromZero)
-                        : Math.Round(fullPrice - totalPaid, 2, MidpointRounding.AwayFromZero);
+                    decimal firstPayment70 = Math.Round(fullPrice * 0.70m, 2, MidpointRounding.AwayFromZero);
+
+                    if (totalPaid == 0m)
+                        return firstPayment70;
+
+                    // Second payment is just whatever remains
+                    return Math.Round(fullPrice - totalPaid, 2, MidpointRounding.AwayFromZero);
 
                 case "100":
                 default:
+                    // One-time full payment plan
                     return Math.Round(fullPrice - totalPaid, 2, MidpointRounding.AwayFromZero);
             }
         }
 
+
         // ===== PayMongo Helpers =========================================================
-        private async void GenerateCheckoutURL(int clientId, int bookingId, bool isContract, decimal fullPrice, decimal totalPaid, string selectedPlan)
+        private async void GenerateCheckoutURL(
+      int clientId,
+      int bookingId,
+      bool isContract,
+      decimal fullPrice,
+      decimal totalPaid,
+      string selectedPlan,
+      decimal? customAmountOverride = null) // <-- Added this
         {
             try
             {
-                decimal amountPhp = CalculateNextInstallment(isContract, fullPrice, totalPaid, selectedPlan);
+                // 1️⃣ Calculate the default system-required amount (next installment)
+                decimal defaultAmount = CalculateNextInstallment(isContract, fullPrice, totalPaid, selectedPlan);
+
+                // 2️⃣ Determine the custom amount:
+                decimal finalCustomAmount = 0m;
+
+                // If a customAmountOverride was passed, use it first
+                if (customAmountOverride.HasValue && customAmountOverride.Value > 0)
+                {
+                    finalCustomAmount = customAmountOverride.Value;
+                }
+                else if (!string.IsNullOrWhiteSpace(txtCustomAmount.Text))
+                {
+                    // Fallback: read directly from textbox
+                    decimal.TryParse(txtCustomAmount.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out finalCustomAmount);
+                }
+
+           
+                // Always prefer custom amount if greater than 0, otherwise default
+                decimal amountPhp = finalCustomAmount > 0 ? finalCustomAmount : defaultAmount;
+
+
+                // 4️⃣ If the final amount is zero or less, no need to create a checkout session
                 if (amountPhp <= 0m)
                 {
                     hiddenCheckoutURL.Value = string.Empty;
                     hiddenReference.Value = string.Empty;
+                    lblMessage.Text += " | Skipped checkout: Amount is zero or negative.";
                     return;
                 }
 
+                // 5️⃣ Build the PayMongo Checkout session
                 string serviceName = GetServiceNameForBooking(bookingId) ?? "RRC Service Payment";
 
                 // RAW reference for webhook mapping
@@ -614,9 +711,10 @@ namespace RRCManagementSystem
                 string successUrl = $"{baseUrl}/Payment.aspx?success=1&ref={HttpUtility.UrlEncode(referenceNumber)}";
                 string cancelUrl = $"{baseUrl}/Payment.aspx?failed=1";
 
+                // Convert PHP to centavos
                 long amountCentavos = (long)Math.Round(amountPhp * 100m, MidpointRounding.AwayFromZero);
 
-                // ✅ Checkout Session payload using line_items (required by your PayMongo setup)
+                // ✅ Checkout Session payload
                 var payload = new
                 {
                     data = new
@@ -629,20 +727,16 @@ namespace RRCManagementSystem
                             reference_number = referenceNumber,
                             success_url = successUrl,
                             cancel_url = cancelUrl,
-
-                            // <-- IMPORTANT: Use line_items instead of top-level amount
                             line_items = new[]
                             {
                         new {
                             name = "RRC Service",
                             description = serviceName,
-                            amount = amountCentavos,   // in centavos
+                            amount = amountCentavos,
                             currency = "PHP",
                             quantity = 1
                         }
                     },
-
-                            // optional but nice:
                             send_email_receipt = false,
                             show_line_items = true,
                             show_description = true
@@ -655,7 +749,7 @@ namespace RRCManagementSystem
                 using (var client = new HttpClient())
                 {
                     var authValue = Convert.ToBase64String(Encoding.ASCII.GetBytes(payMongoSecretKey + ":"));
-                    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authValue);
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authValue);
 
                     using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
                     {
@@ -671,11 +765,12 @@ namespace RRCManagementSystem
                         else
                         {
                             hiddenCheckoutURL.Value = string.Empty;
-                            lblMessage.Text = "❌ PayMongo Error: " + res;
+                            lblMessage.Text += " | ❌ PayMongo Error: " + res;
                         }
                     }
                 }
 
+                // Update PayMongo button on UI
                 ScriptManager.RegisterStartupScript(this, GetType(), "pmUpdateBtn", "updatePayMongoButton();", true);
             }
             catch (Exception ex)
@@ -684,6 +779,50 @@ namespace RRCManagementSystem
                 lblMessage.Text = "❌ Exception: " + ex.Message;
             }
         }
+
+        protected void txtCustomAmount_TextChanged(object sender, EventArgs e)
+        {
+            if (Session["ClientID"] == null) return;
+
+            int clientId = Convert.ToInt32(Session["ClientID"]);
+            int bookingId = GetLatestAssignedBookingId(clientId);
+
+            decimal minRequired = 0m;
+            decimal.TryParse(hfMinRequired.Value, out minRequired);
+
+            string rawInput = txtCustomAmount.Text.Trim();
+            bool hasValue = !string.IsNullOrWhiteSpace(rawInput);
+
+            decimal enteredAmount = 0m;
+            if (hasValue && !decimal.TryParse(rawInput, out enteredAmount))
+            {
+                lblCustomAmountError.Text = "Please enter a valid number.";
+                hiddenCheckoutURL.Value = string.Empty;
+                return;
+            }
+
+            if (hasValue && enteredAmount < minRequired)
+            {
+                lblCustomAmountError.Text = $"Amount cannot be less than ₱{minRequired:N2}";
+                hiddenCheckoutURL.Value = string.Empty;
+                return;
+            }
+
+            lblCustomAmountError.Text = "";
+
+            decimal finalAmount = hasValue ? enteredAmount : minRequired;
+
+            // ✅ Reload KPI and hidden fields
+            LoadClientInfo(clientId, hfSelectedPlan.Value);
+
+            // ✅ Generate PayMongo checkout link
+            GenerateCheckoutURL(clientId, bookingId, true, 0, 0, hfSelectedPlan.Value, finalAmount);
+
+            // ✅ Update PayPal dynamically
+            ScriptManager.RegisterStartupScript(this, GetType(), "refreshPayPal",
+                "renderPayPalButtons();", true);
+        }
+
 
 
         private string GetServiceNameForBooking(int bookingId)

@@ -11,6 +11,7 @@ namespace RRCManagementSystem
     {
         private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
         private int bookingID;
+        private int scheduleID;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -21,7 +22,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // 2. Restrict SuperAdmin and Inspector roles from accessing this page
+            // 2. Restrict SuperAdmin and Inspector roles
             string role = Session["Role"].ToString();
             if (role == "SuperAdmin" || role == "Inspector")
             {
@@ -31,54 +32,57 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // 3. Check if user has edit permission for ManageBooking
+            // 3. Check Edit Permission
             if (!HasEditPermission(userId, "ManageBooking"))
             {
+                lblMessage.Visible = true;
                 lblMessage.Text = "❌ You do not have permission to assign bookings.";
                 lblMessage.ForeColor = System.Drawing.Color.Red;
                 btnAssignAll.Enabled = false;
                 return;
             }
 
-            // 4. Only load data on first page load
+            // 4. Load data on initial page load
             if (!IsPostBack)
             {
                 hfConfirmAssign.Value = "false";
 
-                // Validate and fetch BookingID from query string
+                // Validate BookingID
                 if (int.TryParse(Request.QueryString["BookingID"], out bookingID))
                 {
-                    // Load BookingCode for top of the card
-                    LoadBookingCode();
+                    // Optional ScheduleID (for follow-up operations)
+                    int.TryParse(Request.QueryString["ScheduleID"], out scheduleID);
 
-                    // Load dropdowns and grids
+                    LoadBookingCodeAndOperation();
                     LoadTeams();
                     LoadAvailableEquipments();
                     LoadAvailableChemicals();
                     LoadAvailableSachetChemicals();
                     LoadSafetyGear();
 
-                    // Show success message if status=Assigned is in query string
+                    // Success alert if redirected from previous assign
                     if (Request.QueryString["status"] == "Assigned")
                     {
                         string script = @"Swal.fire({
-                    icon:'success',
-                    title:'Assigned!',
-                    text:'The booking was successfully assigned.',
-                    showConfirmButton:false,
-                    timer:2000
-                });";
+                            icon:'success',
+                            title:'Assigned!',
+                            text:'The booking was successfully assigned.',
+                            showConfirmButton:false,
+                            timer:2000
+                        });";
                         ClientScript.RegisterStartupScript(this.GetType(), "AssignSuccess", script, true);
                     }
                 }
                 else
                 {
+                    lblMessage.Visible = true;
                     lblMessage.Text = "⚠️ Invalid Booking ID.";
                     lblMessage.ForeColor = System.Drawing.Color.Red;
                     btnAssignAll.Enabled = false;
                 }
             }
         }
+
 
 
 
@@ -101,18 +105,34 @@ namespace RRCManagementSystem
             }
             catch { return false; }
         }
-        private void LoadBookingCode()
+        private void LoadBookingCodeAndOperation()
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("dbo.spBooking_GetBookingCode", con))
+            using (var cmd = new SqlCommand("dbo.spBooking_GetBookingCodeWithOperation", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleID > 0 ? (object)scheduleID : DBNull.Value;
 
                 con.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        lblBookingCode.Text = reader["BookingCode"].ToString();
 
-                var result = cmd.ExecuteScalar();
-                lblBookingCode.Text = (result != null && result != DBNull.Value) ? result.ToString() : "N/A";
+                        // Show operation number only if it's a reschedule
+                        if (scheduleID > 0 && reader["OperationNumber"] != DBNull.Value)
+                        {
+                            lblOperationNumber.Visible = true;
+                            lblOperationNumber.Text = $"(Op #{reader["OperationNumber"]})";
+                        }
+                        else
+                        {
+                            lblOperationNumber.Visible = false;
+                        }
+                    }
+                }
             }
         }
 
@@ -501,11 +521,14 @@ namespace RRCManagementSystem
                     }
 
                     // 10) Create contract ops if needed
-                    using (var cmd = new SqlCommand("dbo.spServiceSchedule_InitIfContract", con, tx))
+                    if (scheduleID == 0)
                     {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
-                        cmd.ExecuteNonQuery();
+                        using (var cmd = new SqlCommand("dbo.spServiceSchedule_InitIfContract", con, tx))
+                        {
+                            cmd.CommandType = CommandType.StoredProcedure;
+                            cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                            cmd.ExecuteNonQuery();
+                        }
                     }
 
 

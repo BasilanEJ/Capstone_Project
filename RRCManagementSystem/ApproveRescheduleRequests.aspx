@@ -77,6 +77,11 @@
                 RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-100 transition-colors"
                 AlternatingRowStyle-CssClass="bg-gray-50 hover:bg-gray-100 transition-colors">
                 <Columns>
+                    <asp:BoundField DataField="BookingCode" HeaderText="Booking Code" 
+    ReadOnly="true" 
+    HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" 
+    ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
+
                     <asp:BoundField DataField="RequestID" HeaderText="Request ID" ReadOnly="true" HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
                     <asp:BoundField DataField="ClientName" HeaderText="Client" ReadOnly="true" HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
                     <asp:BoundField DataField="ServiceNames" HeaderText="Service" ReadOnly="true" HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />

@@ -8,12 +8,14 @@
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
     <div class="container mx-auto py-8 px-4">
         <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-            <div class="bg-blue-800 text-white font-bold p-5 flex items-center justify-between">
-                <span>Booking Code</span>
-                <span class="bg-white text-blue-800 font-bold py-1 px-3 rounded-full">
-                    <asp:Label ID="lblBookingCode" runat="server" />
-                </span>
-            </div>
+        <div class="bg-blue-800 text-white font-bold p-5 flex items-center justify-between">
+    <span>Booking Code / Operation #</span>
+    <span class="bg-white text-blue-800 font-bold py-1 px-3 rounded-full">
+        <asp:Label ID="lblBookingCode" runat="server" />
+        <asp:Label ID="lblOperationNumber" runat="server" CssClass="ml-2 text-gray-700 font-normal" Visible="false" />
+    </span>
+</div>
+
 
             <div class="p-6">
                 <h2 class="text-2xl font-bold text-blue-800 mb-6 flex items-center">

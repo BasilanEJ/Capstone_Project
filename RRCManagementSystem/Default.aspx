@@ -281,6 +281,32 @@
 /* ==========================================
    MODAL DESIGN
 ========================================== */
+/* Modal Body Text */
+.modal-body p {
+    text-align: justify; /* Justifies the text */
+    margin-bottom: 1.5rem; /* Adds more space below each paragraph for better visual separation */
+    font-size: 1rem;
+    color: #444;
+    line-height: 1.6;
+}
+
+/* Bullet List inside Modal */
+.modal-body ul {
+    list-style-type: none; /* Removes default bullet points for a cleaner look */
+    padding-left: 0; /* Aligns the list flush with the content */
+    margin-top: 15px;
+}
+
+.modal-body ul li {
+    text-align: justify; /* Justifies the text for list items */
+    font-size: 0.95rem;
+    padding: 4px 0;
+    color: #333;
+    /* The following lines create the "hanging indent" effect for the checkmark emoji */
+    text-indent: -1.5rem;
+    padding-left: 1.5rem;
+}
+
 .modal-content {
     border-radius: 12px;
     border: none;
