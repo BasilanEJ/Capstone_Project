@@ -15,6 +15,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // === Setup response headers ===
             Response.Clear();
             Response.ContentType = "text/plain";
             Response.Cache.SetCacheability(HttpCacheability.NoCache);
@@ -23,6 +24,7 @@ namespace RRCManagementSystem
 
             try
             {
+                // === Step 1: Validate session ===
                 if (Session["ClientID"] == null)
                 {
                     WriteAndEnd("0|||<div class='text-muted small p-2'>Not signed in.</div>");
@@ -30,23 +32,29 @@ namespace RRCManagementSystem
                 }
 
                 int clientId = Convert.ToInt32(Session["ClientID"], CultureInfo.InvariantCulture);
+
+                // === Step 2: Check for 'action' query string ===
                 string action = (Request.QueryString["action"] ?? "").Trim().ToLowerInvariant();
 
                 if (action == "markread")
                 {
+                    // Mark notifications as read
                     MarkAllRead(clientId);
+
+                    // Immediately return after marking
                     WriteAndEnd("0|||");
                     return;
                 }
 
+                // === Step 3: Default behavior - Get notifications ===
                 int unread = 0;
                 string html = BuildListHtml(clientId, ref unread);
 
-                // 🔔 Optional: include unread chat badge/row (kept from your original)
+                // === Step 4: Include unread chat count (optional) ===
                 int unreadChat = GetUnreadChatCount(clientId);
                 if (unreadChat > 0)
                 {
-                    unread += 1; // one grouped chat card
+                    unread += 1; // one grouped chat notification
 
                     string chatHtml =
                         "<a href='ChatWithAdmin.aspx' class='text-decoration-none d-block'>" +
@@ -59,9 +67,11 @@ namespace RRCManagementSystem
                         "  </div>" +
                         "</a>";
 
+                    // Prepend chat notification at the top
                     html = chatHtml + html;
                 }
 
+                // === Step 5: Return unread count and HTML ===
                 WriteAndEnd(unread.ToString(CultureInfo.InvariantCulture) + "|||" + html);
             }
             catch (Exception ex)
@@ -71,6 +81,7 @@ namespace RRCManagementSystem
             }
         }
 
+        // ===== Helper: Mark all notifications as read =====
         private void MarkAllRead(int clientId)
         {
             using (var con = new SqlConnection(cs))
@@ -83,13 +94,14 @@ namespace RRCManagementSystem
             }
         }
 
+        // ===== Helper: Build notification list HTML =====
         private string BuildListHtml(int clientId, ref int unread)
         {
             using (var con = new SqlConnection(cs))
             {
                 con.Open();
 
-                // 1) Unread count (use ClientID; adjust if you also store UserID)
+                // === 1) Get unread count ===
                 using (var cmdCount = new SqlCommand(@"
                     SELECT COUNT(*) 
                     FROM dbo.Notifications 
@@ -100,7 +112,7 @@ namespace RRCManagementSystem
                     unread = (o == null || o == DBNull.Value) ? 0 : Convert.ToInt32(o, CultureInfo.InvariantCulture);
                 }
 
-                // 2) Latest 10 (use Title/Body/Type/Url; fallback to Message if Title is null)
+                // === 2) Get latest 10 notifications ===
                 using (var cmd = new SqlCommand(@"
                     SELECT TOP 10
                            COALESCE(NULLIF(LTRIM(RTRIM([Title])), ''), [Message]) AS DisplayTitle,
@@ -128,18 +140,24 @@ namespace RRCManagementSystem
                             string type = (r["Type"] as string ?? "").Trim().ToLowerInvariant();
                             string url = HttpUtility.HtmlEncode(r["Url"] as string ?? "#");
                             bool isRead = r["IsRead"] != DBNull.Value && Convert.ToBoolean(r["IsRead"], CultureInfo.InvariantCulture);
+
                             DateTime created = (r["CreatedAt"] == DBNull.Value)
                                 ? DateTime.UtcNow
                                 : Convert.ToDateTime(r["CreatedAt"], CultureInfo.InvariantCulture);
 
+                            // Icon mapping
                             string icon = "fa-circle-info";
                             if (type == "booking") icon = "fa-calendar-check";
                             else if (type == "payment") icon = "fa-credit-card";
                             else if (type == "quotation" || type == "quote") icon = "fa-file-invoice";
 
+                            // Apply CSS for read/unread
                             string readCls = isRead ? "opacity-75" : "fw-semibold";
-                            string when = created.ToLocalTime().ToString("MMM dd, yyyy hh:mm tt", CultureInfo.InvariantCulture);
 
+                            string when = created.ToLocalTime()
+                                .ToString("MMM dd, yyyy hh:mm tt", CultureInfo.InvariantCulture);
+
+                            // Build each notification row
                             sb.Append(
                                 "<a href='" + url + "' class='text-decoration-none d-block'>" +
                                 "  <div class='d-flex gap-2 p-2 border-bottom'>" +
@@ -160,15 +178,14 @@ namespace RRCManagementSystem
             }
         }
 
-        // 🔎 Unread Admin→Client messages (optional badge)
         private int GetUnreadChatCount(int clientId)
         {
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand(@"
                 SELECT COUNT(*) 
                 FROM dbo.Messages
-                WHERE ReceiverType='Client' AND ReceiverID=@ClientID
-                  AND SenderType='Admin'
+                WHERE ReceiverType = 'Client' AND ReceiverID = @ClientID
+                  AND SenderType = 'Admin'
                   AND (Status IS NULL OR Status <> 'Read');", con))
             {
                 cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
@@ -178,6 +195,7 @@ namespace RRCManagementSystem
             }
         }
 
+        // ===== Helper: Write and end response safely =====
         private void WriteAndEnd(string payload)
         {
             Response.Write(payload ?? "");

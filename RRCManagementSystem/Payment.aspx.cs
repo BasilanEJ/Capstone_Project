@@ -20,13 +20,10 @@ namespace RRCManagementSystem
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
         private readonly string payMongoSecretKey = ConfigurationManager.AppSettings["PayMongoSecretKey"];
 
-        // ==== KPI backing fields (re-applied in OnPreRender to survive master.DataBind) ====
         private string _kpiNext = "₱0.00";
         private string _kpiTotal = "₱0.00";
         private string _kpiPaid = "₱0.00";
         private string _kpiRemain = "₱0.00";
-
-        // ===== Lifecycle Guards =========================================================
         protected override void OnInit(EventArgs e)
         {
             base.OnInit(e);
@@ -41,10 +38,8 @@ namespace RRCManagementSystem
         {
             if (Session["ClientID"] == null) return;
 
-            // Keep hidden field synced with dropdown
             hfSelectedPlan.Value = ddlPlanChoice.SelectedValue;
 
-            // Non-blocking: ensure webhook exists (if key present)
             await EnsurePayMongoWebhookAsync();
 
             if (!IsPostBack)
@@ -684,7 +679,7 @@ namespace RRCManagementSystem
                     decimal.TryParse(txtCustomAmount.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out finalCustomAmount);
                 }
 
-           
+
                 // Always prefer custom amount if greater than 0, otherwise default
                 decimal amountPhp = finalCustomAmount > 0 ? finalCustomAmount : defaultAmount;
 

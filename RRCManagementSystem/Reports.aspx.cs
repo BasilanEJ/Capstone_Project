@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -95,6 +96,28 @@ namespace RRCManagementSystem
                 try
                 {
                     da.Fill(dt);
+
+                    // ✅ Decrypt the Email column here
+                    if (dt.Columns.Contains("Email"))
+                    {
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            string encryptedEmail = row["Email"].ToString();
+                            if (!string.IsNullOrWhiteSpace(encryptedEmail))
+                            {
+                                try
+                                {
+                                    row["Email"] = AESHelper.DecryptEmail(encryptedEmail);
+                                }
+                                catch
+                                {
+                                    // If decryption fails, mark it clearly instead of crashing
+                                    row["Email"] = "[Decryption Error]";
+                                }
+                            }
+                        }
+                    }
+
                     gvReports.DataSource = dt;
                     gvReports.DataBind();
 
@@ -128,6 +151,7 @@ namespace RRCManagementSystem
                 // swallow logging errors by design; don't break the report
             }
         }
+
 
         private void LogReport(string reportType, int generatedBy, DateTime? from, DateTime? to, string remarks)
         {

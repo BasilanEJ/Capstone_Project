@@ -1,8 +1,9 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers; // For AESHelper and PasswordHelper
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using RRCManagementSystem.Helpers; // For AESHelper and PasswordHelper
+using System.Web.UI;
 
 namespace RRCManagementSystem
 {
@@ -78,7 +79,7 @@ namespace RRCManagementSystem
 
             if (string.IsNullOrEmpty(newName) || string.IsNullOrEmpty(newEmail))
             {
-                lblMessage.Text = "⚠ Name and Email cannot be empty.";
+                ShowSweetAlert("Error", "Name and Email cannot be empty.", "error");
                 return;
             }
 
@@ -106,20 +107,38 @@ namespace RRCManagementSystem
                     conn.Open();
                     cmd.ExecuteNonQuery();
 
-                    // Optional: log it
+                    // Log the update
                     TryAudit(superAdminId, "SuperAdmin updated own profile.");
 
-                    lblMessage.CssClass = "alert success";
-                    lblMessage.Text = "✅ Profile updated successfully!";
                     // Clear password box
                     txtNewPassword.Text = string.Empty;
+
+                    // ✅ Success popup
+                    ShowSweetAlert("Profile Updated", "Your profile has been updated successfully!", "success");
                 }
                 catch (Exception ex)
                 {
-                    lblMessage.Text = "⚠ Error saving profile: " + ex.Message;
+                    // ❌ Error popup
+                    ShowSweetAlert("Error Saving Profile", ex.Message, "error");
                 }
             }
         }
+
+        private void ShowSweetAlert(string title, string message, string icon)
+        {
+            string script = $@"
+        Swal.fire({{
+            title: '{title}',
+            text: '{message}',
+            icon: '{icon}',
+            confirmButtonColor: '#3085d6',
+            confirmButtonText: 'OK'
+        }});
+    ";
+
+            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert", script, true);
+        }
+
 
         private void TryAudit(int userId, string action)
         {

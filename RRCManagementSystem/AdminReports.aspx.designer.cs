@@ -186,6 +186,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Button btnTabInspections;
 
         /// <summary>
+        /// btnTabInquiryEstimation control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnTabInquiryEstimation;
+
+        /// <summary>
         /// btnTabTeams control.
         /// </summary>
         /// <remarks>
@@ -445,6 +454,33 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.GridView gvInspections;
+
+        /// <summary>
+        /// pnlInquiryEstimation control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlInquiryEstimation;
+
+        /// <summary>
+        /// btnExportInquiryEstimation control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnExportInquiryEstimation;
+
+        /// <summary>
+        /// gvInquiryEstimation control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.GridView gvInquiryEstimation;
 
         /// <summary>
         /// pnlTeams control.

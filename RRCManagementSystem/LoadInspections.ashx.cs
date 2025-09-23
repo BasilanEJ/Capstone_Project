@@ -14,35 +14,51 @@ namespace RRCManagementSystem
         {
             context.Response.ContentType = "application/json";
 
-            int inspectorId;
-            if (context.Session["UserID"] == null || !int.TryParse(context.Session["UserID"].ToString(), out inspectorId))
+            if (context.Session["UserID"] == null || context.Session["Role"]?.ToString() != "Inspector")
             {
                 context.Response.Write("[]");
                 return;
             }
 
-            List<object> events = new List<object>();
+            int inspectorId = Convert.ToInt32(context.Session["UserID"]);
+            var events = new List<object>();
 
             try
             {
                 using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString))
                 {
-                    string query = "SELECT InspectionID, ScheduledDate, InquiryID FROM Inspections WHERE InspectorID = @InspectorID";
+                    string query = @"
+                        SELECT i.InspectionID, i.ScheduledDate, i.InspectionStatus, q.InquiryCode,
+                               q.FirstName, q.LastName
+                        FROM Inspections i
+                        INNER JOIN InquirySimple q ON i.InquiryID = q.InquiryID
+                        WHERE i.InspectorID = @InspectorID";
+
                     SqlCommand cmd = new SqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
                     conn.Open();
-                    SqlDataReader reader = cmd.ExecuteReader();
 
+                    SqlDataReader reader = cmd.ExecuteReader();
                     while (reader.Read())
                     {
+                        // Determine color based on status
+                        string status = reader["InspectionStatus"].ToString();
+                        string bgColor = "#3b82f6"; // Default blue
+                        if (status == "Pending") bgColor = "#facc15";   // Yellow
+                        if (status == "Completed") bgColor = "#22c55e"; // Green
+                        if (status == "Cancelled") bgColor = "#ef4444"; // Red
+
                         events.Add(new
                         {
                             id = reader["InspectionID"].ToString(),
-                            title = "Inspection",
-                            start = Convert.ToDateTime(reader["ScheduledDate"]).ToString("yyyy-MM-dd"),
+                            title = $"{reader["FirstName"]} {reader["LastName"]} - {status}",
+                            start = Convert.ToDateTime(reader["ScheduledDate"]).ToString("yyyy-MM-ddTHH:mm:ss"),
+                            color = bgColor,
                             extendedProps = new
                             {
-                                inquiryId = reader["InquiryID"].ToString()
+                                inquiryCode = reader["InquiryCode"].ToString(),
+                                clientName = $"{reader["FirstName"]} {reader["LastName"]}",
+                                status = status
                             }
                         });
                     }

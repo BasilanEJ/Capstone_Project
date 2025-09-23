@@ -56,6 +56,7 @@
                     <asp:Button ID="btnTabSales" runat="server" Text="Sales" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabBookings" runat="server" Text="Bookings" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabInspections" runat="server" Text="Inspections" CssClass="folder-tab" OnClick="TabButton_Click" />
+                    <asp:Button ID="btnTabInquiryEstimation" runat="server" Text="Inquiry Estimation" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabTeams" runat="server" Text="Team Reports" CssClass="folder-tab" OnClick="TabButton_Click" />
                 </div>
 
@@ -219,27 +220,80 @@
                     </div>
                 </asp:Panel>
 
-                <asp:Panel ID="pnlInspections" runat="server" Visible="false" CssClass="report-panel">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-2xl font-semibold text-gray-800">🔍 Inspection Details</h3>
-                        <asp:Button ID="btnExportInspections" runat="server" Text="Export Inspections to PDF" CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" OnClick="btnExportInspections_Click" />
-                    </div>
-                    <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                        <asp:GridView ID="gvInspections" runat="server" AutoGenerateColumns="False" CssClass="min-w-full custom-table" HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
-                            <Columns>
-                                <asp:TemplateField HeaderText="Inspection ID">
-                                    <ItemTemplate><%# "Inspect" + String.Format("{0:D4}", Eval("InspectionID")) %></ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:BoundField DataField="InspectorName" HeaderText="Inspector Name" />
-                                <asp:BoundField DataField="ClientName" HeaderText="Client Name" />
-                                <asp:BoundField DataField="ClientAddress" HeaderText="Client Address" />
-                                <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled Date" />
-                                <asp:BoundField DataField="InspectionStatus" HeaderText="Status" />
-                                <asp:BoundField DataField="Remarks" HeaderText="Remarks" />
-                            </Columns>
-                        </asp:GridView>
-                    </div>
-                </asp:Panel>
+<asp:Panel ID="pnlInspections" runat="server" Visible="false" CssClass="report-panel">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-2xl font-semibold text-gray-800">🔍 Inspection Details</h3>
+        <asp:Button ID="btnExportInspections" runat="server" Text="Export Inspections to PDF"
+            CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200"
+            OnClick="btnExportInspections_Click" />
+    </div>
+    <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+        <asp:GridView ID="gvInspections" runat="server" AutoGenerateColumns="False"
+            CssClass="min-w-full custom-table"
+            HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider"
+            RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
+            <Columns>
+                <asp:TemplateField HeaderText="Inspection #">
+                    <ItemTemplate>
+                        <%# "Inspect" + String.Format("{0:D4}", Eval("InspectionID")) %>
+                    </ItemTemplate>
+                </asp:TemplateField>
+                <asp:BoundField DataField="InquiryCode" HeaderText="Reference Code" />
+                <asp:BoundField DataField="InspectorName" HeaderText="Inspector" />
+                <asp:BoundField DataField="ClientFullName" HeaderText="Client" />
+                <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled"
+                    DataFormatString="{0:yyyy-MM-dd}" HtmlEncode="false" />
+                <asp:BoundField DataField="InspectionStatus" HeaderText="Status" />
+                <asp:BoundField DataField="Remarks" HeaderText="Remarks">
+                    <ItemStyle CssClass="whitespace-normal break-words" />
+                </asp:BoundField>
+                <asp:BoundField DataField="ClientAddress" HeaderText="Address">
+                    <ItemStyle CssClass="whitespace-normal break-words" />
+                </asp:BoundField>
+                <asp:BoundField DataField="Findings" HeaderText="Findings">
+                    <ItemStyle CssClass="whitespace-normal break-words" />
+                </asp:BoundField>
+            </Columns>
+        </asp:GridView>
+    </div>
+</asp:Panel>
+
+<asp:Panel ID="pnlInquiryEstimation" runat="server" Visible="false" CssClass="report-panel">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-2xl font-semibold text-gray-800">📑 Inquiry Estimation</h3>
+        <asp:Button ID="btnExportInquiryEstimation" runat="server" Text="Export to PDF"
+            CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200"
+            OnClick="btnExportInquiryEstimation_Click" />
+    </div>
+
+    <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+        <asp:GridView ID="gvInquiryEstimation" runat="server" AutoGenerateColumns="False"
+            CssClass="min-w-full custom-table"
+            HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider"
+            RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
+            <Columns>
+                <asp:BoundField DataField="QuotationCode" HeaderText="Quotation Code" />
+                <asp:BoundField DataField="CreatedAt" HeaderText="Created Date" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
+                <asp:BoundField DataField="ClientName" HeaderText="Client" />
+                <asp:BoundField DataField="InspectorName" HeaderText="Inspector" />
+                <asp:BoundField DataField="ServiceNames" HeaderText="Services" />
+                <asp:BoundField DataField="SQM" HeaderText="SQM" />
+                <asp:BoundField DataField="BasePrice" HeaderText="Base Price (₱)" DataFormatString="{0:N2}" />
+                <asp:BoundField DataField="TravelExpense" HeaderText="Travel Expense (₱)" DataFormatString="{0:N2}" />
+                <asp:BoundField DataField="Miscellaneous" HeaderText="Miscellaneous (₱)" DataFormatString="{0:N2}" />
+                <asp:BoundField DataField="Price" HeaderText="Total Price (₱)" DataFormatString="{0:N2}" />
+                <asp:TemplateField HeaderText="Contract?">
+                    <ItemTemplate>
+                        <%# Convert.ToBoolean(Eval("IsContract")) ? "Yes" : "No" %>
+                    </ItemTemplate>
+                </asp:TemplateField>
+                <asp:BoundField DataField="Status" HeaderText="Status" />
+            </Columns>
+        </asp:GridView>
+    </div>
+</asp:Panel>
+
+
 
                 <asp:Panel ID="pnlTeams" runat="server" Visible="false" CssClass="report-panel">
                     <div class="flex items-center justify-between mb-4">
@@ -296,58 +350,42 @@
         </asp:UpdatePanel>
     </div>
 
-    <style>
+
+ 
+   <style>
         .folder-tab {
             background-color: #e5e7eb;
             color: #4b5563;
             font-weight: 600;
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
-            padding-left: 1.5rem;
-            padding-right: 1.5rem;
+            padding: 0.75rem 1.5rem;
             margin-bottom: -1px;
             border-top-left-radius: 0.5rem;
             border-top-right-radius: 0.5rem;
-            transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 200ms;
+            transition: 0.2s;
             cursor: pointer;
             white-space: nowrap;
-            -webkit-appearance: none;
             border: 1px solid transparent;
             border-bottom: none;
-            z-index: 1;
-            position: relative;
         }
-
-        .folder-tab:hover {
-            background-color: #d1d5db;
-        }
-
-        /* Active state for the folder tabs */
+        .folder-tab:hover { background-color: #d1d5db; }
         .folder-tab.active-tab {
             background-color: #ffffff;
             color: #2563eb;
             font-weight: 700;
             border-color: #d1d5db;
-            border-top-left-radius: 0.5rem;
-            border-top-right-radius: 0.5rem;
             z-index: 2;
         }
 
-        /* Styles for the GridView table */
         .custom-table th, .custom-table td {
             padding: 1rem;
             border: 1px solid #e5e7eb;
         }
-
         .custom-table th {
             background-color: #f3f4f6;
             font-weight: 600;
             color: #4b5563;
         }
-        
-        /* The container for the panels. This is used to visually link the active tab to the content. */
+
         .report-panel {
             background-color: #ffffff;
             border-radius: 0.5rem;
@@ -356,5 +394,6 @@
             border: 1px solid #d1d5db;
             margin-top: -1px;
         }
+      
     </style>
 </asp:Content>

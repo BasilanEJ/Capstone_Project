@@ -94,6 +94,7 @@ namespace RRCManagementSystem
                 AddGridToPDF(doc, gvEquipment, "🛠️ Equipment Status");
                 AddGridToPDF(doc, gvBookings, "📅 Booking Details");
                 AddGridToPDF(doc, gvInspections, "🔍 Inspection Details");
+                AddGridToPDF(doc, gvInquiryEstimation, "📑 Inquiry Estimation");
                 AddGridToPDF(doc, gvTeamsSummary, "👥 Team Summary");
                 AddGridToPDF(doc, gvTeamMembers, "👨‍👩‍👧‍👦 Team Members");
                 
@@ -165,7 +166,13 @@ namespace RRCManagementSystem
         {
             if (gvInspections.Rows.Count > 0) ExportGridViewToPDF(gvInspections, "Inspections_Report");
         }
-        
+        protected void btnExportInquiryEstimation_Click(object sender, EventArgs e)
+        {
+            if (gvInquiryEstimation.Rows.Count > 0)
+                ExportGridViewToPDF(gvInquiryEstimation, "InquiryEstimation_Report");
+        }
+
+
         // ---------------------- Panel and Tab Logic ----------------------
 
         private void HideAllPanels()
@@ -179,6 +186,7 @@ namespace RRCManagementSystem
             pnlSales.Visible = false;
             pnlBookings.Visible = false;
             pnlInspections.Visible = false;
+            pnlInquiryEstimation.Visible = false;
             pnlTeams.Visible = false;
         }
 
@@ -194,14 +202,15 @@ namespace RRCManagementSystem
             btnTabBookings.CssClass = "folder-tab";
             btnTabInspections.CssClass = "folder-tab";
             btnTabTeams.CssClass = "folder-tab";
-
+            btnTabInquiryEstimation.CssClass = "folder-tab"; 
             Button activeButton = (Button)ReportsUpdatePanel.FindControl(activeButtonID);
             if (activeButton != null)
             {
                 activeButton.CssClass += " active-tab";
             }
         }
-        
+
+
         // ---------------------- Data Loaders ----------------------
 
         private void LoadAllReportData()
@@ -221,6 +230,7 @@ namespace RRCManagementSystem
             LoadInspections(from, to);
             LoadSales(from, to);
             LoadTeamReports(from, to, teamDate);
+            LoadInquiryEstimation(from, to);
         }
 
         private void LoadSpecificReport(string tabId)
@@ -265,6 +275,10 @@ namespace RRCManagementSystem
                 case "btnTabInspections":
                     pnlInspections.Visible = true;
                     LoadInspections(from, to);
+                    break;
+                case "btnTabInquiryEstimation":
+                    pnlInquiryEstimation.Visible = true;
+                    LoadInquiryEstimation(from, to);
                     break;
                 case "btnTabTeams":
                     pnlTeams.Visible = true;
@@ -411,6 +425,7 @@ namespace RRCManagementSystem
             var dt = ExecToTable("dbo.spReports_Inspections",
                 new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
                 new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
+
             foreach (DataRow row in dt.Rows)
             {
                 string street = row["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(row["StreetEnc"].ToString()) : "";
@@ -418,12 +433,29 @@ namespace RRCManagementSystem
                 string city = row["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CityEnc"].ToString()) : "";
                 string region = row["RegionEnc"] != DBNull.Value ? AESHelper.DecryptField(row["RegionEnc"].ToString()) : "";
                 string country = row["CountryEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CountryEnc"].ToString()) : "";
+
                 row["StreetEnc"] = $"{street}, {barangay}, {city}, {region}, {country}".Trim(',', ' ');
             }
+
             dt.Columns["StreetEnc"].ColumnName = "ClientAddress";
+
             gvInspections.DataSource = dt;
             gvInspections.DataBind();
         }
+
+        private void LoadInquiryEstimation(DateTime from, DateTime to)
+        {
+            var dt = ExecToTable(
+                "usp_GetPendingQuotations",
+                new SqlParameter("@FromDate", SqlDbType.DateTime) { Value = from },
+                new SqlParameter("@ToDate", SqlDbType.DateTime) { Value = to },
+                new SqlParameter("@InspectorID", SqlDbType.Int) { Value = DBNull.Value } 
+            );
+            gvInquiryEstimation.DataSource = dt;
+            gvInquiryEstimation.DataBind();
+        }
+
+
 
         private void LoadSales(DateTime from, DateTime to)
         {

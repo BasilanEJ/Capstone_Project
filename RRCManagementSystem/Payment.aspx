@@ -48,34 +48,34 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
 
     function renderPayPalButtons() {
         var amountEl = document.getElementById('<%= hfPayPalAmount.ClientID %>');
-    var container = document.getElementById('paypal-button-container');
+        var container = document.getElementById('paypal-button-container');
 
-    if (!container || !window.paypal) return;
+        if (!container || !window.paypal) return;
 
-    // ✅ Always clear before rendering
-    container.innerHTML = "";
-    if (window.__ppButtons && window.__ppButtons.close) {
-        try { window.__ppButtons.close(); } catch (e) { }
-    }
-    window.__ppButtons = null;
-    window.__ppLastAmount = null;
+        // ✅ Always clear before rendering
+        container.innerHTML = "";
+        if (window.__ppButtons && window.__ppButtons.close) {
+            try { window.__ppButtons.close(); } catch (e) { }
+        }
+        window.__ppButtons = null;
+        window.__ppLastAmount = null;
 
-    var raw = amountEl ? (amountEl.value || "") : "";
-    var amt = parseFloat(String(raw).replace(/,/g, ""));
+        var raw = amountEl ? (amountEl.value || "") : "";
+        var amt = parseFloat(String(raw).replace(/,/g, ""));
 
-    if (!amt || isNaN(amt) || amt <= 0) {
-        container.innerHTML = "<p class='text-green-600 font-semibold mt-3 mb-0'>✅ You have no balance.</p>";
-        return;
-    }
+        if (!amt || isNaN(amt) || amt <= 0) {
+            container.innerHTML = "<p class='text-green-600 font-semibold mt-3 mb-0'>✅ You have no balance.</p>";
+            return;
+        }
 
-    var amount = amt.toFixed(2);
+        var amount = amt.toFixed(2);
 
-    // Render PayPal buttons
-    window.__ppButtons = paypal.Buttons({
-        style: { layout: 'vertical', label: 'paypal' },
+        // Render PayPal buttons
+        window.__ppButtons = paypal.Buttons({
+            style: { layout: 'vertical', label: 'paypal' },
 
-        createOrder: function (data, actions) {
-            var minRequired = parseFloat(document.getElementById('<%= hfMinRequired.ClientID %>').value) || 0;
+            createOrder: function (data, actions) {
+                var minRequired = parseFloat(document.getElementById('<%= hfMinRequired.ClientID %>').value) || 0;
             var customValue = document.getElementById('<%= txtCustomAmount.ClientID %>').value.trim();
             var customAmount = customValue === "" ? amt : parseFloat(customValue);
 

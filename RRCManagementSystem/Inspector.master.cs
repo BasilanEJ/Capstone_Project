@@ -21,7 +21,16 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // --- Disable caching ---
+            int inspectorId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔹 NEW: Check if inspector's status is still valid
+            if (!IsInspectorStatusStillValid(inspectorId))
+            {
+                ForceLogout("Your account status has been changed. Please contact the administrator.");
+                return; // Stop processing the page
+            }
+
+            // --- Disable caching to prevent back button access after logout ---
             Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
@@ -32,6 +41,33 @@ namespace RRCManagementSystem
             {
                 LoadInspectorName();
                 LoadNotificationCount();
+            }
+        }
+
+        /// <summary>
+        /// Checks the database to ensure inspector's account is still active/available
+        /// </summary>
+        private bool IsInspectorStatusStillValid(int inspectorId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(Cs))
+                using (var cmd = new SqlCommand("SELECT Status FROM Users WHERE UserID = @UserID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", inspectorId);
+                    conn.Open();
+
+                    var status = cmd.ExecuteScalar()?.ToString();
+
+                    // Only allow Active or Available
+                    return status != null &&
+                           (status.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
+                            status.Equals("Available", StringComparison.OrdinalIgnoreCase));
+                }
+            }
+            catch
+            {
+                return false; // If there's an error, treat as invalid for safety
             }
         }
 
@@ -103,12 +139,13 @@ namespace RRCManagementSystem
         }
 
         /// <summary>
-        /// Logout button click handler
+        /// Logs the inspector out and clears session/cookies
         /// </summary>
-        protected void btnLogout_Click(object sender, EventArgs e)
+        private void ForceLogout(string message)
         {
             // Clear session
             Session.Clear();
+            Session.RemoveAll();
             Session.Abandon();
 
             // Expire session cookie
@@ -118,7 +155,7 @@ namespace RRCManagementSystem
                 Response.Cookies["ASP.NET_SessionId"].Expires = DateTime.UtcNow.AddDays(-1);
             }
 
-            // Sign out of FormsAuthentication
+            // Expire FormsAuth cookie
             FormsAuthentication.SignOut();
             if (Request.Cookies[FormsAuthentication.FormsCookieName] != null)
             {
@@ -126,7 +163,18 @@ namespace RRCManagementSystem
                 Response.Cookies[FormsAuthentication.FormsCookieName].Expires = DateTime.UtcNow.AddDays(-1);
             }
 
+            // Optional: store message to show on Login.aspx
+            Session["LogoutMessage"] = message;
+
             SafeRedirect("~/Login.aspx");
+        }
+
+        /// <summary>
+        /// Logout button click handler
+        /// </summary>
+        protected void btnLogout_Click(object sender, EventArgs e)
+        {
+            ForceLogout("You have been logged out successfully.");
         }
 
         /// <summary>

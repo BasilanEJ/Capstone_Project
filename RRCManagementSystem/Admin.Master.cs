@@ -22,8 +22,17 @@ namespace RRCManagementSystem
                 return;
             }
 
+            int userId = Convert.ToInt32(Session["UserID"]);
             string role = Session["Role"].ToString();
-            // Admin master is for Admin role only (not Inspector, not SuperAdmin)
+
+            // 🔹 NEW: Check if user status is still Active or Available
+            if (!IsUserStatusStillValid(userId))
+            {
+                ForceLogout("Your account status has been changed. Please contact the administrator.");
+                return; // stop further execution
+            }
+
+            // Admin master is for Admin role only
             if (!role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
             {
                 SafeRedirect("~/Login.aspx");
@@ -31,7 +40,6 @@ namespace RRCManagementSystem
             }
 
             // ----- Step 2: No-cache headers for all protected views -----
-            // Prevent Back/Forward from showing stale content after logout
             Response.Cache.SetCacheability(HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
@@ -41,12 +49,6 @@ namespace RRCManagementSystem
             // ----- Step 3: Load sidebar permissions (once) -----
             if (Session["AllowedModules"] == null)
             {
-                int userId;
-                if (!int.TryParse(Session["UserID"].ToString(), out userId))
-                {
-                    SafeRedirect("~/Login.aspx");
-                    return;
-                }
                 LoadSidebarPermissions(userId);
             }
 
@@ -54,6 +56,24 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 lblAdminName.Text = (Session["Name"] as string) ?? "User";
+            }
+        }
+
+        // ✅ Check database to see if user's status is still valid
+        private bool IsUserStatusStillValid(int userId)
+        {
+            using (var con = new SqlConnection(Cs))
+            using (var cmd = new SqlCommand("SELECT Status FROM Users WHERE UserID = @UserID", con))
+            {
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                con.Open();
+
+                var status = cmd.ExecuteScalar()?.ToString();
+
+                // Only allow Active or Available
+                return status != null &&
+                       (status.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
+                        status.Equals("Available", StringComparison.OrdinalIgnoreCase));
             }
         }
 
@@ -81,8 +101,7 @@ namespace RRCManagementSystem
             Session["AllowedModules"] = allowedModules;
         }
 
-        // Helper to check visibility in .master markup:
-        // <% if (IsModuleAllowed("ViewTeams")) { %> ... <% } %>
+        // Helper to check visibility in .master markup
         public bool IsModuleAllowed(string moduleName)
         {
             var list = Session["AllowedModules"] as List<string>;
@@ -96,32 +115,22 @@ namespace RRCManagementSystem
             return currentPath == (page ?? string.Empty).ToLowerInvariant() ? "active" : "";
         }
 
-        protected void btnLogout_Click(object sender, EventArgs e)
+        // 🔹 Force logout if status changes or if user clicks logout
+        private void ForceLogout(string message)
         {
-            // ----- Clear app/session state -----
-            Session.Remove("IsAuthenticated");
-            Session.Remove("UserID");
-            Session.Remove("Role");
-            Session.Remove("Name");
-            Session.Remove("Email");
-            Session.Remove("AllowedModules");
-            Session.Remove("Pending2FA_UserID");
-            Session.Remove("Pending2FA_Email");
-            Session.Remove("Pending2FA_Name");
-            Session.Remove("Pending2FA_Role");
-
+            // Clear session
             Session.Clear();
             Session.RemoveAll();
             Session.Abandon();
 
-            // ----- Expire session cookie -----
+            // Expire session cookie
             if (Request.Cookies["ASP.NET_SessionId"] != null)
             {
                 Response.Cookies["ASP.NET_SessionId"].Value = string.Empty;
                 Response.Cookies["ASP.NET_SessionId"].Expires = DateTime.UtcNow.AddDays(-1);
             }
 
-            // ----- Expire FormsAuth cookie (important even if no OTP) -----
+            // Expire FormsAuth cookie
             FormsAuthentication.SignOut();
             if (Request.Cookies[FormsAuthentication.FormsCookieName] != null)
             {
@@ -129,17 +138,20 @@ namespace RRCManagementSystem
                 Response.Cookies[FormsAuthentication.FormsCookieName].Expires = DateTime.UtcNow.AddDays(-1);
             }
 
-            // ----- Strong no-cache on the way out -----
-            Response.Cache.SetCacheability(HttpCacheability.NoCache);
-            Response.Cache.SetNoStore();
-            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
+            // Optional: store message to display on login page
+            Session["LogoutMessage"] = message;
 
             SafeRedirect("~/Login.aspx");
         }
 
+        protected void btnLogout_Click(object sender, EventArgs e)
+        {
+            ForceLogout("You have been logged out successfully.");
+        }
+
         private void SafeRedirect(string url)
         {
-            // Avoid ThreadAbortException + ensure the pipeline stops
+            // Avoid ThreadAbortException
             Response.Redirect(url, false);
             Context.ApplicationInstance.CompleteRequest();
         }

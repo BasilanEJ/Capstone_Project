@@ -41,13 +41,49 @@ namespace RRCManagementSystem
 
                     if (string.IsNullOrWhiteSpace(findings))
                     {
+                        // Redirect if no findings provided
                         Response.Redirect("MyInspections.aspx?err=nofindings");
                         return;
                     }
 
                     try
                     {
-                        // Save combined findings text
+                        // 🔹 Validate scheduled date before marking as done
+                        using (var conn = new SqlConnection(connectionString))
+                        using (var cmd = new SqlCommand(@"
+                            SELECT ScheduledDate, InspectionStatus
+                            FROM Inspections
+                            WHERE InspectionID = @InspectionID AND InspectorID = @InspectorID", conn))
+                        {
+                            cmd.Parameters.Add("@InspectionID", SqlDbType.Int).Value = inspectionId;
+                            cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
+
+                            conn.Open();
+                            var reader = cmd.ExecuteReader();
+
+                            if (!reader.Read())
+                            {
+                                throw new Exception("Inspection not found or you are not authorized to update this inspection.");
+                            }
+
+                            DateTime scheduledDate = Convert.ToDateTime(reader["ScheduledDate"]);
+                            string status = reader["InspectionStatus"].ToString();
+                            reader.Close();
+
+                            // ❌ Cannot mark as done if scheduled date is in the future
+                            if (scheduledDate.Date > DateTime.Now.Date)
+                            {
+                                throw new Exception("You cannot mark this inspection as done before its scheduled date.");
+                            }
+
+                            // ❌ Cannot mark as done if already completed
+                            if (status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+                            {
+                                throw new Exception("This inspection is already marked as completed.");
+                            }
+                        }
+
+                        // ✅ If validation passed, save the findings and mark as done
                         MarkInspectionAsDone(inspectionId, inspectorId, findings);
 
                         Response.Redirect("MyInspections.aspx?marked=1");
@@ -55,12 +91,19 @@ namespace RRCManagementSystem
                     }
                     catch (Exception ex)
                     {
-                        Response.Redirect("MyInspections.aspx?err=save&msg=" + Server.UrlEncode(ex.Message));
-                        return;
+                        // 🔹 Show error in SweetAlert after redirect
+                        string script = $@"
+                            <script>
+                                window.onload = function() {{
+                                    Swal.fire('Error', '{ex.Message.Replace("'", "\\'")}', 'error');
+                                }};
+                            </script>";
+
+                        ClientScript.RegisterStartupScript(this.GetType(), "ErrorAlert", script);
                     }
                 }
 
-                // Load inspections when page first loads
+                // ✅ Load inspections when page first loads
                 LoadMyInspections();
             }
         }
@@ -68,6 +111,32 @@ namespace RRCManagementSystem
         protected void ddlStatusFilter_SelectedIndexChanged(object sender, EventArgs e)
         {
             LoadMyInspections();
+        }
+
+        /// <summary>
+        /// Helper method to return the action button HTML
+        /// </summary>
+        protected string GetActionButton(object scheduledDateObj, object inspectionStatusObj, object inspectionIdObj)
+        {
+            if (scheduledDateObj == null || inspectionStatusObj == null)
+                return "";
+
+            DateTime scheduledDate = Convert.ToDateTime(scheduledDateObj);
+            string status = inspectionStatusObj.ToString();
+            DateTime today = DateTime.Now.Date;
+
+            // Show "Mark as Done" if scheduled date is today or earlier and status is Pending
+            if (scheduledDate <= today && status == "Pending")
+            {
+                return $"<button type='button' class='bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors' onclick=\"markDoneWithFindings('{inspectionIdObj}')\">Mark as Done</button>";
+            }
+            // Show disabled button if scheduled date is in the future
+            else if (scheduledDate > today && status == "Pending")
+            {
+                return "<button type='button' class='bg-gray-400 text-white font-bold py-2 px-4 rounded-md text-sm cursor-not-allowed' disabled>Mark Done</button>";
+            }
+
+            return ""; // Completed or other cases → no button
         }
 
         /// <summary>
@@ -149,10 +218,10 @@ namespace RRCManagementSystem
         {
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand(@"
-        SELECT ServiceID, Name, ServiceType 
-        FROM Services 
-        WHERE Status = 'Available'
-        ORDER BY ServiceType ASC, Name ASC", conn))
+                SELECT ServiceID, Name, ServiceType 
+                FROM Services 
+                WHERE Status = 'Available'
+                ORDER BY ServiceType ASC, Name ASC", conn))
             {
                 conn.Open();
                 var reader = cmd.ExecuteReader();
@@ -168,32 +237,72 @@ namespace RRCManagementSystem
                     });
                 }
 
-                var json = new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(services);
+                var json = new JavaScriptSerializer().Serialize(services);
                 Response.ContentType = "application/json";
                 Response.Write(json);
                 Response.End();
             }
         }
 
-        /// <summary>
-        /// Marks inspection as completed, saving findings as plain text
-        /// </summary>
         private void MarkInspectionAsDone(int inspectionId, int inspectorId, string findings)
         {
             using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.usp_Inspection_MarkCompleted", conn))
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@InspectionID", SqlDbType.Int).Value = inspectionId;
-                cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
-                cmd.Parameters.Add("@Findings", SqlDbType.NVarChar, -1).Value = findings;
-
-                var affectedParam = cmd.Parameters.Add("@RowsAffected", SqlDbType.Int);
-                affectedParam.Direction = ParameterDirection.Output;
-
                 conn.Open();
-                cmd.ExecuteNonQuery();
+
+                // Validate the inspection first
+                using (var cmd = new SqlCommand(@"
+            SELECT ScheduledDate, InspectionStatus 
+            FROM Inspections 
+            WHERE InspectionID = @InspectionID AND InspectorID = @InspectorID", conn))
+                {
+                    cmd.Parameters.Add("@InspectionID", SqlDbType.Int).Value = inspectionId;
+                    cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
+
+                    var reader = cmd.ExecuteReader();
+
+                    if (!reader.Read())
+                        throw new Exception("Inspection not found or you are not authorized to update this inspection.");
+
+                    DateTime scheduledDate = Convert.ToDateTime(reader["ScheduledDate"]);
+                    string status = reader["InspectionStatus"].ToString();
+                    reader.Close();
+
+                    if (scheduledDate.Date > DateTime.Now.Date)
+                        throw new Exception("You cannot mark this inspection as done before its scheduled date.");
+
+                    if (status == "Completed")
+                        throw new Exception("This inspection is already marked as completed.");
+
+                    // ✅ Call the stored procedure
+                    using (var cmdUpdate = new SqlCommand("dbo.usp_Inspection_MarkCompleted", conn))
+                    {
+                        cmdUpdate.CommandType = CommandType.StoredProcedure;
+
+                        // Required input parameters
+                        cmdUpdate.Parameters.Add("@InspectionID", SqlDbType.Int).Value = inspectionId;
+                        cmdUpdate.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
+                        cmdUpdate.Parameters.Add("@Findings", SqlDbType.NVarChar, -1).Value = findings;
+
+                        // ✅ OUTPUT parameter
+                        var rowsAffectedParam = cmdUpdate.Parameters.Add("@RowsAffected", SqlDbType.Int);
+                        rowsAffectedParam.Direction = ParameterDirection.Output;
+
+                        cmdUpdate.ExecuteNonQuery();
+
+                        // Get the value back
+                        int rowsAffected = (int)rowsAffectedParam.Value;
+
+                        // Check if the update actually happened
+                        if (rowsAffected == 0)
+                        {
+                            throw new Exception("No inspection was updated. Ensure you are assigned to this inspection.");
+                        }
+                    }
+                }
             }
         }
+
+
     }
 }

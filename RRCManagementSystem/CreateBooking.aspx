@@ -21,7 +21,7 @@
                         <div class="mb-5">
                             <label for="<%= txtClientSearch.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-1">Search Client</label>
                             <asp:TextBox ID="txtClientSearch" runat="server" CssClass="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Type name or email..." />
-                            <div class="text-sm text-gray-500 mt-1">Start typing to search, then select a suggestion.</div>
+                            <div class="text-sm text-gray-500 mt-1">Start typing to search a name, then select the desired client to create a quotation on.</div>
                             <ajaxToolkit:AutoCompleteExtender
                                 ID="AutoCompleteExtender1" runat="server"
                                 TargetControlID="txtClientSearch"
