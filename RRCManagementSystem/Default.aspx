@@ -1019,12 +1019,12 @@ body.modal-open {
                         <small style="color: #1a202c;">Upload a photo if available.</small>
                     </div>
 
-          
-                    <div style="margin-bottom: 15px;">
-                        <asp:Label runat="server" AssociatedControlID="txtMessage" Text="Describe what you observed*" />
-                        <asp:TextBox ID="txtMessage" runat="server" TextMode="MultiLine" Rows="4"
-                            placeholder="Describe what you observed..." required CssClass="textarea-box" />
-                    </div>
+          <div style="margin-bottom: 15px;">
+    <asp:Label runat="server" AssociatedControlID="txtMessage" Text="Describe what you observed (optional)" />
+    <asp:TextBox ID="txtMessage" runat="server" TextMode="MultiLine" Rows="4"
+        placeholder="Describe what you observed..." CssClass="textarea-box" />
+</div>
+
 
         
                     <div style="margin-bottom: 10px;">

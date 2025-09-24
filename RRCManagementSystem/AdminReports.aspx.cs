@@ -180,8 +180,8 @@ namespace RRCManagementSystem
             pnlUsers.Visible = false;
             pnlInquiries.Visible = false;
             pnlClients.Visible = false;
-            pnlInventorySnapshots.Visible = false;
             pnlInventory.Visible = false;
+            pnlInventorySnapshots.Visible = false;
             pnlEquipment.Visible = false;
             pnlSales.Visible = false;
             pnlBookings.Visible = false;
@@ -195,8 +195,8 @@ namespace RRCManagementSystem
             btnTabUsers.CssClass = "folder-tab";
             btnTabInquiries.CssClass = "folder-tab";
             btnTabClients.CssClass = "folder-tab";
-            btnTabInventorySnapshots.CssClass = "folder-tab";
             btnTabInventory.CssClass = "folder-tab";
+            btnTabInventorySnapshots.CssClass = "folder-tab";
             btnTabEquipment.CssClass = "folder-tab";
             btnTabSales.CssClass = "folder-tab";
             btnTabBookings.CssClass = "folder-tab";
@@ -252,13 +252,13 @@ namespace RRCManagementSystem
                     pnlClients.Visible = true;
                     LoadApprovedClients(from, to);
                     break;
-                case "btnTabInventorySnapshots":
-                    pnlInventorySnapshots.Visible = true;
-                    LoadInventorySnapshots(from, to);
-                    break;
                 case "btnTabInventory":
                     pnlInventory.Visible = true;
                     LoadInventory();
+                    break;
+                case "btnTabInventorySnapshots":
+                    pnlInventorySnapshots.Visible = true;
+                    LoadInventorySnapshots(from, to);
                     break;
                 case "btnTabEquipment":
                     pnlEquipment.Visible = true;
@@ -396,19 +396,51 @@ namespace RRCManagementSystem
 
         private void LoadEquipment()
         {
-            DateTime reportDate = DateTime.Today;
+            DateTime reportDate;
+
+            // Ensure txtFromDate has a valid date
+            if (!DateTime.TryParse(txtFromDate.Text, out reportDate))
+            {
+                // If parsing fails, stop execution and avoid passing today's date silently
+                System.Diagnostics.Debug.WriteLine("Invalid or missing filter date. Cannot load equipment.");
+                return;
+            }
+
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("dbo.spReports_EquipmentAvailableOnDate", con))
             using (var da = new SqlDataAdapter(cmd))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
+
+                // Pass the date from the filter UI
                 cmd.Parameters.AddWithValue("@Date", reportDate);
+
+                // Default capacity is 2 unless you need to make it dynamic
+                cmd.Parameters.AddWithValue("@DailyCapacity", 2);
+
                 var dt = new DataTable();
                 da.Fill(dt);
+
+                // Debugging to verify actual values being bound to the GridView
+                System.Diagnostics.Debug.WriteLine($"Running spReports_EquipmentAvailableOnDate for {reportDate:yyyy-MM-dd}");
+                foreach (DataRow row in dt.Rows)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"EquipmentID={row["EquipmentID"]}, " +
+                        $"Name={row["Name"]}, " +
+                        $"BaseStatus={row["BaseStatus"]}, " +
+                        $"StatusToday={row["StatusToday"]}");
+                }
+
                 gvEquipment.DataSource = dt;
                 gvEquipment.DataBind();
             }
         }
+
+
+
+
+
 
         private void LoadBookings(DateTime from, DateTime to)
         {

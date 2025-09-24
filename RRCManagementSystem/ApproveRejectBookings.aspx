@@ -61,15 +61,16 @@
                     
                     <asp:TemplateField HeaderText="Actions" HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center space-x-2 whitespace-nowrap">
                         <ItemTemplate>
-                            <asp:Button ID="btnApprove" runat="server" Text="Approve"
-                                CssClass="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition-colors duration-200 text-sm"
-                                CommandName="Approve" CommandArgument='<%# Eval("BookingID") %>'
-                                OnClientClick="return confirmAction('approve', this);" />
+                          <asp:Button ID="btnApprove" runat="server" Text="Approve"
+    CssClass="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition-colors duration-200 text-sm"
+    CommandName="Approve" CommandArgument='<%# Eval("BookingID") %>'
+    OnClientClick="return confirmAction('approve', '<%# ((Control)Container).FindControl("btnApprove").UniqueID %>');" />
 
-                            <asp:Button ID="btnReject" runat="server" Text="Reject"
-                                CssClass="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition-colors duration-200 text-sm"
-                                CommandName="Reject" CommandArgument='<%# Eval("BookingID") %>'
-                                OnClientClick="return confirmAction('reject', this);" />
+<asp:Button ID="btnReject" runat="server" Text="Reject"
+    CssClass="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition-colors duration-200 text-sm"
+    CommandName="Reject" CommandArgument='<%# Eval("BookingID") %>'
+    OnClientClick="return confirmAction('reject', '<%# ((Control)Container).FindControl("btnReject").UniqueID %>');" />
+
                         </ItemTemplate>
                     </asp:TemplateField>
                 </Columns>
@@ -80,7 +81,7 @@
     </div>
 
     <script type="text/javascript">
-        function confirmAction(action, button) {
+        function confirmAction(action, uniqueId) {
             event.preventDefault();
             const actionText = action === 'approve' ? 'Approve' : 'Reject';
             const confirmColor = action === 'approve' ? '#28a745' : '#dc3545';
@@ -95,7 +96,7 @@
                 confirmButtonText: 'Yes, ' + actionText.toLowerCase()
             }).then((result) => {
                 if (result.isConfirmed) {
-                    __doPostBack(button.name, '');
+                    __doPostBack(uniqueId, '');
                 }
             });
             return false;

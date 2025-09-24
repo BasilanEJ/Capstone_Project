@@ -155,7 +155,7 @@ namespace RRCManagementSystem
                     cmd.Parameters.AddWithValue("@EmailHash", emailHash);
                     cmd.Parameters.AddWithValue("@EmailEnc", emailEnc);
                     cmd.Parameters.AddWithValue("@ContactEnc", contactEnc);
-                    cmd.Parameters.AddWithValue("@Message", string.IsNullOrEmpty(message) ? (object)DBNull.Value : message);
+                    cmd.Parameters.AddWithValue("@Message", string.IsNullOrEmpty(message) ? "N/A" : message);
                     cmd.Parameters.AddWithValue("@PhotoPath", string.IsNullOrEmpty(photoPath) ? (object)DBNull.Value : photoPath);
 
                     cmd.Parameters.AddWithValue("@LastName", "");

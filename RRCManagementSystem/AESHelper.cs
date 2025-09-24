@@ -248,7 +248,7 @@ namespace RRCManagementSystem.Helpers
                 return ComputeSHA256(input); // fallback if no pepper
 
             using (var sha = SHA256.Create())
-            {
+            {   
                 string saltedInput = input.ToLowerInvariant() + Pepper;
                 byte[] hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(saltedInput));
                 return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();

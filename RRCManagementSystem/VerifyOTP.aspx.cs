@@ -26,14 +26,16 @@ namespace RRCManagementSystem
             string enteredOTP = txtOTP.Text.Trim();
             string sessionOTP = Session["OTP"]?.ToString();
             DateTime? expiry = Session["OTP_Expiry"] as DateTime?;
-            string email = Session["OTP_Email"] as string;  // set earlier during Forgot Password
+            string email = Session["OTP_Email"] as string; // plain email from ForgotPassword
 
+            // 1. Validate OTP entry
             if (string.IsNullOrWhiteSpace(enteredOTP))
             {
                 lblMessage.Text = "⚠ Please enter the OTP.";
                 return;
             }
 
+            // 2. Ensure session values exist
             if (sessionOTP == null || expiry == null || string.IsNullOrWhiteSpace(email))
             {
                 lblMessage.Text = "⚠ Session expired. Please request a new OTP.";
@@ -41,62 +43,63 @@ namespace RRCManagementSystem
                 return;
             }
 
-            if (DateTime.Now > expiry)
+            // 3. Check OTP expiration
+            if (DateTime.Now > expiry.Value)
             {
                 lblMessage.Text = "⚠ OTP has expired. Please request a new one.";
                 Response.Redirect("ForgotPassword.aspx", endResponse: false);
                 return;
             }
 
+            // 4. Check OTP match
             if (!string.Equals(enteredOTP, sessionOTP, StringComparison.Ordinal))
             {
                 lblMessage.Text = "⚠ Invalid OTP. Please try again.";
                 return;
             }
 
-            // ✅ OTP verified: issue a reset token, email the link, and redirect with ?token=...
+            // 5. OTP is correct → move to reset link generation
             try
             {
-                string accountType = GetAccountTypeByEmail(email); // "User" | "Client" | null
+                string accountType = GetAccountTypeByEmail(email);
+
                 if (accountType == null)
                 {
                     lblMessage.Text = "⚠ Account not found for this email.";
                     return;
                 }
 
-                // Optional flag you can check on the reset pages
+                // OTP verified successfully
                 Session["IsOTPVerified"] = true;
 
-                // Invalidate the OTP so it can't be reused
+                // Clear OTP session data
                 Session.Remove("OTP");
                 Session.Remove("OTP_Expiry");
                 Session.Remove("OTP_Email");
 
-                // 1) Issue a new reset token in DB and get the URL to the right page
+                // Generate reset token and URL
                 string resetUrl = IssueResetTokenAndGetUrl(email, accountType);
 
-                // 2) Email the reset link (also shows up in user inbox if they open it later)
+                // Send reset link via email
                 SendResetLinkEmail(email, resetUrl);
 
-                // 3) Redirect immediately so the reset page receives ?token=...
+                // Redirect user to the reset page directly
                 Response.Redirect(resetUrl, endResponse: false);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                lblMessage.Text = "⚠ Could not issue reset link. Please try again.";
+                lblMessage.Text = "⚠ Could not issue reset link. Please try again.<br/>" + ex.Message;
             }
         }
 
-        // ---------- Helpers ----------
-
-        /// <summary>
-        /// Returns "User" if found in Users table, "Client" if found in Clients table, otherwise null.
-        /// If the email exists in both, Users wins (adjust if you prefer otherwise).
-        /// </summary>
+        // ============================================================
+        // ACCOUNT LOOKUP
+        // ============================================================
         private string GetAccountTypeByEmail(string email)
         {
-            // Compute hash for comparison
-            string emailHash = AESHelper.ComputeSHA256WithPepper(email);
+            // Hashes used to find account in respective tables
+            string userHash = AESHelper.ComputeSHA256(email.ToLowerInvariant());            // plain hash for Users
+            string clientHash = AESHelper.ComputeSHA256WithPepper(email.ToLowerInvariant()); // peppered hash for Clients
 
             using (var con = new SqlConnection(cs))
             {
@@ -104,55 +107,54 @@ namespace RRCManagementSystem
 
                 // Check Users table
                 using (var cmd = new SqlCommand(
-                    "IF EXISTS (SELECT 1 FROM dbo.Users WHERE EmailHash = @EmailHash) SELECT 1 ELSE SELECT 0", con))
+                    "IF EXISTS (SELECT 1 FROM dbo.Users WHERE EmailHash = @H) SELECT 1 ELSE SELECT 0", con))
                 {
-                    cmd.Parameters.AddWithValue("@EmailHash", emailHash);
-                    int inUsers = (int)cmd.ExecuteScalar();
-                    if (inUsers == 1) return "User";
+                    cmd.Parameters.AddWithValue("@H", userHash);
+                    if ((int)cmd.ExecuteScalar() == 1)
+                        return "User";
                 }
 
                 // Check Clients table
                 using (var cmd = new SqlCommand(
-                    "IF EXISTS (SELECT 1 FROM dbo.Clients WHERE EmailHash = @EmailHash) SELECT 1 ELSE SELECT 0", con))
+                    "IF EXISTS (SELECT 1 FROM dbo.Clients WHERE EmailHash = @H) SELECT 1 ELSE SELECT 0", con))
                 {
-                    cmd.Parameters.AddWithValue("@EmailHash", emailHash);
-                    int inClients = (int)cmd.ExecuteScalar();
-                    if (inClients == 1) return "Client";
+                    cmd.Parameters.AddWithValue("@H", clientHash);
+                    if ((int)cmd.ExecuteScalar() == 1)
+                        return "Client";
                 }
             }
 
-            return null;
+            return null; // No match found
         }
 
+        // ============================================================
+        // TOKEN GENERATION & RESET URL
+        // ============================================================
 
-        /// <summary>Create a URL-safe random token (length ~32 chars when base64url).</summary>
-        /// <summary>Create a URL-safe random token (~32 chars when base64url).</summary>
+        /// <summary>
+        /// Generate a secure random token (~32 chars)
+        /// </summary>
         private static string NewToken()
         {
-            var bytes = new byte[24]; // 192 bits
+            var bytes = new byte[24];
             using (var rng = RandomNumberGenerator.Create())
             {
-                rng.GetBytes(bytes);   // <- works on .NET Framework
+                rng.GetBytes(bytes);
             }
 
-            // base64url without padding
             return Convert.ToBase64String(bytes)
                 .Replace("+", "-")
                 .Replace("/", "_")
                 .TrimEnd('=');
         }
 
-
         /// <summary>
-        /// Writes the token to DB (via SP) and returns the full reset-page URL containing ?token=...
+        /// Call stored procedure to store token and return reset URL.
         /// </summary>
         private string IssueResetTokenAndGetUrl(string email, string accountType)
         {
             string token = NewToken();
             DateTime expiry = DateTime.Now.AddMinutes(15);
-
-            // Compute SHA-256 hash with pepper
-            string emailHash = AESHelper.ComputeSHA256WithPepper(email);
 
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand(
@@ -160,10 +162,19 @@ namespace RRCManagementSystem
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                // Use plain email only for sending email notifications
-                cmd.Parameters.AddWithValue("@Email", email);
+                if (accountType == "User")
+                {
+                    // ✅ Users: plain SHA-256 hash of lowercase email
+                    string userHash = AESHelper.ComputeSHA256(email.ToLowerInvariant());
+                    cmd.Parameters.AddWithValue("@EmailHash", userHash);
+                }
+                else
+                {
+                    // ✅ Clients: SHA-256 with pepper
+                    string clientHash = AESHelper.ComputeSHA256WithPepper(email.ToLowerInvariant());
+                    cmd.Parameters.AddWithValue("@EmailHash", clientHash);
+                }
 
-                // Pass the token and expiry
                 cmd.Parameters.AddWithValue("@Token", token);
                 cmd.Parameters.AddWithValue("@Expiry", expiry);
 
@@ -173,46 +184,53 @@ namespace RRCManagementSystem
                     throw new Exception("Account not found to issue token.");
             }
 
+            // Build full reset URL
             string baseUrl = Request.Url.GetLeftPart(UriPartial.Authority);
             string path = accountType == "User" ? "~/ResetAdminPassword.aspx" : "~/ResetPassword.aspx";
             return baseUrl + ResolveUrl(path) + "?token=" + token;
         }
 
-
-        /// <summary>Email the reset link to the user.</summary>
+        // ============================================================
+        // EMAIL SENDING
+        // ============================================================
         private void SendResetLinkEmail(string recipientEmail, string resetUrl)
         {
             var body = $@"
 <!DOCTYPE html>
-<html><body style='font-family:Arial,sans-serif;background:#f6f7f9;padding:24px;'>
+<html>
+<body style='font-family:Arial,sans-serif;background:#f6f7f9;padding:24px;'>
   <table width='100%' cellspacing='0' cellpadding='0'>
     <tr><td align='center'>
-      <table width='520' cellspacing='0' cellpadding='0' style='background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.08);'>
+      <table width='520' cellspacing='0' cellpadding='0' 
+             style='background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.08);'>
         <tr>
-          <td style='background:#007bff;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0;font-size:18px;font-weight:600;'>
+          <td style='background:#007bff;color:#fff;padding:16px 20px;
+                     border-radius:8px 8px 0 0;font-size:18px;font-weight:600;'>
             RRC Management System
           </td>
         </tr>
         <tr>
           <td style='padding:24px;color:#333'>
-            <h3 style='margin:0 0 12px 0;'>Password reset link</h3>
+            <h3 style='margin:0 0 12px 0;'>Password Reset Link</h3>
             <p>Click the button below to reset your password. This link is valid for <b>15 minutes</b>.</p>
-            <p style='margin:24px 0;'>
-              <a href='{resetUrl}' style='display:inline-block;padding:10px 16px;background:#007bff;color:#fff;
-                 text-decoration:none;border-radius:6px;'>Reset Password</a>
+            <p style='margin:24px 0;text-align:center;'>
+              <a href='{resetUrl}' style='display:inline-block;padding:10px 16px;
+                 background:#007bff;color:#fff;text-decoration:none;border-radius:6px;'>Reset Password</a>
             </p>
             <p>If the button doesn't work, copy and paste this URL into your browser:<br>{resetUrl}</p>
           </td>
         </tr>
         <tr>
-          <td style='background:#f3f4f6;color:#777;padding:12px 20px;border-radius:0 0 8px 8px;font-size:12px;text-align:center'>
+          <td style='background:#f3f4f6;color:#777;padding:12px 20px;
+                     border-radius:0 0 8px 8px;font-size:12px;text-align:center'>
             &copy; 2025 RRC Management System
           </td>
         </tr>
-      </table>
+      </table>  
     </td></tr>
   </table>
-</body></html>";
+</body>
+</html>";
 
             var mail = new MailMessage
             {
@@ -221,12 +239,13 @@ namespace RRCManagementSystem
                 Body = body,
                 IsBodyHtml = true
             };
+
             mail.To.Add(recipientEmail);
 
             var smtp = new SmtpClient("smtp.gmail.com", 587)
             {
                 UseDefaultCredentials = false,
-                Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq"), // move to web.config/AppSettings
+                Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq"), // move to web.config
                 EnableSsl = true
             };
 

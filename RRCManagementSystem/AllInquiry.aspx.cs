@@ -35,15 +35,20 @@ namespace RRCManagementSystem
             }
         }
 
+        // OLD - No longer needed
         protected void gvInquiries_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName == "viewMessage")
             {
-                string fullMessage = e.CommandArgument.ToString().Replace("'", "\\'");
+                string fullMessage = Server.HtmlDecode(e.CommandArgument.ToString());
+                fullMessage = fullMessage.Replace("'", "\\'").Replace(Environment.NewLine, "\\n");
+
                 ScriptManager.RegisterStartupScript(this, GetType(), "ViewMessageModal",
-                    $"Swal.fire({{ title: 'Full Message', text: '{fullMessage}', icon: 'info', confirmButtonText: 'Close' }});", true);
+                    $"Swal.fire({{ title: 'Full Message', text: '{fullMessage}', icon: 'info', confirmButtonText: 'Close' }});",
+                    true);
             }
         }
+
 
         private void BindInspectors()
         {

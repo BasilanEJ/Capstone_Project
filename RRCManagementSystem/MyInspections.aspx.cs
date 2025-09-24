@@ -70,8 +70,12 @@ namespace RRCManagementSystem
                             string status = reader["InspectionStatus"].ToString();
                             reader.Close();
 
-                            // ❌ Cannot mark as done if scheduled date is in the future
-                            if (scheduledDate.Date > DateTime.Now.Date)
+                            // ✅ Convert to Philippine Time
+                            TimeZoneInfo phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"); // PH Time
+                            DateTime phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
+
+                            // ✅ Only compare the DATE (ignore time)
+                            if (scheduledDate.Date > phNow.Date)
                             {
                                 throw new Exception("You cannot mark this inspection as done before its scheduled date.");
                             }
@@ -123,15 +127,21 @@ namespace RRCManagementSystem
 
             DateTime scheduledDate = Convert.ToDateTime(scheduledDateObj);
             string status = inspectionStatusObj.ToString();
-            DateTime today = DateTime.Now.Date;
+
+            // ✅ Convert current time to Philippine Time
+            TimeZoneInfo phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+            DateTime phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
+
+            // ✅ Only compare the date
+            DateTime todayPH = phNow.Date;
 
             // Show "Mark as Done" if scheduled date is today or earlier and status is Pending
-            if (scheduledDate <= today && status == "Pending")
+            if (scheduledDate.Date <= todayPH && status == "Pending")
             {
                 return $"<button type='button' class='bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors' onclick=\"markDoneWithFindings('{inspectionIdObj}')\">Mark as Done</button>";
             }
             // Show disabled button if scheduled date is in the future
-            else if (scheduledDate > today && status == "Pending")
+            else if (scheduledDate.Date > todayPH && status == "Pending")
             {
                 return "<button type='button' class='bg-gray-400 text-white font-bold py-2 px-4 rounded-md text-sm cursor-not-allowed' disabled>Mark Done</button>";
             }
@@ -244,6 +254,9 @@ namespace RRCManagementSystem
             }
         }
 
+        /// <summary>
+        /// Marks the inspection as completed using a stored procedure
+        /// </summary>
         private void MarkInspectionAsDone(int inspectionId, int inspectorId, string findings)
         {
             using (var conn = new SqlConnection(connectionString))
@@ -252,9 +265,9 @@ namespace RRCManagementSystem
 
                 // Validate the inspection first
                 using (var cmd = new SqlCommand(@"
-            SELECT ScheduledDate, InspectionStatus 
-            FROM Inspections 
-            WHERE InspectionID = @InspectionID AND InspectorID = @InspectorID", conn))
+                    SELECT ScheduledDate, InspectionStatus 
+                    FROM Inspections 
+                    WHERE InspectionID = @InspectionID AND InspectorID = @InspectorID", conn))
                 {
                     cmd.Parameters.Add("@InspectionID", SqlDbType.Int).Value = inspectionId;
                     cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
@@ -268,7 +281,12 @@ namespace RRCManagementSystem
                     string status = reader["InspectionStatus"].ToString();
                     reader.Close();
 
-                    if (scheduledDate.Date > DateTime.Now.Date)
+                    // ✅ Convert to Philippine Time
+                    TimeZoneInfo phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+                    DateTime phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
+
+                    // ✅ Compare only dates
+                    if (scheduledDate.Date > phNow.Date)
                         throw new Exception("You cannot mark this inspection as done before its scheduled date.");
 
                     if (status == "Completed")
@@ -302,7 +320,5 @@ namespace RRCManagementSystem
                 }
             }
         }
-
-
     }
 }

@@ -50,8 +50,8 @@
                     <asp:Button ID="btnTabUsers" runat="server" Text="User Accounts" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabInquiries" runat="server" Text="Inquiries" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabClients" runat="server" Text="Clients" CssClass="folder-tab" OnClick="TabButton_Click" />
+                      <asp:Button ID="btnTabInventory" runat="server" Text="Inventory Details" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabInventorySnapshots" runat="server" Text="Total Stocks" CssClass="folder-tab" OnClick="TabButton_Click" />
-                    <asp:Button ID="btnTabInventory" runat="server" Text="Inventory Details" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabEquipment" runat="server" Text="Equipment" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabSales" runat="server" Text="Sales" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabBookings" runat="server" Text="Bookings" CssClass="folder-tab" OnClick="TabButton_Click" />
@@ -121,26 +121,7 @@
                     </div>
                 </asp:Panel>
 
-                <asp:Panel ID="pnlInventorySnapshots" runat="server" Visible="false" CssClass="report-panel">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-2xl font-semibold text-gray-800">📦 Total Stocks Snapshot (Daily)</h3>
-                        <asp:Button ID="btnExportInventorySnapshots" runat="server" Text="Export Snapshots to PDF" CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" OnClick="btnExportInventorySnapshots_Click" />
-                    </div>
-                    <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                        <asp:GridView ID="gvInventorySnapshots" runat="server" AutoGenerateColumns="False" CssClass="min-w-full custom-table" HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
-                            <Columns>
-                                <asp:TemplateField HeaderText="Snapshot ID">
-                                    <ItemTemplate><%# Container.DataItemIndex >= 0 ? "Snap" + String.Format("{0:D4}", Container.DataItemIndex + 1) : "" %></ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:BoundField DataField="Name" HeaderText="Item Name" />
-                                <asp:BoundField DataField="Type" HeaderText="Type" />
-                                <asp:BoundField DataField="Quantity" HeaderText="Quantity" />
-                                <asp:BoundField DataField="ExcessML" HeaderText="Excess (mL)" />
-                                <asp:BoundField DataField="SnapshotDate" HeaderText="Snapshot Date" />
-                            </Columns>
-                        </asp:GridView>
-                    </div>
-                </asp:Panel>
+             
 
                 <asp:Panel ID="pnlInventory" runat="server" Visible="false" CssClass="report-panel">
                     <div class="flex items-center justify-between mb-4">
@@ -160,21 +141,49 @@
                     </div>
                 </asp:Panel>
 
+                   <asp:Panel ID="pnlInventorySnapshots" runat="server" Visible="false" CssClass="report-panel">
+       <div class="flex items-center justify-between mb-4">
+           <h3 class="text-2xl font-semibold text-gray-800">📦 Total Stocks Snapshot (Daily)</h3>
+           <asp:Button ID="btnExportInventorySnapshots" runat="server" Text="Export Snapshots to PDF" CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" OnClick="btnExportInventorySnapshots_Click" />
+       </div>
+       <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+           <asp:GridView ID="gvInventorySnapshots" runat="server" AutoGenerateColumns="False" CssClass="min-w-full custom-table" HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
+               <Columns>
+                   <asp:TemplateField HeaderText="Snapshot ID">
+                       <ItemTemplate><%# Container.DataItemIndex >= 0 ? "Snap" + String.Format("{0:D4}", Container.DataItemIndex + 1) : "" %></ItemTemplate>
+                   </asp:TemplateField>
+                   <asp:BoundField DataField="Name" HeaderText="Item Name" />
+                   <asp:BoundField DataField="Type" HeaderText="Type" />
+                   <asp:BoundField DataField="Quantity" HeaderText="Quantity" />
+                   <asp:BoundField DataField="ExcessML" HeaderText="Excess (mL)" />
+                   <asp:BoundField DataField="SnapshotDate" HeaderText="Snapshot Date" />
+               </Columns>
+           </asp:GridView>
+       </div>
+   </asp:Panel>
+
+
                 <asp:Panel ID="pnlEquipment" runat="server" Visible="false" CssClass="report-panel">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-2xl font-semibold text-gray-800">🛠️ Equipment Status</h3>
                         <asp:Button ID="btnExportEquipment" runat="server" Text="Export Equipment to PDF" CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" OnClick="btnExportEquipment_Click" />
                     </div>
                     <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                        <asp:GridView ID="gvEquipment" runat="server" AutoGenerateColumns="False" CssClass="min-w-full custom-table" HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
-                            <Columns>
-                                <asp:TemplateField HeaderText="ID">
-                                    <ItemTemplate><%# "Equip" + String.Format("{0:D4}", Eval("EquipmentID")) %></ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:BoundField DataField="Name" HeaderText="Equipment Name" />
-                                <asp:BoundField DataField="StatusToday" HeaderText="Status Today" />
-                            </Columns>
-                        </asp:GridView>
+                   <asp:GridView ID="gvEquipment" runat="server" AutoGenerateColumns="False"
+    CssClass="min-w-full custom-table"
+    HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider"
+    RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
+    <Columns>
+        <asp:TemplateField HeaderText="ID">
+            <ItemTemplate><%# "Equip" + String.Format("{0:D4}", Eval("EquipmentID")) %></ItemTemplate>
+        </asp:TemplateField>
+        <asp:BoundField DataField="Name" HeaderText="Equipment Name" />
+        <asp:BoundField DataField="StatusToday" HeaderText="Status Today" />
+    </Columns>
+</asp:GridView>
+
+
+
                     </div>
                 </asp:Panel>
 
@@ -191,7 +200,7 @@
                             <Columns>
                                 <asp:BoundField DataField="TransactionIDFormatted" HeaderText="Txn ID" />
                                 <asp:BoundField DataField="ClientName" HeaderText="Client" />
-                                <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="{0:N2}" HtmlEncode="False" />
+                                <asp:BoundField DataField="Amount" HeaderText="Amount ₱" DataFormatString="{0:N2}" HtmlEncode="False" />
                                 <asp:BoundField DataField="PaymentMethod" HeaderText="Method" />
                                 <asp:BoundField DataField="Status" HeaderText="Status" />
                                 <asp:BoundField DataField="TransactionDatePHT" HeaderText="Date" />

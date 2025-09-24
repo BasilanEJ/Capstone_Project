@@ -32,7 +32,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         protected void ddlServices_PreRender(object sender, EventArgs e)
         {
             if (hfInquiryVisible.Value == "true")
@@ -41,7 +40,6 @@ namespace RRCManagementSystem
                     "document.getElementById('inquiryBackground').style.display = 'block';", true);
             }
         }
-
 
         /// <summary>
         /// Load all available services into dropdown
@@ -80,7 +78,6 @@ namespace RRCManagementSystem
                 return (result != null && result != DBNull.Value) ? Convert.ToDecimal(result) : 0;
             }
         }
-
 
         /// <summary>
         /// Generate a unique Quotation Code
@@ -133,7 +130,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         /// <summary>
         /// Trigger recalculation when dropdown selection changes
         /// </summary>
@@ -149,8 +145,6 @@ namespace RRCManagementSystem
             // Recalculate total
             RecalculateTotal(sender, e);
         }
-
-
 
         /// <summary>
         /// Submit the quotation and save to DB
@@ -477,6 +471,7 @@ ORDER BY ch.CreatedAt DESC;";
                     using (var rdr = cmd.ExecuteReader())
                     {
                         DateTime? latest = null;
+                        TimeZoneInfo phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"); // Philippine Time
 
                         while (rdr.Read())
                         {
@@ -489,6 +484,12 @@ ORDER BY ch.CreatedAt DESC;";
                             DateTime? createdAt = rdr["CreatedAt"] == DBNull.Value
                                 ? (DateTime?)null
                                 : Convert.ToDateTime(rdr["CreatedAt"], CultureInfo.InvariantCulture);
+
+                            // ✅ Convert to Philippine Time
+                            if (createdAt.HasValue)
+                            {
+                                createdAt = TimeZoneInfo.ConvertTimeFromUtc(createdAt.Value, phTimeZone);
+                            }
 
                             string text = !string.IsNullOrWhiteSpace(desc)
                                 ? desc
@@ -506,8 +507,11 @@ ORDER BY ch.CreatedAt DESC;";
                                 latest = createdAt;
                         }
 
+                        // ✅ Convert and set the latest updated timestamp
                         if (latest.HasValue)
+                        {
                             dto.LastUpdated = latest.Value.ToString("MMM dd, yyyy h:mm tt", CultureInfo.InvariantCulture);
+                        }
                     }
                 }
             }
@@ -515,7 +519,7 @@ ORDER BY ch.CreatedAt DESC;";
             return dto;
         }
 
-        // Helpers
+        // Helpers to check if columns and tables exist dynamically
         private static bool ColumnExists(SqlConnection con, string schema, string table, string column)
         {
             using (var cmd = new SqlCommand(@"

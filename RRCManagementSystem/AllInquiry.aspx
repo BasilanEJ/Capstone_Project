@@ -35,12 +35,14 @@
 
         <div class="overflow-x-auto shadow-lg rounded-lg">
             <asp:GridView ID="gvInquiries" runat="server" AutoGenerateColumns="False"
-                CssClass="min-w-full bg-white table-rounded-corners"
-                DataKeyNames="InquiryID,InquiryCode"
-                OnRowDataBound="gvInquiries_RowDataBound"
-                HeaderStyle-CssClass="bg-blue-600 text-white uppercase text-sm leading-normal"
-                RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-100 transition-colors"
-                AlternatingRowStyle-CssClass="bg-gray-50 hover:bg-gray-100 transition-colors">
+    CssClass="min-w-full bg-white table-rounded-corners"
+    DataKeyNames="InquiryID,InquiryCode"
+    OnRowCommand="gvInquiries_RowCommand"
+    OnRowDataBound="gvInquiries_RowDataBound"
+    HeaderStyle-CssClass="bg-blue-600 text-white uppercase text-sm leading-normal"
+    RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-100 transition-colors"
+    AlternatingRowStyle-CssClass="bg-gray-50 hover:bg-gray-100 transition-colors">
+
                 <Columns>
                     <asp:BoundField DataField="InquiryCode" HeaderText="Reference Code"
                         HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
@@ -61,28 +63,29 @@
                             <span class="block max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">
                                 <%# Eval("Message") %>
                             </span>
-                            <asp:LinkButton ID="lnkViewMessage" runat="server"
-                                CssClass="text-blue-500 hover:underline ml-1 text-sm"
-                                CommandName="viewMessage"
-                                CommandArgument='<%# Eval("Message") %>'
-                                Visible='<%# Eval("Message") != null && Eval("Message").ToString().Length > 50 %>'>
-                                See more
-                            </asp:LinkButton>
+                       <asp:LinkButton ID="lnkViewMessage" runat="server"
+    CssClass="text-blue-500 hover:underline ml-1 text-sm"
+    OnClientClick='<%# "return showFullMessage(\"" + HttpUtility.JavaScriptStringEncode(Eval("Message").ToString()) + "\");" %>'
+    Visible='<%# Eval("Message") != null && Eval("Message").ToString().Length > 50 %>'>
+    See more
+</asp:LinkButton>
+
+
                         </ItemTemplate>
                     </asp:TemplateField>
 
-                    <asp:TemplateField HeaderText="Photo"
-                        HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
-                        ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200">
-                        <ItemTemplate>
-                            <asp:Image runat="server" ID="imgPhoto"
-                                ImageUrl='<%# ResolveUrl(Eval("PhotoPath").ToString()) %>'
-                                Width="60"
-                                Visible='<%# !string.IsNullOrEmpty(Eval("PhotoPath").ToString()) %>'
-                                AlternateText="Pest Photo" CssClass="rounded-md" />
-                            <%# string.IsNullOrEmpty(Eval("PhotoPath").ToString()) ? "No Photo" : "" %>
-                        </ItemTemplate>
-                    </asp:TemplateField>
+                  <asp:TemplateField HeaderText="Photo"
+    HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
+    ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200">
+    <ItemTemplate>
+        <asp:Image ID="imgPhoto" runat="server"
+            Width="60" Height="60" CssClass="rounded-md"
+            ImageUrl='<%# string.IsNullOrEmpty(Eval("PhotoPath") as string) 
+                        ? ResolveUrl("~/Images/no-image.png") 
+                        : ResolveUrl(Eval("PhotoPath").ToString()) %>' />
+    </ItemTemplate>
+</asp:TemplateField>
+
 
                     <asp:BoundField DataField="SubmittedAt" HeaderText="Submitted At" DataFormatString="{0:g}"
                         HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
@@ -321,5 +324,16 @@
                 }
             });
         }
+
+        function showFullMessage(message) {
+            Swal.fire({
+                title: 'Full Message',
+                text: message,
+                icon: 'info',
+                confirmButtonText: 'Close'
+            });
+            return false; // Prevent postback
+        }
+
     </script>
 </asp:Content>

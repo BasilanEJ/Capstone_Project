@@ -1,4 +1,5 @@
-﻿using RRCManagementSystem.Helpers;
+﻿// (Your existing using statements)
+using RRCManagementSystem.Helpers;
 using System;
 using System.Configuration;
 using System.Data;
@@ -32,6 +33,7 @@ namespace RRCManagementSystem
         }
 
         #region Data Binding
+        // (Your existing BindCompleted and GetCompletedData methods remain the same)
         private void BindCompleted()
         {
             var dt = GetCompletedData();
@@ -69,7 +71,7 @@ namespace RRCManagementSystem
                 if (!dt.Columns.Contains("FullName"))
                     dt.Columns.Add("FullName", typeof(string));
 
-                // Decrypt sensitive fields
+                // ===== Decrypt sensitive fields =====
                 foreach (DataRow row in dt.Rows)
                 {
                     if (row["EmailEnc"] != DBNull.Value)
@@ -96,14 +98,14 @@ namespace RRCManagementSystem
                     if (row["LandmarkEnc"] != DBNull.Value)
                         row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
 
-                    // Build FullName
+                    // Build FullName for display
                     string first = row["FirstName"]?.ToString() ?? "";
                     string middle = row["MiddleName"]?.ToString() ?? "";
                     string last = row["LastName"]?.ToString() ?? "";
                     row["FullName"] = $"{last}, {first} {middle}".Trim();
                 }
 
-                // Rename decrypted columns to match UI
+                // ===== Rename decrypted columns =====
                 dt.Columns["EmailEnc"].ColumnName = "Email";
                 dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
                 dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
@@ -113,7 +115,7 @@ namespace RRCManagementSystem
                 dt.Columns["CountryEnc"].ColumnName = "Country";
                 dt.Columns["LandmarkEnc"].ColumnName = "Landmark";
 
-                // Add HasAccount column if missing
+                // ===== Add HasAccount column =====
                 if (!dt.Columns.Contains("HasAccount"))
                     dt.Columns.Add("HasAccount", typeof(bool));
 
@@ -201,8 +203,12 @@ namespace RRCManagementSystem
                 Session["Prefill_InquiryCode"] = r.Table.Columns.Contains("InquiryCode") ? Safe(r["InquiryCode"]) : "";
                 Session["Prefill_Findings"] = r.Table.Columns.Contains("Findings") ? Safe(r["Findings"]) : "";
 
-                Response.Redirect("~/CreateCustomerAccount.aspx?prefill=1", false);
-                Context.ApplicationInstance.CompleteRequest();
+                // --- MODIFIED LINE ---
+                // Use ScriptManager to redirect after the AJAX postback completes,
+                // preventing a full page refresh before the redirect.
+                string redirectScript = $"window.location.href = '{ResolveUrl("~/CreateCustomerAccount.aspx?prefill=1")}';";
+                ScriptManager.RegisterStartupScript(this, this.GetType(), "redirect", redirectScript, true);
+                return;
             }
         }
 
@@ -212,7 +218,9 @@ namespace RRCManagementSystem
             {
                 var row = (DataRowView)e.Row.DataItem;
 
-                // === Address Handling ===
+                /* ===========================
+                    1. ADDRESS WITH SEE MORE
+                    =========================== */
                 string street = row["StreetAndUnit"]?.ToString() ?? "";
                 string barangay = row["Barangay"]?.ToString() ?? "";
                 string city = row["City"]?.ToString() ?? "";
@@ -220,55 +228,74 @@ namespace RRCManagementSystem
                 string country = row["Country"]?.ToString() ?? "";
                 string landmark = row["Landmark"]?.ToString() ?? "";
 
-                // Build full address
                 string fullAddress = $"{street}, {barangay}, {city}, {region}, {country}";
                 if (!string.IsNullOrWhiteSpace(landmark))
                     fullAddress += $" • (Landmark: {landmark})";
 
+                // Escape for JS
+                string safeFullAddress = fullAddress.Replace("\\", "\\\\")
+                                                    .Replace("'", "\\'")
+                                                    .Replace("\"", "\\\"")
+                                                    .Replace("\r", "")
+                                                    .Replace("\n", "\\n");
+
                 var litAddress = (Literal)e.Row.FindControl("litAddress");
 
-                // ✅ Use full address length instead of partial components
                 if (fullAddress.Length > 50)
                 {
                     string preview = fullAddress.Substring(0, 50) + "...";
                     litAddress.Text = $"{preview} <br/><a href='#' class='text-blue-500 hover:text-blue-700 font-semibold' " +
-                                      $"onclick='openModal(\"Full Address\", \"{fullAddress.Replace("\"", "&quot;")}\"); return false;'>See more</a>";
+                                     $"onclick='openModal(\"Full Address\", \"{safeFullAddress}\"); return false;'>See more</a>";
                 }
                 else
                 {
                     litAddress.Text = fullAddress;
                 }
 
-                // === Findings Handling ===
+                /* ===========================
+                    2. FINDINGS WITH SEE MORE
+                    =========================== */
                 string findings = row["Findings"]?.ToString() ?? "";
+
+                string safeFindings = findings.Replace("\\", "\\\\")
+                                              .Replace("'", "\\'")
+                                              .Replace("\"", "\\\"")
+                                              .Replace("\r", "")
+                                              .Replace("\n", "\\n");
+
                 var litFindings = (Literal)e.Row.FindControl("litFindings");
 
                 if (findings.Length > 50)
                 {
                     string preview = findings.Substring(0, 50) + "...";
                     litFindings.Text = $"{preview} <br/><a href='#' class='text-blue-500 hover:text-blue-700 font-semibold' " +
-                                       $"onclick='openModal(\"Full Findings\", \"{findings.Replace("\"", "&quot;")}\"); return false;'>See more</a>";
+                                        $"onclick='openModal(\"Full Findings\", \"{safeFindings}\"); return false;'>See more</a>";
                 }
                 else
                 {
                     litFindings.Text = findings;
                 }
 
-                // === Action Button Styling ===
+                /* ===========================
+                    3. ACTION BUTTON STYLING
+                    =========================== */
                 LinkButton btnCreate = (LinkButton)e.Row.FindControl("btnCreate");
                 bool hasAccount = row.Row.Table.Columns.Contains("HasAccount") && Convert.ToBoolean(row["HasAccount"]);
 
-                if (hasAccount)
+                if (btnCreate != null)
                 {
-                    btnCreate.Text = "<i class='fa fa-check-circle mr-2'></i>Already Created";
-                    btnCreate.Enabled = false;
-                    btnCreate.CssClass = "inline-flex items-center bg-green-600 text-white font-semibold py-2 px-3 rounded-full opacity-80 cursor-not-allowed";
-                }
-                else
-                {
-                    btnCreate.Text = "<i class='fa fa-user-plus mr-2'></i>Create Client";
-                    btnCreate.Enabled = true;
-                    btnCreate.CssClass = "inline-flex items-center bg-blue-600 text-white font-semibold py-2 px-3 rounded-full hover:bg-blue-700 transition-colors";
+                    if (hasAccount)
+                    {
+                        btnCreate.Text = "<i class='fa fa-check-circle mr-2'></i>Already Created";
+                        btnCreate.Enabled = false;
+                        btnCreate.CssClass = "inline-flex items-center bg-green-600 text-white font-semibold py-2 px-3 rounded-full opacity-80 cursor-not-allowed";
+                    }
+                    else
+                    {
+                        btnCreate.Text = "<i class='fa fa-user-plus mr-2'></i>Create Client";
+                        btnCreate.Enabled = true;
+                        btnCreate.CssClass = "inline-flex items-center bg-blue-600 text-white font-semibold py-2 px-3 rounded-full hover:bg-blue-700 transition-colors";
+                    }
                 }
             }
         }
