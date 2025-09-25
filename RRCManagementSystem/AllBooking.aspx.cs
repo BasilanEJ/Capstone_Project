@@ -273,9 +273,9 @@ namespace RRCManagementSystem
             }
 
             if (btnOp1 != null)
-                btnOp1.Visible = isContract
-                               && string.Equals(bookingStatus, "Assigned", StringComparison.OrdinalIgnoreCase)
+                btnOp1.Visible = string.Equals(bookingStatus, "Assigned", StringComparison.OrdinalIgnoreCase)
                                && !string.Equals(op1Status, "Completed", StringComparison.OrdinalIgnoreCase);
+
 
             // 3. Permission check for Edit button
             int userId = Convert.ToInt32(Session["UserID"]);

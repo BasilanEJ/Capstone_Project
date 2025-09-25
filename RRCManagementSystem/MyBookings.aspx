@@ -82,13 +82,15 @@
                         
                         <asp:TemplateField HeaderText="Actions">
                             <ItemTemplate>
-                                <asp:LinkButton ID="btnCancel" runat="server"
-                                    Text="Cancel"
-                                    CssClass="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow text-xs transition grid-btn"
-                                    CausesValidation="false"
-                                    UseSubmitBehavior="false"
-                                    data-bookingid='<%# Eval("BookingID") %>'
-                                    Visible='<%# Eval("Status").ToString() == "Pending" %>' />
+                             <asp:LinkButton ID="btnCancel" runat="server"
+    Text="Cancel"
+    CssClass="cancel-btn bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow text-xs transition grid-btn"
+    CausesValidation="false"
+    UseSubmitBehavior="false"
+    OnClientClick="return false;"
+    data-bookingid='<%# Eval("BookingID") %>'
+    Visible='<%# Eval("Status").ToString() == "Pending" %>' />
+
                             </ItemTemplate>
                             <ItemStyle CssClass="px-4 py-2" />
                         </asp:TemplateField>
@@ -284,11 +286,12 @@
                     }).then((result) => {
                         if (result.isConfirmed) {
                             document.getElementById('<%= hdnCancelBooking.ClientID %>').value = bookingId;
-                            __doPostBack('CancelBooking', '');
-                        }
-                    });
-                });
+                    __doPostBack('CancelBooking', '');
+                }
             });
         });
+    });
+     });
+
     </script>
 </asp:Content>

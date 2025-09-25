@@ -109,7 +109,7 @@ namespace RRCManagementSystem
                         return;
                     }
 
-                    string folderRelativePath = "/UploadedPestPhotos/";
+                    string folderRelativePath = "/Uploads/InquiryPhotos/";
                     string folderPhysicalPath = Server.MapPath(folderRelativePath);
 
                     if (!Directory.Exists(folderPhysicalPath))

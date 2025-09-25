@@ -49,14 +49,27 @@ namespace RRCManagementSystem
                 LoadClientInfo(clientId, hfSelectedPlan.Value);
                 LoadPaymentHistory(clientId);
 
-                // Handle PayMongo redirect messages (from success_url/cancel_url)
                 var qs = Request.QueryString;
-                if (qs["success"] == "1")
+                string refNo = qs["ref"];
+
+                if (qs["success"] == "1" && !string.IsNullOrEmpty(refNo))
                 {
-                    ScriptManager.RegisterStartupScript(
-                        this, GetType(), "pmOk",
-                        "Swal.fire('Payment completed!', 'Thanks for your payment. Your balance has been updated.', 'success');",
-                        true);
+                    if (IsReferenceValid(refNo))
+                    {
+                        // ✅ Valid payment found in DB
+                        ScriptManager.RegisterStartupScript(
+                            this, GetType(), "pmOk",
+                            "Swal.fire('Payment completed!', 'Thanks for your payment. Your balance has been updated.', 'success');",
+                            true);
+                    }
+                    else
+                    {
+                        // ❌ Invalid reference or not recorded
+                        ScriptManager.RegisterStartupScript(
+                            this, GetType(), "pmInvalid",
+                            "Swal.fire('Payment not verified', 'We could not find a valid record for this payment. Please contact support.', 'error');",
+                            true);
+                    }
                 }
                 else if (qs["failed"] == "1")
                 {
@@ -71,6 +84,22 @@ namespace RRCManagementSystem
                     "renderPayPalButtons(); updatePayMongoButton();", true);
             }
         }
+
+        private bool IsReferenceValid(string reference)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_Payment_ValidateReference", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Reference", SqlDbType.NVarChar, 200).Value = reference;
+
+                con.Open();
+                int matchCount = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+
+                return matchCount > 0;
+            }
+        }
+
 
         // Re-apply KPI values late so a master page DataBind can't clear them
         protected override void OnPreRender(EventArgs e)

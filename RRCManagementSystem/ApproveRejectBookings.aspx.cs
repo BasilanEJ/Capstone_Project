@@ -2,6 +2,7 @@
     using System.Configuration;
     using System.Data;
     using System.Data.SqlClient;
+using System.Web.UI;
 
     namespace RRCManagementSystem
     {
@@ -137,19 +138,41 @@
             {
                 if (SetBookingStatus(bookingID, "Rejected"))
                 {
-                    lblMessage.Text = $"⚠️ Booking {bookingID} rejected.";
-                    lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
+                    // Refresh grid first so the booking disappears from the list
+                    LoadPendingBookings();
 
+                    // Audit log
                     AddAuditLog(adminId, $"Rejected booking ID: {bookingID}");
 
-                    LoadPendingBookings();
+                    // ✅ SweetAlert success + optional redirect
+                    var js = $@"Swal.fire({{
+            icon: 'success',
+            title: 'Booking Rejected',
+            text: 'Booking #{bookingID} has been rejected.',
+            confirmButtonColor: '#dc3545'
+        }}).then((result) => {{
+            if (result.isConfirmed) {{
+                window.location.href = 'ApproveRejectBookings.aspx';
+            }}
+        }});";
+
+                    ScriptManager.RegisterStartupScript(this, GetType(), "RejectOK", js, true);
                 }
                 else
                 {
-                    lblMessage.Text = $"❌ Failed to reject booking {bookingID}.";
-                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                    // ❌ SweetAlert error
+                    var js = $@"Swal.fire({{
+            icon: 'error',
+            title: 'Failed to Reject',
+            text: 'We could not reject booking #{bookingID}. Please try again.',
+            confirmButtonColor: '#6c757d'
+        }});";
+
+                    ScriptManager.RegisterStartupScript(this, GetType(), "RejectFail", js, true);
                 }
             }
+
+
         }
 
         private bool ApproveBookingAndInsertBalance(int bookingID, int adminId)

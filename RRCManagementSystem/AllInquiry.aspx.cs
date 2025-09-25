@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using System.Web.Script.Serialization;
 using RRCManagementSystem.Helpers; // Needed for AESHelper
 
 namespace RRCManagementSystem
@@ -28,11 +29,76 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // 🔹 AJAX handler for inspector schedule
+            if (Request.QueryString["getInspectorSchedule"] == "1")
+            {
+                int inspectorId = int.Parse(Request.QueryString["inspectorId"]);
+                DateTime selectedDate = DateTime.Parse(Request.QueryString["date"]);
+                GetInspectorSchedule(inspectorId, selectedDate);
+                Response.End();
+            }
+
             if (!IsPostBack)
             {
                 BindInspectors();
                 LoadInquiries();
             }
+        }
+
+        private void GetInspectorSchedule(int inspectorId, DateTime date)
+        {
+            var result = new DataTable();
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInspector_DailySchedule", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
+                cmd.Parameters.AddWithValue("@Date", date);
+
+                using (var da = new SqlDataAdapter(cmd))
+                {
+                    conn.Open();
+                    da.Fill(result);
+                }
+            }
+
+            // Decrypt sensitive fields before returning
+            foreach (DataRow row in result.Rows)
+            {
+                if (row["StreetEnc"] != DBNull.Value)
+                    row["StreetEnc"] = AESHelper.DecryptField(row["StreetEnc"].ToString());
+                if (row["BarangayEnc"] != DBNull.Value)
+                    row["BarangayEnc"] = AESHelper.DecryptField(row["BarangayEnc"].ToString());
+                if (row["CityEnc"] != DBNull.Value)
+                    row["CityEnc"] = AESHelper.DecryptField(row["CityEnc"].ToString());
+                if (row["RegionEnc"] != DBNull.Value)
+                    row["RegionEnc"] = AESHelper.DecryptField(row["RegionEnc"].ToString());
+                if (row["LandmarkEnc"] != DBNull.Value)
+                    row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
+
+                // ⭐ NO CHANGE NEEDED FOR SCHEDULEDDATE HERE ⭐
+                // The value is already formatted as a string by the stored procedure.
+                // The cast to DateTime is no longer necessary and was causing the error.
+            }
+
+            // Convert to JSON
+            var serializer = new JavaScriptSerializer();
+            var rows = new System.Collections.Generic.List<System.Collections.Generic.Dictionary<string, object>>();
+
+            foreach (DataRow dr in result.Rows)
+            {
+                var dict = new System.Collections.Generic.Dictionary<string, object>();
+                foreach (DataColumn col in result.Columns)
+                {
+                    dict[col.ColumnName] = dr[col];
+                }
+                rows.Add(dict);
+            }
+
+            string json = serializer.Serialize(rows);
+            Response.ContentType = "application/json";
+            Response.Write(json);
         }
 
         // OLD - No longer needed

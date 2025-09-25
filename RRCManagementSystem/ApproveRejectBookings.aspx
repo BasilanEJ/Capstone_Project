@@ -59,20 +59,22 @@
                         </ItemTemplate>
                     </asp:TemplateField>
                     
-                    <asp:TemplateField HeaderText="Actions" HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center space-x-2 whitespace-nowrap">
-                        <ItemTemplate>
-                          <asp:Button ID="btnApprove" runat="server" Text="Approve"
+              <asp:TemplateField HeaderText="Actions" HeaderStyle-CssClass="py-3 px-6 text-center" 
+    ItemStyle-CssClass="py-3 px-6 text-center space-x-2 whitespace-nowrap">
+    <ItemTemplate>
+ <asp:Button ID="btnApprove" runat="server" Text="Approve"
     CssClass="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition-colors duration-200 text-sm"
     CommandName="Approve" CommandArgument='<%# Eval("BookingID") %>'
-    OnClientClick="return confirmAction('approve', '<%# ((Control)Container).FindControl("btnApprove").UniqueID %>');" />
+    OnClientClick="confirmAction('approve', this.name); return false;" />
 
 <asp:Button ID="btnReject" runat="server" Text="Reject"
     CssClass="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition-colors duration-200 text-sm"
     CommandName="Reject" CommandArgument='<%# Eval("BookingID") %>'
-    OnClientClick="return confirmAction('reject', '<%# ((Control)Container).FindControl("btnReject").UniqueID %>');" />
+    OnClientClick="confirmAction('reject', this.name); return false;" />
 
-                        </ItemTemplate>
-                    </asp:TemplateField>
+    </ItemTemplate>
+</asp:TemplateField>
+
                 </Columns>
             </asp:GridView>
         </div>
@@ -80,26 +82,32 @@
         <asp:Label ID="lblMessage" runat="server" CssClass="text-center block mt-4 font-semibold text-green-500" />
     </div>
 
-    <script type="text/javascript">
-        function confirmAction(action, uniqueId) {
-            event.preventDefault();
-            const actionText = action === 'approve' ? 'Approve' : 'Reject';
-            const confirmColor = action === 'approve' ? '#28a745' : '#dc3545';
+ <script type="text/javascript">
+     function confirmAction(action, uniqueId) {
+         event.preventDefault();
 
-            Swal.fire({
-                title: actionText + ' Booking?',
-                text: `Are you sure you want to ${action} this booking?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: confirmColor,
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, ' + actionText.toLowerCase()
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    __doPostBack(uniqueId, '');
-                }
-            });
-            return false;
-        }
-    </script>
+         const actionText = action === 'approve' ? 'Approve' : 'Reject';
+         const confirmColor = action === 'approve' ? '#28a745' : '#dc3545';
+
+         Swal.fire({
+             title: actionText + ' Booking?',
+             text: `Are you sure you want to ${action} this booking?`,
+             icon: 'question',
+             showCancelButton: true,
+             confirmButtonColor: confirmColor,
+             cancelButtonColor: '#6c757d',
+             confirmButtonText: 'Yes, ' + actionText.toLowerCase()
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 // ✅ Pass correct UniqueID from this.name
+                 __doPostBack(uniqueId, '');
+             }
+         });
+
+         return false;
+     }
+ </script>
+
+
+
 </asp:Content>
