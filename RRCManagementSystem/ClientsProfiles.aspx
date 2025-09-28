@@ -48,6 +48,12 @@
                             <asp:TemplateField HeaderText="Actions" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <ItemTemplate>
                                     <div class="flex items-center space-x-2">
+                                          <asp:Button ID="btnResendEmail" runat="server"
+                CssClass="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition-colors"
+                Text="Resend Email"
+                CommandName="ResendEmail"
+                CommandArgument='<%# Eval("ClientID") %>' />
+
                                         <asp:Button ID="btnView" runat="server"
                                             CssClass="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                                             Text="View Profile"

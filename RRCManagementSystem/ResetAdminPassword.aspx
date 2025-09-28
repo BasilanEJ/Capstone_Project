@@ -45,25 +45,34 @@
 
     <script>
         function validatePasswordStrength(password) {
-            const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
+            const specialCharRegex = /[!@#$%^&*(),.?":{}|<>\-_=+\\\/]/; // Special characters
+            const uppercaseRegex = /[A-Z]/; // Uppercase letters
             const strengthMsg = document.getElementById("passwordStrengthMsg");
 
             if (password.length < 8) {
                 strengthMsg.innerText = "❌ Password must be at least 8 characters.";
                 strengthMsg.style.color = "red";
-            } else if (!specialCharRegex.test(password)) {
+            }
+            else if (!uppercaseRegex.test(password)) {
+                strengthMsg.innerText = "❌ Must include at least one uppercase letter.";
+                strengthMsg.style.color = "red";
+            }
+            else if (!specialCharRegex.test(password)) {
                 strengthMsg.innerText = "❌ Must include at least one special character.";
                 strengthMsg.style.color = "red";
-            } else if (password.length >= 8 && password.length < 12) {
+            }
+            else if (password.length >= 8 && password.length < 12) {
                 strengthMsg.innerText = "⚠ Medium strength. Add more characters for a stronger password.";
                 strengthMsg.style.color = "orange";
-            } else {
+            }
+            else {
                 strengthMsg.innerText = "✅ Strong password.";
                 strengthMsg.style.color = "green";
             }
 
             validatePasswordMatch();
         }
+
 
         function validatePasswordMatch() {
             const password = document.getElementById("<%= txtNewPassword.ClientID %>").value;

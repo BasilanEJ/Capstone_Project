@@ -71,18 +71,28 @@ namespace RRCManagementSystem
                 ShowMessage("⚠ Last Name and First Name are required.", false);
                 return;
             }
-            if (string.IsNullOrWhiteSpace(txtEmail.Text) ||
-                !Regex.IsMatch(txtEmail.Text.Trim(), @"^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook)\.com$", RegexOptions.IgnoreCase))
+            string emailInput = txtEmail.Text.Trim(); // Always trim first
+
+            // Allow either N/A or a valid email
+            if (!emailInput.Equals("N/A", StringComparison.OrdinalIgnoreCase))
             {
-                ShowMessage("⚠ Please enter a valid Gmail, Yahoo, or Outlook email address.", false);
-                return;
+                // Must be Gmail, Yahoo, or Outlook
+                if (!Regex.IsMatch(emailInput, @"^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook)\.com$", RegexOptions.IgnoreCase))
+                {
+                    ShowMessage("⚠ Please enter a valid Gmail, Yahoo, or Outlook email address, or type 'N/A'.", false);
+                    return;
+                }
             }
+
+
+
             string phoneNumber = txtPhone.Text.Trim();
-            if (!Regex.IsMatch(phoneNumber, @"^\d{11}$"))
+            if (!Regex.IsMatch(phoneNumber, @"^09\d{9}$"))
             {
-                ShowMessage("⚠ Please enter a valid 11-digit phone number.", false);
+                ShowMessage("⚠ Phone number must be 11 digits and start with '09'.", false);
                 return;
             }
+
             if (ddlPosition.SelectedIndex == 0)
             {
                 ShowMessage("⚠ Please select a Position.", false);
@@ -116,12 +126,17 @@ namespace RRCManagementSystem
 
             try
             {
-                // optional: ensure email unique
-                if (IsEmployeeEmailTaken(txtEmail.Text.Trim()))
+
+                string emailInputForCheck = txtEmail.Text.Trim();
+                if (!emailInputForCheck.Equals("N/A", StringComparison.OrdinalIgnoreCase))
                 {
-                    ShowMessage("⚠ This email is already used by another employee.", false);
-                    return;
+                    if (IsEmployeeEmailTaken(emailInputForCheck))
+                    {
+                        ShowMessage("⚠ This email is already used by another employee.", false);
+                        return;
+                    }
                 }
+
 
                 int newId = InsertEmployee(
                     txtLastName.Text.Trim(),

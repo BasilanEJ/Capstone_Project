@@ -8,34 +8,27 @@
     <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
     <title><asp:ContentPlaceHolder ID="PageTitle" runat="server" /> | RRC Termite & Pest Control</title>
 
+    <!-- TailwindCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
 
     <style>
-        :root {
-            --sidebar-width: 260px;
-        }
-
-        #content {
-            margin-left: var(--sidebar-width);
-            transition: margin-left 0.3s ease-in-out;
-        }
-
+        /* ===== Sidebar transition ===== */
         #sidebar {
-            width: var(--sidebar-width);
+            transform: translateX(-100%);
             transition: transform 0.3s ease-in-out;
+        }
+        #sidebar.open {
             transform: translateX(0);
         }
 
-        @media (max-width: 1023px) {
-            #content {
-                margin-left: 0;
-            }
+        /* ===== Desktop view ===== */
+        @media (min-width: 1024px) {
             #sidebar {
-                transform: translateX(-100%);
-            }
-            #sidebar.open {
-                transform: translateX(0);
+                transform: translateX(0); /* Always visible on desktop */
             }
         }
     </style>
@@ -47,15 +40,20 @@
     <form id="form1" runat="server">
         <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="false" />
 
-        <header class="bg-blue-800 text-white shadow-md fixed w-full top-0 left-0 z-50 px-4 py-3 flex items-center justify-between lg:justify-start">
-            <button id="burgerMenu" class="block lg:hidden text-2xl text-white mr-4 focus:outline-none">
+        <!-- HEADER / NAVBAR -->
+        <header class="bg-blue-800 text-white shadow-md fixed w-full top-0 left-0 z-50 px-4 py-3 flex items-center justify-between">
+            <!-- Burger Menu (Visible on Mobile/Tablet Only) -->
+            <button id="burgerMenu" type="button" class="block lg:hidden text-2xl text-white mr-4 focus:outline-none">
                 <i class="fas fa-bars"></i>
             </button>
+
+            <!-- Logo + Title -->
             <div class="flex items-center flex-grow">
-                <img src="\images\logorrc.png" class="h-10 w-10 mr-4 rounded-lg shadow-sm" alt="RRC Logo" />
-                <h1 class="text-xl font-bold hidden md:block">Admin Dashboard</h1>
+                <img src="/images/logorrc.png" class="h-10 w-10 mr-4 rounded-lg shadow-sm" alt="RRC Logo" />
+                <h1 class="text-lg sm:text-xl font-bold hidden md:block">Admin Dashboard</h1>
             </div>
 
+            <!-- User Info -->
             <div class="flex items-center space-x-4">
                 <div class="flex items-center text-sm font-semibold">
                     <i class="fas fa-user-circle text-lg mr-2"></i>
@@ -64,8 +62,12 @@
             </div>
         </header>
 
+        <!-- Sidebar Overlay (Hidden by default on all devices, but toggled on for mobile) -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+
         <div class="flex">
-            <nav id="sidebar" class="bg-gray-800 text-gray-300 fixed h-full top-16 z-40 overflow-y-auto">
+            <!-- SIDEBAR -->
+            <nav id="sidebar" class="bg-gray-800 text-gray-300 fixed top-16 left-0 h-full z-50 w-64 overflow-y-auto lg:translate-x-0">
                 <ul class="flex flex-col py-4">
                     <%
                         List<string> allowed = Session["AllowedModules"] as List<string>;
@@ -75,104 +77,130 @@
                     %>
                         <% if (allowed.Contains("Dashboard")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("dashboard.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/Dashboard.aspx") %>'>
-                                    <i class="fas fa-tachometer-alt mr-3"></i> Dashboard
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("dashboard.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/Dashboard.aspx") %>'>
+                                     <i class="fas fa-tachometer-alt mr-3"></i> Dashboard
                                 </a>
                             </li>
                         <% } %>
 
                         <% if (allowed.Contains("ManageBooking")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("managebooking.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageBooking.aspx") %>'>
-                                    <i class="fas fa-book mr-3"></i> Bookings
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("managebooking.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/ManageBooking.aspx") %>'>
+                                     <i class="fas fa-book mr-3"></i> Bookings
                                 </a>
                             </li>
                         <% } %>
 
                         <% if (allowed.Contains("ManageClient")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageclient.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageClient.aspx") %>'>
-                                    <i class="fas fa-users mr-3"></i> Clients
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("manageclient.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/ManageClient.aspx") %>'>
+                                     <i class="fas fa-users mr-3"></i> Clients
                                 </a>
                             </li>
                         <% } %>
-                        
+
                         <% if (allowed.Contains("Sales&Transaction")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("salesandtransactions.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'>
-                                    <i class="fas fa-receipt mr-3"></i> Sales & Transactions
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("salesandtransactions.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'>
+                                     <i class="fas fa-receipt mr-3"></i> Sales & Transactions
                                 </a>
                             </li>
                         <% } %>
 
                         <% if (allowed.Contains("ManageEmployees")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageemployee.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageEmployee.aspx") %>'>
-                                    <i class="fas fa-user-tie mr-3"></i> Manage Employees
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("manageemployee.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/ManageEmployee.aspx") %>'>
+                                     <i class="fas fa-user-tie mr-3"></i> Manage Employees
                                 </a>
                             </li>
                         <% } %>
 
                         <% if (allowed.Contains("ManageItem")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageitem.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageItem.aspx") %>'>
-                                    <i class="fas fa-boxes mr-3"></i> Manage Items
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("manageitem.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/ManageItem.aspx") %>'>
+                                     <i class="fas fa-boxes mr-3"></i> Manage Items
                                 </a>
                             </li>
                         <% } %>
-                        
+
                         <% if (allowed.Contains("ManageEquipment")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageequipment.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageEquipment.aspx") %>'>
-                                    <i class="fas fa-tools mr-3"></i> Manage Equipment
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("manageequipment.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/ManageEquipment.aspx") %>'>
+                                     <i class="fas fa-tools mr-3"></i> Manage Equipment
                                 </a>
                             </li>
                         <% } %>
 
                         <% if (allowed.Contains("ManageServices")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageservices.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageServices.aspx") %>'>
-                                    <i class="fas fa-bug mr-3"></i> Manage Services
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("manageservices.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/ManageServices.aspx") %>'>
+                                     <i class="fas fa-bug mr-3"></i> Manage Services
                                 </a>
                             </li>
                         <% } %>
-                        
+
                         <% if (allowed.Contains("ManageSupplier")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("managesupplier.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageSupplier.aspx") %>'>
-                                    <i class="fas fa-box mr-3"></i> Manage Supplier
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("managesupplier.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/ManageSupplier.aspx") %>'>
+                                     <i class="fas fa-box mr-3"></i> Manage Supplier
                                 </a>
                             </li>
                         <% } %>
-                        
+
                         <% if (allowed.Contains("AdminReports")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("adminreports.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/AdminReports.aspx") %>'>
-                                    <i class="fas fa-chart-bar mr-3"></i> Reports
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("adminreports.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/AdminReports.aspx") %>'>
+                                     <i class="fas fa-chart-bar mr-3"></i> Reports
                                 </a>
                             </li>
                         <% } %>
-                        
+
                         <% if (allowed.Contains("ManageInquiry")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("manageinquiry.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'>
-                                    <i class="fas fa-file-alt mr-3"></i> Manage Inquiry
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("manageinquiry.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'>
+                                     <i class="fas fa-file-alt mr-3"></i> Manage Inquiry
                                 </a>
                             </li>
                         <% } %>
 
                         <% if (allowed.Contains("CreateCustomerAccount")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("createcustomeraccount.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
-                                    <i class="fas fa-user-plus mr-3"></i> Create Customer Account
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("createcustomeraccount.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
+                                     <i class="fas fa-user-plus mr-3"></i> Create Customer Account
                                 </a>
                             </li>
                         <% } %>
 
                         <% if (allowed.Contains("AdminGuide")) { %>
                             <li>
-                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 <%= currentPath.Contains("adminguide.aspx") ? "bg-blue-600 font-bold" : "" %>" href='<%= ResolveUrl("~/AdminGuide.aspx") %>'>
-                                    <i class="fas fa-book-open mr-3"></i> Admin Guide
+                                <a class="flex items-center py-3 px-6 hover:bg-gray-700 transition-colors duration-200 
+                                    <%= currentPath.Contains("adminguide.aspx") ? "bg-blue-600 font-bold text-white" : "" %>" 
+                                    href='<%= ResolveUrl("~/AdminGuide.aspx") %>'>
+                                     <i class="fas fa-book-open mr-3"></i> Admin Guide
                                 </a>
                             </li>
                         <% } %>
@@ -189,27 +217,41 @@
                     %>
                 </ul>
 
+                <!-- Logout Button -->
                 <div class="p-4 mt-auto">
-                    <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="w-full text-left py-3 px-6 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors">
+                    <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click"
+                        CssClass="w-full text-left py-3 px-6 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors">
                         <i class="fas fa-sign-out-alt mr-2"></i> Logout
                     </asp:LinkButton>
                 </div>
             </nav>
 
-            <main id="content" class="flex-1 p-8 pt-20 lg:pt-8 min-h-screen">
+            <!-- MAIN CONTENT -->
+            <main id="content" class="flex-1 p-4 sm:p-6 lg:p-8 pt-20 min-h-screen lg:ml-64 transition-all">
                 <asp:ContentPlaceHolder ID="MainContent" runat="server" />
             </main>
         </div>
     </form>
 
+    <!-- Burger Menu Script -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            let burgerMenu = document.getElementById("burgerMenu");
-            let sidebar = document.getElementById("sidebar");
+            const burgerMenu = document.getElementById("burgerMenu");
+            const sidebar = document.getElementById("sidebar");
+            const sidebarOverlay = document.getElementById("sidebarOverlay");
 
-            burgerMenu.addEventListener("click", function () {
+            // Function to toggle the sidebar and overlay
+            function toggleSidebar() {
                 sidebar.classList.toggle("open");
-            });
+                sidebarOverlay.classList.toggle("hidden");
+                document.body.classList.toggle("overflow-hidden"); // Prevent background scroll
+            }
+
+            // Event listener for burger menu click
+            burgerMenu.addEventListener("click", toggleSidebar);
+
+            // Event listener for overlay click (closes the sidebar)
+            sidebarOverlay.addEventListener("click", toggleSidebar);
         });
     </script>
 </body>

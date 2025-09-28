@@ -42,6 +42,24 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.DropDownList ddlTeams;
 
         /// <summary>
+        /// pnlTeamBookings control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlTeamBookings;
+
+        /// <summary>
+        /// lblTeamBookings control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblTeamBookings;
+
+        /// <summary>
         /// gvEquipments control.
         /// </summary>
         /// <remarks>

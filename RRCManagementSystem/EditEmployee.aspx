@@ -57,9 +57,8 @@
                 <div>
                     <label for="<%= ddlStatus.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
                     <asp:DropDownList ID="ddlStatus" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
-                        <asp:ListItem Text="Available" Value="Available" />
-                        <asp:ListItem Text="Unavailable" Value="Unavailable" />
-                        <asp:ListItem Text="Resigned" Value="Resigned" />
+                        <asp:ListItem Text="Active" Value="Active" />
+                        <asp:ListItem Text="Inactive" Value="Inactive" />
                     </asp:DropDownList>
                 </div>
             </div>

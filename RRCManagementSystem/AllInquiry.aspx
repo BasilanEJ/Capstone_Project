@@ -18,6 +18,18 @@
         .table-rounded-corners thead tr:first-child th:last-child {
             border-top-right-radius: 0.5rem;
         }
+        #inspectorScheduleContainer {
+    scroll-behavior: smooth;
+}
+        @media (max-width: 640px) {
+    .swal2-popup {
+        width: 95% !important;
+        max-height: 90vh !important;
+    }
+}
+
+
+
     </style>
 
     <div class="container mx-auto p-4 md:p-8 bg-white rounded-lg shadow-lg mt-8">
@@ -163,7 +175,7 @@
             customClass: {
                 container: '!w-full !m-0 !p-0 !max-w-none flex justify-center items-center',
                 htmlContainer: '!my-0',
-                popup: '!p-4 md:!p-8 !w-11/12 md:!w-2/3 lg:!w-1/2 !max-h-[95vh] overflow-y-hidden'
+                popup: '!p-4 md:!p-8 !w-11/12 md:!w-2/3 lg:!w-1/2 max-h-[90vh] overflow-y-auto rounded-lg'
             },
             html: `
                 <div class="space-y-2">
@@ -239,7 +251,10 @@
                         <label class="text-sm font-medium text-gray-700">Inspector</label>
                         <select id="swalInspector" class="w-full px-3 py-2 border rounded-md"></select>
                     </div>
-                    <div id="inspectorScheduleContainer" class="max-h-48 overflow-y-auto hidden"></div>
+                  <div id="inspectorScheduleContainer"
+     class="hidden border border-gray-300 rounded-md max-h-[200px] md:max-h-[300px] overflow-y-auto p-2 bg-gray-50">
+</div>
+
                     <div class="w-full flex flex-col gap-1">
                         <label class="text-sm font-medium text-gray-700">Remarks</label>
                         <textarea id="swalRemarks" class="w-full px-3 py-2 border rounded-md" placeholder="Remarks (optional)"></textarea>

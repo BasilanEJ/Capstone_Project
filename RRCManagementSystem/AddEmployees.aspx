@@ -51,7 +51,17 @@
                 </div>
                 <div>
                     <label for="<%= txtPhone.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-                    <asp:TextBox ID="txtPhone" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Enter 11-digit Phone Number" required oninput="this.value=this.value.replace(/[^0-9]/g,'')"></asp:TextBox>
+                  <asp:TextBox ID="txtPhone" runat="server"
+    CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+    placeholder="Enter 11-digit Phone Number"
+    required
+    maxlength="11"
+    pattern="^09\d{9}$"
+    title="Phone number must start with 09 and be 11 digits long."
+    oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+</asp:TextBox>
+
+
                     <span id="phoneError" class="block text-xs text-red-500 mt-1 hidden"></span>
                 </div>
             </div>
@@ -128,9 +138,15 @@
                 phoneError.style.display = 'none';
             }
             
-            var emailPattern = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-            if (email.toLowerCase() !== 'n/a' && !emailPattern.test(email)) {
-                Swal.fire({ icon: 'warning', title: 'Invalid Email', text: 'Please enter a valid email address or type "N/A".' });
+            var emailInput = document.getElementById('<%= txtEmail.ClientID %>').value.trim();
+            var emailPattern = /^\w+([\.-]?\w+)*@(gmail|yahoo|outlook)\.com$/i;
+
+            if (emailInput.toLowerCase() !== 'n/a' && !emailPattern.test(emailInput)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Email',
+                    text: 'Please enter a valid Gmail, Yahoo, or Outlook email address, or type "N/A".'
+                });
                 return false;
             }
 

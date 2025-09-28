@@ -20,6 +20,11 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Page.Form != null)
+            {
+                Page.Form.Enctype = "multipart/form-data";
+            }
+
             if (!IsPostBack)
             {
                 // Restrict file picker to image files only
@@ -30,6 +35,9 @@ namespace RRCManagementSystem
 
         protected void btnSubmitInquiry_Click(object sender, EventArgs e)
         {
+            // ================================
+            // 1. Validate Terms & Conditions
+            // ================================
             if (!chkTerms.Checked)
             {
                 ScriptManager.RegisterStartupScript(
@@ -57,11 +65,16 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // ================================
+            // 2. Gather Form Data
+            // ================================
             string email = (txtEmail.Text ?? "").Trim().ToLowerInvariant();
             string contact = (txtContactNumber.Text ?? "").Trim();
             string message = (txtMessage.Text ?? "").Trim();
 
-            // Validate email
+            // ================================
+            // 3. Validate Email
+            // ================================
             int atIndex = email.IndexOf('@');
             if (atIndex < 0 || atIndex == email.Length - 1)
             {
@@ -85,21 +98,27 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Validate contact number
+            // ================================
+            // 4. Validate Contact Number
+            // ================================
             if (!System.Text.RegularExpressions.Regex.IsMatch(contact, @"^09\d{9}$"))
             {
                 ShowSweetAlert("Invalid Contact", "Contact number must be 11 digits starting with 09.", "warning");
                 return;
             }
 
-            // Handle photo upload
+            // ================================
+            // 5. Handle Photo Upload
+            // ================================
             string photoPath = null;
+
             if (fuPestPhoto.HasFile)
             {
                 try
                 {
                     string extension = Path.GetExtension(fuPestPhoto.FileName).ToLowerInvariant();
                     string contentType = (fuPestPhoto.PostedFile.ContentType ?? "").ToLowerInvariant();
+
                     string[] allowedExtensions = { ".png", ".jpg", ".jpeg" };
                     string[] allowedMimeTypes = { "image/png", "image/jpg", "image/jpeg" };
 
@@ -109,17 +128,20 @@ namespace RRCManagementSystem
                         return;
                     }
 
-                    string folderRelativePath = "/Uploads/InquiryPhotos/";
-                    string folderPhysicalPath = Server.MapPath(folderRelativePath);
-
+                    // Create physical folder if it does not exist
+                    string folderPhysicalPath = Server.MapPath("~/Uploads/InquiryPhotos/");
                     if (!Directory.Exists(folderPhysicalPath))
                         Directory.CreateDirectory(folderPhysicalPath);
 
+                    // Generate unique filename
                     string filename = Guid.NewGuid().ToString("N") + extension;
                     string savePath = Path.Combine(folderPhysicalPath, filename);
 
+                    // Save the file
                     fuPestPhoto.SaveAs(savePath);
-                    photoPath = folderRelativePath + filename;
+
+                    // ✅ Correct path for database with ~ prefix
+                    photoPath = "/Uploads/InquiryPhotos/" + filename;
                 }
                 catch (Exception ex)
                 {
@@ -128,16 +150,17 @@ namespace RRCManagementSystem
                 }
             }
 
+            // ================================
+            // 6. Save Inquiry to Database
+            // ================================
             try
             {
-                // ================================================
-                // Encryption + Hashing
-                // ================================================
+                // Encryption & Hashing
                 string emailHash = AESHelper.ComputeSHA256WithPepper(email); // For search
                 string emailEnc = AESHelper.EncryptEmail(email);
                 string contactEnc = AESHelper.EncryptField(contact);
 
-                // Address placeholders (client not entering these yet)
+                // Placeholder encrypted address values
                 string streetEnc = AESHelper.EncryptField("");
                 string barangayEnc = AESHelper.EncryptField("");
                 string cityEnc = AESHelper.EncryptField("");
@@ -156,6 +179,8 @@ namespace RRCManagementSystem
                     cmd.Parameters.AddWithValue("@EmailEnc", emailEnc);
                     cmd.Parameters.AddWithValue("@ContactEnc", contactEnc);
                     cmd.Parameters.AddWithValue("@Message", string.IsNullOrEmpty(message) ? "N/A" : message);
+
+                    // ✅ Ensure correct path is stored in DB
                     cmd.Parameters.AddWithValue("@PhotoPath", string.IsNullOrEmpty(photoPath) ? (object)DBNull.Value : photoPath);
 
                     cmd.Parameters.AddWithValue("@LastName", "");
@@ -169,10 +194,16 @@ namespace RRCManagementSystem
                     cmd.Parameters.AddWithValue("@CountryEnc", countryEnc);
                     cmd.Parameters.AddWithValue("@LandmarkEnc", landmarkEnc);
 
-                    var pCode = new SqlParameter("@GeneratedInquiryCode", SqlDbType.NVarChar, 25) { Direction = ParameterDirection.Output };
+                    var pCode = new SqlParameter("@GeneratedInquiryCode", SqlDbType.NVarChar, 25)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
                     cmd.Parameters.Add(pCode);
 
-                    var pId = new SqlParameter("@NewInquiryID", SqlDbType.Int) { Direction = ParameterDirection.Output };
+                    var pId = new SqlParameter("@NewInquiryID", SqlDbType.Int)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
                     cmd.Parameters.Add(pId);
 
                     conn.Open();
@@ -181,9 +212,13 @@ namespace RRCManagementSystem
                     generatedCode = Convert.ToString(pCode.Value ?? "");
                 }
 
+                // Send confirmation email
                 SendConfirmationEmail(email, generatedCode);
 
+                // Success alert
                 ShowSweetAlert("Submitted!", $"Your inquiry was submitted successfully.\nReference Code: {generatedCode}", "success");
+
+                // Clear form fields
                 ClearForm();
             }
             catch (Exception ex)
@@ -191,6 +226,7 @@ namespace RRCManagementSystem
                 ShowSweetAlert("Error", "Something went wrong while saving: " + ex.Message, "error");
             }
         }
+
 
 
         private bool SendConfirmationEmail(string toEmail, string inquiryCode)

@@ -7,12 +7,14 @@
     <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
     <title>Login - RRC Management System</title>
 
+    <!-- Tailwind CSS -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Google reCAPTCHA -->
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 
     <style>
@@ -31,12 +33,11 @@
 
         /* Error message container to prevent layout shifting */
         #messageContainer {
-            min-height: 1.5rem; /* Reserves space for one line of text */
-            transition: opacity 0.3s ease-in-out; /* Adds a fade effect */
+            min-height: 1.5rem;
+            transition: opacity 0.3s ease-in-out;
             opacity: 0;
         }
 
-        /* When message is visible */
         #messageContainer.show {
             opacity: 1;
         }
@@ -47,14 +48,15 @@
         <asp:ScriptManager ID="ScriptManager1" runat="server" />
 
         <div class="login-container bg-white p-12 md:p-16 rounded-2xl shadow-2xl flex flex-col items-center text-center border border-gray-200 w-11/12 max-w-xl transition-transform hover:translate-y-[-5px]">
-                 
             <img src="images/logorrc.png" alt="RRC Logo" class="w-48 h-auto mb-5" />
 
             <h2 class="text-3xl font-semibold text-gray-800 mb-6">Login</h2>
 
+
             <asp:UpdatePanel ID="upLogin" runat="server">
                 <ContentTemplate>
                     <asp:Panel ID="pnlLogin" runat="server" DefaultButton="btnLogin" CssClass="w-full">
+
 
                         <asp:TextBox ID="txtEmail" runat="server"
                             CssClass="input block w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-5"
@@ -64,6 +66,7 @@
                             MaxLength="100"
                             onkeydown="return focusPasswordOnEnter(event)" />
 
+
                         <div class="relative w-full mb-5">
                             <asp:TextBox ID="txtPassword" runat="server"
                                 CssClass="input block w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
@@ -72,7 +75,9 @@
                                 MaxLength="64"
                                 AutoCompleteType="Disabled" />
 
-                            <button type="button" id="btnTogglePwd" class="toggle-password absolute inset-y-0 right-0 flex items-center pr-3 hidden" aria-label="Show password">
+                            <button type="button" id="btnTogglePwd" 
+                                class="toggle-password absolute inset-y-0 right-0 flex items-center pr-3 hidden" 
+                                aria-label="Show password">
                                 <i class="fa-solid fa-eye" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -88,17 +93,24 @@
                             UseSubmitBehavior="false" />
                     </asp:Panel>
 
+
                     <div class="links mt-5">
                         <a href="ForgotPassword.aspx" class="text-blue-600 text-sm hover:underline">Forgot Password?</a>
                     </div>
+
 
                     <div id="messageContainer" class="mt-4 text-sm text-red-500">
                         <asp:Label ID="lblMessage" runat="server"></asp:Label>
                     </div>
                 </ContentTemplate>
+
+                <Triggers>
+                    <asp:PostBackTrigger ControlID="btnLogin" />
+                </Triggers>
             </asp:UpdatePanel>
         </div>
 
+        <!-- JavaScript -->
         <script>
             function initScripts() {
                 const pwdInput = document.getElementById('<%= txtPassword.ClientID %>');
@@ -106,6 +118,7 @@
                 const toggleIcon = toggleBtn.querySelector('i');
                 const msgContainer = document.getElementById('messageContainer');
 
+                // Toggle password visibility
                 if (pwdInput && toggleBtn) {
                     const refreshEyeVisibility = () => {
                         if (pwdInput.value && pwdInput.value.length > 0) {
@@ -144,6 +157,7 @@
                     }
                 }
 
+                // Show or hide error container smoothly
                 if (msgContainer) {
                     if (msgContainer.innerText.trim() !== "") {
                         msgContainer.classList.add('show');
@@ -153,6 +167,7 @@
                 }
             }
 
+            // Focus password field when Enter is pressed in email field
             function focusPasswordOnEnter(event) {
                 if (event.key === "Enter") {
                     event.preventDefault();
@@ -162,6 +177,7 @@
                 return true;
             }
 
+            // Initialize scripts after DOM is ready
             document.addEventListener("DOMContentLoaded", initScripts);
             Sys.WebForms.PageRequestManager.getInstance().add_endRequest(initScripts);
         </script>

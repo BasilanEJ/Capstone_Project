@@ -91,6 +91,10 @@
             width: 100%; border: none; border-bottom: 2px solid #1a202c; padding: 10px;
             background: transparent; color: #1a202c; font-size: 14px;
         }
+        .form-underline::placeholder {
+    color: #000; /* black placeholder text */
+    opacity: 1;  /* make sure it's fully visible */
+}
         .textarea-box {
             width: 100%; border-radius: 4px; padding: 10px; font-size: 14px; min-height: 120px;
         }
@@ -1253,10 +1257,10 @@ body.modal-open {
             </div>
         </section>
     </ContentTemplate>
-    <Triggers>
-       
-        <asp:AsyncPostBackTrigger ControlID="btnSubmitInquiry" EventName="Click" />
-    </Triggers>
+   <Triggers>
+    <asp:PostBackTrigger ControlID="btnSubmitInquiry" />
+</Triggers>
+
 </asp:UpdatePanel>
 
     <script>

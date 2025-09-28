@@ -6,17 +6,19 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Web.UI;
-using RRCManagementSystem.Helpers; // For AESHelper
+using RRCManagementSystem.Helpers; // AESHelper for encryption/hashing
+using System.Web.Script.Serialization;
 
 namespace RRCManagementSystem
 {
     public partial class Login : Page
     {
         private static readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-        private const int IpWindowMinutes = 10;
+        private const int IpWindowMinutes = 5;
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Prevent caching of sensitive pages
             Response.Cache.SetCacheability(HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
             Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
@@ -27,21 +29,22 @@ namespace RRCManagementSystem
                 lblMessage.Text = "";
             }
 
-            // (Your existing redirection logic remains unchanged)
+            // Redirect already logged-in admins
             if (Session["IsAuthenticated"] as bool? == true && Session["UserID"] != null && Session["Role"] != null)
             {
                 string role = Session["Role"].ToString();
                 Response.Redirect(
-                    role == "RootAdmin" ? "~/RootDashboard.aspx"
-                  : role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx"
-                  : role == "Inspector" ? "~/InspectorDashboard.aspx"
-                                        : "~/Dashboard.aspx",
+                    role == "RootAdmin" ? "~/RootDashboard.aspx" :
+                    role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx" :
+                    role == "Inspector" ? "~/InspectorDashboard.aspx" :
+                    "~/Dashboard.aspx",
                     false
                 );
                 Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
+            // Redirect logged-in client
             if (Session["ClientID"] != null)
             {
                 Response.Redirect("Home.aspx", false);
@@ -52,21 +55,22 @@ namespace RRCManagementSystem
 
         protected void btnLogin_Click(object sender, EventArgs e)
         {
-            // Reset the message text on every click to clear old messages
-            lblMessage.Text = "";
+            lblMessage.Text = ""; // Clear previous messages
 
-            // ... (Your existing validation and login logic below) ...
             string ip = Request.UserHostAddress ?? "";
 
+            // Step 1: IP-based throttling check
             if (GetFailedIPAttempts(ip, IpWindowMinutes) >= 5)
             {
-                lblMessage.Text = "⏳ Too many failed attempts from this IP. Try again later.";
+                lblMessage.Text = $"⏳ Too many failed attempts from this IP. Please wait {IpWindowMinutes} minutes before trying again.";
                 return;
             }
+
 
             string email = txtEmail.Text.Trim();
             string password = txtPassword.Text.Trim();
 
+            // Step 2: Basic input validation
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
                 lblMessage.Text = "⚠ Please enter both email and password.";
@@ -91,7 +95,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            Regex strongPasswordRegex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,64}$");
+            Regex strongPasswordRegex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,64}$");
             if (!strongPasswordRegex.IsMatch(password))
             {
                 lblMessage.Text = "⚠ Password must contain at least one uppercase, one lowercase, one number, and one special character.";
@@ -101,6 +105,8 @@ namespace RRCManagementSystem
             try
             {
                 string emailHash = AESHelper.ComputeSHA256(email);
+
+                // Step 3: Try Admin/SuperAdmin/Inspector login
                 using (var conn = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand("dbo.spAuth_GetUserByEmail", conn))
                 {
@@ -120,7 +126,7 @@ namespace RRCManagementSystem
                             object lockoutObj = reader["LockoutUntil"];
                             int userID = Convert.ToInt32(reader["UserID"]);
                             string userName = reader["Name"]?.ToString() ?? "";
-                            string decryptedEmail = string.Empty;
+                            string decryptedEmail = "";
 
                             if (reader["Email"] != DBNull.Value)
                             {
@@ -128,6 +134,7 @@ namespace RRCManagementSystem
                                 catch { decryptedEmail = "[Decryption Error]"; }
                             }
 
+                            // Step 4: Account status checks
                             if (status.Equals("Deleted", StringComparison.OrdinalIgnoreCase))
                             {
                                 lblMessage.Text = "⚠ Account not found.";
@@ -139,6 +146,7 @@ namespace RRCManagementSystem
                                 return;
                             }
 
+                            // Step 5: Lockout handling
                             if (lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
                             {
                                 pnlCaptcha.Visible = true;
@@ -146,9 +154,18 @@ namespace RRCManagementSystem
                                 return;
                             }
 
+                            // Step 6: CAPTCHA logic (only after 5 failed attempts)
                             if (failedAttempts >= 5)
                             {
                                 pnlCaptcha.Visible = true;
+                                string captchaResponse = Request.Form["g-recaptcha-response"];
+
+                                if (string.IsNullOrEmpty(captchaResponse))
+                                {
+                                    lblMessage.Text = "⚠ Please complete the CAPTCHA.";
+                                    return;
+                                }
+
                                 if (!IsCaptchaValid())
                                 {
                                     lblMessage.Text = "⚠ CAPTCHA verification failed.";
@@ -156,12 +173,15 @@ namespace RRCManagementSystem
                                 }
                             }
 
+                            // Step 7: Password verification
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
+                                // Reset failed attempts on success
                                 ResetFailedLogin(userID);
                                 LogIPAttempt(ip, true);
                                 AddAuditLog(userID, $"{role} {userName} passed password; 2FA pending.");
 
+                                // If not inspector, go to 2FA flow
                                 if (!role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
                                 {
                                     Session["Pending2FA_UserID"] = userID;
@@ -175,11 +195,13 @@ namespace RRCManagementSystem
                                 }
                                 else
                                 {
+                                    // Inspector logs in directly
                                     Session["UserID"] = userID;
                                     Session["Role"] = role;
                                     Session["Name"] = userName;
                                     Session["Email"] = decryptedEmail;
                                     Session["IsAuthenticated"] = true;
+
                                     AddAuditLog(userID, $"Inspector {userName} logged in.");
                                     Response.Redirect("~/InspectorDashboard.aspx", false);
                                     Context.ApplicationInstance.CompleteRequest();
@@ -188,18 +210,23 @@ namespace RRCManagementSystem
                             }
                             else
                             {
+                                // Incorrect password
                                 HandleFailedLogin(userID);
                                 LogIPAttempt(ip, false);
-                                int remaining = Math.Max(0, 4 - (failedAttempts + 1));
+                                const int MaxAttempts = 5;
+                                int remaining = Math.Max(0, MaxAttempts - (failedAttempts + 1));
                                 lblMessage.Text = $"⚠ Invalid credentials. {remaining} attempt(s) left.";
-                                if (failedAttempts + 1 >= 5) pnlCaptcha.Visible = true;
+
+                                if (failedAttempts + 1 >= 5)
+                                    pnlCaptcha.Visible = true;
+
                                 return;
                             }
                         }
                     }
                 }
 
-                // If no user was found, try Clients
+                // Step 8: Try client login if not found in admin table
                 using (var conn = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand("dbo.spAuth_GetClientByEmail", conn))
                 {
@@ -216,7 +243,7 @@ namespace RRCManagementSystem
                             string hash = reader["PasswordHash"]?.ToString();
                             int clientId = Convert.ToInt32(reader["ClientID"]);
                             string name = reader["Name"]?.ToString() ?? "";
-                            string decryptedClientEmail = string.Empty;
+                            string decryptedClientEmail = "";
 
                             if (reader["EmailEnc"] != DBNull.Value)
                             {
@@ -237,6 +264,7 @@ namespace RRCManagementSystem
 
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
+                                // Successful client login
                                 Session["ClientID"] = clientId;
                                 Session["ClientName"] = name;
                                 Session["Email"] = decryptedClientEmail;
@@ -271,24 +299,29 @@ namespace RRCManagementSystem
             }
         }
 
-        // (The rest of your helper methods like IsCaptchaValid, GetFailedIPAttempts, etc., are unchanged)
+        // ========== HELPER METHODS ==========
+
         private bool IsCaptchaValid()
         {
-            // ... (rest of the code is unchanged)
             string response = Request.Form["g-recaptcha-response"];
             if (string.IsNullOrEmpty(response)) return false;
 
             using (var client = new WebClient())
             {
                 string secret = ConfigurationManager.AppSettings["RecaptchaSecretKey"];
-                string result = client.DownloadString($"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}");
-                return result.Contains("\"success\": true");
+                string googleResponse = client.DownloadString(
+                    $"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}"
+                );
+
+                var js = new JavaScriptSerializer();
+                dynamic jsonData = js.Deserialize<dynamic>(googleResponse);
+
+                return jsonData["success"] == true;
             }
         }
 
         private int GetFailedIPAttempts(string ip, int windowMinutes)
         {
-            // ... (rest of the code is unchanged)
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spLoginAttempt_CountRecentFailures", conn))
             {
@@ -303,7 +336,6 @@ namespace RRCManagementSystem
 
         private void LogIPAttempt(string ip, bool success)
         {
-            // ... (rest of the code is unchanged)
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spLoginAttempt_Insert", conn))
             {
@@ -317,7 +349,6 @@ namespace RRCManagementSystem
 
         private void HandleFailedLogin(int userId)
         {
-            // ... (rest of the code is unchanged)
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spAuth_FailAndMaybeLock", conn))
             {
@@ -330,7 +361,6 @@ namespace RRCManagementSystem
 
         private void ResetFailedLogin(int userId)
         {
-            // ... (rest of the code is unchanged)
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spAuth_ResetFailures", conn))
             {
@@ -343,7 +373,6 @@ namespace RRCManagementSystem
 
         private void AddAuditLog(int? userID, string action)
         {
-            // ... (rest of the code is unchanged)
             if (userID == null) return;
 
             using (var conn = new SqlConnection(connectionString))

@@ -22,10 +22,32 @@
                     <i class="fas fa-tasks mr-3"></i> Assign Team, Equipment, Chemicals & Safety Gear
                 </h2>
 
-                <div class="mb-6">
-                    <label class="block text-gray-700 font-semibold mb-2">Select Team</label>
-                    <asp:DropDownList ID="ddlTeams" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
-                </div>
+           <div class="mb-6">
+    <label for="ddlTeams" class="block text-gray-700 font-semibold mb-2">Select Team</label>
+    <asp:DropDownList 
+        ID="ddlTeams" 
+        runat="server" 
+        AutoPostBack="true" 
+        OnSelectedIndexChanged="ddlTeams_SelectedIndexChanged"
+        CssClass="block w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+    </asp:DropDownList>
+</div>
+
+<div class="mt-4">
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">Team's Bookings</h3>
+    <asp:Panel 
+        ID="pnlTeamBookings" 
+        runat="server" 
+        CssClass="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <asp:Label 
+            ID="lblTeamBookings" 
+            runat="server" 
+            Text="Select a team to view their bookings." 
+            CssClass="text-gray-600" />
+    </asp:Panel>
+</div>
+
+
 
                 <div class="mt-8">
                     <h3 class="text-xl font-bold text-blue-800 mb-4 flex items-center">

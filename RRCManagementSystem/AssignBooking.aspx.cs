@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -54,7 +55,8 @@ namespace RRCManagementSystem
                     int.TryParse(Request.QueryString["ScheduleID"], out scheduleID);
 
                     LoadBookingCodeAndOperation();
-                    LoadTeams();
+                    DateTime scheduledDate = GetScheduledDate(bookingID);
+                    LoadTeams(scheduledDate);
                     LoadAvailableEquipments();
                     LoadAvailableChemicals();
                     LoadAvailableSachetChemicals();
@@ -139,20 +141,141 @@ namespace RRCManagementSystem
 
 
 
-        private void LoadTeams()
+        private void LoadTeams(DateTime scheduledDate)
         {
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("dbo.spTeams_ListAvailable", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Date", SqlDbType.Date).Value = scheduledDate;
+
                 con.Open();
                 ddlTeams.DataSource = cmd.ExecuteReader();
-                ddlTeams.DataTextField = "GroupName";
-                ddlTeams.DataValueField = "TeamID";
+                ddlTeams.DataTextField = "GroupName";   // Display team name
+                ddlTeams.DataValueField = "TeamID";     // Actual value
                 ddlTeams.DataBind();
+
+                // Add a default "Select Team" option
                 ddlTeams.Items.Insert(0, new ListItem("-- Select Team --", ""));
             }
         }
+
+
+        private DateTime GetScheduledDate(int bookingID)
+        {
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("dbo.spBooking_GetSchedule", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+
+                con.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        if (reader["ScheduledDate"] != DBNull.Value)
+                        {
+                            // ✅ Clean return, no debug output
+                            return Convert.ToDateTime(reader["ScheduledDate"]);
+                        }
+                        else
+                        {
+                            throw new Exception("⚠️ Booking has no scheduled date.");
+                        }
+                    }
+                    else
+                    {
+                        throw new Exception($"⚠️ Booking not found. BookingID = {bookingID}");
+                    }
+                }
+            }
+        }
+
+
+
+
+        protected void ddlTeams_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // Clear any previous messages
+            lblTeamBookings.Text = "";
+
+            // ✅ 1. Validate dropdown selection first
+            if (!int.TryParse(ddlTeams.SelectedValue, out int teamId))
+            {
+                lblTeamBookings.Text = "Select a team to view their bookings.";
+                return;
+            }
+
+            try
+            {
+                // ✅ 2. Ensure BookingID is valid
+                if (!int.TryParse(Request.QueryString["BookingID"], out bookingID))
+                {
+                    throw new Exception("BookingID is missing or invalid in the URL.");
+                }
+
+                // ✅ 3. Get the scheduled date for this booking
+                DateTime scheduledDate = GetScheduledDate(bookingID);
+
+                // ✅ 4. Load bookings for the selected team and date
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spBookingSummary", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@TeamID", SqlDbType.Int).Value = teamId;
+                    cmd.Parameters.Add("@Date", SqlDbType.Date).Value = scheduledDate;
+
+                    con.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                        {
+                            // If there are no bookings for this date
+                            lblTeamBookings.Text = $"No bookings scheduled for this team on {scheduledDate:MMMM dd, yyyy}.";
+                        }
+                        else
+                        {
+                            // ✅ Start building the booking list
+                            lblTeamBookings.Text = "<ul class='list-disc ml-5 text-gray-700'>";
+
+                            while (reader.Read())
+                            {
+                                // ✅ Safe parsing of StartTime
+                                string startTime = "00:00";
+                                if (reader["StartTime"] != DBNull.Value && TimeSpan.TryParse(reader["StartTime"].ToString(), out TimeSpan ts))
+                                {
+                                    startTime = ts.ToString(@"hh\:mm");
+                                }
+
+                                // ✅ Safely decrypt address fields
+                                string street = reader["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(reader["StreetEnc"].ToString()) : "";
+                                string barangay = reader["BarangayEnc"] != DBNull.Value ? AESHelper.DecryptField(reader["BarangayEnc"].ToString()) : "";
+                                string city = reader["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(reader["CityEnc"].ToString()) : "";
+
+                                // ✅ Combine full location
+                                string fullLocation = $"{street}, {barangay}, {city}".Trim(',', ' ');
+
+                                // ✅ Build the display line
+                                lblTeamBookings.Text += $"<li><strong>{reader["BookingCode"]}</strong> - {fullLocation} at {startTime}</li>";
+                            }
+
+                            // Close the list
+                            lblTeamBookings.Text += "</ul>";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // ✅ Error handling
+                lblTeamBookings.Text = $"❌ Error loading bookings: {ex.Message}";
+            }
+        }
+
+
+
+
 
         private void LoadAvailableEquipments()
         {

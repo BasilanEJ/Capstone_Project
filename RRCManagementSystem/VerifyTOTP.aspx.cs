@@ -7,6 +7,8 @@ using System.Data.SqlClient;
 using System.Net;
 using System.Net.Mail;
 using System.Web;
+using System.Web.Script.Serialization;
+
 
 namespace RRCManagementSystem
 {
@@ -341,12 +343,17 @@ namespace RRCManagementSystem
 
             using (var client = new WebClient())
             {
-                string secret = "6Ld6VrcrAAAAANJi4Djjr9vN7N5KIWoIoL_CCi_z"; // move to Web.config
-                string result = client.DownloadString(
+                string secret = ConfigurationManager.AppSettings["RecaptchaSecretKey"];
+                string googleResponse = client.DownloadString(
                     $"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}"
                 );
-                return result.Contains("\"success\": true");
+
+                var js = new JavaScriptSerializer();
+                dynamic jsonData = js.Deserialize<dynamic>(googleResponse);
+
+                return jsonData["success"] == true;
             }
         }
+
     }
 }
