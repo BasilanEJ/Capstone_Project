@@ -48,63 +48,69 @@
         </div>
     </form>
 
-    <script>
-        function validatePasswordStrength(password) {
-            const specialCharRegex = /[!@#$%^&*(),.?":{}|<>\-_=+\\\/]/; // Special characters
-            const uppercaseRegex = /[A-Z]/; // Uppercase letters
-            const strengthMsg = document.getElementById("passwordStrengthMsg");
+   <script>
+       function validatePasswordStrength(password) {
+           const specialCharRegex = /[!@#$%^&*(),.?":{}|<>\-_=+\\\/]/; // Special characters
+           const uppercaseRegex = /[A-Z]/; // Uppercase letters
+           const lowercaseRegex = /[a-z]/; // Lowercase letters
+           const strengthMsg = document.getElementById("passwordStrengthMsg");
 
-            if (password.length < 8) {
-                strengthMsg.innerText = "❌ Password must be at least 8 characters.";
-                strengthMsg.style.color = "red";
-            }
-            else if (!uppercaseRegex.test(password)) {
-                strengthMsg.innerText = "❌ Must include at least one uppercase letter.";
-                strengthMsg.style.color = "red";
-            }
-            else if (!specialCharRegex.test(password)) {
-                strengthMsg.innerText = "❌ Must include at least one special character.";
-                strengthMsg.style.color = "red";
-            }
-            else if (password.length >= 8 && password.length < 12) {
-                strengthMsg.innerText = "⚠ Medium strength. Add more characters for a stronger password.";
-                strengthMsg.style.color = "orange";
-            }
-            else {
-                strengthMsg.innerText = "✅ Strong password.";
-                strengthMsg.style.color = "green";
-            }
+           // Validation checks
+           if (password.length < 8) {
+               strengthMsg.innerText = "❌ Password must be at least 8 characters.";
+               strengthMsg.style.color = "red";
+           }
+           else if (!uppercaseRegex.test(password)) {
+               strengthMsg.innerText = "❌ Must include at least one uppercase letter.";
+               strengthMsg.style.color = "red";
+           }
+           else if (!lowercaseRegex.test(password)) {
+               strengthMsg.innerText = "❌ Must include at least one lowercase letter.";
+               strengthMsg.style.color = "red";
+           }
+           else if (!specialCharRegex.test(password)) {
+               strengthMsg.innerText = "❌ Must include at least one special character.";
+               strengthMsg.style.color = "red";
+           }
+           else if (password.length >= 8 && password.length < 12) {
+               strengthMsg.innerText = "⚠ Medium strength. Add more characters for a stronger password.";
+               strengthMsg.style.color = "orange";
+           }
+           else {
+               strengthMsg.innerText = "✅ Strong password.";
+               strengthMsg.style.color = "green";
+           }
 
-            validatePasswordMatch();
+           validatePasswordMatch();
+       }
+
+       function validatePasswordMatch() {
+           const password = document.getElementById("<%= txtNewPassword.ClientID %>").value;
+        const confirm = document.getElementById("<%= txtConfirmPassword.ClientID %>").value;
+        const matchMsg = document.getElementById("passwordMatchMsg");
+
+        if (!confirm) {
+            matchMsg.innerText = "";
+            return;
         }
 
-
-        function validatePasswordMatch() {
-            const password = document.getElementById("<%= txtNewPassword.ClientID %>").value;
-            const confirm = document.getElementById("<%= txtConfirmPassword.ClientID %>").value;
-            const matchMsg = document.getElementById("passwordMatchMsg");
-
-            if (!confirm) {
-                matchMsg.innerText = "";
-                return;
-            }
-
-            if (password !== confirm) {
-                matchMsg.innerText = "❌ Passwords do not match.";
-                matchMsg.style.color = "red";
-            } else {
-                matchMsg.innerText = "✅ Passwords match.";
-                matchMsg.style.color = "green";
-            }
+        if (password !== confirm) {
+            matchMsg.innerText = "❌ Passwords do not match.";
+            matchMsg.style.color = "red";
+        } else {
+            matchMsg.innerText = "✅ Passwords match.";
+            matchMsg.style.color = "green";
         }
+    }
 
-        function togglePasswords() {
-            const pass1 = document.getElementById("<%= txtNewPassword.ClientID %>");
-            const pass2 = document.getElementById("<%= txtConfirmPassword.ClientID %>");
-            const type = pass1.type === "password" ? "text" : "password";
-            pass1.type = type;
-            pass2.type = type;
-        }
-    </script>
+    function togglePasswords() {
+        const pass1 = document.getElementById("<%= txtNewPassword.ClientID %>");
+        const pass2 = document.getElementById("<%= txtConfirmPassword.ClientID %>");
+           const type = pass1.type === "password" ? "text" : "password";
+           pass1.type = type;
+           pass2.type = type;
+       }
+   </script>
+
 </body>
 </html>

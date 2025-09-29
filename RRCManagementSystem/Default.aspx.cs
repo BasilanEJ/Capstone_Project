@@ -221,10 +221,29 @@ namespace RRCManagementSystem
                 // Clear form fields
                 ClearForm();
             }
+            catch (SqlException sqlEx)
+            {
+               
+                if (sqlEx.Message.Contains("Please wait 24 hours"))
+                {
+                    ShowSweetAlert(
+                        "Wait Before Submitting",
+                        "You have already submitted an inquiry recently. Please wait 24 hours before submitting another one.",
+                        "warning"
+                    );
+                }
+                else
+                {
+                    // Any other SQL error
+                    ShowSweetAlert("Database Error", sqlEx.Message, "error");
+                }
+            }
             catch (Exception ex)
             {
+                // Handle non-SQL exceptions (e.g., network issues, file save problems)
                 ShowSweetAlert("Error", "Something went wrong while saving: " + ex.Message, "error");
             }
+
         }
 
 

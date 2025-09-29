@@ -261,6 +261,7 @@ namespace RRCManagementSystem
         {
             ddlCity.Items.Clear();
             ddlCity.Items.Add(new ListItem("-- Select City --", ""));
+
             if (selectedRegion == "NCR")
             {
                 ddlCity.Items.Add(new ListItem("Quezon City", "Quezon City"));
@@ -272,32 +273,76 @@ namespace RRCManagementSystem
                 ddlCity.Items.Add(new ListItem("Taguig", "Taguig"));
                 ddlCity.Items.Add(new ListItem("Valenzuela", "Valenzuela"));
                 ddlCity.Items.Add(new ListItem("Pasay", "Pasay"));
+                ddlCity.Items.Add(new ListItem("Malabon", "Malabon"));
+                ddlCity.Items.Add(new ListItem("Mandaluyong", "Mandaluyong"));
                 ddlCity.Items.Add(new ListItem("Marikina", "Marikina"));
                 ddlCity.Items.Add(new ListItem("Muntinlupa", "Muntinlupa"));
                 ddlCity.Items.Add(new ListItem("Navotas", "Navotas"));
                 ddlCity.Items.Add(new ListItem("San Juan", "San Juan"));
                 ddlCity.Items.Add(new ListItem("Pateros", "Pateros"));
+                ddlCity.Items.Add(new ListItem("Parañaque", "Parañaque"));
             }
             else if (selectedRegion == "Region I")
             {
+                ddlCity.Items.Add(new ListItem("Alaminos", "Alaminos"));
+                ddlCity.Items.Add(new ListItem("Batac", "Batac"));
+                ddlCity.Items.Add(new ListItem("Candon", "Candon"));
+                ddlCity.Items.Add(new ListItem("Laoag", "Laoag"));
                 ddlCity.Items.Add(new ListItem("Vigan", "Vigan"));
                 ddlCity.Items.Add(new ListItem("San Fernando", "San Fernando"));
+                ddlCity.Items.Add(new ListItem("San Carlos", "San Carlos"));
                 ddlCity.Items.Add(new ListItem("Dagupan", "Dagupan"));
+                ddlCity.Items.Add(new ListItem("Urdaneta", "Urdaneta"));
             }
             else if (selectedRegion == "Region II")
             {
+                ddlCity.Items.Add(new ListItem("Cauayan", "Cauayan"));
                 ddlCity.Items.Add(new ListItem("Tuguegarao", "Tuguegarao"));
                 ddlCity.Items.Add(new ListItem("Ilagan", "Ilagan"));
+                ddlCity.Items.Add(new ListItem("Santiago", "Santiago"));
             }
             else if (selectedRegion == "Region III")
             {
                 ddlCity.Items.Add(new ListItem("San Fernando", "San Fernando"));
                 ddlCity.Items.Add(new ListItem("Angeles", "Angeles"));
+                ddlCity.Items.Add(new ListItem("Olongapo", "Olongapo"));
+                ddlCity.Items.Add(new ListItem("Balanga", "Balanga"));
+                ddlCity.Items.Add(new ListItem("Baliwag", "Baliwag"));
+                ddlCity.Items.Add(new ListItem("Cabanatuan", "Cabanatuan"));
+                ddlCity.Items.Add(new ListItem("Gapan", "Gapan"));
+                ddlCity.Items.Add(new ListItem("Mabalacat", "Mabalacat"));
+                ddlCity.Items.Add(new ListItem("Malolos", "Malolos"));
+                ddlCity.Items.Add(new ListItem("Meycauayan", "Meycauayan"));
+                ddlCity.Items.Add(new ListItem("Muñoz", "Muñoz"));
+                ddlCity.Items.Add(new ListItem("Palayan", "Palayan"));
+                ddlCity.Items.Add(new ListItem("San Jose", "San Jose"));
+                ddlCity.Items.Add(new ListItem("San Jose del Monte", "San Jose del Monte"));
+                ddlCity.Items.Add(new ListItem("Tarlac City", "Tarlac City"));
             }
             else if (selectedRegion == "Region IV-A")
             {
                 ddlCity.Items.Add(new ListItem("Cavite", "Cavite"));
                 ddlCity.Items.Add(new ListItem("Batangas", "Batangas"));
+                ddlCity.Items.Add(new ListItem("Lucena", "Lucena"));
+                ddlCity.Items.Add(new ListItem("Antipolo", "Antipolo"));
+                ddlCity.Items.Add(new ListItem("Bacoor", "Bacoor"));
+                ddlCity.Items.Add(new ListItem("Biñan", "Biñan"));
+                ddlCity.Items.Add(new ListItem("Cabuyao", "Cabuyao"));
+                ddlCity.Items.Add(new ListItem("Calaca", "Calaca"));
+                ddlCity.Items.Add(new ListItem("Calamba", "Calamba"));
+                ddlCity.Items.Add(new ListItem("Carmona", "Carmona"));
+                ddlCity.Items.Add(new ListItem("Dasmariñas", "Dasmariñas"));
+                ddlCity.Items.Add(new ListItem("General Trias", "General Trias"));
+                ddlCity.Items.Add(new ListItem("Imus", "Imus"));
+                ddlCity.Items.Add(new ListItem("Lipa", "Lipa"));
+                ddlCity.Items.Add(new ListItem("San Pablo", "San Pablo"));
+                ddlCity.Items.Add(new ListItem("San Pedro", "San Pedro"));
+                ddlCity.Items.Add(new ListItem("Santa Rosa", "Santa Rosa"));
+                ddlCity.Items.Add(new ListItem("Santo Tomas", "Santo Tomas"));
+                ddlCity.Items.Add(new ListItem("Tagaytay", "Tagaytay"));
+                ddlCity.Items.Add(new ListItem("Tanauan", "Tanauan"));
+                ddlCity.Items.Add(new ListItem("Tayabas", "Tayabas"));
+                ddlCity.Items.Add(new ListItem("Trece Martires", "Trece Martires"));
             }
             else if (selectedRegion == "Region IV-B")
             {
@@ -308,22 +353,39 @@ namespace RRCManagementSystem
             {
                 ddlCity.Items.Add(new ListItem("Legazpi", "Legazpi"));
                 ddlCity.Items.Add(new ListItem("Naga", "Naga"));
+                ddlCity.Items.Add(new ListItem("Iriga", "Iriga"));
+                ddlCity.Items.Add(new ListItem("Ligao", "Ligao"));
+                ddlCity.Items.Add(new ListItem("Masbate City", "Masbate City"));
+                ddlCity.Items.Add(new ListItem("Sorsogon City", "Sorsogon City"));
+                ddlCity.Items.Add(new ListItem("Tabaco", "Tabaco"));
             }
             else if (selectedRegion == "Region VI")
             {
                 ddlCity.Items.Add(new ListItem("Iloilo City", "Iloilo City"));
+                ddlCity.Items.Add(new ListItem("Passi", "Passi"));
                 ddlCity.Items.Add(new ListItem("Bacolod", "Bacolod"));
+                ddlCity.Items.Add(new ListItem("Roxas City", "Roxas City"));
             }
             else if (selectedRegion == "Region VII")
             {
                 ddlCity.Items.Add(new ListItem("Cebu City", "Cebu City"));
                 ddlCity.Items.Add(new ListItem("Dumaguete", "Dumaguete"));
+                ddlCity.Items.Add(new ListItem("Lapu-Lapu City", "Lapu-Lapu City"));
+                ddlCity.Items.Add(new ListItem("Mandaue", "Mandaue"));
+                ddlCity.Items.Add(new ListItem("Bogo", "Bogo"));
+                ddlCity.Items.Add(new ListItem("Carcar", "Carcar"));
+                ddlCity.Items.Add(new ListItem("Danao", "Danao"));
+                ddlCity.Items.Add(new ListItem("Naga", "Naga"));
+                ddlCity.Items.Add(new ListItem("Tagbilaran", "Tagbilaran"));
+                ddlCity.Items.Add(new ListItem("Talisay", "Talisay"));
+                ddlCity.Items.Add(new ListItem("Toledo", "Toledo"));
             }
             else
             {
                 ddlCity.Items.Add(new ListItem("No Cities Available", ""));
             }
         }
+
 
         /* ========================= VALIDATION HELPERS ========================= */
         private static readonly HashSet<string> AllowedExactDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

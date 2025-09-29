@@ -130,15 +130,15 @@
 <script type="text/javascript">
     const regionCities = {
         "NCR": ["Quezon City", "Manila", "Makati", "Caloocan", "Las Piñas", "Pasig",
-            "Taguig", "Valenzuela", "Pasay", "Marikina", "Muntinlupa", "Navotas", "San Juan", "Pateros"],
-        "Region I": ["Vigan", "San Fernando", "Dagupan"],
-        "Region II": ["Tuguegarao", "Ilagan"],
-        "Region III": ["San Fernando", "Angeles"],
-        "Region IV-A": ["Cavite", "Batangas"],
+            "Taguig", "Valenzuela", "Pasay", "Malabon", "Mandaluyong", "Marikina", "Muntinlupa", "Navotas", "San Juan", "Pateros", "Parañaque"],
+        "Region I": ["Alaminos", "Batac", "Candon", "Laoag", "Vigan", "San Fernando", "San Carlos", "Dagupan", "Urdaneta"],
+        "Region II": ["Cauayan", "Tuguegarao", "Ilagan", "Santiago"],
+        "Region III": ["San Fernando", "Angeles", "Olongapo", "Balanga", "Baliwag", "Cabanatuan", "Gapan", "Mabalacat", "Malolos", "Meycauayan", "Muñoz", "Palayan", "San Jose", "San Jose del Monte", "Tarlac City"],
+        "Region IV-A": ["Cavite", "Batangas", "Lucena", "Antipolo", "Bacoor", "Biñan", "Cabuyao", "Calaca", "Calamba", "Carmona", "Dasmariñas", "General Trias", "Imus", "Lipa", "San Pablo", "San Pedro", "Santa Rosa", "Santo Tomas", "Tagaytay", "Tanauan", "Tayabas", "Trece Martires"],
         "Region IV-B": ["Puerto Princesa", "Calapan"],
-        "Region V": ["Legazpi", "Naga"],
-        "Region VI": ["Iloilo City", "Bacolod"],
-        "Region VII": ["Cebu City", "Dumaguete"]
+        "Region V": ["Legazpi", "Naga", "Iriga", "Ligao", "Masbate City", "Sorsogon City", "Tabaco"],
+        "Region VI": ["Iloilo City", "Passi", "Bacolod", "Roxas City"],
+        "Region VII": ["Cebu City", "Dumaguete", "Lapu-Lapu City", "Mandaue", "Bogo", "Carcar", "Danao", "Naga", "Tagbilaran", "Talisay", "Toledo"],
     };
 
     function loadCitiesForRegion(regionValue) {

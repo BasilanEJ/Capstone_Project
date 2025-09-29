@@ -7,6 +7,7 @@ using System.Data.SqlClient;
 using System.Net;
 using System.Net.Mail;
 using System.Text.RegularExpressions;   // email shape check
+using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -273,84 +274,92 @@ namespace RRCManagementSystem
         {
             try
             {
-                // Fetch credentials from App.config or Web.config for improved security
+                // ✅ Fetch credentials from Web.config or App.config
                 string fromEmail = ConfigurationManager.AppSettings["emailFrom"] ?? "rrctermiteandpestcontrol@gmail.com";
                 string appPassword = ConfigurationManager.AppSettings["emailPassword"] ?? "";
 
-                // The reset link is now for the client role
-                string resetLink = $"https://rrcmngmnt.com/ResetPassword.aspx?type=client&token={token}";
+                // ✅ Generate the reset link
+                string resetLink = $"https://rrcmngmnt.com/ResetPassword.aspx?type=client&token={HttpUtility.UrlEncode(token)}";
                 string subject = "Set Your Password - RRC Management System";
 
-                // Updated HTML body with a professional, table-based layout and inline CSS for email client compatibility.
-                // The role is now hardcoded as "Client" as per the new logic.
+                // ✅ Simplified and clean HTML email template with full inline styles
                 string body = $@"
-<!DOCTYPE html PUBLIC ""-//W3C//DTD XHTML 1.0 Transitional//EN"" ""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"">
-<html xmlns=""http://www.w3.org/1999/xhtml"">
+<!DOCTYPE html>
+<html>
 <head>
-    <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"" />
-    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
-    <title>Set Your Password - RRC Management System</title>
-    <style type=""text/css"">
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin: 0; padding: 0; background-color: #f4f7fa; }}
-        table {{ border-collapse: collapse; }}
-        a {{ text-decoration: none; }}
-        .button {{
-            background-color: #2b6cb0;
-            color: #ffffff;
-            font-size: 16px;
-            font-weight: bold;
-            padding: 12px 24px;
-            border-radius: 6px;
-            display: inline-block;
-        }}
-        .link-text {{ color: #2b6cb0; text-decoration: underline; word-break: break-all; }}
-        .content-box {{ background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); padding: 30px; }}
-        .header {{ background-color: #1a202c; padding: 20px 0; }}
-        .footer {{ font-size: 12px; color: #718096; margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; }}
-    </style>
+<meta http-equiv='Content-Type' content='text/html; charset=UTF-8' />
+<meta name='viewport' content='width=device-width, initial-scale=1.0' />
+<title>Set Your Password - RRC Management System</title>
 </head>
-<body style=""margin: 0; padding: 0; background-color: #f4f7fa;"">
-    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"">
-        <tr>
-            <td align=""center"" style=""padding: 20px;"">
-                <table role=""presentation"" width=""600"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""max-width: 600px; width: 100%;"">
-                    <tr>
-                        <td align=""center"" style=""padding-bottom: 20px;"">
-                            <h1 style=""color: #2b6cb0; font-size: 28px; margin: 0;"">RRC Management System</h1>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style=""padding: 30px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);"">
-                            <h2 style=""color: #2d3748; font-size: 24px; margin: 0 0 15px;"">Welcome to RRC Management System</h2>
-                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">Hello,</p>
-                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">You have been registered as a <strong>Client</strong>. To get started, you'll need to set your password.</p>
-                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px;"">Please click the button below to continue:</p>
-                            <p align=""center"" style=""margin: 0; text-align: center;"">
-                                <a href=""{resetLink}"" class=""button"" style=""background-color: #2b6cb0; color: #ffffff; font-size: 16px; font-weight: bold; padding: 12px 24px; border-radius: 6px; display: inline-block;"">Set Password</a>
-                            </p>
-                            <p style=""color: #4a5568; font-size: 14px; line-height: 1.6; margin: 30px 0 15px; text-align: center;"">If the button does not work, you can copy and paste the following URL into your browser:</p>
-                            <p style=""text-align: center; font-size: 14px; margin: 0;""><a href=""{resetLink}"" class=""link-text"" style=""color: #2b6cb0; text-decoration: underline; word-break: break-all;"">{resetLink}</a></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td align=""center"" style=""padding-top: 20px;"">
-                            <p style=""font-size: 12px; color: #718096; margin: 0; text-align: center;"">
-                                This link will expire in 1 hour. If you did not request this, you can safely ignore this email.
-                                <br/><br/>
-                                &copy; 2024 RRC Management System. All rights reserved.
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
+<body style='margin:0; padding:0; background-color:#f4f7fa; font-family: Arial, sans-serif;'>
+
+<table width='100%' cellpadding='0' cellspacing='0' border='0'>
+    <tr>
+        <td align='center' style='padding:20px;'>
+            <table width='600' cellpadding='0' cellspacing='0' border='0' style='max-width:600px; width:100%; background:#ffffff; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.05);'>
+                
+                <!-- HEADER -->
+                <tr>
+                    <td align='center' style='padding:20px; background-color:#1a202c; border-top-left-radius:8px; border-top-right-radius:8px;'>
+                        <h1 style='color:#ffffff; font-size:24px; margin:0;'>RRC Management System</h1>
+                    </td>
+                </tr>
+
+                <!-- BODY -->
+                <tr>
+                    <td style='padding:30px;'>
+                        <h2 style='color:#2d3748; font-size:22px; margin:0 0 15px;'>Welcome!</h2>
+                        <p style='color:#4a5568; font-size:16px; line-height:1.6; margin:0 0 15px;'>Hello,</p>
+                        <p style='color:#4a5568; font-size:16px; line-height:1.6; margin:0 0 15px;'>
+                            You have been registered as a <strong>Client</strong>. 
+                            To get started, you'll need to set your password.
+                        </p>
+                        <p style='color:#4a5568; font-size:16px; line-height:1.6; margin:0 0 25px;'>
+                            Please click the button below to continue:
+                        </p>
+
+                        <!-- BUTTON -->
+                        <p style='text-align:center; margin:0 0 30px;'>
+                            <a href='{resetLink}' 
+                               style='background-color:#2b6cb0; color:#ffffff; font-size:16px; font-weight:bold; padding:12px 24px; 
+                                      border-radius:6px; display:inline-block; text-align:center; text-decoration:none;'>
+                               Set Password
+                            </a>
+                        </p>
+
+                        <!-- PLAIN URL -->
+                        <p style='color:#4a5568; font-size:14px; line-height:1.6; margin:20px 0 10px; text-align:center;'>
+                            If the button does not work, copy and paste this URL into your browser:
+                        </p>
+                        <p style='text-align:center; font-size:14px; word-break:break-word; margin:0;'>
+                            <a href='{resetLink}' style='color:#2b6cb0; text-decoration:underline;'>{resetLink}</a>
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- FOOTER -->
+                <tr>
+                    <td align='center' style='padding:15px; background:#f4f7fa; border-top:1px solid #e2e8f0;'>
+                        <p style='font-size:12px; color:#718096; margin:0;'>
+                            This link will expire in 1 hour. If you did not request this, you can safely ignore this email.
+                            <br/><br/>
+                            &copy; {DateTime.Now.Year} RRC Management System. All rights reserved.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+
 </body>
 </html>";
 
-                // Specify TLS 1.2 for better security and compatibility.
+       
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
+                // ✅ Send the email
                 using (var mail = new MailMessage())
                 {
                     mail.From = new MailAddress(fromEmail, "RRC Management System");
@@ -367,15 +376,17 @@ namespace RRCManagementSystem
                         smtp.Send(mail);
                     }
                 }
+
                 return true;
             }
             catch (Exception ex)
             {
-                // Log the exception to help with debugging and not just swallow the error.
-                System.Diagnostics.Debug.WriteLine("Email error: " + ex.Message);
+                // Log for debugging
+                System.Diagnostics.Debug.WriteLine("Email sending error: " + ex.Message);
                 return false;
             }
         }
+
 
 
 
@@ -528,6 +539,7 @@ Swal.fire({{
         {
             ddlCity.Items.Clear();
             ddlCity.Items.Add(new ListItem("-- Select City --", ""));
+
             if (selectedRegion == "NCR")
             {
                 ddlCity.Items.Add(new ListItem("Quezon City", "Quezon City"));
@@ -539,32 +551,76 @@ Swal.fire({{
                 ddlCity.Items.Add(new ListItem("Taguig", "Taguig"));
                 ddlCity.Items.Add(new ListItem("Valenzuela", "Valenzuela"));
                 ddlCity.Items.Add(new ListItem("Pasay", "Pasay"));
+                ddlCity.Items.Add(new ListItem("Malabon", "Malabon"));
+                ddlCity.Items.Add(new ListItem("Mandaluyong", "Mandaluyong"));
                 ddlCity.Items.Add(new ListItem("Marikina", "Marikina"));
                 ddlCity.Items.Add(new ListItem("Muntinlupa", "Muntinlupa"));
                 ddlCity.Items.Add(new ListItem("Navotas", "Navotas"));
                 ddlCity.Items.Add(new ListItem("San Juan", "San Juan"));
                 ddlCity.Items.Add(new ListItem("Pateros", "Pateros"));
+                ddlCity.Items.Add(new ListItem("Parañaque", "Parañaque"));
             }
             else if (selectedRegion == "Region I")
             {
+                ddlCity.Items.Add(new ListItem("Alaminos", "Alaminos"));
+                ddlCity.Items.Add(new ListItem("Batac", "Batac"));
+                ddlCity.Items.Add(new ListItem("Candon", "Candon"));
+                ddlCity.Items.Add(new ListItem("Laoag", "Laoag"));
                 ddlCity.Items.Add(new ListItem("Vigan", "Vigan"));
                 ddlCity.Items.Add(new ListItem("San Fernando", "San Fernando"));
+                ddlCity.Items.Add(new ListItem("San Carlos", "San Carlos"));
                 ddlCity.Items.Add(new ListItem("Dagupan", "Dagupan"));
+                ddlCity.Items.Add(new ListItem("Urdaneta", "Urdaneta"));
             }
             else if (selectedRegion == "Region II")
             {
+                ddlCity.Items.Add(new ListItem("Cauayan", "Cauayan"));
                 ddlCity.Items.Add(new ListItem("Tuguegarao", "Tuguegarao"));
                 ddlCity.Items.Add(new ListItem("Ilagan", "Ilagan"));
+                ddlCity.Items.Add(new ListItem("Santiago", "Santiago"));
             }
             else if (selectedRegion == "Region III")
             {
                 ddlCity.Items.Add(new ListItem("San Fernando", "San Fernando"));
                 ddlCity.Items.Add(new ListItem("Angeles", "Angeles"));
+                ddlCity.Items.Add(new ListItem("Olongapo", "Olongapo"));
+                ddlCity.Items.Add(new ListItem("Balanga", "Balanga"));
+                ddlCity.Items.Add(new ListItem("Baliwag", "Baliwag"));
+                ddlCity.Items.Add(new ListItem("Cabanatuan", "Cabanatuan"));
+                ddlCity.Items.Add(new ListItem("Gapan", "Gapan"));
+                ddlCity.Items.Add(new ListItem("Mabalacat", "Mabalacat"));
+                ddlCity.Items.Add(new ListItem("Malolos", "Malolos"));
+                ddlCity.Items.Add(new ListItem("Meycauayan", "Meycauayan"));
+                ddlCity.Items.Add(new ListItem("Muñoz", "Muñoz"));
+                ddlCity.Items.Add(new ListItem("Palayan", "Palayan"));
+                ddlCity.Items.Add(new ListItem("San Jose", "San Jose"));
+                ddlCity.Items.Add(new ListItem("San Jose del Monte", "San Jose del Monte"));
+                ddlCity.Items.Add(new ListItem("Tarlac City", "Tarlac City"));
             }
             else if (selectedRegion == "Region IV-A")
             {
                 ddlCity.Items.Add(new ListItem("Cavite", "Cavite"));
                 ddlCity.Items.Add(new ListItem("Batangas", "Batangas"));
+                ddlCity.Items.Add(new ListItem("Lucena", "Lucena"));
+                ddlCity.Items.Add(new ListItem("Antipolo", "Antipolo"));
+                ddlCity.Items.Add(new ListItem("Bacoor", "Bacoor"));
+                ddlCity.Items.Add(new ListItem("Biñan", "Biñan"));
+                ddlCity.Items.Add(new ListItem("Cabuyao", "Cabuyao"));
+                ddlCity.Items.Add(new ListItem("Calaca", "Calaca"));
+                ddlCity.Items.Add(new ListItem("Calamba", "Calamba"));
+                ddlCity.Items.Add(new ListItem("Carmona", "Carmona"));
+                ddlCity.Items.Add(new ListItem("Dasmariñas", "Dasmariñas"));
+                ddlCity.Items.Add(new ListItem("General Trias", "General Trias"));
+                ddlCity.Items.Add(new ListItem("Imus", "Imus"));
+                ddlCity.Items.Add(new ListItem("Lipa", "Lipa"));
+                ddlCity.Items.Add(new ListItem("San Pablo", "San Pablo"));
+                ddlCity.Items.Add(new ListItem("San Pedro", "San Pedro"));
+                ddlCity.Items.Add(new ListItem("Santa Rosa", "Santa Rosa"));
+                ddlCity.Items.Add(new ListItem("Santo Tomas", "Santo Tomas"));
+                ddlCity.Items.Add(new ListItem("Tagaytay", "Tagaytay"));
+                ddlCity.Items.Add(new ListItem("Tanauan", "Tanauan"));
+                ddlCity.Items.Add(new ListItem("Tayabas", "Tayabas"));
+                ddlCity.Items.Add(new ListItem("Trece Martires", "Trece Martires"));
             }
             else if (selectedRegion == "Region IV-B")
             {
@@ -575,22 +631,39 @@ Swal.fire({{
             {
                 ddlCity.Items.Add(new ListItem("Legazpi", "Legazpi"));
                 ddlCity.Items.Add(new ListItem("Naga", "Naga"));
+                ddlCity.Items.Add(new ListItem("Iriga", "Iriga"));
+                ddlCity.Items.Add(new ListItem("Ligao", "Ligao"));
+                ddlCity.Items.Add(new ListItem("Masbate City", "Masbate City"));
+                ddlCity.Items.Add(new ListItem("Sorsogon City", "Sorsogon City"));
+                ddlCity.Items.Add(new ListItem("Tabaco", "Tabaco"));
             }
             else if (selectedRegion == "Region VI")
             {
                 ddlCity.Items.Add(new ListItem("Iloilo City", "Iloilo City"));
+                ddlCity.Items.Add(new ListItem("Passi", "Passi"));
                 ddlCity.Items.Add(new ListItem("Bacolod", "Bacolod"));
+                ddlCity.Items.Add(new ListItem("Roxas City", "Roxas City"));
             }
             else if (selectedRegion == "Region VII")
             {
                 ddlCity.Items.Add(new ListItem("Cebu City", "Cebu City"));
                 ddlCity.Items.Add(new ListItem("Dumaguete", "Dumaguete"));
+                ddlCity.Items.Add(new ListItem("Lapu-Lapu City", "Lapu-Lapu City"));
+                ddlCity.Items.Add(new ListItem("Mandaue", "Mandaue"));
+                ddlCity.Items.Add(new ListItem("Bogo", "Bogo"));
+                ddlCity.Items.Add(new ListItem("Carcar", "Carcar"));
+                ddlCity.Items.Add(new ListItem("Danao", "Danao"));
+                ddlCity.Items.Add(new ListItem("Naga", "Naga"));
+                ddlCity.Items.Add(new ListItem("Tagbilaran", "Tagbilaran"));
+                ddlCity.Items.Add(new ListItem("Talisay", "Talisay"));
+                ddlCity.Items.Add(new ListItem("Toledo", "Toledo"));
             }
             else
             {
                 ddlCity.Items.Add(new ListItem("No Cities Available", ""));
             }
         }
+
 
         private void ClearForm()
         {
