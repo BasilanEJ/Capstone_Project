@@ -9,7 +9,6 @@ using System.Net.Mail;
 using System.Web;
 using System.Web.Script.Serialization;
 
-
 namespace RRCManagementSystem
 {
     public partial class VerifyTOTP : System.Web.UI.Page
@@ -29,7 +28,7 @@ namespace RRCManagementSystem
                 lblInfo.Text = "";
                 pnlCaptcha.Visible = false;
 
-                // Clear authenticated session values
+                // Clear any authenticated session values
                 Session.Remove("IsAuthenticated");
                 Session.Remove("UserID");
                 Session.Remove("Role");
@@ -165,27 +164,44 @@ namespace RRCManagementSystem
         }
 
         /* ==============================================================
-           COMPLETE AUTHENTICATION
+           COMPLETE AUTHENTICATION (UPDATED FOR SINGLE-SESSION)
            ============================================================== */
         private void CompleteAuthentication(int userID, string role, string name, string email, string method)
         {
-            // Set final session values
+            Guid newSessionID = Guid.NewGuid();
+
+            // ✅ Update the DB with the new session ID
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand(@"
+                UPDATE dbo.Users
+                SET CurrentSessionID = @SessionID,
+                    CurrentSessionAt = GETDATE()
+                WHERE UserID = @UserID", conn))
+            {
+                cmd.Parameters.AddWithValue("@SessionID", newSessionID);
+                cmd.Parameters.AddWithValue("@UserID", userID);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+
+            // ✅ Set final session values
             Session["UserID"] = userID;
             Session["Role"] = role;
             Session["Name"] = name;
             Session["Email"] = email;
             Session["IsAuthenticated"] = true;
+            Session["SessionID"] = newSessionID;  // <-- IMPORTANT for Global.asax check
 
-            // Clear pending 2FA session values
+            // ✅ Clear pending 2FA session values
             Session.Remove("Pending2FA_UserID");
             Session.Remove("Pending2FA_Email");
             Session.Remove("Pending2FA_Name");
             Session.Remove("Pending2FA_Role");
 
-            // Add audit log
+            // ✅ Add audit log
             AddAuditLog(userID, $"{role} {name} completed 2FA verification via {method}.");
 
-            // Determine redirect based on role
+            // ✅ Determine redirect based on role
             string redirect;
             if (role.Equals("RootAdmin", StringComparison.OrdinalIgnoreCase))
             {
@@ -197,14 +213,13 @@ namespace RRCManagementSystem
             }
             else
             {
-                redirect = "Dashboard.aspx"; // Default for Admin, Inspector, etc.
+                redirect = "Dashboard.aspx"; // Default for Admin and others
             }
 
-            // Redirect to the appropriate dashboard
+            // ✅ Redirect safely
             Response.Redirect(redirect, false);
             Context.ApplicationInstance.CompleteRequest();
         }
-
 
         /* ==============================================================
            VERIFY EMAIL CODE
@@ -354,6 +369,5 @@ namespace RRCManagementSystem
                 return jsonData["success"] == true;
             }
         }
-
     }
 }

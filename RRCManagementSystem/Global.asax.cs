@@ -31,9 +31,12 @@ namespace RRCManagementSystem
         {
             try
             {
-                string path = HttpContext.Current.Request.Url.AbsolutePath.ToLower();
+                var ctx = HttpContext.Current;
+                if (ctx == null || ctx.Session == null) return;
 
-                // Pages allowed even during maintenance
+                string path = ctx.Request.Url.AbsolutePath.ToLower();
+
+                // ======= STEP 1: Maintenance Mode Enforcement =======
                 string[] allowedPages = new string[]
                 {
                     "/systemsettings.aspx",
@@ -45,25 +48,72 @@ namespace RRCManagementSystem
                     "/scriptresource.axd"
                 };
 
-                // Robust matching using IndexOf for case-insensitive check
                 bool isAllowedPage = allowedPages.Any(page => path.IndexOf(page, StringComparison.OrdinalIgnoreCase) >= 0);
 
-                // Check if current user is RootAdmin (ensure Session is not null)
-                bool isRootAdmin = HttpContext.Current.Session != null &&
-                                   HttpContext.Current.Session["Role"] != null &&
-                                   string.Equals(HttpContext.Current.Session["Role"].ToString(), "RootAdmin", StringComparison.OrdinalIgnoreCase);
+                bool isRootAdmin = ctx.Session["Role"] != null &&
+                                   string.Equals(ctx.Session["Role"].ToString(), "RootAdmin", StringComparison.OrdinalIgnoreCase);
 
-                // If not allowed page and not RootAdmin, enforce maintenance
                 if (!isAllowedPage && !isRootAdmin)
                 {
                     string maintenanceMode = Application["MaintenanceMode"]?.ToString() ?? "false";
-
                     if (string.Equals(maintenanceMode, "true", StringComparison.OrdinalIgnoreCase))
                     {
-                        HttpContext.Current.Response.Redirect("~/Maintenance.aspx", false);
-                        HttpContext.Current.ApplicationInstance.CompleteRequest();
+                        ctx.Response.Redirect("~/Maintenance.aspx", false);
+                        ctx.ApplicationInstance.CompleteRequest();
+                        return; // Stop here if in maintenance
                     }
                 }
+
+                // ======= STEP 2: Single-Session Enforcement =======
+                // Skip login/logout pages
+                if (path.Contains("login.aspx") || path.Contains("logout.aspx") || path.Contains("error")) return;
+
+                if (ctx.Session["SessionID"] != null)
+                {
+                    Guid currentSessionID;
+                    if (!Guid.TryParse(ctx.Session["SessionID"].ToString(), out currentSessionID))
+                        return;
+
+                    int id;
+                    string sql;
+
+                    // ✅ Determine which table to check
+                    if (ctx.Session["ClientID"] != null)
+                    {
+                        // Logged in as Client
+                        id = Convert.ToInt32(ctx.Session["ClientID"]);
+                        sql = "SELECT CurrentSessionID FROM dbo.Clients WHERE ClientID = @ID";
+                    }
+                    else if (ctx.Session["UserID"] != null)
+                    {
+                        // Logged in as Admin/SuperAdmin/Inspector
+                        id = Convert.ToInt32(ctx.Session["UserID"]);
+                        sql = "SELECT CurrentSessionID FROM dbo.Users WHERE UserID = @ID";
+                    }
+                    else
+                    {
+                        return; // No valid session
+                    }
+
+                    // ✅ Now check the correct table
+                    using (var conn = new SqlConnection(connectionString))
+                    {
+                        conn.Open();
+                        using (var cmd = new SqlCommand(sql, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@ID", id);
+                            var dbSession = cmd.ExecuteScalar();
+
+                            if (dbSession == null || (Guid)dbSession != currentSessionID)
+                            {
+                                ctx.Session.Clear();
+                                ctx.Session.Abandon();
+                                ctx.Response.Redirect("~/Login.aspx?msg=loggedOutByAnotherDevice", true);
+                            }
+                        }
+                    }
+                }
+
             }
             catch (Exception ex)
             {
@@ -116,6 +166,7 @@ namespace RRCManagementSystem
             }
         }
 
+
         /// <summary>
         /// Refresh the maintenance mode cache immediately
         /// Call this after toggling the checkbox in SystemSettings.aspx
@@ -124,26 +175,36 @@ namespace RRCManagementSystem
         {
             try
             {
-                var app = HttpContext.Current?.ApplicationInstance;
+                // Use Application instead of ApplicationInstance
+                var app = HttpContext.Current?.Application;
                 if (app != null)
                 {
                     string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
                     using (SqlConnection conn = new SqlConnection(connectionString))
                     {
                         conn.Open();
                         using (SqlCommand cmd = new SqlCommand(
-                            "SELECT SettingValue FROM SettingSystem WHERE SettingKey='MaintenanceMode'", conn))
+                            "SELECT SettingValue FROM SettingSystem WHERE SettingKey = 'MaintenanceMode'", conn))
                         {
                             var result = cmd.ExecuteScalar()?.ToString();
-                            app.Application["MaintenanceMode"] = string.Equals(result, "true", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
+                            string newState = string.Equals(result, "true", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
+
+                            // ✅ Update application-wide cache
+                            app["MaintenanceMode"] = newState;
+
+                            // Debug logging for testing
+                            System.Diagnostics.Debug.WriteLine("MaintenanceMode updated to: " + newState);
                         }
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore caching errors to avoid breaking requests
+                // Log errors but don't break application flow
+                System.Diagnostics.Debug.WriteLine("RefreshMaintenanceModeCache Error: " + ex.Message);
             }
         }
+
     }
 }

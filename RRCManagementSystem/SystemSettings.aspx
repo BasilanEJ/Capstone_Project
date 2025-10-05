@@ -64,39 +64,45 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var switchToggle = document.getElementById('switchToggle');
-            var btn = document.getElementById('<%= btnToggle.ClientID %>');
+  <script>
+      document.addEventListener('DOMContentLoaded', function () {
+          var switchToggle = document.getElementById('switchToggle');
+          var btn = document.getElementById('<%= btnToggle.ClientID %>');
 
-            var modal = new bootstrap.Modal(document.getElementById('confirmModal'));
-            var input = document.getElementById('confirmInput');
-            var confirmBtn = document.getElementById('modalConfirm');
+        var modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        var input = document.getElementById('confirmInput');
+        var confirmBtn = document.getElementById('modalConfirm');
 
-            // Set initial state from server (server renders class "on" if maintenance enabled)
-            var isOn = switchToggle.classList.contains('on');
+        // Set initial state from server (server renders class "on" if maintenance enabled)
+        var isOn = switchToggle.classList.contains('on');
 
-            switchToggle.addEventListener('click', function () {
-                modal.show();
-                input.value = "";
-                input.focus();
-            });
-
-            confirmBtn.addEventListener('click', function () {
-                if (input.value.trim().toUpperCase() === "CONFIRM") {
-                    // Toggle visual state
-                    isOn = !switchToggle.classList.contains('on');
-                    switchToggle.className = isOn ? "switch on" : "switch";
-
-                    // Trigger server-side postback to save the new state
-                    modal.hide();
-                    btn.click();
-                } else {
-                    alert('You must type CONFIRM to proceed.');
-                    input.focus();
-                }
-            });
+        switchToggle.addEventListener('click', function () {
+            console.log("Switch clicked, opening modal...");
+            modal.show();
+            input.value = "";
+            input.focus();
         });
-    </script>
+
+        confirmBtn.addEventListener('click', function () {
+            console.log("Confirm button clicked.");
+            if (input.value.trim().toUpperCase() === "CONFIRM") {
+                console.log("CONFIRM matched. Triggering postback...");
+
+                // Toggle visual state
+                isOn = !switchToggle.classList.contains('on');
+                switchToggle.className = isOn ? "switch on" : "switch";
+
+                // Trigger server-side postback
+                modal.hide();
+                btn.click();
+            } else {
+                alert('You must type CONFIRM to proceed.');
+                input.focus();
+            }
+        });
+    });
+  </script>
+
+
 
 </asp:Content>

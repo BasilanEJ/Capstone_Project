@@ -23,17 +23,26 @@ namespace RRCManagementSystem
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
-            string role = Session["Role"].ToString();
+            string role = Session["Role"]?.ToString() ?? string.Empty;
 
-            // 🔹 NEW: Check if user status is still Active or Available
+            // 🔹 1) Check if user status is still Active or Available
             if (!IsUserStatusStillValid(userId))
             {
                 ForceLogout("Your account status has been changed. Please contact the administrator.");
-                return; // stop further execution
+                return;
             }
 
-            // Admin master is for Admin role only
-            if (!role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            // 🔹 2) Single-Session Enforcement
+            if (!IsUserSessionValid(userId))
+            {
+                ForceLogout("You were logged out because your account was accessed from another device.");
+                return;
+            }
+
+            // 🎯 Use a list for more maintainable role checks
+            var excludedRoles = new List<string> { "SuperAdmin", "RootAdmin", "Inspector" };
+
+            if (excludedRoles.Contains(role, StringComparer.OrdinalIgnoreCase))
             {
                 SafeRedirect("~/Login.aspx");
                 return;
@@ -74,6 +83,37 @@ namespace RRCManagementSystem
                 return status != null &&
                        (status.Equals("Active", StringComparison.OrdinalIgnoreCase) ||
                         status.Equals("Available", StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        /// <summary>
+        /// Single-session validation - ensures the current ASP.NET session matches DB
+        /// </summary>
+        private bool IsUserSessionValid(int userId)
+        {
+            if (Session["SessionID"] == null) return false;
+
+            try
+            {
+                Guid currentSessionID;
+                if (!Guid.TryParse(Session["SessionID"].ToString(), out currentSessionID))
+                    return false;
+
+                using (var con = new SqlConnection(Cs))
+                using (var cmd = new SqlCommand("SELECT CurrentSessionID FROM Users WHERE UserID = @UserID", con))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+                    con.Open();
+
+                    var dbSession = cmd.ExecuteScalar();
+
+                    // If there's no session or mismatch -> invalid
+                    return dbSession != null && (Guid)dbSession == currentSessionID;
+                }
+            }
+            catch
+            {
+                return false; // Treat any error as invalid to force logout
             }
         }
 

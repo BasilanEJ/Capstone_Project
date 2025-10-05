@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Configuration;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
 using System.Web.Security;
@@ -7,6 +9,8 @@ namespace RRCManagementSystem
 {
     public partial class RootAdmin : System.Web.UI.MasterPage
     {
+        private static readonly string Cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
         protected void Page_Load(object sender, EventArgs e)
         {
             // Get current page file name
@@ -14,7 +18,6 @@ namespace RRCManagementSystem
             var role = Session["Role"] as string;
 
             // --- RootAdmin access check ---
-            // Only allow users with Role="RootAdmin" and a valid UserID
             if (Session["UserID"] == null || !string.Equals(role ?? "", "RootAdmin", StringComparison.OrdinalIgnoreCase))
             {
                 // If session invalid, redirect to Login
@@ -22,10 +25,18 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // --- Only run once ---
+            int rootAdminId = Convert.ToInt32(Session["UserID"]);
+
+            // 🔹 1) Single-session enforcement
+            if (!IsRootAdminSessionValid(rootAdminId))
+            {
+                ForceLogout("You were logged out because your account was accessed from another device.");
+                return;
+            }
+
+            // --- Only run once on first load ---
             if (!IsPostBack)
             {
-                // Display welcome message safely
                 lblRootAdminName.Text = "Welcome, " + (Session["Name"] ?? "Root Admin");
             }
 
@@ -38,31 +49,51 @@ namespace RRCManagementSystem
         }
 
         /// <summary>
-        /// Redirects safely without causing ThreadAbortException
+        /// Checks if the current RootAdmin session matches the one stored in the database
         /// </summary>
-        private void SafeRedirect(string url)
+        private bool IsRootAdminSessionValid(int userId)
         {
-            Response.Redirect(url, false);
-            Context.ApplicationInstance.CompleteRequest();
+            if (Session["SessionID"] == null) return false;
+
+            try
+            {
+                Guid currentSessionID;
+                if (!Guid.TryParse(Session["SessionID"].ToString(), out currentSessionID))
+                    return false;
+
+                using (var conn = new SqlConnection(Cs))
+                using (var cmd = new SqlCommand("SELECT CurrentSessionID FROM Users WHERE UserID = @UserID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+                    conn.Open();
+
+                    var dbSession = cmd.ExecuteScalar();
+
+                    return dbSession != null && (Guid)dbSession == currentSessionID;
+                }
+            }
+            catch
+            {
+                return false; // Fail-safe: force logout if check fails
+            }
         }
-    
 
-
-/// <summary>
-/// Returns "active" if the current page matches the given page name (for sidebar highlighting).
-/// </summary>
-public string GetActiveClasses(string pageName)
-
+        /// <summary>
+        /// Returns "active" if the current page matches the given page name (for sidebar highlighting).
+        /// </summary>
+        public string GetActiveClasses(string pageName)
         {
             string currentPage = System.IO.Path.GetFileName(Request.Path);
             return string.Equals(currentPage, pageName, StringComparison.OrdinalIgnoreCase) ? "active" : "";
         }
 
         /// <summary>
-        /// Logout logic for RootAdmin. Clears session, cookies, and redirects to Login.
+        /// Force logout if RootAdmin logs in somewhere else or manually logs out
         /// </summary>
-        protected void btnLogout_Click(object sender, EventArgs e)
+        private void ForceLogout(string message)
         {
+            ClearDatabaseSession();
+
             // ---- Clear all Session values ----
             Session.Remove("IsAuthenticated");
             Session.Remove("UserID");
@@ -93,6 +124,9 @@ public string GetActiveClasses(string pageName)
                 Response.Cookies[FormsAuthentication.FormsCookieName].Expires = DateTime.UtcNow.AddDays(-1);
             }
 
+            // Optional: Store message to display on login page
+            Session["LogoutMessage"] = message;
+
             // ---- Prevent Caching after logout ----
             Response.Cache.SetCacheability(HttpCacheability.NoCache);
             Response.Cache.SetNoStore();
@@ -102,8 +136,45 @@ public string GetActiveClasses(string pageName)
         }
 
         /// <summary>
-        /// Safe redirect method to prevent ThreadAbortException.
+        /// Clears CurrentSessionID in the database for this RootAdmin
         /// </summary>
-       
+        private void ClearDatabaseSession()
+        {
+            try
+            {
+                if (Session["UserID"] != null)
+                {
+                    using (var conn = new SqlConnection(Cs))
+                    using (var cmd = new SqlCommand(
+                        "UPDATE Users SET CurrentSessionID = NULL, CurrentSessionAt = NULL WHERE UserID = @UserID", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@UserID", Convert.ToInt32(Session["UserID"]));
+                        conn.Open();
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch
+            {
+                // Fail silently, logout continues
+            }
+        }
+
+        /// <summary>
+        /// Logout button click - manually logs out RootAdmin
+        /// </summary>
+        protected void btnLogout_Click(object sender, EventArgs e)
+        {
+            ForceLogout("You have been logged out successfully.");
+        }
+
+        /// <summary>
+        /// Redirect safely without causing ThreadAbortException
+        /// </summary>
+        private void SafeRedirect(string url)
+        {
+            Response.Redirect(url, false);
+            Context.ApplicationInstance.CompleteRequest();
+        }
     }
 }

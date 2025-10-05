@@ -23,10 +23,17 @@ namespace RRCManagementSystem
 
             int inspectorId = Convert.ToInt32(Session["UserID"]);
 
-            // 🔹 NEW: Check if inspector's status is still valid
+            // 🔹 1) Check if inspector's status is still valid
             if (!IsInspectorStatusStillValid(inspectorId))
             {
                 ForceLogout("Your account status has been changed. Please contact the administrator.");
+                return; // Stop processing the page
+            }
+
+            // 🔹 2) Check if this session is still active (Single-session enforcement)
+            if (!IsInspectorSessionValid(inspectorId))
+            {
+                ForceLogout("You were logged out because your account was accessed from another device.");
                 return; // Stop processing the page
             }
 
@@ -68,6 +75,38 @@ namespace RRCManagementSystem
             catch
             {
                 return false; // If there's an error, treat as invalid for safety
+            }
+        }
+
+        /// <summary>
+        /// Checks whether the inspector's current session matches the one in the database
+        /// </summary>
+        private bool IsInspectorSessionValid(int inspectorId)
+        {
+            if (Session["SessionID"] == null) return false;
+
+            try
+            {
+                Guid currentSessionID;
+                if (!Guid.TryParse(Session["SessionID"].ToString(), out currentSessionID))
+                    return false;
+
+                using (var conn = new SqlConnection(Cs))
+                using (var cmd = new SqlCommand(
+                    "SELECT CurrentSessionID FROM Users WHERE UserID = @UserID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", inspectorId);
+                    conn.Open();
+
+                    var dbSession = cmd.ExecuteScalar();
+
+                    // If there's no session or mismatch -> invalid
+                    return dbSession != null && (Guid)dbSession == currentSessionID;
+                }
+            }
+            catch
+            {
+                return false; // Treat any error as invalid to force logout
             }
         }
 

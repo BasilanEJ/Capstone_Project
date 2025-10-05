@@ -195,18 +195,39 @@ namespace RRCManagementSystem
                                 }
                                 else
                                 {
-                                    // Inspector logs in directly
+
+                                    Guid newSessionID = Guid.NewGuid();
+
+                                    // === Use a NEW connection for the update ===
+                                    using (var updateConn = new SqlConnection(connectionString))
+                                    using (var updateCmd = new SqlCommand(@"
+    UPDATE dbo.Users
+    SET CurrentSessionID = @SessionID,
+        CurrentSessionAt = GETDATE()
+    WHERE UserID = @UserID", updateConn))
+                                    {
+                                        updateCmd.Parameters.AddWithValue("@SessionID", newSessionID);
+                                        updateCmd.Parameters.AddWithValue("@UserID", userID);
+                                        updateConn.Open();
+                                        updateCmd.ExecuteNonQuery();
+                                    }
+
+
+                                    // === Save to ASP.NET Session ===
                                     Session["UserID"] = userID;
                                     Session["Role"] = role;
                                     Session["Name"] = userName;
                                     Session["Email"] = decryptedEmail;
                                     Session["IsAuthenticated"] = true;
+                                    Session["SessionID"] = newSessionID;
 
-                                    AddAuditLog(userID, $"Inspector {userName} logged in.");
+                                    AddAuditLog(userID, $"Inspector {userName} logged in (single session started).");
+
                                     Response.Redirect("~/InspectorDashboard.aspx", false);
                                     Context.ApplicationInstance.CompleteRequest();
                                     return;
                                 }
+
                             }
                             else
                             {
@@ -263,17 +284,39 @@ namespace RRCManagementSystem
                             }
 
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
-                            {
-                                // Successful client login
+                            {   
+                                Guid newSessionID = Guid.NewGuid();
+
+                                using (var updateConn = new SqlConnection(connectionString))
+                                using (var updateCmd = new SqlCommand(@"
+    UPDATE dbo.Clients
+    SET CurrentSessionID = @SessionID,
+        CurrentSessionAt = GETDATE()
+    WHERE ClientID = @ClientID", updateConn))
+                                {
+                                    updateCmd.Parameters.AddWithValue("@SessionID", newSessionID);
+                                    updateCmd.Parameters.AddWithValue("@ClientID", clientId);
+                                    updateConn.Open();
+                                    updateCmd.ExecuteNonQuery();
+                                }
+
+                                // Save to ASP.NET Session
                                 Session["ClientID"] = clientId;
                                 Session["ClientName"] = name;
                                 Session["Email"] = decryptedClientEmail;
+                                Session["Role"] = "Client";             // VERY IMPORTANT
+                                Session["SessionID"] = newSessionID;    // Used for Global.asax check
+
 
                                 LogIPAttempt(ip, true);
+
+                                AddAuditLog(clientId, $"Client {name} logged in (single session started).");
+
                                 Response.Redirect("Home.aspx", false);
                                 Context.ApplicationInstance.CompleteRequest();
                                 return;
                             }
+
                             else
                             {
                                 lblMessage.Text = "⚠ Invalid credentials for client account.";
