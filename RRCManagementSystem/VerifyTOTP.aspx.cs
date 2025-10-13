@@ -211,6 +211,10 @@ namespace RRCManagementSystem
             {
                 redirect = "SuperAdminDashboard.aspx";
             }
+            else if (role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
+            {
+                redirect = "InspectorDashboard.aspx";
+            }
             else
             {
                 redirect = "Dashboard.aspx"; // Default for Admin and others

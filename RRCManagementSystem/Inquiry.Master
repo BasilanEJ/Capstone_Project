@@ -13,7 +13,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 
-
     <!-- Optional per-page head additions -->
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
@@ -44,7 +43,6 @@
         header.top-header { animation: fadeSlideDown .8s ease-in-out; }
 
         /* ===== Layout container responsiveness ===== */
-        /* Make the content beautifully wide on desktops and big screens, but comfortable on mobiles */
         .container { max-width: 1200px; }
         @media (min-width: 1400px) { .container { max-width: 1320px; } }
         @media (min-width: 1600px) { .container { max-width: 1440px; } }
@@ -133,6 +131,192 @@
         .dot:nth-child(2){ animation-delay:.15s; } .dot:nth-child(3){ animation-delay:.3s; }
         @keyframes bounce{ 0%,80%,100%{transform:scale(.8);} 40%{transform:scale(1);} }
 
+        html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Universal responsive safety */
+* {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Floating chat container fix */
+.rrc-chat {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2000;
+  pointer-events: auto;
+  overflow: visible;
+  max-width: calc(100vw - 32px);
+}
+
+/* Prevent animation overflow */
+.rrc-chat .pulse {
+  clip-path: circle(50%);
+  overflow: hidden;
+}
+
+/* Ensure chat panel fits mobile screens */
+.rrc-chat .chat-panel {
+  width: 90vw;
+  max-width: 400px;
+  right: 0;
+  bottom: 80px;
+  border-radius: 12px;
+}
+
+/* Adjust for very small devices */
+@media (max-width: 480px) {
+  .rrc-chat {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .rrc-chat .chat-panel {
+    width: 95vw;
+    bottom: 70px;
+  }
+}
+
+
+        .btn-success {
+          background-color: #28a745;
+          border: none;
+          font-weight: 600;
+          padding: 8px 18px;
+          border-radius: 6px;
+          transition: all 0.3s ease;
+        }
+        .btn-success:hover {
+          background-color: #218838;
+          transform: translateY(-2px);
+        }
+        
+        /* ===== Navbar Buttons ===== */
+        .nav-btn {
+          font-weight: 600;
+          border-radius: 8px;
+          padding: 8px 18px;
+          min-width: 120px;
+          text-align: center;
+          transition: all 0.3s ease;
+        }
+
+        /* ===== Inquire Now Shake Animation ===== */
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+          20%, 40%, 60%, 80% { transform: translateX(3px); }
+        }
+
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.6); }
+          50% { box-shadow: 0 0 10px 5px rgba(40, 167, 69, 0.4); }
+        }
+
+        .btn-success.nav-btn {
+          background-color: #28a745;
+          border: none;
+          animation: shake 2s ease-in-out infinite 2s, pulseGlow 4s infinite;
+        }
+
+        .btn-success.nav-btn:hover {
+          background-color: #218838;
+          transform: scale(1.05);
+          animation: none;
+        }
+
+        .btn-primary.nav-btn {
+          background-color: #0d6efd;
+          border: none;
+        }
+        .btn-primary.nav-btn:hover {
+          background-color: #0b5ed7;
+          transform: translateY(-2px);
+        }
+
+        /* ===== Scroll to Top Button ===== */
+        .scroll-top-btn {
+          position: fixed;
+          bottom: 100px;
+          right: 20px;
+          background-color: #808080;
+          color: white;
+          border: none;
+          border-radius: 50%;
+          width: 56px;
+          height: 56px;
+          font-size: 20px;
+          cursor: pointer;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+          z-index: 1999;
+        }
+
+        .scroll-top-btn:hover {
+          background-color: #0b5ed7;
+          transform: translateY(-3px);
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ===== Responsive Navbar Buttons ===== */
+        @media (max-width: 992px) {
+          .navbar-nav {
+            text-align: center;
+            width: 100%;
+          }
+          .nav-item {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+          .nav-btn {
+            width: 80%;
+            margin: 6px 0;
+            font-size: 15px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .btn-success.nav-btn {
+            animation: pulseGlow 4s infinite;
+          }
+          
+          .scroll-top-btn {
+            width: 50px;
+            height: 50px;
+            font-size: 18px;
+            bottom: 95px;
+          }
+        }
+
+        @media (max-width: 576px) {
+          .nav-btn {
+            width: 90%;
+            font-size: 14px;
+            padding: 10px 0;
+          }
+          
+          .scroll-top-btn {
+            width: 48px;
+            height: 48px;
+            font-size: 16px;
+            bottom: 90px;
+            right: 15px;
+          }
+          
+          .rrc-chat {
+            right: 15px;
+          }
+        }
+
         /* Chat safe-zone on very small screens */
         @media (max-width: 400px){
           .rrc-chat .chat-panel { width: 95vw; }
@@ -143,7 +327,6 @@
 
 <body>
   <form id="form1" runat="server" enctype="multipart/form-data">
-
 
         <!-- Scroll Navbar -->
         <nav class="navbar navbar-expand-lg navbar-light bg-white scroll-navbar" id="scrollNavbar">
@@ -161,9 +344,10 @@
 
                 <!-- Links -->
                 <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                    <ul class="navbar-nav align-items-center">
-                        <li class="nav-item">
-                            <a href="../Login.aspx" class="btn btn-primary ms-3">Login</a>
+                    <ul class="navbar-nav ms-auto align-items-center gap-2">
+                        <li class="nav-item d-flex gap-2 flex-wrap justify-content-center">
+                            <a href="#inquiryForm" class="btn btn-success nav-btn">Inquire Now</a>
+                            <a href="../Login.aspx" class="btn btn-primary nav-btn">Login</a>
                         </li>
                     </ul>
                 </div>
@@ -174,6 +358,11 @@
         <div class="container mt-4">
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </div>
+
+        <!-- ===== Scroll to Top Button ===== -->
+        <button id="scrollToTopBtn" class="scroll-top-btn" aria-label="Scroll to top">
+            <i class="fas fa-arrow-up"></i>
+        </button>
 
         <!-- ===================== Floating Modern Chat Assistant (FAQ-only via Dropdown) ===================== -->
         <div class="rrc-chat" id="rrcChat" aria-live="polite">
@@ -206,7 +395,7 @@
                 <div class="chat-body" id="chatBody">
                     <!-- Welcome message -->
                     <div class="msg bot fade-in">
-                        Hi! I’m your RRC Assistant. Select a question from the dropdown below to see quick answers about bookings, services, or inspections.
+                        Hi! I'm your RRC Assistant. Select a question from the dropdown below to see quick answers about bookings, services, or inspections.
                         <span class="time" data-time></span>
                     </div>
                 </div>
@@ -228,7 +417,8 @@
         <footer class="footer bg-dark text-white py-4 mt-4">
             <div class="container text-center">
                 <p>&copy; <%= DateTime.Now.Year %> RRC Termite &amp; Pest Control. All rights reserved.</p>
-                <p>Follow us:
+                <p>
+                    <a href="AboutUs.aspx" class="text-white mx-2 text-decoration-none">About Us</a> |
                     <a href="https://www.facebook.com/rrcpestcontrolservice" class="text-white mx-2" aria-label="Facebook">
                         <i class="fab fa-facebook-f"></i>
                     </a>
@@ -243,6 +433,23 @@
 
     <!-- Bootstrap Bundle (JS) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // ===== Scroll to Top Button Behavior =====
+        const scrollBtn = document.getElementById("scrollToTopBtn");
+
+        window.addEventListener("scroll", () => {
+            if (window.scrollY > 300) {
+                scrollBtn.style.display = "flex";
+            } else {
+                scrollBtn.style.display = "none";
+            }
+        });
+
+        scrollBtn.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    </script>
 
     <!-- ===== Scroll Navbar behavior ===== -->
     <script>
@@ -283,11 +490,11 @@
                 },
                 {
                     q: "Do you have free inspection?",
-                    a: "Our ocular inspections are FREE within serviceable areas. Send an inquiry here and set the date/time you’re available."
+                    a: "Our ocular inspections are FREE within serviceable areas. Send an inquiry here and set the date/time you're available."
                 },
                 {
                     q: "What are your business hours?",
-                    a: "We’re open 24/7. You can submit inquiries and bookings anytime."
+                    a: "We're open 24/7. You can submit inquiries and bookings anytime."
                 },
                 {
                     q: "What services do you offer?",
@@ -345,7 +552,7 @@
             function answerFor(question) {
                 const qClean = String(question).trim().toLowerCase();
                 const hit = FAQ.find(x => x.q.trim().toLowerCase() === qClean);
-                return hit ? hit.a : "Sorry, that’s not in our FAQs yet.";
+                return hit ? hit.a : "Sorry, that's not in our FAQs yet.";
             }
 
             function sendFAQ(questionText) {

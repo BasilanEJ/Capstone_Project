@@ -397,6 +397,7 @@ namespace RRCManagementSystem
             {
                 var drv = (DataRowView)e.Row.DataItem;
 
+                // ✅ Handle Assign button data attributes
                 Button btnAssign = (Button)e.Row.FindControl("btnAssign");
                 string inquiryId = drv["InquiryID"].ToString();
                 string inquiryCode = drv["InquiryCode"].ToString();
@@ -416,9 +417,12 @@ namespace RRCManagementSystem
             }
         }
 
-        private static string SafeAttr(object val)
+
+        private string SafeAttr(object value)
         {
-            return val == null || val == DBNull.Value ? "" : val.ToString();
+            return value == DBNull.Value || value == null
+                ? ""
+                : value.ToString().Replace("\"", "&quot;");
         }
     }
 }

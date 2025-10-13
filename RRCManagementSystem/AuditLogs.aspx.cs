@@ -9,7 +9,7 @@ using System.Collections.Generic;
 namespace RRCManagementSystem
 {
     // =========================
-    // Serializable Class Here
+    // Serializable Class
     // =========================
     [Serializable]
     public class AuditLogEntry
@@ -31,14 +31,12 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                // Initial data load on first page visit
                 LoadAuditLogs();
             }
         }
 
         protected void btnFilter_Click(object sender, EventArgs e)
         {
-            // Reloads data and rebinds the GridView when the Filter button is clicked
             LoadAuditLogs();
         }
 
@@ -79,10 +77,9 @@ namespace RRCManagementSystem
                 Timestamp = r.Field<DateTime>("Timestamp")
             }).ToList();
 
-            // Store the data in ViewState for subsequent postbacks (like paging)
+            // Store the data in ViewState for paging
             ViewState["AuditLogsData"] = logEntries;
 
-            // Bind the data directly to the GridView
             if (logEntries.Count == 0)
             {
                 gvLogs.Visible = false;
@@ -102,10 +99,8 @@ namespace RRCManagementSystem
 
         protected void gvLogs_PageIndexChanging(object sender, GridViewPageEventArgs e)
         {
-            // Set the new page index for the GridView
             gvLogs.PageIndex = e.NewPageIndex;
 
-            // Retrieve the data from ViewState and rebind the GridView
             var logEntries = ViewState["AuditLogsData"] as List<AuditLogEntry>;
             if (logEntries != null)
             {
@@ -114,8 +109,61 @@ namespace RRCManagementSystem
             }
         }
 
-        // The repeater-related methods are removed as they are no longer needed.
-        // protected void rptYears_ItemDataBound(...)
-        // protected void rptMonths_ItemDataBound(...)
+        // =========================
+        // CUSTOM NUMERIC PAGER METHODS
+        // =========================
+        protected void gvLogs_DataBound(object sender, EventArgs e)
+        {
+            Repeater rptPages = (Repeater)gvLogs.BottomPagerRow?.FindControl("rptPages");
+            if (rptPages != null)
+            {
+                int totalPages = gvLogs.PageCount;
+                if (totalPages > 0)
+                {
+                    List<int> pages = Enumerable.Range(1, totalPages).ToList();
+                    rptPages.DataSource = pages;
+                    rptPages.DataBind();
+
+                    // Disable buttons when necessary
+                    LinkButton btnFirst = (LinkButton)gvLogs.BottomPagerRow.FindControl("btnFirst");
+                    LinkButton btnPrev = (LinkButton)gvLogs.BottomPagerRow.FindControl("btnPrev");
+                    LinkButton btnNext = (LinkButton)gvLogs.BottomPagerRow.FindControl("btnNext");
+                    LinkButton btnLast = (LinkButton)gvLogs.BottomPagerRow.FindControl("btnLast");
+
+                    if (btnFirst != null) btnFirst.Enabled = gvLogs.PageIndex > 0;
+                    if (btnPrev != null) btnPrev.Enabled = gvLogs.PageIndex > 0;
+                    if (btnNext != null) btnNext.Enabled = gvLogs.PageIndex < totalPages - 1;
+                    if (btnLast != null) btnLast.Enabled = gvLogs.PageIndex < totalPages - 1;
+                }
+            }
+        }
+
+        protected void rptPages_ItemCommand(object source, RepeaterCommandEventArgs e)
+        {
+            if (e.CommandName == "Page")
+            {
+                gvLogs.PageIndex = Convert.ToInt32(e.CommandArgument) - 1;
+
+                var logEntries = ViewState["AuditLogsData"] as List<AuditLogEntry>;
+                if (logEntries != null)
+                {
+                    gvLogs.DataSource = logEntries;
+                    gvLogs.DataBind();
+                }
+            }
+        }
+
+        protected void rptPages_ItemDataBound(object sender, RepeaterItemEventArgs e)
+        {
+            if (e.Item.ItemType == ListItemType.Item || e.Item.ItemType == ListItemType.AlternatingItem)
+            {
+                LinkButton lnkPage = (LinkButton)e.Item.FindControl("lnkPage");
+                if (lnkPage != null && lnkPage.CommandArgument == (gvLogs.PageIndex + 1).ToString())
+                {
+                    lnkPage.CssClass = "selected-page";
+                    lnkPage.Enabled = false;
+                }
+            }
+        }
     }
 }

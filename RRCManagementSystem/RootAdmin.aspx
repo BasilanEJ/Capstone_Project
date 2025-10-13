@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="SystemAdmin.aspx.cs" Inherits="RRCManagementSystem.SystemAdmin" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="RootAdmin.aspx.cs" Inherits="RRCManagementSystem.SystemAdmin" %>
 <!DOCTYPE html>
 <html lang="en">
 <head runat="server">

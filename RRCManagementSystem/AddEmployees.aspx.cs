@@ -71,9 +71,9 @@ namespace RRCManagementSystem
                 ShowMessage("⚠ Last Name and First Name are required.", false);
                 return;
             }
-            string emailInput = txtEmail.Text.Trim(); // Always trim first
 
-            // Allow either N/A or a valid email
+            // Email validation - Allow N/A (case-insensitive) or valid email
+            string emailInput = txtEmail.Text.Trim();
             if (!emailInput.Equals("N/A", StringComparison.OrdinalIgnoreCase))
             {
                 // Must be Gmail, Yahoo, or Outlook
@@ -84,8 +84,7 @@ namespace RRCManagementSystem
                 }
             }
 
-
-
+            // Phone validation
             string phoneNumber = txtPhone.Text.Trim();
             if (!Regex.IsMatch(phoneNumber, @"^09\d{9}$"))
             {
@@ -93,13 +92,14 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // Position validation
             if (ddlPosition.SelectedIndex == 0)
             {
                 ShowMessage("⚠ Please select a Position.", false);
                 return;
             }
 
-            // upload
+            // Profile picture upload
             string imagePath = string.Empty;
             if (fuProfilePicture.HasFile)
             {
@@ -126,23 +126,22 @@ namespace RRCManagementSystem
 
             try
             {
-
-                string emailInputForCheck = txtEmail.Text.Trim();
-                if (!emailInputForCheck.Equals("N/A", StringComparison.OrdinalIgnoreCase))
+                // Check for duplicate email (skip if N/A)
+                if (!emailInput.Equals("N/A", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (IsEmployeeEmailTaken(emailInputForCheck))
+                    if (IsEmployeeEmailTaken(emailInput))
                     {
                         ShowMessage("⚠ This email is already used by another employee.", false);
                         return;
                     }
                 }
 
-
+                // Insert employee
                 int newId = InsertEmployee(
                     txtLastName.Text.Trim(),
                     txtFirstName.Text.Trim(),
                     string.IsNullOrWhiteSpace(txtMiddleName.Text) ? null : txtMiddleName.Text.Trim(),
-                    txtEmail.Text.Trim(),
+                    emailInput,
                     phoneNumber,
                     ddlPosition.SelectedValue,
                     imagePath);
@@ -155,7 +154,7 @@ namespace RRCManagementSystem
 
                     ShowMessage("✅ Employee added successfully!", true);
 
-                    // reset form
+                    // Reset form
                     txtLastName.Text = txtFirstName.Text = txtMiddleName.Text = txtEmail.Text = txtPhone.Text = "";
                     ddlPosition.SelectedIndex = 0;
                 }

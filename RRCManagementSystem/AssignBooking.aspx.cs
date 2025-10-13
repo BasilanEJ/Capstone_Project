@@ -51,27 +51,38 @@ namespace RRCManagementSystem
                 // Validate BookingID
                 if (int.TryParse(Request.QueryString["BookingID"], out bookingID))
                 {
-                    // Optional ScheduleID (for follow-up operations)
+                    // Optional ScheduleID (for reschedules or follow-ups)
                     int.TryParse(Request.QueryString["ScheduleID"], out scheduleID);
 
                     LoadBookingCodeAndOperation();
-                    DateTime scheduledDate = GetScheduledDate(bookingID);
+
+                    // 🟢 Determine which date to use
+                    DateTime scheduledDate = GetCorrectScheduledDate();
+
+                    // 🟢 Store scheduled date for reuse in postbacks
+                    ViewState["ScheduledDate"] = scheduledDate;
+                    ViewState["ScheduleID"] = scheduleID;
+
+                    lblMessage.Text = $"📅 Scheduled Date: {scheduledDate:MMMM dd, yyyy}";
+                    lblMessage.ForeColor = System.Drawing.Color.Black;
+
+                    // 🧩 Load related data
                     LoadTeams(scheduledDate);
                     LoadAvailableEquipments();
                     LoadAvailableChemicals();
                     LoadAvailableSachetChemicals();
                     LoadSafetyGear();
 
-                    // Success alert if redirected from previous assign
+                    // ✅ Show success alert if redirected after assignment
                     if (Request.QueryString["status"] == "Assigned")
                     {
                         string script = @"Swal.fire({
-                            icon:'success',
-                            title:'Assigned!',
-                            text:'The booking was successfully assigned.',
-                            showConfirmButton:false,
-                            timer:2000
-                        });";
+                    icon:'success',
+                    title:'Assigned!',
+                    text:'The booking was successfully assigned.',
+                    showConfirmButton:false,
+                    timer:2000
+                });";
                         ClientScript.RegisterStartupScript(this.GetType(), "AssignSuccess", script, true);
                     }
                 }
@@ -83,9 +94,40 @@ namespace RRCManagementSystem
                     btnAssignAll.Enabled = false;
                 }
             }
+            else
+            {
+                // ✅ Restore values on postback
+                if (ViewState["ScheduleID"] != null)
+                {
+                    scheduleID = (int)ViewState["ScheduleID"];
+                }
+                if (!int.TryParse(Request.QueryString["BookingID"], out bookingID))
+                {
+                    bookingID = 0;
+                }
+            }
         }
 
 
+        private DateTime GetCorrectScheduledDate()
+        {
+            if (scheduleID > 0)
+            {
+                // Get the new approved reschedule date
+                DateTime newDate = GetNewScheduledDate(scheduleID);
+
+                // If for some reason not found, fallback to original
+                if (newDate == DateTime.MinValue)
+                    return GetScheduledDate(bookingID);
+
+                return newDate;
+            }
+            else
+            {
+                // Normal booking date
+                return GetScheduledDate(bookingID);
+            }
+        }
 
 
 
@@ -139,6 +181,29 @@ namespace RRCManagementSystem
         }
 
 
+        private DateTime GetNewScheduledDate(int scheduleID)
+        {
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spServiceSchedule_GetNewDate", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleID;
+                    con.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && result != DBNull.Value
+                        ? Convert.ToDateTime(result)
+                        : DateTime.MinValue;
+                }
+            }
+            catch
+            {
+                return DateTime.MinValue;
+            }
+        }
+
+
 
 
         private void LoadTeams(DateTime scheduledDate)
@@ -151,14 +216,15 @@ namespace RRCManagementSystem
 
                 con.Open();
                 ddlTeams.DataSource = cmd.ExecuteReader();
-                ddlTeams.DataTextField = "GroupName";   // Display team name
-                ddlTeams.DataValueField = "TeamID";     // Actual value
+                ddlTeams.DataTextField = "GroupName";
+                ddlTeams.DataValueField = "TeamID";
                 ddlTeams.DataBind();
 
                 // Add a default "Select Team" option
                 ddlTeams.Items.Insert(0, new ListItem("-- Select Team --", ""));
             }
         }
+
 
 
         private DateTime GetScheduledDate(int bookingID)
@@ -176,7 +242,6 @@ namespace RRCManagementSystem
                     {
                         if (reader["ScheduledDate"] != DBNull.Value)
                         {
-                            // ✅ Clean return, no debug output
                             return Convert.ToDateTime(reader["ScheduledDate"]);
                         }
                         else
@@ -194,13 +259,10 @@ namespace RRCManagementSystem
 
 
 
-
         protected void ddlTeams_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // Clear any previous messages
             lblTeamBookings.Text = "";
 
-            // ✅ 1. Validate dropdown selection first
             if (!int.TryParse(ddlTeams.SelectedValue, out int teamId))
             {
                 lblTeamBookings.Text = "Select a team to view their bookings.";
@@ -209,16 +271,19 @@ namespace RRCManagementSystem
 
             try
             {
-                // ✅ 2. Ensure BookingID is valid
-                if (!int.TryParse(Request.QueryString["BookingID"], out bookingID))
+                // ✅ Get the scheduled date from ViewState (already determined in Page_Load)
+                DateTime scheduledDate;
+                if (ViewState["ScheduledDate"] != null)
                 {
-                    throw new Exception("BookingID is missing or invalid in the URL.");
+                    scheduledDate = (DateTime)ViewState["ScheduledDate"];
+                }
+                else
+                {
+                    // Fallback: recalculate if ViewState is lost
+                    scheduledDate = GetCorrectScheduledDate();
                 }
 
-                // ✅ 3. Get the scheduled date for this booking
-                DateTime scheduledDate = GetScheduledDate(bookingID);
-
-                // ✅ 4. Load bookings for the selected team and date
+                // Load bookings for the selected team and date
                 using (var con = new SqlConnection(cs))
                 using (var cmd = new SqlCommand("dbo.spBookingSummary", con))
                 {
@@ -231,36 +296,29 @@ namespace RRCManagementSystem
                     {
                         if (!reader.HasRows)
                         {
-                            // If there are no bookings for this date
                             lblTeamBookings.Text = $"No bookings scheduled for this team on {scheduledDate:MMMM dd, yyyy}.";
                         }
                         else
                         {
-                            // ✅ Start building the booking list
                             lblTeamBookings.Text = "<ul class='list-disc ml-5 text-gray-700'>";
 
                             while (reader.Read())
                             {
-                                // ✅ Safe parsing of StartTime
                                 string startTime = "00:00";
                                 if (reader["StartTime"] != DBNull.Value && TimeSpan.TryParse(reader["StartTime"].ToString(), out TimeSpan ts))
                                 {
                                     startTime = ts.ToString(@"hh\:mm");
                                 }
 
-                                // ✅ Safely decrypt address fields
                                 string street = reader["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(reader["StreetEnc"].ToString()) : "";
                                 string barangay = reader["BarangayEnc"] != DBNull.Value ? AESHelper.DecryptField(reader["BarangayEnc"].ToString()) : "";
                                 string city = reader["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(reader["CityEnc"].ToString()) : "";
 
-                                // ✅ Combine full location
                                 string fullLocation = $"{street}, {barangay}, {city}".Trim(',', ' ');
 
-                                // ✅ Build the display line
                                 lblTeamBookings.Text += $"<li><strong>{reader["BookingCode"]}</strong> - {fullLocation} at {startTime}</li>";
                             }
 
-                            // Close the list
                             lblTeamBookings.Text += "</ul>";
                         }
                     }
@@ -268,7 +326,6 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
-                // ✅ Error handling
                 lblTeamBookings.Text = $"❌ Error loading bookings: {ex.Message}";
             }
         }
@@ -281,11 +338,19 @@ namespace RRCManagementSystem
         {
             if (!int.TryParse(Request.QueryString["BookingID"], out bookingID)) return;
 
+            // Get scheduleID from ViewState if available
+            int scheduleID = 0;
+            if (ViewState["ScheduleID"] != null)
+            {
+                scheduleID = (int)ViewState["ScheduleID"];
+            }
+
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("dbo.spAssign_ListAvailableEquipments", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleID > 0 ? (object)scheduleID : DBNull.Value;
 
                 using (var da = new SqlDataAdapter(cmd))
                 {
@@ -362,6 +427,12 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // ✅ Restore scheduleID from ViewState
+            if (ViewState["ScheduleID"] != null)
+            {
+                scheduleID = (int)ViewState["ScheduleID"];
+            }
+
             if (ddlTeams.SelectedIndex <= 0)
             {
                 lblMessage.Text = "⚠️ Please select a team.";
@@ -379,20 +450,48 @@ namespace RRCManagementSystem
 
                 try
                 {
-                    // 1) Booking schedule (date + time)
+                    // ✅ 1) Get correct scheduled date based on context
                     DateTime scheduledDate;
                     TimeSpan startTime;
-                    using (var cmd = new SqlCommand("dbo.spBooking_GetSchedule", con, tx))
+
+                    if (scheduleID > 0)
                     {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
-                        using (var r = cmd.ExecuteReader())
+                        // FOR RESCHEDULES: Get NEW date from ServiceSchedules
+                        scheduledDate = GetNewScheduledDate(scheduleID);
+
+                        if (scheduledDate == DateTime.MinValue)
                         {
-                            if (!r.Read()) throw new Exception("Booking not found.");
-                            scheduledDate = r["ScheduledDate"] == DBNull.Value ? DateTime.Today : Convert.ToDateTime(r["ScheduledDate"]);
-                            startTime = r["StartTime"] == DBNull.Value ? new TimeSpan(8, 0, 0) : (TimeSpan)r["StartTime"];
+                            throw new Exception("⚠️ Could not retrieve new scheduled date for this reschedule.");
+                        }
+
+                        // Get start time from original booking
+                        using (var cmd = new SqlCommand("dbo.spBooking_GetSchedule", con, tx))
+                        {
+                            cmd.CommandType = CommandType.StoredProcedure;
+                            cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                            using (var r = cmd.ExecuteReader())
+                            {
+                                if (!r.Read()) throw new Exception("Booking not found.");
+                                startTime = r["StartTime"] == DBNull.Value ? new TimeSpan(8, 0, 0) : (TimeSpan)r["StartTime"];
+                            }
                         }
                     }
+                    else
+                    {
+                        // FOR INITIAL BOOKINGS: Get from Bookings table
+                        using (var cmd = new SqlCommand("dbo.spBooking_GetSchedule", con, tx))
+                        {
+                            cmd.CommandType = CommandType.StoredProcedure;
+                            cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                            using (var r = cmd.ExecuteReader())
+                            {
+                                if (!r.Read()) throw new Exception("Booking not found.");
+                                scheduledDate = r["ScheduledDate"] == DBNull.Value ? DateTime.Today : Convert.ToDateTime(r["ScheduledDate"]);
+                                startTime = r["StartTime"] == DBNull.Value ? new TimeSpan(8, 0, 0) : (TimeSpan)r["StartTime"];
+                            }
+                        }
+                    }
+
                     DateTime scheduledDateTime = scheduledDate.Date.Add(startTime);
 
                     // 2) Verify team daily cap (< 2)
@@ -424,7 +523,7 @@ namespace RRCManagementSystem
                     int sqm = Session["SQM"] != null ? Convert.ToInt32(Session["SQM"]) : 0;
                     decimal usage = GetChemicalUsageBasedOnSQMProc(con, tx, sqm);
 
-                    // 5) Equipments (each selected = quantity 1; this fixes your NOT NULL error)
+                    // 5) Equipments (each selected = quantity 1)
                     int selectedEquipCount = 0;
                     var seen = new System.Collections.Generic.HashSet<int>();
                     foreach (GridViewRow row in gvEquipments.Rows)
@@ -456,7 +555,7 @@ namespace RRCManagementSystem
                                 ins.CommandType = CommandType.StoredProcedure;
                                 ins.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
                                 ins.Parameters.Add("@EquipmentID", SqlDbType.Int).Value = equipmentId;
-                                ins.Parameters.Add("@QuantityAssigned", SqlDbType.Int).Value = 1; // ✅ FIX
+                                ins.Parameters.Add("@QuantityAssigned", SqlDbType.Int).Value = 1;
                                 ins.ExecuteNonQuery();
                             }
                             selectedEquipCount++;
@@ -643,7 +742,19 @@ namespace RRCManagementSystem
                         cmd.ExecuteNonQuery();
                     }
 
-                    // 10) Create contract ops if needed
+                    // ✅ 10) If this is a reschedule, update ServiceSchedule assignment
+                    if (scheduleID > 0)
+                    {
+                        using (var cmd = new SqlCommand("dbo.spServiceSchedule_AssignTeam", con, tx))
+                        {
+                            cmd.CommandType = CommandType.StoredProcedure;
+                            cmd.Parameters.Add("@ScheduleID", SqlDbType.Int).Value = scheduleID;
+                            cmd.Parameters.Add("@TeamID", SqlDbType.Int).Value = teamId;
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    // 11) Create contract ops if needed (only for initial bookings)
                     if (scheduleID == 0)
                     {
                         using (var cmd = new SqlCommand("dbo.spServiceSchedule_InitIfContract", con, tx))
@@ -654,11 +765,23 @@ namespace RRCManagementSystem
                         }
                     }
 
-
                     tx.Commit();
-                    AddAuditLog(adminId, $"Assigned Team {teamId} + equipment/consumables to BookingID {bookingID}");
-                    Response.Redirect("AssignBooking.aspx?BookingID=" + bookingID + "&status=Assigned");
-                    Response.End();
+                    AddAuditLog(adminId, $"Assigned Team {teamId} + equipment/consumables to BookingID {bookingID}" + (scheduleID > 0 ? $" (Reschedule Op#{scheduleID})" : ""));
+
+                    // ✅ Trigger SweetAlert success message and redirect after 3 seconds
+                    string script = @"
+Swal.fire({
+    icon: 'success',
+    title: 'Assigned Successfully!',
+    text: 'The booking was successfully assigned.',
+    showConfirmButton: false,
+    timer: 3000
+}).then(() => {
+    window.location.href = 'AllBooking.aspx';
+});";
+
+                    ClientScript.RegisterStartupScript(this.GetType(), "AssignSuccess", script, true);
+
                 }
                 catch (Exception ex)
                 {

@@ -2,7 +2,9 @@
 <%@ Import Namespace="System.Data" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    </asp:Content>
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
+</asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
     <div class="container mx-auto py-10 px-4">
@@ -28,10 +30,22 @@
                         <h4 class="text-2xl font-bold text-blue-700 mb-2 sm:mb-0">
                             Team: <%# Eval("GroupName") %>
                         </h4>
-                        <span class='inline-block px-4 py-1.5 text-xs font-bold leading-none rounded-full 
-                            <%# Eval("Status").ToString() == "Available" ? "bg-green-500 text-white" : "bg-red-500 text-white" %>'>
-                            <%# Eval("Status") %>
-                        </span>
+                        <div class="flex items-center gap-3">
+                            <span class='inline-block px-4 py-1.5 text-xs font-bold leading-none rounded-full 
+                                <%# Eval("Status").ToString() == "Available" ? "bg-green-500 text-white" : "bg-red-500 text-white" %>'>
+                                <%# Eval("Status") %>
+                            </span>
+                            
+                            <%-- Placeholder to conditionally show the Delete Button --%>
+                            <asp:PlaceHolder ID="phDeleteTeam" runat="server" Visible="false">
+                                <asp:Button ID="btnDeleteTeam" runat="server" 
+                                    Text="Delete Team" 
+                                    CommandArgument='<%# Eval("TeamID") %>'
+                                    CssClass="px-4 py-1.5 bg-red-600 text-white font-bold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                                    OnClientClick="return confirmDelete(this, event);"
+                                    OnClick="btnDeleteTeam_Click" />
+                            </asp:PlaceHolder>
+                        </div>
                     </div>
 
                     <div>
@@ -47,7 +61,6 @@
                                                 <%# Eval("LastName") %>, <%# Eval("FirstName") %> <%# string.IsNullOrEmpty(Eval("MiddleName") as string) ? "" : Eval("MiddleName") %>
                                             </p>
                                         </div>
-                                      
                                     </li>
                                 </ItemTemplate>
                             </asp:Repeater>
@@ -63,6 +76,88 @@
             </ItemTemplate>
         </asp:Repeater>
 
-        <asp:Label ID="lblMessage" runat="server" CssClass="block text-center text-xl font-bold text-gray-500 mt-8" />
+        <asp:Label ID="lblMessage" runat="server" CssClass="block text-center text-xl font-bold text-gray-500 mt-8" Visible="false" />
+        
+        <!-- Hidden field to store delete confirmation -->
+        <asp:HiddenField ID="hdnConfirmDelete" runat="server" Value="false" />
+        <asp:HiddenField ID="hdnTeamIdToDelete" runat="server" Value="" />
     </div>
+
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    
+    <script type="text/javascript">
+        function confirmDelete(button, event) {
+            event.preventDefault();
+            
+            var teamId = button.getAttribute('commandargument');
+            
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to delete this empty team? This action cannot be undone!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Set hidden fields
+                    document.getElementById('<%= hdnConfirmDelete.ClientID %>').value = 'true';
+                    document.getElementById('<%= hdnTeamIdToDelete.ClientID %>').value = teamId;
+                    
+                    // Trigger the actual delete
+                    __doPostBack(button.name, '');
+                }
+            });
+            
+            return false;
+        }
+
+        // Function to show success alert from code-behind
+        function showSuccessAlert(message) {
+            Swal.fire({
+                title: 'Success!',
+                text: message,
+                icon: 'success',
+                confirmButtonColor: '#2563eb',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        // Function to show error alert from code-behind
+        function showErrorAlert(message) {
+            Swal.fire({
+                title: 'Error!',
+                text: message,
+                icon: 'error',
+                confirmButtonColor: '#dc2626',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        // Function to show warning alert from code-behind
+        function showWarningAlert(message) {
+            Swal.fire({
+                title: 'Warning!',
+                text: message,
+                icon: 'warning',
+                confirmButtonColor: '#f59e0b',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        // Function to show info alert from code-behind
+        function showInfoAlert(message) {
+            Swal.fire({
+                title: 'Info',
+                text: message,
+                icon: 'info',
+                confirmButtonColor: '#3b82f6',
+                confirmButtonText: 'OK'
+            });
+        }
+    </script>
 </asp:Content>

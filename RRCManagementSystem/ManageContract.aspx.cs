@@ -15,7 +15,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // Require login
+            // ✅ Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
                 Response.Redirect("~/Login.aspx");
@@ -24,6 +24,7 @@ namespace RRCManagementSystem
 
             string role = Session["Role"].ToString();
 
+            // ✅ Restrict access for SuperAdmin and Inspector
             if (role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
                 role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
             {
@@ -33,13 +34,25 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // Store permission in ViewState
+            // ✅ Store permission in ViewState
             ViewState["CanEditContract"] = HasEditPermission(userId, "ManageClient");
 
             if (!IsPostBack)
             {
+                // 🔹 Load all clients first
                 LoadClients();
 
+                // 🔹 Autofill client if redirected with ?ClientID=xxx
+                if (Request.QueryString["ClientID"] != null)
+                {
+                    string clientId = Request.QueryString["ClientID"];
+                    if (ddlClients.Items.FindByValue(clientId) != null)
+                    {
+                        ddlClients.SelectedValue = clientId;
+                    }
+                }
+
+                // 🔹 Handle permission logic
                 bool canEdit = ViewState["CanEditContract"] != null && (bool)ViewState["CanEditContract"];
                 btnUpload.Enabled = canEdit;
 
@@ -50,6 +63,7 @@ namespace RRCManagementSystem
                 }
             }
         }
+
 
         private void LoadClients()
         {

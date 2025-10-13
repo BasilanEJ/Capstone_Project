@@ -46,84 +46,84 @@
         <asp:DropDownList ID="ddlInspectorSource" runat="server" Style="display:none;"></asp:DropDownList>
 
         <div class="overflow-x-auto shadow-lg rounded-lg">
-            <asp:GridView ID="gvInquiries" runat="server" AutoGenerateColumns="False"
-                CssClass="min-w-full bg-white table-rounded-corners"
-                DataKeyNames="InquiryID,InquiryCode"
-                OnRowCommand="gvInquiries_RowCommand"
-                OnRowDataBound="gvInquiries_RowDataBound"
-                HeaderStyle-CssClass="bg-blue-600 text-white uppercase text-sm leading-normal"
-                RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-100 transition-colors"
-                AlternatingRowStyle-CssClass="bg-gray-50 hover:bg-gray-100 transition-colors">
+<asp:GridView ID="gvInquiries" runat="server" AutoGenerateColumns="False"
+    CssClass="min-w-full bg-white table-rounded-corners"
+    DataKeyNames="InquiryID,InquiryCode"
+    OnRowCommand="gvInquiries_RowCommand"
+    OnRowDataBound="gvInquiries_RowDataBound"
+    HeaderStyle-CssClass="bg-blue-600 text-white uppercase text-sm leading-normal"
+    RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-100 transition-colors"
+    AlternatingRowStyle-CssClass="bg-gray-50 hover:bg-gray-100 transition-colors"
+    EnableViewState="true">
 
-                <Columns>
-                    <asp:BoundField DataField="InquiryCode" HeaderText="Reference Code"
-                        HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
-                        ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
+    <Columns>
+        <asp:BoundField DataField="InquiryCode" HeaderText="Reference Code"
+            HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
+            ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
 
-                    <asp:BoundField DataField="Email" HeaderText="Client Email"
-                        HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
-                        ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
+        <asp:BoundField DataField="Email" HeaderText="Client Email"
+            HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
+            ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
 
-                    <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number"
-                        HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
-                        ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
+        <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number"
+            HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
+            ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
 
-                    <asp:TemplateField HeaderText="Message"
-                        HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
-                        ItemStyle-CssClass="py-3 px-6 border-r border-gray-200 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">
-                        <ItemTemplate>
-                            <span class="block max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">
-                                <%# Eval("Message") %>
-                            </span>
-                           <asp:LinkButton ID="lnkViewMessage" runat="server"
-                                CssClass="text-blue-500 hover:underline ml-1 text-sm"
-                                OnClientClick='<%# "return showFullMessage(\"" + HttpUtility.JavaScriptStringEncode(Eval("Message").ToString()) + "\");" %>'
-                                Visible='<%# Eval("Message") != null && Eval("Message").ToString().Length > 50 %>'>
-                                See more
-                            </asp:LinkButton>
-                        </ItemTemplate>
-                    </asp:TemplateField>
+        <asp:TemplateField HeaderText="Message"
+            HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
+            ItemStyle-CssClass="py-3 px-6 border-r border-gray-200 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">
+            <ItemTemplate>
+                <span class="block max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">
+                    <%# Eval("Message") %>
+                </span>
+                <asp:LinkButton ID="lnkViewMessage" runat="server"
+                    CssClass="text-blue-500 hover:underline ml-1 text-sm"
+                    OnClientClick='<%# "return showFullMessage(\"" + HttpUtility.JavaScriptStringEncode(Eval("Message").ToString()) + "\");" %>'
+                    Visible='<%# Eval("Message") != null && Eval("Message").ToString().Length > 50 %>'>
+                    See more
+                </asp:LinkButton>
+            </ItemTemplate>
+        </asp:TemplateField>
 
-                    <asp:TemplateField HeaderText="Photo"
-                        HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
-                        ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200">
-                        <ItemTemplate>
-                            <asp:Image ID="imgPhoto" runat="server"
-                                Width="60" Height="60" CssClass="rounded-md"
-                                ImageUrl='<%# string.IsNullOrEmpty(Eval("PhotoPath") as string) 
-                                        ? ResolveUrl("~/Images/no-image.png") 
-                                        : ResolveUrl(Eval("PhotoPath").ToString()) %>' />
-                        </ItemTemplate>
-                    </asp:TemplateField>
+        <asp:TemplateField HeaderText="Photo"
+            HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
+            ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200">
+            <ItemTemplate>
+                <%# string.IsNullOrEmpty(Eval("PhotoPath") as string)
+                    ? "<span class='text-gray-500 italic'>N/A</span>"
+                    : $"<img src='{ResolveUrl(Eval("PhotoPath").ToString())}' class='rounded-md mx-auto' style='width:60px;height:60px;' />" %>
+            </ItemTemplate>
+        </asp:TemplateField>
 
-                    <asp:BoundField DataField="SubmittedAt" HeaderText="Submitted At" DataFormatString="{0:g}"
-                        HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
-                        ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
+        <asp:BoundField DataField="SubmittedAt" HeaderText="Submitted At" DataFormatString="{0:g}"
+            HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
+            ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
 
-                    <asp:TemplateField HeaderText="Action"
-                        HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
-                        ItemStyle-CssClass="py-3 px-6 text-center">
-                        <ItemTemplate>
-                            <asp:Button ID="btnAssign" runat="server" Text="Assign Inspector"
-                                CssClass="px-4 py-2 bg-blue-500 text-white font-bold rounded-md hover:bg-blue-600 transition-colors text-sm"
-                                CommandName="Assign"
-                                CommandArgument='<%# Eval("InquiryID") %>' />
-                        </ItemTemplate>
-                    </asp:TemplateField>
+        <asp:TemplateField HeaderText="Action"
+            HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200"
+            ItemStyle-CssClass="py-3 px-6 text-center">
+            <ItemTemplate>
+                <asp:Button ID="btnAssign" runat="server" Text="Assign Inspector"
+                    CssClass="px-4 py-2 bg-blue-500 text-white font-bold rounded-md hover:bg-blue-600 transition-colors text-sm"
+                    CommandName="Assign"
+                    CommandArgument='<%# Eval("InquiryID") %>' />
+            </ItemTemplate>
+        </asp:TemplateField>
 
-                    <asp:TemplateField HeaderText="Archive"
-                        HeaderStyle-CssClass="py-3 px-6 text-center"
-                        ItemStyle-CssClass="py-3 px-6 text-center">
-                        <ItemTemplate>
-                            <button type="button"
-                                class="px-4 py-2 bg-yellow-500 text-white font-bold rounded-md hover:bg-yellow-600 transition-colors text-sm"
-                                onclick='confirmArchive(<%# Eval("InquiryID") %>)'>
-                                Archive
-                            </button>
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-            </asp:GridView>
+        <asp:TemplateField HeaderText="Archive"
+            HeaderStyle-CssClass="py-3 px-6 text-center"
+            ItemStyle-CssClass="py-3 px-6 text-center">
+            <ItemTemplate>
+                <button type="button"
+                    class="px-4 py-2 bg-yellow-500 text-white font-bold rounded-md hover:bg-yellow-600 transition-colors text-sm"
+                    onclick='confirmArchive(<%# Eval("InquiryID") %>)'>
+                    Archive
+                </button>
+            </ItemTemplate>
+        </asp:TemplateField>
+    </Columns>
+</asp:GridView>
+
         </div>
     </div>
 
@@ -178,6 +178,9 @@
                 popup: '!p-4 md:!p-8 !w-11/12 md:!w-2/3 lg:!w-1/2 max-h-[90vh] overflow-y-auto rounded-lg'
             },
             html: `
+             <p class="text-sm text-gray-500 mt-1 mb-4">
+                Reminder: You must conduct an initial interview with the client.
+            </p>
                 <div class="space-y-2">
                     <div class="flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0">
                         <div class="flex-1 flex flex-col gap-1">

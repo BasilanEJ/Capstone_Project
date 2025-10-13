@@ -978,7 +978,7 @@ body.modal-open {
 <!-- ====== INQUIRY FORM (Responsive with UpdatePanel) ====== -->
 <asp:UpdatePanel ID="upInquiryForm" runat="server" UpdateMode="Conditional">
     <ContentTemplate>
-        <section class="inquiry-wrap">
+      <section id="inquiryForm" class="inquiry-wrap">
             <div class="inquiry-card">
       
                 <div class="inquiry-left">

@@ -75,7 +75,6 @@ namespace RRCManagementSystem
             int superAdminId = Convert.ToInt32(Session["UserID"]);
             string newName = (txtName.Text ?? "").Trim();
             string newEmail = (txtEmail.Text ?? "").Trim();
-            string newPw = (txtNewPassword.Text ?? "").Trim();
 
             if (string.IsNullOrEmpty(newName) || string.IsNullOrEmpty(newEmail))
             {
@@ -87,9 +86,6 @@ namespace RRCManagementSystem
             string encryptedEmail = AESHelper.EncryptEmail(newEmail);
             string emailHash = AESHelper.ComputeSHA256(newEmail);
 
-            // Hash password only if a new password was entered
-            string hashedPassword = string.IsNullOrEmpty(newPw) ? null : PasswordHelper.HashPassword(newPw);
-
             using (var conn = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spSuperAdmin_UpdateProfile", conn))
             {
@@ -99,30 +95,22 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@Email", SqlDbType.NVarChar, -1).Value = encryptedEmail;
                 cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
 
-                var pHash = cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, -1);
-                pHash.Value = (object)hashedPassword ?? DBNull.Value;
-
                 try
                 {
                     conn.Open();
                     cmd.ExecuteNonQuery();
 
-                    // Log the update
                     TryAudit(superAdminId, "SuperAdmin updated own profile.");
 
-                    // Clear password box
-                    txtNewPassword.Text = string.Empty;
-
-                    // ✅ Success popup
                     ShowSweetAlert("Profile Updated", "Your profile has been updated successfully!", "success");
                 }
                 catch (Exception ex)
                 {
-                    // ❌ Error popup
                     ShowSweetAlert("Error Saving Profile", ex.Message, "error");
                 }
             }
         }
+
 
         private void ShowSweetAlert(string title, string message, string icon)
         {

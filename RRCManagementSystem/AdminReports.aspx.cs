@@ -70,12 +70,18 @@ namespace RRCManagementSystem
         protected void btnExportPDF_Click(object sender, EventArgs e)
         {
             LoadAllReportData(); // Refresh data to ensure all grids are up-to-date before export
-            
-            var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
+
+            string userName = Session["Name"]?.ToString() ?? "Unknown User";
+            string logoPath = Server.MapPath("~/Images/logorrc.png");
+
+            var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 60f, 40f); // Increased top/bottom margins for header/footer
             using (var ms = new MemoryStream())
             {
                 PdfWriter writer = PdfWriter.GetInstance(doc, ms);
-                writer.PageEvent = new PdfWatermark();
+
+                // Use the new custom header/footer event handler
+                writer.PageEvent = new PdfHeaderFooter("All Reports", userName, logoPath);
+
                 string userPassword = Session["Password"]?.ToString() ?? "default123";
                 writer.SetEncryption(
                     Encoding.UTF8.GetBytes(userPassword),
@@ -97,7 +103,7 @@ namespace RRCManagementSystem
                 AddGridToPDF(doc, gvInquiryEstimation, "📑 Inquiry Estimation");
                 AddGridToPDF(doc, gvTeamsSummary, "👥 Team Summary");
                 AddGridToPDF(doc, gvTeamMembers, "👨‍👩‍👧‍👦 Team Members");
-                
+
                 doc.Close();
 
                 Response.Clear();
@@ -111,7 +117,7 @@ namespace RRCManagementSystem
             }
             AddAuditLog(Convert.ToInt32(Session["UserID"]), "Exported All Reports to PDF");
         }
-        
+
         protected void btnExportTeamsSummary_Click(object sender, EventArgs e)
         {
             if (gvTeamsSummary.Rows.Count > 0) ExportGridViewToPDF(gvTeamsSummary, "Team_Summary_Report");
@@ -638,11 +644,18 @@ namespace RRCManagementSystem
         private void ExportGridViewToPDF(GridView grid, string title)
         {
             if (grid.Rows.Count == 0) return;
-            var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 20f, 10f);
+
+            string userName = Session["Name"]?.ToString() ?? "Unknown User";
+            string logoPath = Server.MapPath("~/Images/logorrc.png");
+
+            var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 60f, 40f); // Increased top/bottom margins
             using (var ms = new MemoryStream())
             {
                 var writer = PdfWriter.GetInstance(doc, ms);
-                writer.PageEvent = new PdfWatermark();
+
+                // Use the new custom header/footer event handler with specific title
+                writer.PageEvent = new PdfHeaderFooter(title, userName, logoPath);
+
                 string userPassword = "default123";
                 writer.SetEncryption(
                     Encoding.UTF8.GetBytes(userPassword),
@@ -651,11 +664,14 @@ namespace RRCManagementSystem
                     PdfWriter.ENCRYPTION_AES_128
                 );
                 doc.Open();
+
+                // Add report content title (optional, since it's already in header)
                 doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
-                doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
-                doc.Add(new Paragraph(" "));
+                doc.Add(new Paragraph(" ")); // Spacing
+
                 int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
                 var table = new PdfPTable(visibleCols) { WidthPercentage = 100, SpacingBefore = 10f };
+
                 if (grid.HeaderRow != null)
                 {
                     foreach (TableCell hc in grid.HeaderRow.Cells)
@@ -672,6 +688,7 @@ namespace RRCManagementSystem
                         table.AddCell(headerCell);
                     }
                 }
+
                 foreach (GridViewRow row in grid.Rows)
                 {
                     for (int c = 0; c < row.Cells.Count; c++)
@@ -696,8 +713,10 @@ namespace RRCManagementSystem
                         table.AddCell(bodyCell);
                     }
                 }
+
                 doc.Add(table);
                 doc.Close();
+
                 Response.Clear();
                 Response.ContentType = "application/pdf";
                 Response.AddHeader("content-disposition", $"attachment;filename={title.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf");
@@ -708,7 +727,7 @@ namespace RRCManagementSystem
                 HttpContext.Current.ApplicationInstance.CompleteRequest();
             }
         }
-        
+
         private void AddAuditLog(int adminId, string action)
         {
             try

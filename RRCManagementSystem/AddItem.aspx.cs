@@ -81,6 +81,14 @@ namespace RRCManagementSystem
 
             string itemName = txtItemName.Text.Trim();
             string itemType = ddlType.SelectedValue;
+
+            if (string.IsNullOrEmpty(itemType))
+            {
+                lblMessage.Text = "⚠ Please select a valid item type.";
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(itemName))
             {
                 lblMessage.Text = "⚠ Item name is required.";
@@ -196,11 +204,25 @@ namespace RRCManagementSystem
                 txtExpirationDate.Text = "";
                 txtExcessML.Text = "";
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                lblMessage.Text = "❌ Failed to add item: " + ex.Message;
+                // Handle known constraint violations gracefully
+                if (ex.Message.Contains("CK_Inventory_Type"))
+                {
+                    lblMessage.Text = "⚠ Invalid item type. Please select a valid type (Bottled Chemical, Sachet Pack Chemical, or Safety Gear).";
+                }
+                else
+                {
+                    lblMessage.Text = "❌ Database error: " + ex.Message;
+                }
                 lblMessage.ForeColor = System.Drawing.Color.Red;
             }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "❌ An unexpected error occurred: " + ex.Message;
+                lblMessage.ForeColor = System.Drawing.Color.Red;
+            }
+
         }
 
         private void InsertAudit(int? adminId, string action)

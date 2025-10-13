@@ -126,7 +126,7 @@
         <div class="flex flex-wrap justify-center space-x-3 text-sm">
             <a href="Home.aspx" class="hover:underline">Home</a>
             <span>|</span>
-            <a href="AboutUs.aspx" class="hover:underline">About Us</a>
+            <a href="ClientAboutUs.aspx" class="hover:underline">About Us</a>
             <span>|</span>
             <a href="PrivacyPolicy.aspx" class="hover:underline">Privacy Policy</a>
         </div>
@@ -137,6 +137,7 @@
     <div id="toastContainer" class="fixed bottom-5 right-5 space-y-3 z-50"></div>
 
     <!-- Tailwind Scripts -->
+
     <script>
         // Toggle dropdowns
         function toggleDropdown(id) {

@@ -10,292 +10,514 @@
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
-    <div class="max-w-6xl mx-auto px-4 py-6 md:py-12">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-tight">Administrator Guide</h1>
-            <p class="text-gray-500 text-sm md:text-base mt-2">
-                RRC Termite &amp; Pest Control Management System &middot;
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Administrator Guide</h1>
+            <p class="text-gray-600">
+                RRC Termite & Pest Control Management System
+            </p>
+            <p class="text-sm text-gray-500 mt-1">
                 Last updated: <asp:Label ID="lblUpdated" runat="server" />
             </p>
         </div>
 
-        <div class="flex flex-col md:flex-row items-center md:space-x-3 space-y-3 md:space-y-0 mb-6">
-            <div class="w-full relative">
-                <input id="filterBox" type="text" placeholder="Search guide..." class="w-full p-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" />
+        <!-- Search Box -->
+        <div class="mb-8">
+            <div class="relative max-w-md">
+                <input 
+                    id="searchBox" 
+                    type="text" 
+                    placeholder="Search modules..." 
+                    class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="md:col-span-1">
-                <div class="bg-white shadow-md rounded-xl p-6 border border-gray-200 sticky top-4">
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Table of Contents</h3>
-                    <ul class="list-disc list-inside space-y-2">
-                        <li><a href="#top" class="text-blue-600 hover:underline">Introduction</a></li>
-                        <li><a href="#dashboard" class="text-blue-600 hover:underline">Dashboard</a></li>
-                        <li><a href="#manage-inquiry" class="text-blue-600 hover:underline">Manage Inquiry</a></li>
-                        <li><a href="#create-customer" class="text-blue-600 hover:underline">Create Customer Account</a></li>
-                        <li><a href="#manage-employees" class="text-blue-600 hover:underline">Manage Employees</a></li>
-                        <li><a href="#manage-items" class="text-blue-600 hover:underline">Manage Items</a></li>
-                        <li><a href="#manage-equipment" class="text-blue-600 hover:underline">Manage Equipment</a></li>
-                        <li><a href="#clients" class="text-blue-600 hover:underline">Clients</a></li>
-                        <li><a href="#bookings" class="text-blue-600 hover:underline">Bookings</a></li>
-                        <li><a href="#sales" class="text-blue-600 hover:underline">Sales & Transactions</a></li>
-                        <li><a href="#supplier" class="text-blue-600 hover:underline">Manage Supplier</a></li>
-                        <li><a href="#services" class="text-blue-600 hover:underline">Manage Services</a></li>
-                        <li><a href="#reports" class="text-blue-600 hover:underline">Reports</a></li>
-                        <li><a href="#best" class="text-blue-600 hover:underline">Best Practices</a></li>
-                        <li><a href="#contact" class="text-blue-600 hover:underline">Contact Information</a></li>
-                    </ul>
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Sidebar Navigation -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-4">
+                    <h3 class="text-sm font-semibold text-gray-900 uppercase mb-3">Quick Navigation</h3>
+                    <nav class="space-y-1">
+                        <a href="#dashboard" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Dashboard</a>
+                        <a href="#bookings" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Bookings</a>
+                        <a href="#clients" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Clients</a>
+                        <a href="#sales" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Sales & Transactions</a>
+                        <a href="#employees" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Manage Employees</a>
+                        <a href="#items" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Manage Items</a>
+                        <a href="#equipment" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Manage Equipment</a>
+                        <a href="#services" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Manage Services</a>
+                        <a href="#supplier" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Manage Supplier</a>
+                        <a href="#reports" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Reports</a>
+                        <a href="#inquiry" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Manage Inquiry</a>
+                        <a href="#create-customer" class="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded">Create Customer Account</a>
+                    </nav>
                 </div>
             </div>
 
-            <div class="md:col-span-2">
-                <div id="top" class="bg-white shadow-md rounded-xl p-6 border border-gray-200 mb-6">
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">1. Introduction</h2>
-                    <p class="text-gray-600 leading-relaxed">
-                        Welcome to the RRC Termite &amp; Pest Control Management Business Administrator Guide.
-                        This manual explains how to use each module to manage clients, employees, equipment,
-                        bookings, inventory, suppliers, sales, and reports.
-                    </p>
-                </div>
+            <!-- Main Content -->
+            <div class="lg:col-span-3 space-y-6">
+                
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-chart-line text-blue-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Get a comprehensive overview of your company's performance and upcoming activities at a glance.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div>
+                                <span class="font-semibold text-gray-900">Total Clients:</span>
+                                <span class="text-gray-700"> View the total number of registered customers</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div>
+                                <span class="font-semibold text-gray-900">Total Employees:</span>
+                                <span class="text-gray-700"> See the count of all active employees</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div>
+                                <span class="font-semibold text-gray-900">Today's Sales:</span>
+                                <span class="text-gray-700"> Monitor your daily sales total in real-time</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div>
+                                <span class="font-semibold text-gray-900">This Month's Sales:</span>
+                                <span class="text-gray-700"> View a summary of the current month's revenue</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div>
+                                <span class="font-semibold text-gray-900">Weekly Booking Calendar:</span>
+                                <span class="text-gray-700"> Check scheduled customer bookings for the current week</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div>
+                                <span class="font-semibold text-gray-900">Sales Overview:</span>
+                                <span class="text-gray-700"> Toggle between Daily, Weekly, Monthly, and Yearly views with Bar or Line graph options</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div>
+                                <span class="font-semibold text-gray-900">Blockchain Sales Transparency:</span>
+                                <span class="text-gray-700"> Verify blockchain-verified sales by clicking the Verify Blockchain button</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-                <div class="mb-6">
-                    <h2 class="text-lg font-bold text-gray-500 mb-4">2. Module Descriptions</h2>
+                <!-- Bookings Section -->
+                <section id="bookings" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-calendar-check text-green-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Bookings</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Manage all customer booking requests and scheduling operations efficiently.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-green-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">View all bookings from customers</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-green-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Approve or reject customer booking requests</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-green-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Approve reschedule requests for contractual services</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-green-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">View all reschedule booking requests</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-green-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Access complete booking history and records</span></div>
+                        </div>
+                    </div>
+                </section>
 
-                    <details id="dashboard" data-filter-item="dashboard overview weekly calendar sales blockchain graphs" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.1 Dashboard
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <p>The Dashboard provides a quick overview of company performance and upcoming activities. Features include:</p>
-                            <ul class="list-disc list-inside pl-4 mt-2 space-y-1">
-                                <li><b>Total Clients</b> – Displays the total registered customers.</li>
-                                <li><b>Total Employees</b> – Shows active employees.</li>
-                                <li><b>Today's Sales</b> – Displays daily total sales.</li>
-                                <li><b>This Month's Sales</b> – Summarizes monthly sales.</li>
-                                <li><b>Weekly Booking Calendar</b> – View booked customers for the current week.</li>
-                                <li><b>Sales Overview</b> – Switch between Daily, Weekly, Monthly, and Yearly views; choose Bar or Line graph formats.</li>
-                                <li><b>Blockchain Sales Transparency</b> – Select a date range to view blockchain-verified sales, including Log ID, Transaction ID, Sale Hash, and Timestamp.</li>
-                            </ul>
+                <!-- Clients Section -->
+                <section id="clients" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-users text-purple-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Clients</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Comprehensive client account management and document handling.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-purple-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">View registered clients' profiles and account details</span></div>
                         </div>
-                    </details>
-                    
-                    <details id="manage-inquiry" data-filter-item="manage inquiry inspectors assignments" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.2 Manage Inquiry
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>Review inquiries submitted via the Inquiry page.</li>
-                                <li>Assign Inspectors to potential client properties.</li>
-                            </ul>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-purple-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Resend password reset emails to client accounts</span></div>
                         </div>
-                    </details>
-                    
-                    <details id="create-customer" data-filter-item="create customer account accounts after inspection" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.3 Create Customer Account
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>Create accounts for customers after a successful property inspection.</li>
-                            </ul>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-purple-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Archive inactive or unused client accounts</span></div>
                         </div>
-                    </details>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-purple-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Restore or permanently delete client accounts</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-purple-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Upload service contracts for customers availing RRC's services</span></div>
+                        </div>
+                    </div>
+                </section>
 
-                    <details id="manage-employees" data-filter-item="manage employees add archive teams team details" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.4 Manage Employees
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>View, add, and archive employees.</li>
-                                <li>Assign employees to service teams and view team details.</li>
-                            </ul>
+                <!-- Sales and Transactions Section -->
+                <section id="sales" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-dollar-sign text-yellow-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Sales & Transactions</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Track and manage all financial transactions and payment records.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-yellow-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">View detailed transaction history including payment methods, amounts, and receipts</span></div>
                         </div>
-                    </details>
-                    
-                    <details id="manage-items" data-filter-item="manage items chemicals sachet safety gear daily total stocks inventory" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.5 Manage Items
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>Add and view items such as chemicals, sacheted chemicals, and safety gear.</li>
-                                <li>Monitor <b>Daily Total Stocks</b> for detailed daily inventory updates.</li>
-                            </ul>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-yellow-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Manually adjust client payments when necessary</span></div>
                         </div>
-                    </details>
-                    
-                    <details id="manage-equipment" data-filter-item="manage equipment sprayers cords wood injectors availability booked days" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.6 Manage Equipment
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>Add and view service equipment (e.g., sprayers, extension cords, wood injectors).</li>
-                                <li>Check equipment availability for booked service days.</li>
-                            </ul>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-yellow-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Monitor payment balances for all client accounts</span></div>
                         </div>
-                    </details>
-                    
-                    <details id="clients" data-filter-item="clients register archive contracts upload" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.7 Clients
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>View all registered clients.</li>
-                                <li>Archive inactive or non-using accounts.</li>
-                                <li>Upload contracts for customers availing RRC’s services.</li>
-                            </ul>
-                        </div>
-                    </details>
-                    
-                    <details id="bookings" data-filter-item="bookings approve reschedule history contractual" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.8 Bookings
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>View and approve customer bookings.</li>
-                                <li>Approve reschedule requests for contractual services.</li>
-                                <li>View booking history.</li>
-                            </ul>
-                        </div>
-                    </details>
-                    
-                    <details id="sales" data-filter-item="sales transactions history payment methods amounts manual adjust" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.9 Sales &amp; Transactions
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>View transaction history with payment methods and amounts.</li>
-                                <li>Manually adjust client payments if needed.</li>
-                            </ul>
-                        </div>
-                    </details>
-                    
-                    <details id="supplier" data-filter-item="supplier add view edit archive" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.10 Manage Supplier
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>Add and view supplier records.</li>
-                                <li>Edit supplier details and archive as needed.</li>
-                            </ul>
-                        </div>
-                    </details>
-                    
-                    <details id="services" data-filter-item="services add view edit delete" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.11 Manage Services
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <ul class="list-disc list-inside pl-4 space-y-1">
-                                <li>Add and view services offered.</li>
-                                <li>Edit or delete services.</li>
-                            </ul>
-                        </div>
-                    </details>
-                    
-                    <details id="reports" data-filter-item="reports pdf totals inquiries clients equipment bookings user accounts inventory sales inspection team" class="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden">
-                        <summary class="flex items-center justify-between p-4 font-semibold cursor-pointer select-none text-gray-800">
-                            2.12 Reports
-                            <span class="transform transition-transform duration-200 fas fa-chevron-right"></span>
-                        </summary>
-                        <div class="p-4 border-t border-gray-200 text-gray-600">
-                            <p>Generate PDF reports filtered by specific dates. Available reports include:</p>
-                            <ul class="list-disc list-inside pl-4 mt-2 space-y-1">
-                                <li>User Accounts (excluding admins)</li>
-                                <li>Inquiries</li>
-                                <li>Approved Clients</li>
-                                <li>Total Stocks Snapshot (Daily)</li>
-                                <li>Inventory Details</li>
-                                <li>Sales</li>
-                                <li>Equipment Status</li>
-                                <li>Booking Details</li>
-                                <li>Inspection Details</li>
-                                <li>Team Reports (by date/range)</li>
-                                <li>Team Members (per roster)</li>
-                            </ul>
-                        </div>
-                    </details>
-                </div>
+                    </div>
+                </section>
 
-                <hr class="border-t border-gray-300 my-8" />
+                <!-- Manage Employees Section -->
+                <section id="employees" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-user-tie text-indigo-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Manage Employees</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Complete employee management system for your workforce.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-indigo-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">View, add, archive, restore, and delete employee records</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-indigo-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Monitor employment status of all employees</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-indigo-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Assign employees to service teams and view team composition details</span></div>
+                        </div>
+                    </div>
+                </section>
 
-                <div id="best" class="bg-white shadow-md rounded-xl p-6 border border-gray-200 mb-6">
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">3. Best Practices &amp; Security Notes</h2>
-                    <ul class="list-disc list-inside pl-4 text-gray-600 space-y-1">
-                        <li>Always log out after each session.</li>
-                        <li>Keep all records updated regularly.</li>
-                        <li>Use strong, unique passwords.</li>
-                        <li>Back up sales, bookings, and inventory data.</li>
-                        <li>Retain blockchain logs for transparency and auditing.</li>
+                <!-- Manage Items Section -->
+                <section id="items" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-boxes text-orange-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Manage Items</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Track and manage your inventory of chemicals, equipment, and supplies.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-orange-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Add and view items including chemicals, sacheted chemicals, and safety gear</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-orange-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Monitor Daily Total Stocks for detailed inventory updates on a daily basis</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Manage Equipment Section -->
+                <section id="equipment" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-tools text-red-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Manage Equipment</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Organize and track all service equipment used by your teams.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-red-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Add and view service equipment for company use (sprayers, extension cords, wood injectors, etc.)</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-red-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Check equipment availability for scheduled service days</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Manage Services Section -->
+                <section id="services" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-clipboard-list text-teal-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Manage Services</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Configure and maintain your service offerings and pricing structure.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-teal-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Add and view services offered with respective pricing per SQM range</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-teal-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Edit or delete service pricing per SQM range</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-teal-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Manage services as a whole including adding or removing service types</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Manage Supplier Section -->
+                <section id="supplier" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-truck text-cyan-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Manage Supplier</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Maintain relationships and records for all your business suppliers.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-cyan-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Add and view supplier information and records</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-cyan-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Send emails directly to suppliers through the system</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-cyan-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Edit supplier details and archive suppliers when needed</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reports Section -->
+                <section id="reports" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-file-alt text-pink-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Business Admin Reports</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Generate comprehensive PDF reports for various aspects of your business operations, filtered by specific date ranges.</p>
+                    <div class="bg-gray-50 rounded-lg p-4 mt-4">
+                        <h3 class="font-semibold text-gray-900 mb-3">Available Reports:</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">User Accounts (excluding Admins)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Inquiries</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Approved Clients</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Inventory Details</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Total Stocks Snapshot (Daily)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Equipment Status</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Sales</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Booking Details</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Inspection Details</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Inquiry Estimations</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Team Summary (by date/range)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                <span class="text-sm text-gray-700">Team Members (per roster)</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Manage Inquiry Section -->
+                <section id="inquiry" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-question-circle text-blue-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Manage Inquiry</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Handle customer inquiries from initial contact through inspection to account creation.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Review inquiries submitted through the Inquiry page</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Assign Inspectors to visit potential client properties</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Create inquiries for walk-in potential customers</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">View professional quotations prepared by Inspectors</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">View inspected inquiries marked as done by Inspectors with option to automatically create client accounts</span></div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-blue-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">View archived inquiries and restore or permanently delete them</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Create Customer Account Section -->
+                <section id="create-customer" class="module-section bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-user-plus text-green-600 text-2xl mr-3"></i>
+                        <h2 class="text-2xl font-bold text-gray-900">Create Customer Account</h2>
+                    </div>
+                    <p class="text-gray-700 mb-4">Convert inspected properties into active customer accounts.</p>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <i class="fas fa-circle text-green-500 text-xs mt-1.5 mr-3"></i>
+                            <div><span class="text-gray-700">Create customer accounts after successful property inspections have been completed</span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Best Practices -->
+                <section class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8">
+                    <h3 class="text-lg font-bold text-blue-900 mb-3 flex items-center">
+                        <i class="fas fa-lightbulb mr-2"></i>
+                        Best Practices & Tips
+                    </h3>
+                    <ul class="space-y-2 text-gray-700">
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-blue-600 mt-1 mr-2"></i>
+                            <span>Always log out of your admin account after each session to maintain security</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-blue-600 mt-1 mr-2"></i>
+                            <span>Keep all records updated regularly for accurate reporting and operations</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-blue-600 mt-1 mr-2"></i>
+                            <span>Use strong, unique passwords and change them periodically</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-blue-600 mt-1 mr-2"></i>
+                            <span>Regularly back up sales, bookings, and inventory data</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-blue-600 mt-1 mr-2"></i>
+                            <span>Retain blockchain logs for transparency and auditing purposes</span>
+                        </li>
                     </ul>
-                </div>
+                </section>
 
-                <div id="contact" class="bg-white shadow-md rounded-xl p-6 border border-gray-200">
-                    <h2 class="text-xl font-bold text-gray-800 mb-2">4. Contact Information</h2>
-                    <p class="text-gray-500 text-sm">
-                        For support or question: <b>edgarjosephbasilan@gmail.com</b>
-                    </p>
-                </div>
-            </div>
-        </div>
+
+           <!-- Contact Information -->
+<section class="bg-gray-50 border border-gray-200 rounded-lg p-6 mt-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center">
+        <i class="fas fa-envelope mr-2"></i>
+        Need Help?
+    </h3>
+    <p class="text-gray-700 mb-4">
+        For technical support or questions about the system, please contact:
+    </p>
+    <div class="space-y-2">
+        <p class="text-gray-900 font-semibold flex items-center">
+            <i class="fas fa-at text-blue-600 mr-2 w-5"></i>
+            edgarjosephbasilan@gmail.com
+        </p>
+        <p class="text-gray-900 font-semibold flex items-center">
+            <i class="fas fa-phone text-green-600 mr-2 w-5"></i>
+            +63 992 435 7834
+        </p>
+       <p class="text-gray-900 font-semibold flex items-center">
+    <i class="fab fa-facebook text-blue-500 mr-2 w-5"></i>
+    <a href="https://www.facebook.com/eiji.delavin/" target="_blank">Eiji Delavin</a>
+</p>
+
     </div>
+</section>
 
-    <script type="text/javascript">
-        // Script to handle the accordion chevron rotation and content filtering
-        document.addEventListener('DOMContentLoaded', function () {
-            var detailsElements = document.querySelectorAll('details');
-            detailsElements.forEach(function (details) {
-                details.addEventListener('toggle', function () {
-                    var chevron = details.querySelector('.fas.fa-chevron-right');
-                    if (details.open) {
-                        chevron.style.transform = 'rotate(90deg)';
-                    } else {
-                        chevron.style.transform = 'rotate(0deg)';
-                    }
-                });
+</div>
+</div>
+</div>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        // Search functionality
+        var searchBox = document.getElementById('searchBox');
+        var sections = document.querySelectorAll('.module-section');
+
+        searchBox.addEventListener('input', function () {
+            var query = searchBox.value.toLowerCase().trim();
+
+            sections.forEach(function (section) {
+                var text = section.textContent.toLowerCase();
+                if (query === '' || text.includes(query)) {
+                    section.style.display = '';
+                } else {
+                    section.style.display = 'none';
+                }
             });
-
-            // Search/filter functionality
-            var input = document.getElementById('filterBox');
-            var groups = Array.from(document.querySelectorAll('[data-filter-item]'));
-            function normalize(s) { return (s || '').toLowerCase().trim(); }
-            function applyFilter() {
-                var q = normalize(input.value);
-                groups.forEach(function (el) {
-                    var hay = normalize(el.getAttribute('data-filter-item'));
-                    if (!q || hay.includes(q)) {
-                        el.style.display = '';
-                        if (q) {
-                            el.setAttribute('open', 'open');
-                        }
-                    } else {
-                        el.style.display = 'none';
-                        el.removeAttribute('open');
-                    }
-                });
-            }
-            input.addEventListener('input', applyFilter);
         });
-    </script>
-</asp:Content>
 
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                var target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    });
+</script>
+</asp:Content>

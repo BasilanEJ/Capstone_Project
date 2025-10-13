@@ -9,14 +9,15 @@
     <title>Inspector Panel</title>
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
-
     <script src="https://cdn.tailwindcss.com"></script>
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
     <style>
-        /* Custom styles that cannot be fully replicated with Tailwind utilities */
-        :root { --sidebar-w: 280px; --header-h: 60px; }
+        :root { 
+            --sidebar-w: 280px; 
+            --header-h: 60px; 
+        }
 
         body {
             @apply bg-gray-100;
@@ -42,6 +43,7 @@
 </head>
 <body class="flex flex-col min-h-screen">
     <form id="form1" runat="server">
+        <!-- ✅ HEADER -->
         <header class="fixed top-0 left-0 w-full h-[var(--header-h)] bg-gray-900 text-white flex items-center justify-between px-4 lg:px-6 z-50 shadow-md">
             <div class="flex items-center gap-2">
                 <button class="lg:hidden text-white hover:text-gray-300 focus:outline-none" type="button"
@@ -56,7 +58,6 @@
 
                 <div id="notificationBell" class="relative cursor-pointer text-gray-300 hover:text-white transition-colors" onclick="toggleNotificationList(); markNotificationsAsRead();">
                     <i class="fas fa-bell text-xl"></i>
-                    
                     <span id="notificationCount" runat="server" class="absolute -top-1 -right-1.5 transform translate-x-1/2 -translate-y-1/2 bg-red-600 text-white rounded-full px-1 py-0.5 text-xs" style="display:none;">0</span>
 
                     <div id="notificationList" class="absolute top-full right-0 mt-4 bg-white text-gray-800 rounded-lg shadow-xl p-4 w-80 max-h-96 overflow-y-auto" style="display: none; z-index: 1000;">
@@ -67,6 +68,7 @@
             </div>
         </header>
 
+        <!-- ✅ SIDEBAR (Desktop) -->
         <aside id="sidebarDesktop" class="hidden lg:flex flex-col w-[var(--sidebar-w)] h-[calc(100vh-var(--header-h))] fixed top-[var(--header-h)] left-0 bg-gray-900 text-white shadow-xl overflow-y-auto">
             <ul class="flex flex-col mt-2">
                 <li class="border-b border-gray-800">
@@ -84,43 +86,47 @@
                         <i class="fas fa-tasks mr-2"></i> Assign Booking
                     </a>
                 </li>
-            </ul>
 
-            <asp:LinkButton ID="btnLogout" runat="server"
-                CssClass="w-3/4 mx-auto my-6 block bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors"
-                OnClick="btnLogout_Click">
-                <i class="fas fa-sign-out-alt mr-2"></i> Logout
-            </asp:LinkButton>
+                <!-- ✅ Logout right below Assign Booking -->
+                <li class="border-t border-gray-800 mt-2">
+                    <asp:LinkButton ID="btnLogout" runat="server"
+                        CssClass="block w-[85%] mx-auto my-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg text-center hover:bg-red-700 transition-colors"
+                        OnClick="btnLogout_Click">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </asp:LinkButton>
+                </li>
+            </ul>
         </aside>
 
+        <!-- ✅ MOBILE MENU -->
         <div id="mobileMenu" class="hidden fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-40 transition-opacity duration-300" onclick="this.classList.add('hidden')">
-            <div class="fixed top-0 left-0 w-[var(--sidebar-w)] h-full bg-gray-900 text-white p-4 shadow-xl flex flex-col justify-between" onclick="event.stopPropagation();">
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h5 class="text-xl font-bold">Menu</h5>
-                        <button type="button" class="text-white hover:text-gray-400 focus:outline-none" onclick="document.getElementById('mobileMenu').classList.add('hidden');">
-                            <i class="fas fa-times text-2xl"></i>
-                        </button>
-                    </div>
-                    <ul class="flex flex-col">
-                        <li class="border-b border-gray-800">
-                            <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="InspectorDashboard.aspx">
-                                <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="border-b border-gray-800">
-                            <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="MyInspections.aspx">
-                                <i class="fas fa-search mr-2"></i> Inspections
-                            </a>
-                        </li>
-                        <li class="border-b border-gray-800">
-                            <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="CreateBooking.aspx">
-                                <i class="fas fa-tasks mr-2"></i> Assign Booking
-                            </a>
-                        </li>
-                    </ul>
+            <div class="fixed top-0 left-0 w-[var(--sidebar-w)] h-full bg-gray-900 text-white p-4 shadow-xl flex flex-col justify-start" onclick="event.stopPropagation();">
+                <div class="flex items-center justify-between mb-4">
+                    <h5 class="text-xl font-bold">Menu</h5>
+                    <button type="button" class="text-white hover:text-gray-400 focus:outline-none" onclick="document.getElementById('mobileMenu').classList.add('hidden');">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
                 </div>
 
+                <ul class="flex flex-col">
+                    <li class="border-b border-gray-800">
+                        <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="InspectorDashboard.aspx">
+                            <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="border-b border-gray-800">
+                        <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="MyInspections.aspx">
+                            <i class="fas fa-search mr-2"></i> Inspections
+                        </a>
+                    </li>
+                    <li class="border-b border-gray-800">
+                        <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="CreateBooking.aspx">
+                            <i class="fas fa-tasks mr-2"></i> Assign Booking
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- ✅ Logout below Assign Booking -->
                 <asp:LinkButton ID="btnLogoutMobile" runat="server"
                     CssClass="w-full mt-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors"
                     OnClick="btnLogout_Click">
@@ -129,17 +135,19 @@
             </div>
         </div>
 
+        <!-- ✅ MAIN CONTENT -->
         <main id="mainContent" class="flex-grow p-4 lg:p-8 mt-[var(--header-h)] lg:mt-0">
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </main>
 
+        <!-- ✅ FOOTER -->
         <footer id="footerDesktop" class="w-full bg-gray-900 text-gray-300 text-center py-4 text-sm fixed bottom-0 z-40">
             &copy; 2025 RRC Management System - Inspector
         </footer>
     </form>
 
+    <!-- ✅ NOTIFICATION SCRIPT -->
     <script>
-        // Existing JavaScript for notifications remains the same, as it's not tied to CSS framework
         async function loadNotifications() {
             try {
                 const res = await fetch('GetNotificationInspector.aspx');
@@ -182,7 +190,6 @@
             list.style.display = (list.style.display === "block") ? "none" : "block";
         }
 
-        // Close dropdown when clicking outside
         document.addEventListener("click", function (event) {
             var bell = document.getElementById("notificationBell");
             if (!bell.contains(event.target)) {

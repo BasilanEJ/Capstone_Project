@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Web.UI;
 using Isopoh.Cryptography.Argon2;
-using RRCManagementSystem.Helpers; // Ensure AESHelper is accessible
+using RRCManagementSystem.Helpers; // Ensure AESHelper and PasswordHelper are accessible
 
 namespace RRCManagementSystem
 {
@@ -16,7 +16,10 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                if (RootAdminExists())
+                // ✅ NEW: Allow override using ?allow=true in the URL
+                bool allow = Request.QueryString["allow"] == "true";
+
+                if (!allow && RootAdminExists())
                 {
                     DisableForm();
                     ShowSweetAlert("info", "Setup Completed", "A Root Admin account already exists. This page is disabled.");
@@ -124,10 +127,9 @@ namespace RRCManagementSystem
 
         private bool EmailExists(string plainEmail)
         {
-            // Hash the email to check against EmailHash in the DB
             string emailHash = AESHelper.ComputeSHA256(plainEmail);
-
             const string sql = "SELECT TOP 1 1 FROM dbo.Users WHERE EmailHash = @h;";
+
             using (SqlConnection con = new SqlConnection(cs))
             using (SqlCommand cmd = new SqlCommand(sql, con))
             {

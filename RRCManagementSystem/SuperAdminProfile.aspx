@@ -77,11 +77,6 @@
 </div>
 
 
-            <div class="form-group">
-                <label for="txtNewPassword">New Password (optional)</label>
-                <asp:TextBox ID="txtNewPassword" runat="server" CssClass="form-control" TextMode="Password" />
-            </div>
-
             <asp:Button ID="btnSaveProfile" runat="server" Text="Save Changes" CssClass="btn-save" OnClick="btnSaveProfile_Click" />
         </div>
     </asp:Content>

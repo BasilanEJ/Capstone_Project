@@ -211,7 +211,7 @@
                 title: 'Assigned!',
                 text: 'The booking was successfully assigned.',
                 showConfirmButton: false,
-                timer: 2000
+                timer: 3000
             }).then(() => {
                 window.location.href = 'AllBooking.aspx';
             });

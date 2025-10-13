@@ -117,6 +117,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="AboutUs.aspx" />
     <Content Include="AddAdmin.aspx" />
     <Content Include="AddEmployees.aspx" />
     <Content Include="AddEquipment.aspx" />
@@ -147,6 +148,7 @@
     <Content Include="BookService.aspx" />
     <Content Include="ChatWithAdmin.aspx" />
     <Content Include="ChatWithClient.aspx" />
+    <Content Include="ClientAboutUs.aspx" />
     <Content Include="ClientsProfiles.aspx" />
     <Content Include="CreateBooking.aspx" />
     <Content Include="CreateCustomerAccount.aspx" />
@@ -180,18 +182,29 @@
     <Content Include="Images\banner tv.jpg" />
     <Content Include="Images\banner-1-01.jpg" />
     <Content Include="Images\bg.jpg" />
+    <Content Include="Images\biosolution.png" />
     <Content Include="Images\blog2.jpg" />
     <Content Include="Images\blog3.jpg" />
+    <Content Include="Images\boc.png" />
+    <Content Include="Images\brinks.png" />
     <Content Include="Images\c&amp;o.png" />
+    <Content Include="Images\completed1.jpg" />
+    <Content Include="Images\completed2.png" />
+    <Content Include="Images\completed3.png" />
     <Content Include="Images\DIY.jpg" />
     <Content Include="Images\logo.jpg" />
     <Content Include="Images\logorrc.png" />
+    <Content Include="Images\ongoing1.png" />
+    <Content Include="Images\ongoing2.png" />
+    <Content Include="Images\ongoing3.png" />
     <Content Include="Images\pestbg.jpg" />
     <Content Include="Images\pestlogo.jpg" />
+    <Content Include="Images\petron.png" />
     <Content Include="Images\ppe.png" />
     <Content Include="Images\rrc-logo.jpg" />
     <Content Include="Images\rrc1.png" />
     <Content Include="Images\rrclogo.jpg" />
+    <Content Include="Images\rrcteam.png" />
     <Content Include="Images\service-baiting.jpg" />
     <Content Include="Images\service-bedbugs.jpg" />
     <Content Include="Images\service-gen pest.jpg" />
@@ -204,6 +217,14 @@
     <Content Include="Images\service-termite.jpg" />
     <Content Include="Images\service-tick-fleas.jpg" />
     <Content Include="Images\services-reticulations.jpg" />
+    <Content Include="Images\Sprayer.png" />
+    <Content Include="Images\team2.png" />
+    <Content Include="Images\team3.png" />
+    <Content Include="Images\team4.png" />
+    <Content Include="Images\teamapt.png" />
+    <Content Include="Images\teamrrc.jpg" />
+    <Content Include="Images\tesda.png" />
+    <Content Include="Images\vcmc.png" />
     <Content Include="InspectedInquiry.aspx" />
     <Content Include="InspectorDashboard.aspx" />
     <Content Include="Login.aspx" />
@@ -283,7 +304,7 @@
     <Content Include="Styles\Styles.css" />
     <Content Include="SuperAdminDashboard.aspx" />
     <Content Include="SuperAdminProfile.aspx" />
-    <Content Include="SystemAdmin.aspx" />
+    <Content Include="RootAdmin.aspx" />
     <Content Include="SystemChanges.aspx" />
     <Content Include="SystemSettings.aspx" />
     <Content Include="Termite.aspx" />
@@ -310,6 +331,13 @@
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AboutUs.aspx.cs">
+      <DependentUpon>AboutUs.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AboutUs.aspx.designer.cs">
+      <DependentUpon>AboutUs.aspx</DependentUpon>
+    </Compile>
     <Compile Include="AddAdmin.aspx.cs">
       <DependentUpon>AddAdmin.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -538,6 +566,13 @@
     </Compile>
     <Compile Include="Client.master.designer.cs">
       <DependentUpon>Client.master</DependentUpon>
+    </Compile>
+    <Compile Include="ClientAboutUs.aspx.cs">
+      <DependentUpon>ClientAboutUs.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ClientAboutUs.aspx.designer.cs">
+      <DependentUpon>ClientAboutUs.aspx</DependentUpon>
     </Compile>
     <Compile Include="ClientsProfiles.aspx.cs">
       <DependentUpon>ClientsProfiles.aspx</DependentUpon>
@@ -909,6 +944,7 @@
     <Compile Include="PayPalWebhook.ashx.cs">
       <DependentUpon>PayPalWebhook.ashx</DependentUpon>
     </Compile>
+    <Compile Include="PdfHeaderFooter.cs" />
     <Compile Include="PdfWatermark.cs" />
     <Compile Include="PrivacyPolicy.aspx.cs">
       <DependentUpon>PrivacyPolicy.aspx</DependentUpon>
@@ -1016,12 +1052,12 @@
     <Compile Include="SuperAdminProfile.aspx.designer.cs">
       <DependentUpon>SuperAdminProfile.aspx</DependentUpon>
     </Compile>
-    <Compile Include="SystemAdmin.aspx.cs">
-      <DependentUpon>SystemAdmin.aspx</DependentUpon>
+    <Compile Include="RootAdmin.aspx.cs">
+      <DependentUpon>RootAdmin.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
-    <Compile Include="SystemAdmin.aspx.designer.cs">
-      <DependentUpon>SystemAdmin.aspx</DependentUpon>
+    <Compile Include="RootAdmin.aspx.designer.cs">
+      <DependentUpon>RootAdmin.aspx</DependentUpon>
     </Compile>
     <Compile Include="SystemChanges.aspx.cs">
       <DependentUpon>SystemChanges.aspx</DependentUpon>

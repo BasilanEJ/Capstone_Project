@@ -6,9 +6,9 @@ namespace RRCManagementSystem.Helpers
     public class PdfWatermark : PdfPageEventHelper
     {
         // super visible test settings
-        private const float OPACITY = 0.25f;
-        private const float FONTSIZE = 40f;
-        private const float ANGLE = 45f;
+        private const float OPACITY = 0.10f;
+        private const float FONTSIZE = 20f;
+        private const float ANGLE = 55f;
         private static readonly BaseColor COLOR = new BaseColor(180, 180, 180);
         private const string TEXT = "RRC Management System Property";
 

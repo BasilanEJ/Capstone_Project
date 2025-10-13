@@ -27,13 +27,103 @@
         .modal-overlay {
             transition: opacity 0.3s ease-in-out;
         }
+
         .modal-open {
             opacity: 1 !important;
             pointer-events: auto;
         }
+
         .modal-closed {
             opacity: 0;
             pointer-events: none;
+        }
+
+        /* === Pagination Styling (same as AllBooking.aspx) === */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            border-top: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+        }
+
+        .pagination-container table {
+            border-collapse: separate;
+            border-spacing: 0.25rem;
+        }
+
+        .pagination-container td {
+            padding: 0;
+        }
+
+        .pagination-container a,
+        .pagination-container span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.5rem;
+            height: 2.5rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 0.375rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .pagination-container a {
+            background-color: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+
+        .pagination-container a:hover {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .pagination-container span {
+            background-color: #3b82f6;
+            color: white;
+            border: 1px solid #3b82f6;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+
+        .pagination-container a:first-child,
+        .pagination-container a:last-child {
+            background-color: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        .pagination-container a:first-child:hover,
+        .pagination-container a:last-child:hover {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .pagination-container i {
+            font-size: 1rem;
+        }
+
+        @media (max-width: 640px) {
+            .pagination-container {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .pagination-container a,
+            .pagination-container span {
+                min-width: 2rem;
+                height: 2rem;
+                padding: 0.375rem 0.5rem;
+                font-size: 0.75rem;
+            }
         }
     </style>
 
@@ -68,6 +158,14 @@
                         OnPageIndexChanging="gvCompleted_PageIndexChanging"
                         OnSorting="gvCompleted_Sorting"
                         OnRowDataBound="gvCompleted_RowDataBound"
+                        PagerStyle-CssClass="pagination-container"
+                        PagerSettings-Mode="NumericFirstLast"
+                        PagerSettings-Position="Bottom"
+                        PagerSettings-PageButtonCount="5"
+                        PagerSettings-FirstPageText="<i class='fas fa-angle-double-left'></i>"
+                        PagerSettings-LastPageText="<i class='fas fa-angle-double-right'></i>"
+                        PagerSettings-PreviousPageText="<i class='fas fa-angle-left'></i>"
+                        PagerSettings-NextPageText="<i class='fas fa-angle-right'></i>"
                         HeaderStyle-CssClass="bg-blue-600 text-white uppercase text-xs leading-normal font-bold"
                         RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-100 transition-colors">
 
@@ -129,8 +227,6 @@
                         <EmptyDataTemplate>
                             <div class="text-center text-slate-500 py-6">No inspected inquiries found.</div>
                         </EmptyDataTemplate>
-
-                        <PagerStyle CssClass="bg-gray-100 text-blue-600 font-bold text-lg p-2 text-center" />
                     </asp:GridView>
                 </div>
             </ContentTemplate>
@@ -153,24 +249,16 @@
     </div>
 
     <script type="text/javascript">
-        // Register the JS functions to run after an AJAX postback
         Sys.WebForms.PageRequestManager.getInstance().add_endRequest(EndRequestHandler);
-        function EndRequestHandler(sender, args) {
-            // Re-bind click events or run other JS logic here if needed
-        }
+        function EndRequestHandler(sender, args) { }
 
-        // The modal functions remain the same as they operate on the DOM, not the server.
         function openModal(title, content) {
             const modal = document.getElementById('infoModal');
             modal.querySelector('#infoModalLabel').innerText = title;
             modal.querySelector('#modal-content').innerText = content;
             modal.classList.remove('modal-closed');
             modal.classList.add('modal-open');
-
-            // Close modal when clicking outside
-            modal.onclick = function () {
-                closeModal('infoModal');
-            };
+            modal.onclick = function () { closeModal('infoModal'); };
         }
 
         function closeModal(modalId) {

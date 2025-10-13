@@ -46,22 +46,20 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label for="<%= txtEmail.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-                    <asp:TextBox ID="txtEmail" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" TextMode="Email" placeholder="Enter email address" required></asp:TextBox>
+                    <label for="<%= txtEmail.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Email <span class="text-gray-400 font-normal">(or type "N/A")</span></label>
+                    <asp:TextBox ID="txtEmail" runat="server" CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" placeholder="Enter email or N/A" required></asp:TextBox>
                 </div>
                 <div>
                     <label for="<%= txtPhone.ClientID %>" class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-                  <asp:TextBox ID="txtPhone" runat="server"
-    CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-    placeholder="Enter 11-digit Phone Number"
-    required
-    maxlength="11"
-    pattern="^09\d{9}$"
-    title="Phone number must start with 09 and be 11 digits long."
-    oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-</asp:TextBox>
-
-
+                    <asp:TextBox ID="txtPhone" runat="server"
+                        CssClass="block w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                        placeholder="Enter 11-digit Phone Number"
+                        required
+                        maxlength="11"
+                        pattern="^09\d{9}$"
+                        title="Phone number must start with 09 and be 11 digits long."
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    </asp:TextBox>
                     <span id="phoneError" class="block text-xs text-red-500 mt-1 hidden"></span>
                 </div>
             </div>
@@ -119,7 +117,7 @@
         function validateForm() {
             var lastName = document.getElementById('<%= txtLastName.ClientID %>').value;
             var firstName = document.getElementById('<%= txtFirstName.ClientID %>').value;
-            var email = document.getElementById('<%= txtEmail.ClientID %>').value;
+            var email = document.getElementById('<%= txtEmail.ClientID %>').value.trim();
             var phone = document.getElementById('<%= txtPhone.ClientID %>').value;
             var position = document.getElementById('<%= ddlPosition.ClientID %>').value;
 
@@ -138,16 +136,17 @@
                 phoneError.style.display = 'none';
             }
             
-            var emailInput = document.getElementById('<%= txtEmail.ClientID %>').value.trim();
-            var emailPattern = /^\w+([\.-]?\w+)*@(gmail|yahoo|outlook)\.com$/i;
-
-            if (emailInput.toLowerCase() !== 'n/a' && !emailPattern.test(emailInput)) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Invalid Email',
-                    text: 'Please enter a valid Gmail, Yahoo, or Outlook email address, or type "N/A".'
-                });
-                return false;
+            // Updated email validation to handle N/A case-insensitively
+            if (email.toLowerCase() !== 'n/a') {
+                var emailPattern = /^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook)\.com$/i;
+                if (!emailPattern.test(email)) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Invalid Email',
+                        text: 'Please enter a valid Gmail, Yahoo, or Outlook email address, or type "N/A".'
+                    });
+                    return false;
+                }
             }
 
             if (position === "") {

@@ -11,7 +11,6 @@
 
         <!-- KPI CARDS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5 mb-10">
-            <!-- Total Inspections -->
             <div class="bg-white rounded-xl shadow hover:shadow-lg p-5 transition transform hover:-translate-y-1">
                 <div class="text-center">
                     <div class="text-3xl sm:text-4xl font-bold text-blue-600">
@@ -21,7 +20,6 @@
                 </div>
             </div>
 
-            <!-- Today's Inspections -->
             <div class="bg-white rounded-xl shadow hover:shadow-lg p-5 transition transform hover:-translate-y-1">
                 <div class="text-center">
                     <div class="text-3xl sm:text-4xl font-bold text-green-600">
@@ -37,12 +35,10 @@
             <div id="calendar" class="w-full"></div>
         </div>
 
-        <!-- MODAL FOR INSPECTION DETAILS -->
+        <!-- MODAL -->
         <div id="eventModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4">
-            <!-- Overlay -->
             <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onclick="closeModal()"></div>
 
-            <!-- Modal Content -->
             <div id="modalContent" class="relative bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-transform duration-300 scale-95">
                 <div class="flex justify-between items-center px-5 py-4 border-b border-gray-200">
                     <h3 class="text-lg sm:text-xl font-bold text-gray-800">Inspection Details</h3>
@@ -58,7 +54,6 @@
                     </p>
                     <div id="modalDetails" class="text-gray-600 text-sm">Loading details...</div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -68,64 +63,49 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 
     <style>
-        /* ===== FullCalendar Toolbar Optimizations ===== */
+        /* === FullCalendar Toolbar (Responsive) === */
         .fc-toolbar.fc-header-toolbar {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             gap: 0.5rem;
             margin-bottom: 1rem;
         }
 
-        /* Left group (Prev, Today, Next) */
+        /* Date title styling */
+        .fc-toolbar-title {
+            order: -1; /* Move title above buttons */
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e40af; /* Tailwind blue-800 */
+            text-align: center;
+        }
+
+        /* Buttons group */
         .fc-toolbar-chunk:first-child {
             display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-
-        /* Center title */
-        .fc-toolbar-chunk:nth-child(2) {
-            flex: 1;
-            text-align: center;
-            font-weight: bold;
-            font-size: 1.25rem;
-        }
-
-        /* Right group */
-        .fc-toolbar-chunk:last-child {
-            display: flex;
+            justify-content: center;
             gap: 0.5rem;
         }
 
-        /* Mobile View: Stack vertically */
-        @media (max-width: 640px) {
-            .fc-toolbar.fc-header-toolbar {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .fc-toolbar-chunk:nth-child(2) {
-                order: 1;
-                margin-top: 0.5rem;
-            }
-
-            .fc-toolbar-chunk:first-child {
-                order: 2;
-            }
-
-            .fc-toolbar-chunk:last-child {
-                order: 3;
-                margin-top: 0.5rem;
-            }
-        }
-
-        /* Event Style */
+        /* Event style */
         .fc-event {
             border-radius: 0.5rem;
             padding: 2px 4px;
             font-size: 0.85rem;
+        }
+
+        /* Mobile responsiveness */
+        @media (min-width: 640px) {
+            .fc-toolbar.fc-header-toolbar {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+            .fc-toolbar-title {
+                order: 0; /* Reset order for larger screens */
+                font-size: 1.5rem;
+            }
         }
 
         /* Modal animation */
@@ -142,71 +122,42 @@
     <script>
         let scrollPosition = 0;
 
-        // === Modal Functions ===
         function showModal() {
-            // Save current scroll position
             scrollPosition = window.scrollY;
-
             const modal = document.getElementById('eventModal');
-
-            // Lock body scroll without layout shift
             document.body.style.position = 'fixed';
             document.body.style.top = `-${scrollPosition}px`;
-            document.body.style.left = '0';
-            document.body.style.right = '0';
             document.body.style.width = '100%';
-
-            // Show modal
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-
-            setTimeout(() => {
-                document.getElementById('modalContent').classList.add('scale-100');
-            }, 10);
+            setTimeout(() => document.getElementById('modalContent').classList.add('scale-100'), 10);
         }
 
         function closeModal() {
             const modal = document.getElementById('eventModal');
             const modalContent = document.getElementById('modalContent');
-
-            // Start hide animation
             modalContent.classList.remove('scale-100');
-
             setTimeout(() => {
-                modal.classList.remove('flex');
                 modal.classList.add('hidden');
-
-                // Restore scroll
                 document.body.style.position = '';
                 document.body.style.top = '';
-                document.body.style.left = '';
-                document.body.style.right = '';
-                document.body.style.width = '';
-
-                window.scrollTo(0, scrollPosition); // Return to saved scroll position
-            }, 300); // Match transition duration
+                window.scrollTo(0, scrollPosition);
+            }, 300);
         }
 
-        // === Calendar Initialization ===
+        // === Calendar Initialization (List View Only) ===
         window.addEventListener('load', function () {
             const calendarEl = document.getElementById('calendar');
             if (!calendarEl) return;
 
-            // Detect screen size
-            const isMobile = window.innerWidth < 768;
-
-            // Default view
-            const initialView = isMobile ? 'listWeek' : 'dayGridMonth';
-
-            // If mobile, disable Month and Week buttons by hiding them
-            const customHeader = isMobile
-                ? { left: 'prev today next', center: 'title', right: 'listWeek' }
-                : { left: 'prev today next', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' };
-
             const calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: initialView,
+                initialView: 'listWeek',
                 height: "auto",
-                headerToolbar: customHeader,
+                headerToolbar: {
+                    left: 'prev today next',
+                    center: 'title',  // ✅ The date will automatically move above buttons due to CSS
+                    right: ''
+                },
                 events: 'LoadInspections.ashx',
                 eventClick: function (info) {
                     fetch('GetInspectionDetails.ashx?id=' + info.event.id)

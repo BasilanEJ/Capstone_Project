@@ -2,12 +2,12 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
-    <!-- Tailwind CSS for utility styles -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
     <style>
-        /* --- Container Styling --- */
+        /* === Container === */
         .log-container {
             width: 100%;
             max-width: 1200px;
@@ -26,23 +26,23 @@
             font-weight: bold;
         }
 
-        /* --- Date Filter Section --- */
+        /* === Date Filters === */
         .date-filters .form-label {
             font-weight: 500;
             color: #333;
         }
 
-        /* --- GridView Wrapper for responsiveness --- */
+        /* === Table Wrapper === */
         .grid-wrapper {
             width: 100%;
-            overflow-x: auto; /* Allows horizontal scrolling on small devices */
+            overflow-x: auto;
             display: flex;
-            justify-content: center; /* Center the table */
+            justify-content: center;
         }
 
-        /* --- GridView Styling --- */
+        /* === GridView === */
         .grid {
-            max-width: 1000px; /* Prevent table from stretching too wide */
+            max-width: 1000px;
             width: 100%;
             margin: 0 auto;
             border-collapse: collapse;
@@ -63,14 +63,14 @@
             font-weight: 600;
         }
 
-        /* --- No Data / Message --- */
+        /* === Message Styles === */
         .alert-message {
             text-align: center;
             margin-bottom: 10px;
             color: red;
         }
 
-        /* --- Pager Custom Styling --- */
+        /* === Custom Pager === */
         .custom-pager {
             display: flex;
             justify-content: center;
@@ -82,8 +82,7 @@
             margin-top: 10px;
         }
 
-        .custom-pager a,
-        .custom-pager span {
+        .pager-btn {
             display: inline-block;
             padding: 8px 12px;
             font-size: 14px;
@@ -94,18 +93,18 @@
             transition: background 0.3s, color 0.3s;
         }
 
-        .custom-pager a:hover {
+        .pager-btn:hover {
             background-color: #007bff;
             color: white;
         }
 
-        .custom-pager .selected-page {
+        .selected-page {
             background-color: #007bff;
             color: white;
             font-weight: bold;
         }
 
-        /* --- Mobile Optimizations --- */
+        /* === Responsive === */
         @media (max-width: 576px) {
             .log-container {
                 padding: 15px;
@@ -131,7 +130,7 @@
     <div class="log-container">
         <h2><i class="fas fa-file-alt me-2"></i> Audit Logs</h2>
 
-        <!-- Date Filters -->
+ 
         <div class="date-filters">
             <div class="row mb-3 align-items-end g-3">
                 <div class="col-md-4 col-12">
@@ -150,23 +149,46 @@
             </div>
         </div>
 
-        <!-- GridView with UpdatePanel -->
+      
         <asp:UpdatePanel ID="UpdatePanelLogs" runat="server" UpdateMode="Conditional">
             <ContentTemplate>
-                <!-- No Data and Alert Messages -->
                 <asp:Label ID="lblNoData" runat="server"
                     CssClass="text-danger text-center d-block mb-3"
                     Visible="false" />
                 <asp:Label ID="lblMessage" runat="server" CssClass="alert-message" />
 
-                <!-- Responsive GridView Wrapper -->
                 <div class="grid-wrapper">
                     <asp:GridView ID="gvLogs" runat="server" CssClass="grid table table-hover"
                         AutoGenerateColumns="False"
                         AllowPaging="True"
                         PageSize="50"
-                        OnPageIndexChanging="gvLogs_PageIndexChanging">
-                        <PagerStyle CssClass="custom-pager" HorizontalAlign="Center" />
+                        OnPageIndexChanging="gvLogs_PageIndexChanging"
+                        OnDataBound="gvLogs_DataBound"
+                        PagerSettings-Mode="NumericFirstLast"
+                        PagerSettings-FirstPageText="« First"
+                        PagerSettings-LastPageText="Last »"
+                        PagerSettings-NextPageText="Next ›"
+                        PagerSettings-PreviousPageText="‹ Prev">
+
+                        <PagerTemplate>
+                            <div class="custom-pager">
+                                <asp:LinkButton runat="server" CommandName="Page" CommandArgument="First" CssClass="pager-btn">« First</asp:LinkButton>
+                                <asp:LinkButton runat="server" CommandName="Page" CommandArgument="Prev" CssClass="pager-btn">‹ Prev</asp:LinkButton>
+
+                                <asp:Repeater ID="rptPages" runat="server" OnItemCommand="rptPages_ItemCommand" OnItemDataBound="rptPages_ItemDataBound">
+                                    <ItemTemplate>
+                                        <asp:LinkButton runat="server" ID="lnkPage" CommandName="Page" CommandArgument='<%# Container.DataItem %>'
+                                            CssClass='<%# (Container.DataItem.ToString() == (gvLogs.PageIndex + 1).ToString()) ? "selected-page" : "pager-btn" %>'
+                                            Text='<%# Container.DataItem %>' />
+                                    </ItemTemplate>
+                                </asp:Repeater>
+
+                                <asp:LinkButton runat="server" CommandName="Page" CommandArgument="Next" CssClass="pager-btn">Next ›</asp:LinkButton>
+                                <asp:LinkButton runat="server" CommandName="Page" CommandArgument="Last" CssClass="pager-btn">Last »</asp:LinkButton>
+                            </div>
+                        </PagerTemplate>
+
+                   
                         <Columns>
                             <asp:BoundField DataField="LogID" HeaderText="Log ID" />
                             <asp:BoundField DataField="AdminName" HeaderText="User Name" />

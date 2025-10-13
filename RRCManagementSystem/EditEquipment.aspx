@@ -52,7 +52,6 @@
                         <asp:ListItem Text="Select Status" Value="" />
                         <asp:ListItem Text="Available" Value="Available" />
                         <asp:ListItem Text="Unavailable" Value="Unavailable" />
-                        <asp:ListItem Text="Under Maintenance" Value="Under Maintenance" />
                     </asp:DropDownList>
                 </div>
 

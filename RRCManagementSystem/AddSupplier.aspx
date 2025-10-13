@@ -77,31 +77,35 @@
                 </script>
 
                 <!-- Email -->
-                <div class="mb-4">
-                    <label for="txtEmail" class="block font-semibold text-gray-700 mb-2">Email</label>
-                    <asp:TextBox
-                        ID="txtEmail"
-                        runat="server"
-                        CssClass="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter email" onblur="validateEmail();" />
-                    
-                    <!-- Required Field Validator -->
-                    <asp:RequiredFieldValidator
-                        ID="rfvEmail"
-                        runat="server"
-                        ControlToValidate="txtEmail"
-                        ForeColor="red"
-                        ErrorMessage="Email is required." />
+               <div class="mb-4">
+    <label for="txtEmail" class="block font-semibold text-gray-700 mb-2">Email</label>
+    <asp:TextBox
+        ID="txtEmail"
+        runat="server"
+        CssClass="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="Enter email"
+        onblur="validateEmail();" />
 
-                    <!-- Regular Expression Validator -->
-                    <asp:RegularExpressionValidator
-                        ID="revEmail"
-                        runat="server"
-                        ControlToValidate="txtEmail"
-                        ForeColor="red"
-                        ValidationExpression="^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$"
-                        ErrorMessage="Email must be in the form of 'xxx@gmail.com', 'xxx@yahoo.com', or 'xxx@outlook.com.'" Visible="false" />
-                </div>
+    <!-- Required Field Validator -->
+    <asp:RequiredFieldValidator
+        ID="rfvEmail"
+        runat="server"
+        ControlToValidate="txtEmail"
+        ErrorMessage="Email is required."
+        ForeColor="Red"
+        Display="Dynamic" />
+
+    <!-- Regular Expression Validator -->
+    <asp:RegularExpressionValidator
+        ID="revEmail"
+        runat="server"
+        ControlToValidate="txtEmail"
+        ErrorMessage="Email must be a valid Gmail, Yahoo, or Outlook address."
+        ForeColor="Red"
+        Display="Dynamic"
+        ValidationExpression="^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$" />
+</div>
+
 
                 <!-- Company Name -->
                 <div class="mb-4">

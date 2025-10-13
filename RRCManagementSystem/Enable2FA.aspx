@@ -128,7 +128,7 @@
             <img src="images/logorrc.png" alt="RRC Logo" class="logo" />
             <h2>Enable 2FA</h2>
 
-            <asp:Label ID="lblInstruction" runat="server" CssClass="instruction" Text="Scan the QR code using Google Authenticator." />
+            <asp:Label ID="lblInstruction" runat="server" CssClass="instruction" Text="Scan the QR code using Google or Microsoft Authenticator." />
 
             <asp:Image ID="imgQRCode" runat="server" CssClass="qr-img" />
 
