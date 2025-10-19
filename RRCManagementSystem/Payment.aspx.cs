@@ -360,7 +360,20 @@ namespace RRCManagementSystem
                     if (string.IsNullOrWhiteSpace(effectivePlan))
                         effectivePlan = isContractDb ? "50-25-25" : "100";
 
-                    bool isContract = isContractDb || !string.Equals(effectivePlan, "100", StringComparison.OrdinalIgnoreCase);
+                    // ✅ FIXED: Only use database IsContract flag (not derived from plan)
+                    bool isContract = isContractDb;
+
+                    // ✅ FIXED: Force non-contract bookings to always use "100" payment plan
+                    if (!isContract)
+                    {
+                        effectivePlan = "100";
+
+                        // Correct the database if it somehow has a wrong payment plan
+                        if (dbPlan != "100")
+                        {
+                            SaveSelectedPlanToDb(bookingId, "100");
+                        }
+                    }
 
                     // Persist plan to DB if missing
                     if (string.IsNullOrWhiteSpace(dbPlan))
@@ -371,15 +384,24 @@ namespace RRCManagementSystem
                     if (item != null) ddlPlanChoice.SelectedValue = effectivePlan;
                     hfSelectedPlan.Value = effectivePlan;
 
-                    // Show/hide plan selector for contract
+                    // ✅ Show/hide plan selector for contract bookings ONLY
                     paymentPlanContainer.Visible = isContract;
+
+                    // ✅ Disable dropdown for non-contract bookings (extra safety layer)
+                    if (!isContract)
+                    {
+                        ddlPlanChoice.Enabled = false;
+                    }
 
                     // ---------------- CALCULATE TOTALS ----------------
                     int saleId = GetSaleIdByBooking(bookingId);
                     decimal totalPaid = saleId > 0 ? GetTotalPaidBySaleId(saleId) : 0m;
 
-                    // Lock plan after first payment
-                    ddlPlanChoice.Enabled = (totalPaid == 0m);
+                    // ✅ Lock plan after first payment (only for contract bookings)
+                    if (isContract)
+                    {
+                        ddlPlanChoice.Enabled = (totalPaid == 0m);
+                    }
 
                     // Next installment and remaining balance
                     decimal nextAmount = CalculateNextInstallment(isContract, fullPrice, totalPaid, effectivePlan);
@@ -474,7 +496,6 @@ namespace RRCManagementSystem
                 }
             }
         }
-
 
 
 
@@ -811,6 +832,8 @@ namespace RRCManagementSystem
             int clientId = Convert.ToInt32(Session["ClientID"]);
             int bookingId = GetLatestAssignedBookingId(clientId);
 
+            if (bookingId <= 0) return;
+
             decimal minRequired = 0m;
             decimal.TryParse(hfMinRequired.Value, out minRequired);
 
@@ -821,14 +844,12 @@ namespace RRCManagementSystem
             if (hasValue && !decimal.TryParse(rawInput, out enteredAmount))
             {
                 lblCustomAmountError.Text = "Please enter a valid number.";
-                hiddenCheckoutURL.Value = string.Empty;
                 return;
             }
 
             if (hasValue && enteredAmount < minRequired)
             {
                 lblCustomAmountError.Text = $"Amount cannot be less than ₱{minRequired:N2}";
-                hiddenCheckoutURL.Value = string.Empty;
                 return;
             }
 
@@ -836,13 +857,40 @@ namespace RRCManagementSystem
 
             decimal finalAmount = hasValue ? enteredAmount : minRequired;
 
-            // ✅ Reload KPI and hidden fields
-            LoadClientInfo(clientId, hfSelectedPlan.Value);
+            // ✅ ONLY generate new checkout URL, DO NOT reload client info (prevents KPI reset)
+            // Get necessary values from database without full reload
+            decimal fullPrice = 0m;
+            decimal totalPaid = 0m;
+            bool isContract = false;
+            string paymentPlan = hfSelectedPlan.Value;
 
-            // ✅ Generate PayMongo checkout link
-            GenerateCheckoutURL(clientId, bookingId, true, 0, 0, hfSelectedPlan.Value, finalAmount);
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.usp_Payment_ClientLatestAssignedInfo", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
 
-            // ✅ Update PayPal dynamically
+                con.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        fullPrice = reader["Price"] == DBNull.Value ? 0m : Convert.ToDecimal(reader["Price"]);
+                        isContract = reader["IsContract"] != DBNull.Value && Convert.ToBoolean(reader["IsContract"]);
+
+                        int saleId = GetSaleIdByBooking(bookingId);
+                        if (saleId > 0)
+                        {
+                            totalPaid = GetTotalPaidBySaleId(saleId);
+                        }
+                    }
+                }
+            }
+
+            // ✅ Generate PayMongo checkout link with custom amount
+            GenerateCheckoutURL(clientId, bookingId, isContract, fullPrice, totalPaid, paymentPlan, finalAmount);
+
+            // ✅ Update PayPal buttons with custom amount
             ScriptManager.RegisterStartupScript(this, GetType(), "refreshPayPal",
                 "renderPayPalButtons();", true);
         }

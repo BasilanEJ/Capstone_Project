@@ -150,6 +150,7 @@
     <Content Include="ChatWithClient.aspx" />
     <Content Include="ClientAboutUs.aspx" />
     <Content Include="ClientsProfiles.aspx" />
+    <Content Include="CMS.aspx" />
     <Content Include="CreateBooking.aspx" />
     <Content Include="CreateCustomerAccount.aspx" />
     <Content Include="CreateInquiry.aspx" />
@@ -226,6 +227,7 @@
     <Content Include="Images\tesda.png" />
     <Content Include="Images\vcmc.png" />
     <Content Include="InspectedInquiry.aspx" />
+    <Content Include="InspectorAreaScope.aspx" />
     <Content Include="InspectorDashboard.aspx" />
     <Content Include="Login.aspx" />
     <Content Include="Logout.aspx" />
@@ -581,6 +583,13 @@
     <Compile Include="ClientsProfiles.aspx.designer.cs">
       <DependentUpon>ClientsProfiles.aspx</DependentUpon>
     </Compile>
+    <Compile Include="CMS.aspx.cs">
+      <DependentUpon>CMS.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="CMS.aspx.designer.cs">
+      <DependentUpon>CMS.aspx</DependentUpon>
+    </Compile>
     <Compile Include="CreateBooking.aspx.cs">
       <DependentUpon>CreateBooking.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -800,6 +809,13 @@
     </Compile>
     <Compile Include="Inspector.master.designer.cs">
       <DependentUpon>Inspector.master</DependentUpon>
+    </Compile>
+    <Compile Include="InspectorAreaScope.aspx.cs">
+      <DependentUpon>InspectorAreaScope.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="InspectorAreaScope.aspx.designer.cs">
+      <DependentUpon>InspectorAreaScope.aspx</DependentUpon>
     </Compile>
     <Compile Include="InspectorDashboard.aspx.cs">
       <DependentUpon>InspectorDashboard.aspx</DependentUpon>

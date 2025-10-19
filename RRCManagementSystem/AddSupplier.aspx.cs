@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.UI;
 
 namespace RRCManagementSystem
 {
@@ -67,7 +68,7 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
-                DisplayMessage("❌ Permission check failed: " + ex.Message, System.Drawing.Color.Red);
+                ShowErrorAlert("Permission check failed: " + ex.Message);
                 return false;
             }
         }
@@ -77,7 +78,7 @@ namespace RRCManagementSystem
             int adminId = Convert.ToInt32(Session["UserID"]);
             if (!HasAddPermission(adminId, "ManageSupplier"))
             {
-                DisplayMessage("❌ You don't have permission to add suppliers.", System.Drawing.Color.Red);
+                ShowErrorAlert("You don't have permission to add suppliers.");
                 return;
             }
 
@@ -95,7 +96,7 @@ namespace RRCManagementSystem
                 string.IsNullOrWhiteSpace(address) ||
                 string.IsNullOrWhiteSpace(contactNumber))
             {
-                DisplayMessage("⚠ Please fill in all required fields (marked with *).", System.Drawing.Color.Red);
+                ShowErrorAlert("Please fill in all required fields (marked with *).");
                 return;
             }
 
@@ -147,21 +148,57 @@ namespace RRCManagementSystem
                     // Audit
                     InsertAudit(adminId, $"Added new supplier (ID: {newId}): {name} ({companyName})");
 
-                    DisplayMessage("✅ Supplier added successfully!", System.Drawing.Color.Green);
+                    // Show success alert
+                    ShowSuccessAlert("Supplier Added Successfully!");
                     ClearForm();
                 }
                 else
                 {
                     var msg = reason == "Duplicate"
-                        ? "⚠ A supplier with the same Name and Company already exists."
-                        : "⚠ Insert failed.";
-                    DisplayMessage(msg, System.Drawing.Color.Red);
+                        ? "A supplier with the same Name and Company already exists."
+                        : "Insert failed.";
+                    ShowErrorAlert(msg);
                 }
             }
             catch (Exception ex)
             {
-                DisplayMessage("⚠ Error adding supplier: " + ex.Message, System.Drawing.Color.Red);
+                ShowErrorAlert("Error adding supplier: " + ex.Message);
             }
+        }
+
+        private void ShowSuccessAlert(string message)
+        {
+            string script = $@"
+                <script type='text/javascript'>
+                    Swal.fire({{
+                        icon: 'success',
+                        title: 'Success!',
+                        text: '{message}',
+                        confirmButtonColor: '#1D4ED8',
+                        showConfirmButton: false,
+                        timer: 3000
+                    }}).then(function() {{
+                        window.location.href = 'ViewSupplier.aspx';
+                    }});
+                </script>
+            ";
+            ClientScript.RegisterStartupScript(this.GetType(), "SuccessAlert", script, false);
+        }
+
+        private void ShowErrorAlert(string message)
+        {
+            string script = $@"
+                <script type='text/javascript'>
+                    Swal.fire({{
+                        icon: 'error',
+                        title: 'Error!',
+                        text: '{message}',
+                        confirmButtonColor: '#1D4ED8',
+                        confirmButtonText: 'OK'
+                    }});
+                </script>
+            ";
+            ClientScript.RegisterStartupScript(this.GetType(), "ErrorAlert", script, false);
         }
 
         private void DisplayMessage(string message, System.Drawing.Color color)

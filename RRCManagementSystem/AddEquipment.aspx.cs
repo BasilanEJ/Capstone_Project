@@ -79,32 +79,28 @@ namespace RRCManagementSystem
 
             if (!HasPermissionToAdd(adminId, "ManageEquipment"))
             {
-                lblMessage.Text = "❌ You do not have permission to add equipment.";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                ShowMessage("error", "Permission Denied", "You do not have permission to add equipment.");
                 return;
             }
 
             // ✅ Validate inputs
             if (!int.TryParse(txtEquipmentID.Text.Trim(), out int equipmentID) || equipmentID <= 0)
             {
-                lblMessage.Text = "⚠ Please enter a valid numeric Equipment ID.";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                ShowMessage("warning", "Invalid Input", "Please enter a valid numeric Equipment ID.");
                 return;
             }
 
             string equipmentName = txtEquipmentName.Text.Trim();
             if (string.IsNullOrWhiteSpace(equipmentName))
             {
-                lblMessage.Text = "⚠ Please enter Equipment Name.";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                ShowMessage("warning", "Invalid Input", "Please enter Equipment Name.");
                 return;
             }
 
             string status = ddlStatus.SelectedValue;
             if (string.IsNullOrEmpty(status))
             {
-                lblMessage.Text = "⚠ Please select Equipment Status.";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                ShowMessage("warning", "Invalid Input", "Please select Equipment Status.");
                 return;
             }
 
@@ -116,8 +112,7 @@ namespace RRCManagementSystem
                 string[] allowed = { ".jpg", ".jpeg", ".png" };
                 if (Array.IndexOf(allowed, ext) < 0)
                 {
-                    lblMessage.Text = "⚠ Only JPG, JPEG, and PNG files are allowed.";
-                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                    ShowMessage("error", "Invalid File", "Only JPG, JPEG, and PNG files are allowed.");
                     return;
                 }
 
@@ -162,26 +157,44 @@ namespace RRCManagementSystem
                     // 🧾 Audit
                     InsertAudit(adminId, $"Added new equipment: {equipmentID} - {equipmentName}");
 
-                    lblMessage.Text = "✅ Equipment added successfully!";
-                    lblMessage.ForeColor = System.Drawing.Color.Green;
-
+                    // Clear form fields
                     txtEquipmentID.Text = "";
                     txtEquipmentName.Text = "";
                     ddlStatus.SelectedIndex = 0;
+
+                    // Clear image preview via JavaScript
+                    ScriptManager.RegisterStartupScript(this, GetType(), "clearImage",
+                        "document.getElementById('imagePreview').classList.add('hidden'); " +
+                        "document.getElementById('imagePreview').classList.remove('block');", true);
+
+                    ShowMessage("success", "Success!", "Equipment added successfully.");
                 }
                 else
                 {
-                    lblMessage.Text = (reason == "Duplicate")
-                        ? "⚠ Equipment ID already exists."
-                        : "❌ Insert failed.";
-                    lblMessage.ForeColor = System.Drawing.Color.Red;
+                    if (reason == "Duplicate")
+                        ShowMessage("error", "Duplicate Entry", "Equipment ID already exists.");
+                    else
+                        ShowMessage("error", "Failed", "Insert operation failed.");
                 }
             }
             catch (Exception ex)
             {
-                lblMessage.Text = "❌ Error adding equipment: " + ex.Message;
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                ShowMessage("error", "Error", $"Error adding equipment: {ex.Message}");
             }
+        }
+
+        private void ShowMessage(string icon, string title, string text)
+        {
+            string script = $@"
+                Swal.fire({{
+                    icon: '{icon}',
+                    title: '{title}',
+                    text: '{text.Replace("'", "\\'")}',
+                    showConfirmButton: true,
+                    confirmButtonColor: '#007bff'
+                }});";
+
+            ScriptManager.RegisterStartupScript(this, GetType(), Guid.NewGuid().ToString(), script, true);
         }
 
         private void InsertAudit(int? adminId, string action)
@@ -205,4 +218,3 @@ namespace RRCManagementSystem
         }
     }
 }
-    

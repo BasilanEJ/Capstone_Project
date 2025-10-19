@@ -38,11 +38,65 @@ namespace RRCManagementSystem
                 Response.End();
             }
 
+            // 🌟 AJAX handler for filtered inspector list
+            if (Request.QueryString["getFilteredInspectors"] == "1")
+            {
+                string region = Request.QueryString["region"] ?? "";
+                string city = Request.QueryString["city"] ?? "";
+                GetFilteredInspectors(region, city);
+                Response.End();
+            }
+
             if (!IsPostBack)
             {
                 BindInspectors();
                 LoadInquiries();
             }
+        }
+
+        /// <summary>
+        /// Fetches inspectors filtered by plain text location (no encryption needed)
+        /// because InspectorAreaScope table stores Region/City as plain text.
+        /// </summary>
+        private void GetFilteredInspectors(string region, string city)
+        {
+            var result = new DataTable();
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spInspectors_FilteredByLocation", conn))
+            using (var da = new SqlDataAdapter(cmd))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                // Pass plain text values directly (no encryption)
+                // Because InspectorAreaScope.Region and InspectorAreaScope.City are stored as plain text
+                cmd.Parameters.Add("@RegionEnc", SqlDbType.NVarChar, 100).Value =
+                    string.IsNullOrWhiteSpace(region) ? (object)DBNull.Value : region.Trim();
+
+                cmd.Parameters.Add("@CityEnc", SqlDbType.NVarChar, 100).Value =
+                    string.IsNullOrWhiteSpace(city) ? (object)DBNull.Value : city.Trim();
+
+                conn.Open();
+                da.Fill(result);
+            }
+
+            // Convert to JSON and send back to client
+            var serializer = new JavaScriptSerializer();
+            var rows = new System.Collections.Generic.List<System.Collections.Generic.Dictionary<string, object>>();
+
+            foreach (DataRow dr in result.Rows)
+            {
+                var dict = new System.Collections.Generic.Dictionary<string, object>
+                {
+                    { "UserID", dr["UserID"] },
+                    { "Name", dr["Name"] }
+                };
+                rows.Add(dict);
+            }
+
+            string json = serializer.Serialize(rows);
+            Response.ContentType = "application/json";
+            Response.Write(json);
         }
 
         private void GetInspectorSchedule(int inspectorId, DateTime date)
@@ -76,10 +130,6 @@ namespace RRCManagementSystem
                     row["RegionEnc"] = AESHelper.DecryptField(row["RegionEnc"].ToString());
                 if (row["LandmarkEnc"] != DBNull.Value)
                     row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
-
-                // ⭐ NO CHANGE NEEDED FOR SCHEDULEDDATE HERE ⭐
-                // The value is already formatted as a string by the stored procedure.
-                // The cast to DateTime is no longer necessary and was causing the error.
             }
 
             // Convert to JSON
@@ -101,7 +151,6 @@ namespace RRCManagementSystem
             Response.Write(json);
         }
 
-        // OLD - No longer needed
         protected void gvInquiries_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName == "viewMessage")
@@ -114,7 +163,6 @@ namespace RRCManagementSystem
                     true);
             }
         }
-
 
         private void BindInspectors()
         {
@@ -192,7 +240,7 @@ namespace RRCManagementSystem
                 conn.Open();
                 da.Fill(dt);
 
-                // ===== Decrypt sensitive fields =====
+                // Decrypt sensitive fields
                 foreach (DataRow row in dt.Rows)
                 {
                     if (row["EmailEnc"] != DBNull.Value)
@@ -278,6 +326,7 @@ namespace RRCManagementSystem
                     string.IsNullOrWhiteSpace(middleName) ? (object)DBNull.Value : middleName;
                 cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = lastName ?? "";
 
+                // Address fields are encrypted before saving
                 cmd.Parameters.Add("@StreetAndUnit", SqlDbType.NVarChar, 255).Value =
                     string.IsNullOrWhiteSpace(street) ? (object)DBNull.Value : AESHelper.EncryptField(street);
 
@@ -332,8 +381,8 @@ namespace RRCManagementSystem
                     string title = "New Inspection Assigned";
                     string body = $"You have a new inspection scheduled on {when} for Inquiry #{inquiryId}.";
                     string url = createdInspectionId.HasValue
-                                     ? $"~/MyInspections.aspx?InspectionID={createdInspectionId.Value}"
-                                     : "~/MyInspections.aspx";
+                                             ? $"~/MyInspections.aspx?InspectionID={createdInspectionId.Value}"
+                                             : "~/MyInspections.aspx";
                     string dedupInspector = $"assign:{inspectorUserId}:{inquiryId}:{when}";
 
                     using (var cmdN = new SqlCommand("dbo.spNotification_Add", conn, tx))
@@ -397,7 +446,6 @@ namespace RRCManagementSystem
             {
                 var drv = (DataRowView)e.Row.DataItem;
 
-                // ✅ Handle Assign button data attributes
                 Button btnAssign = (Button)e.Row.FindControl("btnAssign");
                 string inquiryId = drv["InquiryID"].ToString();
                 string inquiryCode = drv["InquiryCode"].ToString();
@@ -416,7 +464,6 @@ namespace RRCManagementSystem
                 btnAssign.OnClientClick = $"showAssignModal(this, {inquiryId}); return false;";
             }
         }
-
 
         private string SafeAttr(object value)
         {

@@ -28,14 +28,11 @@ namespace RRCManagementSystem
             DateTime? expiry = Session["OTP_Expiry"] as DateTime?;
             string email = Session["OTP_Email"] as string; // plain email from ForgotPassword
 
-            // 1. Validate OTP entry
             if (string.IsNullOrWhiteSpace(enteredOTP))
             {
                 lblMessage.Text = "⚠ Please enter the OTP.";
                 return;
             }
-
-            // 2. Ensure session values exist
             if (sessionOTP == null || expiry == null || string.IsNullOrWhiteSpace(email))
             {
                 lblMessage.Text = "⚠ Session expired. Please request a new OTP.";
@@ -43,7 +40,6 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // 3. Check OTP expiration
             if (DateTime.Now > expiry.Value)
             {
                 lblMessage.Text = "⚠ OTP has expired. Please request a new one.";
@@ -51,14 +47,12 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // 4. Check OTP match
             if (!string.Equals(enteredOTP, sessionOTP, StringComparison.Ordinal))
             {
                 lblMessage.Text = "⚠ Invalid OTP. Please try again.";
                 return;
             }
 
-            // 5. OTP is correct → move to reset link generation
             try
             {
                 string accountType = GetAccountTypeByEmail(email);
@@ -69,21 +63,15 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                // OTP verified successfully
                 Session["IsOTPVerified"] = true;
 
-                // Clear OTP session data
                 Session.Remove("OTP");
                 Session.Remove("OTP_Expiry");
                 Session.Remove("OTP_Email");
 
-                // Generate reset token and URL
                 string resetUrl = IssueResetTokenAndGetUrl(email, accountType);
 
-                // Send reset link via email
                 SendResetLinkEmail(email, resetUrl);
-
-                // Redirect user to the reset page directly
                 Response.Redirect(resetUrl, endResponse: false);
             }
             catch (Exception ex)
@@ -92,20 +80,16 @@ namespace RRCManagementSystem
             }
         }
 
-        // ============================================================
-        // ACCOUNT LOOKUP
-        // ============================================================
+
         private string GetAccountTypeByEmail(string email)
         {
-            // Hashes used to find account in respective tables
-            string userHash = AESHelper.ComputeSHA256(email.ToLowerInvariant());            // plain hash for Users
-            string clientHash = AESHelper.ComputeSHA256WithPepper(email.ToLowerInvariant()); // peppered hash for Clients
+            string userHash = AESHelper.ComputeSHA256(email.ToLowerInvariant());            
+            string clientHash = AESHelper.ComputeSHA256WithPepper(email.ToLowerInvariant());
 
             using (var con = new SqlConnection(cs))
             {
                 con.Open();
 
-                // Check Users table
                 using (var cmd = new SqlCommand(
                     "IF EXISTS (SELECT 1 FROM dbo.Users WHERE EmailHash = @H) SELECT 1 ELSE SELECT 0", con))
                 {
@@ -114,7 +98,6 @@ namespace RRCManagementSystem
                         return "User";
                 }
 
-                // Check Clients table
                 using (var cmd = new SqlCommand(
                     "IF EXISTS (SELECT 1 FROM dbo.Clients WHERE EmailHash = @H) SELECT 1 ELSE SELECT 0", con))
                 {
@@ -124,16 +107,10 @@ namespace RRCManagementSystem
                 }
             }
 
-            return null; // No match found
+            return null;
         }
 
-        // ============================================================
-        // TOKEN GENERATION & RESET URL
-        // ============================================================
 
-        /// <summary>
-        /// Generate a secure random token (~32 chars)
-        /// </summary>
         private static string NewToken()
         {
             var bytes = new byte[24];
@@ -148,9 +125,7 @@ namespace RRCManagementSystem
                 .TrimEnd('=');
         }
 
-        /// <summary>
-        /// Call stored procedure to store token and return reset URL.
-        /// </summary>
+
         private string IssueResetTokenAndGetUrl(string email, string accountType)
         {
             string token = NewToken();
@@ -164,13 +139,12 @@ namespace RRCManagementSystem
 
                 if (accountType == "User")
                 {
-                    // ✅ Users: plain SHA-256 hash of lowercase email
+              
                     string userHash = AESHelper.ComputeSHA256(email.ToLowerInvariant());
                     cmd.Parameters.AddWithValue("@EmailHash", userHash);
                 }
                 else
                 {
-                    // ✅ Clients: SHA-256 with pepper
                     string clientHash = AESHelper.ComputeSHA256WithPepper(email.ToLowerInvariant());
                     cmd.Parameters.AddWithValue("@EmailHash", clientHash);
                 }
@@ -184,15 +158,11 @@ namespace RRCManagementSystem
                     throw new Exception("Account not found to issue token.");
             }
 
-            // Build full reset URL
             string baseUrl = Request.Url.GetLeftPart(UriPartial.Authority);
             string path = accountType == "User" ? "~/ResetAdminPassword.aspx" : "~/ResetPassword.aspx";
             return baseUrl + ResolveUrl(path) + "?token=" + token;
         }
 
-        // ============================================================
-        // EMAIL SENDING
-        // ============================================================
         private void SendResetLinkEmail(string recipientEmail, string resetUrl)
         {
             var body = $@"
@@ -245,7 +215,7 @@ namespace RRCManagementSystem
             var smtp = new SmtpClient("smtp.gmail.com", 587)
             {
                 UseDefaultCredentials = false,
-                Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq"), // move to web.config
+                Credentials = new NetworkCredential("rrctermiteandpestcontrol@gmail.com", "pktz jwzp tbvx qheq"), 
                 EnableSsl = true
             };
 

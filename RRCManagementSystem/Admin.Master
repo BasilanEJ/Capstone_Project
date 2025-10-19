@@ -9,186 +9,245 @@
     <title><asp:ContentPlaceHolder ID="PageTitle" runat="server" /> | RRC Termite & Pest Control</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
 
     <style>
-        /* ===== Root Variables for Consistency ===== */
+        /* ===== Variables ===== */
         :root {
-            --header-height: 56px;
-            --sidebar-width: 256px;
+            --header-height: 64px;
+            --sidebar-collapsed: 80px;
+            --sidebar-expanded: 280px;
+            --primary-blue: #2563eb;
+            --primary-blue-dark: #1e40af;
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
         }
 
-        @media (min-width: 640px) {
+        @media (max-width: 640px) {
             :root {
-                --header-height: 64px;
+                --header-height: 60px;
             }
         }
 
-        @media (min-width: 1024px) {
-            :root {
-                --header-height: 64px;
-                --sidebar-width: 280px;
-            }
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
 
-        /* ===== Sidebar transition & responsive height ===== */
-        #sidebar {
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            height: calc(100vh - var(--header-height));
-            width: var(--sidebar-width);
-            top: var(--header-height);
-        }
-        
-        #sidebar.open {
-            transform: translateX(0);
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
         }
 
-        /* ===== Desktop view ===== */
-        @media (min-width: 1024px) {
-            #sidebar {
-                transform: translateX(0);
-            }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--primary-blue), var(--primary-blue-dark));
+            border-radius: 4px;
         }
 
-        /* ===== Logo glow effect ===== */
-        .logo-glow {
-            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.9));
+        /* ===== Body ===== */
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
         }
 
-        /* ===== Responsive Header Height ===== */
+        /* ===== Header ===== */
         #mainHeader {
             height: var(--header-height);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
         }
 
-        /* ===== Responsive Logo ===== */
-        .responsive-logo {
-            height: 2.5rem;
-            width: 5rem;
-        }
-
-        @media (min-width: 640px) {
-            .responsive-logo {
-                height: 3rem;
-                width: 6rem;
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .responsive-logo {
-                height: 4rem;
-                width: 8rem;
-            }
-        }
-
-        /* ===== Main Content Responsive Padding ===== */
-        #content {
-            padding-top: calc(var(--header-height) + 1rem);
-            margin-left: 0;
-            transition: margin-left 0.3s ease-in-out;
-        }
-
-        @media (min-width: 640px) {
-            #content {
-                padding-top: calc(var(--header-height) + 1.5rem);
-            }
-        }
-
-        @media (min-width: 1024px) {
-            #content {
-                margin-left: var(--sidebar-width);
-                padding-top: calc(var(--header-height) + 2rem);
-            }
-        }
-
-        /* ===== Sidebar Menu Items Responsive ===== */
-        .sidebar-link {
-            font-size: 0.875rem;
-            padding: 0.75rem 1rem;
-        }
-
-        @media (min-width: 640px) {
-            .sidebar-link {
-                font-size: 0.9375rem;
-                padding: 0.75rem 1.25rem;
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .sidebar-link {
-                font-size: 1rem;
-                padding: 0.75rem 1.5rem;
-            }
-        }
-
-        /* ===== Sidebar Icon Spacing ===== */
-        .sidebar-icon {
-            margin-right: 0.5rem;
-            font-size: 1rem;
-        }
-
-        @media (min-width: 640px) {
-            .sidebar-icon {
-                margin-right: 0.625rem;
-                font-size: 1.125rem;
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .sidebar-icon {
-                margin-right: 0.75rem;
-                font-size: 1.125rem;
-            }
-        }
-
-        /* ===== User Info Responsive ===== */
-        .user-info {
-            font-size: 0.75rem;
-        }
-
-        @media (min-width: 640px) {
-            .user-info {
-                font-size: 0.875rem;
-            }
-        }
-
-        /* ===== Burger Menu Responsive Size ===== */
+        /* ===== Burger Menu ===== */
         #burgerMenu {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            color: white;
+        }
+
+        #burgerMenu:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        #burgerMenu i {
             font-size: 1.25rem;
         }
 
-        @media (min-width: 640px) {
-            #burgerMenu {
-                font-size: 1.5rem;
+        /* ===== Logo ===== */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-left: 1rem;
+        }
+
+        .logo-img {
+            height: 40px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+        }
+
+        @media (max-width: 640px) {
+            .logo-container {
+                margin-left: 0;
+            }
+            
+            .logo-img {
+                height: 35px;
+                max-width: 150px;
             }
         }
 
-        /* ===== Logout Button Responsive ===== */
-        .logout-button {
+           .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .user-name {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .datetime-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        padding-left: 1rem;
+        border-left: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .date-display,
+    .time-display {
+        font-size: 0.8125rem;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .date-display {
+        font-weight: 500;
+        opacity: 0.9;
+    }
+
+    .time-display {
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    @media (max-width: 640px) {
+        .user-profile {
+            gap: 0.75rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+        }
+        
+        .user-name {
             font-size: 0.875rem;
-            padding: 0.75rem 1rem;
+            max-width: 100px;
         }
 
-        @media (min-width: 640px) {
-            .logout-button {
-                font-size: 0.9375rem;
-                padding: 0.75rem 1.25rem;
-            }
+        .datetime-container {
+            padding-left: 0.75rem;
         }
 
-        @media (min-width: 1024px) {
-            .logout-button {
-                font-size: 1rem;
-                padding: 0.75rem 1.5rem;
-            }
+        .date-display,
+        .time-display {
+            font-size: 0.75rem;
         }
 
-        /* ===== Smooth Scrolling for Sidebar ===== */
+        .time-display {
+            font-size: 0.8125rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .user-name {
+            display: none;
+        }
+
+        .datetime-container {
+            border-left: none;
+            padding-left: 0;
+        }
+    }
+
+        /* ===== Sidebar ===== */
+        #sidebar {
+            position: fixed;
+            left: 0;
+            top: var(--header-height);
+            height: calc(100vh - var(--header-height));
+            width: var(--sidebar-collapsed);
+            background: var(--sidebar-bg);
+            z-index: 40;
+            transition: width 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
+        }
+
+        #sidebar.expanded {
+            width: var(--sidebar-expanded);
+        }
+
+        /* ===== Sidebar Menu ===== */
         .sidebar-menu {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1rem 0;
         }
 
         .sidebar-menu::-webkit-scrollbar {
@@ -200,357 +259,496 @@
         }
 
         .sidebar-menu::-webkit-scrollbar-thumb {
-            background-color: rgba(156, 163, 175, 0.5);
+            background-color: rgba(148, 163, 184, 0.3);
             border-radius: 3px;
         }
 
-        .sidebar-menu::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(156, 163, 175, 0.7);
-        }
-
-        /* ===== Prevent content shift when overlay appears ===== */
-        body.sidebar-open {
-            overflow: hidden;
-        }
-
-        @media (min-width: 1024px) {
-            body.sidebar-open {
-                overflow: auto;
-            }
-        }
-
-        /* ===== Safe area padding for notched devices ===== */
-        @supports (padding: max(0px)) {
-            #mainHeader {
-                padding-left: max(1rem, env(safe-area-inset-left));
-                padding-right: max(1rem, env(safe-area-inset-right));
-            }
-            
-            #sidebar {
-                padding-left: env(safe-area-inset-left);
-            }
-            
-            #content {
-                padding-left: max(1rem, env(safe-area-inset-left));
-                padding-right: max(1rem, env(safe-area-inset-right));
-            }
-        }
-
-        /* ===== Touch optimization ===== */
-        @media (hover: none) and (pointer: coarse) {
-            .sidebar-link {
-                min-height: 44px;
-                display: flex;
-                align-items: center;
-            }
-            
-            .logout-button {
-                min-height: 44px;
-            }
-        }
-
-        /* ===== Active link indicator ===== */
-        .sidebar-link.active {
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.875rem 1rem;
+            margin: 0.25rem 0.5rem;
+            border-radius: 8px;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: all 0.3s ease;
             position: relative;
+            min-height: 48px;
         }
 
-        .sidebar-link.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background-color: #3b82f6;
+        .sidebar-link:hover {
+            background: var(--sidebar-hover);
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+
+        .sidebar-link.active {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .sidebar-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-text {
+            margin-left: 1rem;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-size: 0.9375rem;
+        }
+
+        #sidebar.expanded .sidebar-text {
+            opacity: 1;
+        }
+
+        /* ===== Logout Section - MODIFIED ===== */
+        .logout-section {
+            padding: 1rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            /* Important for fixing the button to the bottom when sidebar is collapsed */
+            margin-top: auto; 
+            padding-top: 0; /* Adjusting padding for better placement */
+        }
+        
+        /* The link button that acts as the container/red part */
+        .logout-button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            min-height: 48px;
+            
+            /* Center icon when collapsed by making width and height 48px */
+            width: 48px; /* For collapsed state */
+            height: 48px; /* For collapsed state */
+            margin-left: auto; /* Center in the available space */
+            margin-right: auto; /* Center in the available space */
+            padding: 0; /* Remove padding in collapsed state */
+        }
+        
+        #sidebar.expanded .logout-button {
+            width: 100%; /* Full width when expanded */
+            height: auto; /* Auto height when expanded */
+            margin: 0; /* Remove margins when expanded */
+            padding: 0.875rem; /* Restore padding when expanded */
+            justify-content: flex-start; /* Align to the start when expanded */
+            padding-left: 1.25rem; /* Alignment to match other links */
+        }
+
+
+        .logout-button:hover {
+            background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+            transform: translateY(-2px);
+        }
+
+        /* Make the icon visible and centered in the collapsed state */
+        .logout-button i {
+            font-size: 1.25rem;
+            margin: 0; /* Remove any default icon margin in collapsed state */
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #sidebar.expanded .logout-button i {
+             margin-right: 0.5rem; /* Add spacing back when expanded */
+        }
+
+        /* Hide the text in the collapsed state */
+        .logout-text {
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-weight: 600;
+            display: none; /* Hide it completely when collapsed */
+        }
+
+        /* Show the text when the sidebar is expanded */
+        #sidebar.expanded .logout-text {
+            opacity: 1;
+            display: inline; /* Show it when expanded */
+        }
+        /* ===== END OF MODIFIED LOGOUT STYLES ===== */
+
+        /* ===== Main Content ===== */
+        #content {
+            margin-left: var(--sidebar-collapsed);
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-left: 2rem;
+            padding-right: 2rem;
+            padding-bottom: 2rem;
+            min-height: calc(100vh - var(--header-height));
+            transition: margin-left 0.3s ease;
+        }
+
+        #sidebar.expanded ~ form #content {
+            margin-left: var(--sidebar-expanded);
+        }
+
+        @media (max-width: 640px) {
+            #content {
+                padding: calc(var(--header-height) + 1.5rem) 1rem 1.5rem;
+            }
+        }
+
+        /* ===== Overlay ===== */
+        #sidebarOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 35;
+            display: none;
+        }
+
+        #sidebarOverlay.active {
+            display: block;
+        }
+
+        /* ===== Mobile Adjustments ===== */
+        @media (max-width: 768px) {
+            #sidebar {
+                transform: translateX(-100%);
+            }
+
+            #sidebar.expanded {
+                transform: translateX(0);
+            }
+
+            #content {
+                margin-left: 0 !important;
+            }
+
+            body.sidebar-open {
+                overflow: hidden;
+            }
         }
     </style>
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head>
 
-<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+<body>
     <form id="form1" runat="server">
-        <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="false" />
+        <asp:ScriptManager ID="ScriptManager1" runat="server" 
+    EnablePartialRendering="true" 
+    EnablePageMethods="true"
+    ScriptMode="Release" />
 
-        <header id="mainHeader" class="bg-blue-800 text-white shadow-md fixed w-full top-0 left-0 z-50 flex items-center justify-between">
-            <button id="burgerMenu" type="button" class="block lg:hidden text-white ml-3 sm:ml-4 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded p-2" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
-
-            <div class="flex items-center flex-grow ml-3 lg:ml-4">
-                <img src="/images/logorrc.png" class="responsive-logo mr-2 sm:mr-3 lg:mr-4 rounded-lg logo-glow" alt="RRC Logo" />
-                <span class="hidden md:inline-block text-sm lg:text-base font-semibold">RRC Management</span>
-            </div>
-
-            <div class="flex items-center mr-3 sm:mr-4">
-                <div class="flex items-center user-info font-semibold">
-                    <i class="fas fa-user-circle text-base sm:text-lg mr-1 sm:mr-2"></i>
-                    <asp:Label ID="lblAdminName" runat="server" CssClass="text-white hidden sm:inline truncate max-w-[150px] lg:max-w-none" />
-                    <asp:Label ID="lblAdminNameMobile" runat="server" CssClass="text-white inline sm:hidden" Text="Admin" />
+        <header id="mainHeader">
+            <div style="display: flex; align-items: center;">
+                <button id="burgerMenu" type="button" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="logo-container">
+                    <img src="/images/logorrc.png" class="logo-img" alt="RRC Management Logo" />
                 </div>
             </div>
+
+         <div class="user-profile">
+    <div class="user-info">
+        <div class="user-avatar">
+            <i class="fas fa-user"></i>
+        </div>
+        <asp:Label ID="lblAdminName" runat="server" CssClass="user-name" />
+    </div>
+    <div class="datetime-container">
+        <div class="date-display" id="currentDate"></div>
+        <div class="time-display" id="currentTime"></div>
+    </div>
+</div>
         </header>
 
-        <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden transition-opacity duration-300"></div>
+        <div id="sidebarOverlay"></div>
 
-        <div class="flex">
-            <nav id="sidebar" class="bg-gray-800 text-gray-300 fixed left-0 z-50 flex flex-col shadow-xl">
+        <nav id="sidebar">
+            <ul class="sidebar-menu">
+                <%
+                    List<string> allowed = Session["AllowedModules"] as List<string>;
+                    string currentPath = Request.Url.AbsolutePath.ToLower();
+                    if (allowed != null)
+                    {
+                %>
                 
-                <ul class="sidebar-menu flex flex-col py-2 sm:py-3 lg:py-4 flex-grow overflow-y-auto">
-                    <%
-                        List<string> allowed = Session["AllowedModules"] as List<string>;
-                        string currentPath = Request.Url.AbsolutePath.ToLower();
-                        if (allowed != null)
-                        {
-                    %>
-                    
-                    <%-- Dashboard Link --%>
-                    <% if (allowed.Contains("Dashboard")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("dashboard.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/Dashboard.aspx") %>'>
-                                <i class="fas fa-tachometer-alt sidebar-icon"></i>
-                                <span>Dashboard</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("Dashboard")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("dashboard.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/Dashboard.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-tachometer-alt"></i></span>
+                            <span class="sidebar-text">Dashboard</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Bookings Link --%>
-                    <% if (allowed.Contains("ManageBooking")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("managebooking.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/ManageBooking.aspx") %>'>
-                                <i class="fas fa-book sidebar-icon"></i>
-                                <span>Bookings</span>
-                            </a>
-                        </li>
-                    <% } %>
-                    
-                    <%-- Clients Link --%>
-                    <% if (allowed.Contains("ManageClient")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("manageclient.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/ManageClient.aspx") %>'>
-                                <i class="fas fa-users sidebar-icon"></i>
-                                <span>Clients</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("ManageBooking")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("managebooking.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/ManageBooking.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-calendar-check"></i></span>
+                            <span class="sidebar-text">Bookings</span>
+                        </a>
+                    </li>
+                <% } %>
+                
+                <% if (allowed.Contains("ManageClient")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("manageclient.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/ManageClient.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-users"></i></span>
+                            <span class="sidebar-text">Clients</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Sales & Transactions Link --%>
-                    <% if (allowed.Contains("Sales&Transaction")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("salesandtransactions.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'>
-                                <i class="fas fa-receipt sidebar-icon"></i>
-                                <span>Sales & Transactions</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("Sales&Transaction")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("salesandtransactions.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/SalesAndTransactions.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-receipt"></i></span>
+                            <span class="sidebar-text">Sales & Transactions</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Manage Employees Link --%>
-                    <% if (allowed.Contains("ManageEmployees")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("manageemployee.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/ManageEmployee.aspx") %>'>
-                                <i class="fas fa-user-tie sidebar-icon"></i>
-                                <span>Manage Employees</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("ManageEmployees")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("manageemployee.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/ManageEmployee.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-user-tie"></i></span>
+                            <span class="sidebar-text">Manage Employees</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Manage Items Link --%>
-                    <% if (allowed.Contains("ManageItem")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("manageitem.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/ManageItem.aspx") %>'>
-                                <i class="fas fa-boxes sidebar-icon"></i>
-                                <span>Manage Items</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("ManageItem")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("manageitem.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/ManageItem.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-boxes"></i></span>
+                            <span class="sidebar-text">Manage Items</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Manage Equipment Link --%>
-                    <% if (allowed.Contains("ManageEquipment")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("manageequipment.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/ManageEquipment.aspx") %>'>
-                                <i class="fas fa-tools sidebar-icon"></i>
-                                <span>Manage Equipment</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("ManageEquipment")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("manageequipment.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/ManageEquipment.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-tools"></i></span>
+                            <span class="sidebar-text">Manage Equipment</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Manage Services Link --%>
-                    <% if (allowed.Contains("ManageServices")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("manageservices.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/ManageServices.aspx") %>'>
-                                <i class="fas fa-bug sidebar-icon"></i>
-                                <span>Manage Services</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("ManageServices")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("manageservices.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/ManageServices.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-bug"></i></span>
+                            <span class="sidebar-text">Manage Services</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Manage Supplier Link --%>
-                    <% if (allowed.Contains("ManageSupplier")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("managesupplier.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/ManageSupplier.aspx") %>'>
-                                <i class="fas fa-box sidebar-icon"></i>
-                                <span>Manage Supplier</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("ManageSupplier")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("managesupplier.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/ManageSupplier.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-truck"></i></span>
+                            <span class="sidebar-text">Manage Supplier</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Reports Link --%>
-                    <% if (allowed.Contains("AdminReports")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("adminreports.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/AdminReports.aspx") %>'>
-                                <i class="fas fa-chart-bar sidebar-icon"></i>
-                                <span>Reports</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("AdminReports")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("adminreports.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/AdminReports.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-chart-line"></i></span>
+                            <span class="sidebar-text">Reports</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Manage Inquiry Link --%>
-                    <% if (allowed.Contains("ManageInquiry")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("manageinquiry.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'>
-                                <i class="fas fa-file-alt sidebar-icon"></i>
-                                <span>Manage Inquiry</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("ManageInquiry")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("manageinquiry.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/ManageInquiry.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-envelope"></i></span>
+                            <span class="sidebar-text">Manage Inquiry</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Create Customer Account Link --%>
-                    <% if (allowed.Contains("CreateCustomerAccount")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("createcustomeraccount.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
-                                <i class="fas fa-user-plus sidebar-icon"></i>
-                                <span>Create Customer Account</span>
-                            </a>
-                        </li>
-                    <% } %>
+                <% if (allowed.Contains("CreateCustomerAccount")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("createcustomeraccount.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-user-plus"></i></span>
+                            <span class="sidebar-text">Create Customer Account</span>
+                        </a>
+                    </li>
+                <% } %>
 
-                    <%-- Admin Guide Link --%>
-                    <% if (allowed.Contains("AdminGuide")) { %>
-                        <li>
-                            <a class="sidebar-link flex items-center hover:bg-gray-700 transition-colors duration-200 
-                                <%= currentPath.Contains("adminguide.aspx") ? "bg-blue-600 font-bold text-white active" : "" %>" 
-                                href='<%= ResolveUrl("~/AdminGuide.aspx") %>'>
-                                <i class="fas fa-book-open sidebar-icon"></i>
-                                <span>Admin Guide</span>
-                            </a>
-                        </li>
-                    <% } %>
-                    
-                    <%
-                        }
-                        else
-                        {
-                    %>
-                        <li class="sidebar-link text-red-500 font-semibold">
-                            <i class="fas fa-exclamation-triangle sidebar-icon"></i>
-                            <span class="text-xs sm:text-sm">Session permissions not loaded</span>
-                        </li>
-                    <%
-                        }
-                    %>
-                </ul>
+                <% if (allowed.Contains("AdminGuide")) { %>
+                    <li>
+                        <a class="sidebar-link <%= currentPath.Contains("adminguide.aspx") ? "active" : "" %>" 
+                            href='<%= ResolveUrl("~/AdminGuide.aspx") %>'>
+                            <span class="sidebar-icon"><i class="fas fa-book-open"></i></span>
+                            <span class="sidebar-text">Admin Guide</span>
+                        </a>
+                    </li>
+                <% } %>
+                
+                <%
+                    }
+                    else
+                    {
+                %>
+                    <li class="sidebar-link" style="color: #f87171;">
+                        <span class="sidebar-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                        <span class="sidebar-text">Session not loaded</span>
+                    </li>
+                <%
+                    }
+                %>
+            </ul>
 
-                <div class="flex-shrink-0 p-3 sm:p-4 border-t border-gray-700">
-                    <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click"
-                        CssClass="logout-button w-full text-center bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                    </asp:LinkButton>
-                </div>
-            </nav>
+            <div class="logout-section">
+                <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="logout-button">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="logout-text">Logout</span>
+                </asp:LinkButton>
+            </div>
+        </nav>
 
-            <main id="content" class="flex-1 p-3 sm:p-4 lg:p-6 xl:p-8 min-h-screen transition-all">
-                <asp:ContentPlaceHolder ID="MainContent" runat="server" />
-            </main>
-        </div>
+        <main id="content">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+        </main>
     </form>
+
+    <script>
+        // Update time and date
+        function updateDateTime() {
+            const now = new Date();
+
+            // Format date: "Fri, Oct 17, 2025"
+            const dateOptions = {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            };
+            const dateString = now.toLocaleDateString('en-US', dateOptions);
+
+            // Format time: "2:30:45 PM"
+            const timeOptions = {
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
+            const timeString = now.toLocaleTimeString('en-US', timeOptions);
+
+            document.getElementById('currentDate').textContent = dateString;
+            document.getElementById('currentTime').textContent = timeString;
+        }
+
+        // Update immediately and then every second
+        document.addEventListener("DOMContentLoaded", function () {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            // ... rest of your existing JavaScript code for sidebar toggle ...
+        });
+    </script>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const burgerMenu = document.getElementById("burgerMenu");
             const sidebar = document.getElementById("sidebar");
-            const sidebarOverlay = document.getElementById("sidebarOverlay");
+            const overlay = document.getElementById("sidebarOverlay");
             const body = document.body;
+            // Use 768px for isMobile check to match your CSS media query
+            const isMobile = window.innerWidth <= 768;
 
             function toggleSidebar() {
-                sidebar.classList.toggle("open");
-                sidebarOverlay.classList.toggle("hidden");
-                body.classList.toggle("sidebar-open");
+                sidebar.classList.toggle("expanded");
+
+                if (window.innerWidth <= 768) { // Re-check isMobile inside function for responsiveness
+                    overlay.classList.toggle("active");
+                    body.classList.toggle("sidebar-open");
+                }
+
+                // Toggle icon
+                const icon = burgerMenu.querySelector("i");
+                if (sidebar.classList.contains("expanded")) {
+                    icon.classList.remove("fa-bars");
+                    icon.classList.add("fa-times");
+                } else {
+                    icon.classList.remove("fa-times");
+                    icon.classList.add("fa-bars");
+                }
             }
 
             function closeSidebar() {
-                sidebar.classList.remove("open");
-                sidebarOverlay.classList.add("hidden");
+                sidebar.classList.remove("expanded");
+                overlay.classList.remove("active");
                 body.classList.remove("sidebar-open");
+
+                const icon = burgerMenu.querySelector("i");
+                icon.classList.remove("fa-times");
+                icon.classList.add("fa-bars");
             }
 
-            burgerMenu.addEventListener("click", function(e) {
+            burgerMenu.addEventListener("click", function (e) {
+                e.preventDefault();
                 e.stopPropagation();
                 toggleSidebar();
             });
 
-            sidebarOverlay.addEventListener("click", closeSidebar);
+            overlay.addEventListener("click", closeSidebar);
 
-            // Close sidebar when clicking a link on mobile
-            const sidebarLinks = sidebar.querySelectorAll('a');
-            sidebarLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    if (window.innerWidth < 1024) {
-                        closeSidebar();
-                    }
+            // Close on mobile when clicking links
+            // Re-evalute isMobile on DOMContentLoaded
+            if (window.innerWidth <= 768) {
+                const links = sidebar.querySelectorAll(".sidebar-link");
+                links.forEach(link => {
+                    link.addEventListener("click", closeSidebar);
                 });
-            });
+            }
 
-            // Handle window resize
+            // Handle resize
             let resizeTimer;
-            window.addEventListener('resize', function() {
+            window.addEventListener("resize", function () {
                 clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(function() {
-                    if (window.innerWidth >= 1024) {
-                        closeSidebar();
+                resizeTimer = setTimeout(function () {
+                    // If resizing to desktop view (> 768px), remove mobile-specific classes
+                    if (window.innerWidth > 768) {
+                        overlay.classList.remove("active");
+                        body.classList.remove("sidebar-open");
                     }
                 }, 250);
             });
-
-            // Prevent body scroll when sidebar is open on mobile
-            sidebar.addEventListener('touchmove', function(e) {
-                if (sidebar.classList.contains('open')) {
-                    e.stopPropagation();
-                }
-            }, { passive: true });
-
-            // Duplicate admin name for mobile display
-            const adminName = document.getElementById('<%= lblAdminName.ClientID %>');
-            const adminNameMobile = document.getElementById('<%= lblAdminNameMobile.ClientID %>');
-            if (adminName && adminNameMobile && adminName.textContent) {
-                const name = adminName.textContent.trim();
-                // Show first name or first 8 characters on mobile
-                const shortName = name.split(' ')[0] || name.substring(0, 8);
-                adminNameMobile.textContent = shortName;
-            }
         });
     </script>
 </body>

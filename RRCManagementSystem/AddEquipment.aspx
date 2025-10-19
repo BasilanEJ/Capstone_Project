@@ -19,6 +19,36 @@
             }
         }
     </script>
+    <style>
+        /* Image Modal Styles */
+        .image-modal-overlay {
+            background-color: rgba(0, 0, 0, 0.85);
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .image-modal-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: none;
+            cursor: pointer;
+            color: #1f2937;
+            font-size: 1.5rem;
+            line-height: 1;
+            padding: 0.5rem;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s, transform 0.2s;
+            z-index: 60;
+        }
+
+        .image-modal-close-btn:hover {
+            background-color: #f87171;
+            color: white;
+            transform: scale(1.05);
+        }
+    </style>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
@@ -66,7 +96,20 @@
                                                                                                         file:text-sm file:font-semibold
                                                                                                         file:bg-blue-50 file:text-blue-700
                                                                                                         hover:file:bg-blue-100" />
-                    <img id="imagePreview" src="#" alt="Equipment Image Preview" class="mt-4 hidden w-32 h-32 object-cover rounded-lg border border-gray-300 shadow-sm" />
+                    
+                    <!-- Image Preview with Click to Enlarge -->
+                    <div class="mt-4 relative">
+                        <img id="imagePreview" src="#" alt="Equipment Image Preview" 
+                             class="hidden w-32 h-32 object-cover rounded-lg border border-gray-300 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+                             onclick="enlargePreview()" />
+                        <button type="button" id="btnRemoveImage" onclick="removeImage()" 
+                                class="hidden absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                style="transform: translate(50%, -50%);">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Buttons -->
@@ -83,6 +126,21 @@
         </div>
     </div>
 
+    <!-- Image Modal for Enlarged Preview -->
+    <div id="imageModal" class="fixed inset-0 z-50 flex items-center justify-center image-modal-overlay opacity-0 pointer-events-none" 
+         onclick="if (event.target.id === 'imageModal') hideImageModal()">
+        
+        <div class="relative max-w-4xl max-h-[90vh]" onclick="event.stopPropagation()">
+            <button type="button" onclick="hideImageModal()" class="image-modal-close-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            
+            <img id="modalImage" class="max-w-full max-h-[90vh] mx-auto rounded-lg" alt="Enlarged Equipment Image" />
+        </div>
+    </div>
+
     <!-- JAVASCRIPT -->
     <script>
         function previewImage(event) {
@@ -91,13 +149,51 @@
                 var reader = new FileReader();
                 reader.onload = function (e) {
                     var imgPreview = document.getElementById("imagePreview");
+                    var btnRemove = document.getElementById("btnRemoveImage");
                     imgPreview.src = e.target.result;
                     imgPreview.classList.remove("hidden");
                     imgPreview.classList.add("block");
+                    btnRemove.classList.remove("hidden");
+                    btnRemove.classList.add("block");
                 };
                 reader.readAsDataURL(file);
             }
         }
+
+        function removeImage() {
+            var fileInput = document.getElementById('<%= fuEquipmentImage.ClientID %>');
+            var imgPreview = document.getElementById("imagePreview");
+            var btnRemove = document.getElementById("btnRemoveImage");
+
+            fileInput.value = '';
+            imgPreview.src = '#';
+            imgPreview.classList.add("hidden");
+            imgPreview.classList.remove("block");
+            btnRemove.classList.add("hidden");
+            btnRemove.classList.remove("block");
+        }
+
+        function enlargePreview() {
+            var imgSrc = document.getElementById("imagePreview").src;
+            if (imgSrc && imgSrc !== '#' && imgSrc !== window.location.href + '#') {
+                document.getElementById('modalImage').src = imgSrc;
+                document.getElementById('imageModal').classList.remove('opacity-0', 'pointer-events-none');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function hideImageModal() {
+            document.getElementById('imageModal').classList.add('opacity-0', 'pointer-events-none');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function (event) {
+            const imageModal = document.getElementById('imageModal');
+            if (event.key === 'Escape' && !imageModal.classList.contains('opacity-0')) {
+                hideImageModal();
+            }
+        });
 
         function validateImage(input) {
             var filePath = input.value;
@@ -109,8 +205,7 @@
                     text: 'Only JPG, JPEG, and PNG files are allowed.'
                 });
                 input.value = '';
-                document.getElementById("imagePreview").classList.add("hidden");
-                document.getElementById("imagePreview").classList.remove("block");
+                removeImage();
                 return false;
             }
         }

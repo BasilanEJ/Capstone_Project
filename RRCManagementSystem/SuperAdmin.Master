@@ -131,18 +131,23 @@
             </a>
         </li>
 
-        <li class="nav-item has-dropdown border-bottom">
-            <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-cogs me-2"></i> System Settings</span><i class="fas fa-chevron-down"></i>
+       <li class="nav-item has-dropdown border-bottom">
+    <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-cogs me-2"></i> System Settings</span><i class="fas fa-chevron-down"></i>
+    </a>
+    <ul class="nav flex-column accordion d-none bg-dark">
+        <li>
+            <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("SystemChanges.aspx") %>' href="SystemChanges.aspx">
+                <i class="fas fa-tools me-2"></i> System Changes
             </a>
-            <ul class="nav flex-column accordion d-none bg-dark">
-                <li>
-                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("SystemChanges.aspx") %>' href="SystemChanges.aspx">
-                        <i class="fas fa-tools me-2"></i> System Changes
-                    </a>
-                </li>
-            </ul>
         </li>
+        <li>
+            <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("InspectorAreaScope.aspx") %>' href="InspectorAreaScope.aspx">
+                <i class="fas fa-map-marked-alt me-2"></i> Inspector Area Scope
+            </a>
+        </li>
+    </ul>
+</li>
 
         <li class="nav-item border-bottom">
             <a class='nav-link text-white px-4 py-3 <%= GetActiveClass("Reports.aspx") %>' href="Reports.aspx">

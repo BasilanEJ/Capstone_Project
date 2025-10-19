@@ -15,38 +15,214 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+
+    <style>
+        /* Logo Styling */
+        .logo-img {
+            height: 40px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+            transition: transform 0.3s ease;
+        }
+
+        .logo-img:hover {
+            transform: scale(1.05);
+        }
+
+        /* Mobile Logo */
+        @media (max-width: 640px) {
+            .logo-img {
+                height: 32px;
+                max-width: 150px;
+            }
+        }
+
+        /* Smooth Animations */
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Toast animation */
+        @keyframes fade-in-toast {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fade-in-toast 0.3s ease-out;
+        }
+
+        /* Notification Badge Pulse */
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Backdrop blur support */
+        .backdrop-blur-custom {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* Smooth dropdown appearance */
+        .dropdown-enter {
+            animation: dropdownEnter 0.2s ease-out;
+        }
+
+        @keyframes dropdownEnter {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Notification item hover effect */
+        .notif-item {
+            transition: all 0.2s ease;
+        }
+
+        .notif-item:hover {
+            background: linear-gradient(to right, #eff6ff, #dbeafe);
+            transform: translateX(4px);
+        }
+
+        /* Mobile menu overlay */
+        .mobile-overlay {
+            transition: opacity 0.3s ease;
+        }
+
+        /* Button hover effects */
+        .nav-btn {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .nav-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: white;
+            transition: width 0.3s ease;
+        }
+
+        .nav-btn:hover::after {
+            width: 100%;
+        }
+
+        /* Footer link hover */
+        .footer-link {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .footer-link:hover {
+            color: #bfdbfe;
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
 
-<body class="flex flex-col min-h-screen bg-gray-50 text-gray-800">
+<body class="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 text-gray-800 antialiased">
     <form id="form1" runat="server" class="flex flex-col flex-grow">
 
         <!-- NAVBAR -->
-        <nav class="bg-blue-700 text-white shadow-md">
-            <div class="max-w-7xl mx-auto px-4">
-                <div class="flex justify-between items-center h-16">
+        <nav class="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-700 text-white shadow-lg sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16 sm:h-18">
                     <!-- Logo / Brand -->
-                    <a href="Home.aspx" class="flex items-center space-x-2 text-lg font-bold hover:text-blue-200">
-                        <i class="fas fa-cogs"></i>
-                        <span>RRC Client</span>
+                    <a href="Home.aspx" class="flex items-center space-x-2 sm:space-x-3 group">
+                        <img src="/images/logorrc.png" class="logo-img" alt="RRC Management Logo" />
+                        <span class="hidden sm:inline-block text-base sm:text-lg font-bold tracking-wide"></span>
                     </a>
 
                     <!-- Desktop Menu -->
-                    <div class="hidden md:flex space-x-6 items-center">
-                        <a href="Home.aspx" class="hover:text-blue-200 transition flex items-center">
-                            <i class="fas fa-home mr-1"></i> Home
+                    <div class="hidden md:flex space-x-4 lg:space-x-8 items-center">
+                        <a href="Home.aspx" class="nav-btn hover:text-blue-100 transition flex items-center space-x-2 px-3 py-2 rounded-lg">
+                            <i class="fas fa-home text-lg"></i>
+                            <span class="font-medium">Home</span>
                         </a>
 
                         <!-- Notifications -->
                         <div class="relative">
-                            <button type="button" onclick="openNotifications()" class="relative hover:text-blue-200 transition">
+                            <button type="button" onclick="openNotifications()" 
+                                class="relative nav-btn hover:text-blue-100 transition p-2 rounded-lg hover:bg-blue-600/50">
                                 <i class="fas fa-bell text-xl"></i>
-                                <span id="notifBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full hidden">0</span>
+                                <span id="notifBadge" 
+                                    class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full hidden pulse-animation shadow-lg">
+                                    0
+                                </span>
                             </button>
 
                             <!-- Notification Dropdown -->
-                            <div id="notifDropdown" class="hidden absolute right-0 mt-2 w-72 bg-white text-gray-800 rounded-lg shadow-lg overflow-hidden z-50">
-                                <div id="notifList" class="max-h-80 overflow-y-auto p-3 text-sm">
-                                    <p class="text-center text-gray-500">No new notifications</p>
+                            <div id="notifDropdown" 
+                                class="hidden absolute right-0 mt-3 w-80 sm:w-96 bg-white text-gray-800 rounded-xl shadow-2xl overflow-hidden z-50 dropdown-enter border border-gray-100">
+                                <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3 font-semibold text-sm flex items-center justify-between">
+                                    <span><i class="fas fa-bell mr-2"></i>Notifications</span>
+                                    <button type="button" onclick="closeNotifications()" class="text-white/80 hover:text-white">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="notifList" class="max-h-96 overflow-y-auto p-2 text-sm custom-scrollbar">
+                                    <p class="text-center text-gray-400 py-8">
+                                        <i class="fas fa-inbox text-3xl mb-2"></i><br>
+                                        No new notifications
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -54,89 +230,124 @@
                         <!-- Profile -->
                         <div class="relative">
                             <button type="button" onclick="toggleDropdown('profileDropdown')"
-                                class="flex items-center space-x-2 hover:text-blue-200 transition">
-                                <i class="fas fa-user-circle text-xl"></i>
-                                <asp:Label ID="lblClientName" runat="server" Text="My Profile"></asp:Label>
+                                class="flex items-center space-x-2 hover:text-blue-100 transition px-3 py-2 rounded-lg hover:bg-blue-600/50">
+                                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user text-sm"></i>
+                                </div>
+                                <asp:Label ID="lblClientName" runat="server" Text="My Profile" CssClass="font-medium hidden lg:inline"></asp:Label>
                                 <i class="fas fa-chevron-down text-xs"></i>
                             </button>
 
                             <!-- Profile Dropdown -->
-                            <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-40 bg-white text-gray-800 rounded-lg shadow-lg overflow-hidden z-50">
-                                <a href="Profile.aspx" class="block px-4 py-2 hover:bg-gray-100">
-                                    <i class="fas fa-user mr-2"></i> My Profile
+                            <div id="profileDropdown" 
+                                class="hidden absolute right-0 mt-3 w-48 bg-white text-gray-800 rounded-xl shadow-2xl overflow-hidden z-50 dropdown-enter border border-gray-100">
+                                <a href="Profile.aspx" class="flex items-center px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 transition group">
+                                    <i class="fas fa-user mr-3 text-blue-600 group-hover:scale-110 transition"></i>
+                                    <span class="font-medium">My Profile</span>
                                 </a>
-                                <a href="../Logout.aspx" class="block px-4 py-2 hover:bg-gray-100">
-                                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                <div class="border-t border-gray-100"></div>
+                                <a href="../Logout.aspx" class="flex items-center px-4 py-3 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 transition group">
+                                    <i class="fas fa-sign-out-alt mr-3 text-red-600 group-hover:scale-110 transition"></i>
+                                    <span class="font-medium">Logout</span>
                                 </a>
                             </div>
                         </div>
                     </div>
 
                     <!-- Mobile Toggle Button -->
-                    <button type="button" class="md:hidden text-2xl" onclick="toggleMobileMenu()">
+                    <button type="button" class="md:hidden text-2xl p-2 rounded-lg hover:bg-blue-600/50 transition" 
+                        onclick="toggleMobileMenu()" aria-label="Toggle menu">
                         <i class="fas fa-bars"></i>
                     </button>
                 </div>
             </div>
-
-            <!-- Mobile Menu -->
-            <div id="mobileMenu" class="fixed inset-0 bg-black/50 z-50 hidden">
-                <div class="absolute right-0 top-0 w-64 bg-blue-700 text-white h-full flex flex-col">
-                    <div class="flex justify-between items-center px-4 py-3 border-b border-blue-600">
-                        <span class="text-lg font-semibold flex items-center gap-2">
-                            <i class="fas fa-cogs"></i> RRC Client
-                        </span>
-                        <button type="button" onclick="toggleMobileMenu()" class="text-2xl hover:text-gray-200">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <nav class="flex-1 p-4 space-y-3">
-                        <a href="Home.aspx" class="block px-3 py-2 rounded hover:bg-blue-600">
-                            <i class="fas fa-home mr-2"></i> Home
-                        </a>
-                        <div>
-                            <div class="flex items-center justify-between">
-                                <span><i class="fas fa-bell mr-2"></i> Notifications</span>
-                                <span id="notifBadgeMobile" class="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full hidden">0</span>
-                            </div>
-                            <div id="notifListMobile" class="mt-2 bg-white text-gray-800 rounded p-2 max-h-72 overflow-y-auto text-sm">
-                                <p class="text-center text-gray-500">No new notifications</p>
-                            </div>
-                        </div>
-                        <a href="Profile.aspx" class="block px-3 py-2 rounded hover:bg-blue-600">
-                            <i class="fas fa-user mr-2"></i> My Profile
-                        </a>
-                        <a href="../Logout.aspx" class="block px-3 py-2 rounded hover:bg-blue-600">
-                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                        </a>
-                    </nav>
-                </div>
-            </div>
         </nav>
 
+        <!-- Mobile Menu Overlay -->
+        <div id="mobileMenu" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden mobile-overlay" onclick="closeMobileMenuOnOverlay(event)">
+            <div class="absolute right-0 top-0 w-80 max-w-[85vw] bg-gradient-to-br from-blue-700 to-blue-800 text-white h-full flex flex-col shadow-2xl slide-in" onclick="event.stopPropagation()">
+                <!-- Mobile Menu Header -->
+                <div class="flex justify-between items-center px-5 py-4 border-b border-blue-600/50 bg-blue-800/30">
+                    <div class="flex items-center gap-3">
+                        <img src="/images/logorrc.png" class="logo-img" alt="RRC Management Logo" style="height: 32px;" />
+                        <span class="text-base font-bold"></span>
+                    </div>
+                    <button type="button" onclick="toggleMobileMenu()" class="text-2xl hover:text-gray-200 transition p-1">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Mobile Menu Content -->
+                <nav class="flex-1 overflow-y-auto custom-scrollbar">
+                    <div class="p-4 space-y-2">
+                        <a href="Home.aspx" class="flex items-center px-4 py-3 rounded-lg hover:bg-blue-600/50 transition group">
+                            <i class="fas fa-home mr-3 text-lg group-hover:scale-110 transition"></i>
+                            <span class="font-medium">Home</span>
+                        </a>
+
+                        <!-- Mobile Notifications Section -->
+                        <div class="mt-4">
+                            <div class="flex items-center justify-between px-4 py-2 text-sm font-semibold text-blue-200">
+                                <div class="flex items-center">
+                                    <i class="fas fa-bell mr-2"></i>
+                                    <span>Notifications</span>
+                                </div>
+                                <span id="notifBadgeMobile" class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full hidden pulse-animation">0</span>
+                            </div>
+                            <div id="notifListMobile" class="mt-2 bg-white/10 backdrop-blur-sm rounded-lg p-3 max-h-64 overflow-y-auto text-sm custom-scrollbar">
+                                <p class="text-center text-blue-200 py-6">
+                                    <i class="fas fa-inbox text-2xl mb-2"></i><br>
+                                    No new notifications
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-blue-600/30 my-4"></div>
+
+                        <a href="Profile.aspx" class="flex items-center px-4 py-3 rounded-lg hover:bg-blue-600/50 transition group">
+                            <i class="fas fa-user mr-3 text-lg group-hover:scale-110 transition"></i>
+                            <span class="font-medium">My Profile</span>
+                        </a>
+
+                        <a href="../Logout.aspx" class="flex items-center px-4 py-3 rounded-lg hover:bg-red-500/50 transition group">
+                            <i class="fas fa-sign-out-alt mr-3 text-lg group-hover:scale-110 transition"></i>
+                            <span class="font-medium">Logout</span>
+                        </a>
+                    </div>
+                </nav>
+
+                <!-- Mobile Menu Footer -->
+                <div class="px-5 py-4 border-t border-blue-600/50 bg-blue-800/30 text-xs text-center text-blue-200">
+                    &copy; <%= DateTime.Now.Year %> RRC Management
+                </div>
+            </div>
+        </div>
+
         <!-- MAIN CONTENT -->
-        <main class="flex-grow max-w-7xl mx-auto w-full px-4 py-6">
+        <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </main>
 
     </form>
 
     <!-- FOOTER -->
-    <footer class="bg-blue-700 text-white text-center py-4 mt-auto">
-        <div class="flex flex-wrap justify-center space-x-3 text-sm">
-            <a href="Home.aspx" class="hover:underline">Home</a>
-            <span>|</span>
-            <a href="ClientAboutUs.aspx" class="hover:underline">About Us</a>
-            <span>|</span>
-            <a href="PrivacyPolicy.aspx" class="hover:underline">Privacy Policy</a>
+    <footer class="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-700 text-white mt-auto shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex flex-wrap justify-center items-center gap-3 sm:gap-4 text-xs sm:text-sm">
+                <a href="Home.aspx" class="footer-link font-medium">Home</a>
+                <span class="text-blue-300">|</span>
+                <a href="ClientAboutUs.aspx" class="footer-link font-medium">About Us</a>
+                <span class="text-blue-300">|</span>
+                <a href="PrivacyPolicy.aspx" class="footer-link font-medium">Privacy Policy</a>
+            </div>
+            <div class="mt-3 text-center text-xs text-blue-100">
+                &copy; <%= DateTime.Now.Year %> RRC Management System. All Rights Reserved.
+            </div>
         </div>
-        <div class="mt-2 text-xs">&copy; <%= DateTime.Now.Year %> RRC Management System. All Rights Reserved.</div>
     </footer>
 
     <!-- Toast Container -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 space-y-3 z-50"></div>
-
-    <!-- Tailwind Scripts -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 space-y-3 z-50 max-w-sm"></div>
 
     <script>
         // Toggle dropdowns
@@ -152,15 +363,29 @@
         window.addEventListener('click', function (e) {
             const dropdowns = document.querySelectorAll('[id$="Dropdown"]');
             dropdowns.forEach(drop => {
-                if (!drop.contains(e.target) && !drop.previousElementSibling.contains(e.target)) {
+                const button = drop.previousElementSibling;
+                if (!drop.contains(e.target) && button && !button.contains(e.target)) {
                     drop.classList.add('hidden');
                 }
             });
         });
 
-        // Mobile menu
+        // Mobile menu functions
         function toggleMobileMenu() {
-            document.getElementById('mobileMenu').classList.toggle('hidden');
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+            document.body.style.overflow = menu.classList.contains('hidden') ? '' : 'hidden';
+        }
+
+        function closeMobileMenuOnOverlay(event) {
+            if (event.target === event.currentTarget) {
+                toggleMobileMenu();
+            }
+        }
+
+        // Close notifications dropdown
+        function closeNotifications() {
+            document.getElementById('notifDropdown').classList.add('hidden');
         }
 
         // ===== Notifications =====
@@ -178,11 +403,15 @@
 
                     // Desktop
                     const list = document.getElementById('notifList');
-                    if (list) list.innerHTML = notifHtml || '<p class="text-center text-gray-500">No notifications</p>';
+                    if (list) {
+                        list.innerHTML = notifHtml || '<p class="text-center text-gray-400 py-8"><i class="fas fa-inbox text-3xl mb-2"></i><br>No notifications</p>';
+                    }
 
                     // Mobile
                     const listMobile = document.getElementById('notifListMobile');
-                    if (listMobile) listMobile.innerHTML = notifHtml || '<p class="text-center text-gray-500">No notifications</p>';
+                    if (listMobile) {
+                        listMobile.innerHTML = notifHtml || '<p class="text-center text-blue-200 py-6"><i class="fas fa-inbox text-2xl mb-2"></i><br>No notifications</p>';
+                    }
 
                     // Badges
                     const badge = document.getElementById('notifBadge');
@@ -198,7 +427,9 @@
                     }
 
                     // Toast for new notifications
-                    if (count > lastNotifCount) showToast('🔔 You have a new notification!');
+                    if (count > lastNotifCount) {
+                        showToast('🔔 You have a new notification!', 'info');
+                    }
                     lastNotifCount = count;
                 })
                 .catch(error => console.error('Notification error:', error));
@@ -221,35 +452,45 @@
                 .catch(error => console.error('Mark read error:', error));
         }
 
-        // ===== Toast Notifications =====
-        function showToast(message) {
+        // ===== Enhanced Toast Notifications =====
+        function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-            toast.className = 'bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in';
-            toast.textContent = message;
+
+            const colors = {
+                info: 'bg-blue-600',
+                success: 'bg-green-600',
+                warning: 'bg-yellow-600',
+                error: 'bg-red-600'
+            };
+
+            toast.className = `${colors[type]} text-white px-5 py-3 rounded-lg shadow-2xl animate-fade-in flex items-center space-x-3 max-w-sm`;
+            toast.innerHTML = `
+                <span class="flex-1">${message}</span>
+                <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
 
             container.appendChild(toast);
 
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
                 toast.addEventListener('transitionend', () => toast.remove());
-            }, 4000);
+            }, 5000);
         }
 
         // Poll every 30 seconds
         setInterval(refreshNotifications, 30000);
         window.addEventListener('load', refreshNotifications);
-    </script>
 
-    <style>
-        /* Toast animation */
-        @keyframes fade-in {
-            0% { opacity: 0; transform: translateY(10px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fade-in 0.3s ease-out;
-        }
-    </style>
+        // Prevent body scroll when mobile menu is open
+        window.addEventListener('resize', function () {
+            if (window.innerWidth >= 768) {
+                document.getElementById('mobileMenu').classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
 </body>
 </html>

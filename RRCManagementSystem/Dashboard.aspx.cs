@@ -202,116 +202,119 @@ namespace RRCManagementSystem
 
 
 
-
-        // ==================== BLOCKCHAIN VERIFY (CANONICAL) ====================
         protected void btnVerifyBlockchain_Click(object sender, EventArgs e)
         {
-            int checkedCount = 0, tamperedCount = 0;
-            bool allValid = true;
 
-            // --- Optional HMAC key (base64 in web.config appSettings) ---
-            byte[] hmacKey = null;
+
             try
             {
-                var keyB64 = ConfigurationManager.AppSettings["BlockchainHmacKey"];
-                if (!string.IsNullOrWhiteSpace(keyB64))
-                    hmacKey = Convert.FromBase64String(keyB64);
-            }
-            catch { hmacKey = null; }
+                int checkedCount = 0, tamperedCount = 0;
+                bool allValid = true;
 
-            // --- 1) Load all blockchain rows ---
-            var rows = new List<BlockRow>();
-            using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("dbo.spBlockchain_Log_ListForVerify", con))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                con.Open();
-                using (var r = cmd.ExecuteReader())
+                // --- Optional HMAC key (base64 in web.config appSettings) ---
+                byte[] hmacKey = null;
+                try
                 {
-                    while (r.Read())
+                    var keyB64 = ConfigurationManager.AppSettings["BlockchainHmacKey"];
+                    if (!string.IsNullOrWhiteSpace(keyB64))
+                        hmacKey = Convert.FromBase64String(keyB64);
+                }
+                catch { hmacKey = null; }
+
+                // --- 1) Load all blockchain rows ---
+                var rows = new List<BlockRow>();
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spBlockchain_Log_ListForVerify", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    con.Open();
+                    using (var r = cmd.ExecuteReader())
                     {
-                        rows.Add(new BlockRow
+                        while (r.Read())
                         {
-                            LogID = (int)r["LogID"],
-                            SaleJson = r["SaleDataJson"] as string ?? "",
-                            SaleHashDb = r["SaleHash"] as string ?? "",
-                            PrevHashDb = r["PrevHash"] as string ?? "",
-                            ChainHashDb = r["ChainHash"] as string ?? "",
-                            TxId = (int)r["TransactionID"],
-                            Timestamp = (DateTime)r["Timestamp"],
-                            AuthTag = r["AuthTag"] as byte[]
-                        });
+                            rows.Add(new BlockRow
+                            {
+                                LogID = (int)r["LogID"],
+                                SaleJson = r["SaleDataJson"] as string ?? "",
+                                SaleHashDb = r["SaleHash"] as string ?? "",
+                                PrevHashDb = r["PrevHash"] as string ?? "",
+                                ChainHashDb = r["ChainHash"] as string ?? "",
+                                TxId = (int)r["TransactionID"],
+                                Timestamp = (DateTime)r["Timestamp"],
+                                AuthTag = r["AuthTag"] as byte[]
+                            });
+                        }
                     }
                 }
-            }
 
-            rows.Sort((a, b) => a.LogID.CompareTo(b.LogID)); // oldest -> newest
+                rows.Sort((a, b) => a.LogID.CompareTo(b.LogID));
 
-            // --- 2) Verify forward ---
-            string previousChain = null; // null on first row
-            foreach (var row in rows)
-            {
-                checkedCount++;
-
-                string saleHash = Sha256Utf8Lower(row.SaleJson);
-                bool okSale = row.SaleHashDb.Equals(saleHash, StringComparison.OrdinalIgnoreCase);
-
-                bool isFirst = (previousChain == null);
-                bool prevOkFirst = row.PrevHashDb.Equals(saleHash, StringComparison.OrdinalIgnoreCase)
-                                   || string.IsNullOrWhiteSpace(row.PrevHashDb)
-                                   || IsAllZeros64(row.PrevHashDb);
-
-                bool okPrev = isFirst ? prevOkFirst : row.PrevHashDb.Equals(previousChain, StringComparison.OrdinalIgnoreCase);
-
-                string material = (previousChain == null ? saleHash : (previousChain + "." + saleHash));
-                string chainHash = Sha256Utf8Lower(material);
-                bool okChain = row.ChainHashDb.Equals(chainHash, StringComparison.OrdinalIgnoreCase);
-
-                previousChain = row.ChainHashDb;
-
-                bool okHmac = true;
-                if (hmacKey != null && row.AuthTag?.Length > 0)
+                // --- 2) Verify forward ---
+                string previousChain = null;
+                foreach (var row in rows)
                 {
-                    string paidAtIso = row.Timestamp.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
-                    string macMaterial = row.SaleJson + "|" + row.TxId + "|" + paidAtIso;
-                    using (var h = new HMACSHA256(hmacKey))
+                    checkedCount++;
+
+                    string saleHash = Sha256Utf8Lower(row.SaleJson);
+                    bool okSale = row.SaleHashDb.Equals(saleHash, StringComparison.OrdinalIgnoreCase);
+
+                    bool isFirst = (previousChain == null);
+                    bool prevOkFirst = row.PrevHashDb.Equals(saleHash, StringComparison.OrdinalIgnoreCase)
+                                       || string.IsNullOrWhiteSpace(row.PrevHashDb)
+                                       || IsAllZeros64(row.PrevHashDb);
+
+                    bool okPrev = isFirst ? prevOkFirst : row.PrevHashDb.Equals(previousChain, StringComparison.OrdinalIgnoreCase);
+
+                    string material = (previousChain == null ? saleHash : (previousChain + "." + saleHash));
+                    string chainHash = Sha256Utf8Lower(material);
+                    bool okChain = row.ChainHashDb.Equals(chainHash, StringComparison.OrdinalIgnoreCase);
+
+                    previousChain = row.ChainHashDb;
+
+                    bool okHmac = true;
+                    if (hmacKey != null && row.AuthTag?.Length > 0)
                     {
-                        byte[] expected = h.ComputeHash(Encoding.UTF8.GetBytes(macMaterial));
-                        okHmac = Enumerable.SequenceEqual(row.AuthTag, expected);
+                        string paidAtIso = row.Timestamp.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
+                        string macMaterial = row.SaleJson + "|" + row.TxId + "|" + paidAtIso;
+                        using (var h = new HMACSHA256(hmacKey))
+                        {
+                            byte[] expected = h.ComputeHash(Encoding.UTF8.GetBytes(macMaterial));
+                            okHmac = Enumerable.SequenceEqual(row.AuthTag, expected);
+                        }
+                    }
+
+                    if (!(okSale && okPrev && okChain && okHmac))
+                    {
+                        allValid = false;
+                        tamperedCount++;
                     }
                 }
 
-                if (!(okSale && okPrev && okChain && okHmac))
+                if (checkedCount == 0)
                 {
-                    allValid = false;
-                    tamperedCount++;
+                    lblVerificationResult.CssClass = "text-lg sm:text-xl font-bold mt-6 block text-gray-500";
+                    lblVerificationResult.Text = "ℹ No blockchain records found.";
                 }
-            }
+                else if (allValid)
+                {
+                    lblVerificationResult.CssClass = "text-lg sm:text-xl font-bold mt-6 block text-green-600";
+                    lblVerificationResult.Text = "✅ Verification complete. All records are consistent. No tampering detected.";
+                }
+                else
+                {
+                    lblVerificationResult.CssClass = "text-lg sm:text-xl font-bold mt-6 block text-red-600";
+                    lblVerificationResult.Text = $"❌ {tamperedCount} of {checkedCount} record(s) appear altered or inconsistent.";
+                }
 
-            // --- 3) Display result only ---
-            if (checkedCount == 0)
-            {
-                lblVerificationResult.ForeColor = System.Drawing.Color.Gray;
-                lblVerificationResult.Text = "ℹ No blockchain records found.";
+                LogAudit("Performed blockchain verification.");
             }
-            else if (allValid)
+            catch (Exception ex)
             {
-                lblVerificationResult.ForeColor = System.Drawing.Color.Green;
-                lblVerificationResult.Text = "✅ Verification complete. All records are consistent. No tampering detected.";
+                lblVerificationResult.CssClass = "text-lg sm:text-xl font-bold mt-6 block text-red-600";
+                lblVerificationResult.Text = "⚠️ Error verifying blockchain: " + ex.Message;
             }
-            else
-            {
-                lblVerificationResult.ForeColor = System.Drawing.Color.Red;
-                lblVerificationResult.Text = $"❌ {tamperedCount} of {checkedCount} record(s) appear altered or inconsistent.";
-            }
-
-            LogAudit("Performed blockchain verification.");
-            LoadWeeklyBookingCalendar();
         }
 
-
-        // Helper row type (C# 7.3-friendly)
-        // Treat UI date pickers as PHT and convert to UTC range for SQL
         private static DateTime? PhtRangeStartUtc(DateTime? localDate)
         {
             if (!localDate.HasValue) return null;

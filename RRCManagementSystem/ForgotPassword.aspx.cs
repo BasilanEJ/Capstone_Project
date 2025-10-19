@@ -31,29 +31,16 @@ namespace RRCManagementSystem
 
             try
             {
-                // ========================
-                // HASHING LOGIC
-                // ========================
-                // Users: Plain SHA256
                 string userEmailHash = AESHelper.ComputeSHA256(email.ToLowerInvariant());
-
-                // Clients: SHA256 WITH PEPPER (must match CreateCustomerAccount)
                 string clientEmailHash = AESHelper.ComputeSHA256WithPepper(email.ToLowerInvariant());
 
-                // Debugging (optional)
-                // lblMessage.Text = $"DEBUG:<br/>UserHash: {userEmailHash}<br/>ClientHash: {clientEmailHash}";
-
-                // ========================
-                // 1) USERS (Admins/Staff)
-                // ========================
                 if (TryGetEligibleUser(userEmailHash, out int userId, out string userName, out string userRole, out string encryptedEmail))
                 {
                     string otp = GenerateOTP();
 
-                    // Save OTP context (valid for 2 minutes)
                     Session["OTP"] = otp;
                     Session["OTP_Expiry"] = DateTime.Now.AddMinutes(2);
-                    Session["OTP_Email"] = email; // plain email for verification
+                    Session["OTP_Email"] = email; 
                     Session["OTP_AccountType"] = "User";
                     Session["OTP_UserID"] = userId;
                     Session.Remove("OTP_ClientID");
@@ -71,16 +58,13 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                // ========================
-                // 2) CLIENTS (Approved Only)
-                // ========================
                 if (TryGetApprovedClient(clientEmailHash, out int clientId, out string clientName, out string encryptedEmailClient))
                 {
                     string otp = GenerateOTP();
 
                     Session["OTP"] = otp;
                     Session["OTP_Expiry"] = DateTime.Now.AddMinutes(2);
-                    Session["OTP_Email"] = email; // plain for verification
+                    Session["OTP_Email"] = email; 
                     Session["OTP_AccountType"] = "Client";
                     Session["OTP_ClientID"] = clientId;
                     Session.Remove("OTP_UserID");
@@ -98,9 +82,6 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                // ========================
-                // 3) NO MATCH FOUND
-                // ========================
                 lblMessage.Text = "⚠ Email not found or not approved/active.";
             }
             catch (Exception ex)
@@ -109,13 +90,7 @@ namespace RRCManagementSystem
             }
         }
 
-        // ==========================
-        // DATABASE HELPERS
-        // ==========================
 
-        /// <summary>
-        /// Lookup for USERS (Admin/Staff) using plain SHA256 hash.
-        /// </summary>
         private bool TryGetEligibleUser(string emailHash, out int userId, out string name, out string role, out string encryptedEmail)
         {
             userId = 0;
@@ -142,7 +117,6 @@ namespace RRCManagementSystem
                         return false;
                     }
 
-                    // Decrypt email for reference
                     string encrypted = reader["Email"]?.ToString() ?? "";
                     if (!string.IsNullOrEmpty(encrypted))
                         encryptedEmail = AESHelper.DecryptEmail(encrypted);
@@ -155,9 +129,6 @@ namespace RRCManagementSystem
             }
         }
 
-        /// <summary>
-        /// Lookup for CLIENTS using SHA256 hash WITH pepper.
-        /// </summary>
         private bool TryGetApprovedClient(string clientEmailHash, out int clientId, out string name, out string decryptedEmail)
         {
             clientId = 0;
@@ -173,17 +144,16 @@ namespace RRCManagementSystem
                 conn.Open();
                 using (var reader = cmd.ExecuteReader())
                 {
-                    // No matching client found
+
                     if (!reader.Read())
                         return false;
 
                     string status = reader["Status"]?.ToString() ?? "";
 
-                    // Only allow Approved clients
                     if (!status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                         return false;
 
-                    // Safely decrypt the encrypted email
+        
                     string encryptedValue = reader["EmailEnc"]?.ToString() ?? "";
                     if (!string.IsNullOrEmpty(encryptedValue))
                     {
@@ -203,10 +173,6 @@ namespace RRCManagementSystem
                 }
             }
         }
-
-        // ==========================
-        // OTP GENERATION AND EMAIL
-        // ==========================
 
         private string GenerateOTP()
         {
@@ -280,10 +246,6 @@ namespace RRCManagementSystem
                 return false;
             }
         }
-
-        // ==========================
-        // AUDIT LOGGING
-        // ==========================
 
         private void TryAudit(string action)
         {

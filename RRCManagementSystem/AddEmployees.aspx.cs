@@ -136,8 +136,8 @@ namespace RRCManagementSystem
                     }
                 }
 
-                // Insert employee
-                int newId = InsertEmployee(
+                // Insert employee and get the employee number
+                var result = InsertEmployee(
                     txtLastName.Text.Trim(),
                     txtFirstName.Text.Trim(),
                     string.IsNullOrWhiteSpace(txtMiddleName.Text) ? null : txtMiddleName.Text.Trim(),
@@ -146,13 +146,22 @@ namespace RRCManagementSystem
                     ddlPosition.SelectedValue,
                     imagePath);
 
-                if (newId > 0)
+                if (result.employeeId > 0)
                 {
                     string fullName = $"{txtLastName.Text.Trim()}, {txtFirstName.Text.Trim()}"
                                       + (string.IsNullOrWhiteSpace(txtMiddleName.Text) ? "" : $" {txtMiddleName.Text.Trim()}");
-                    AddAuditLog(adminId, $"Added a new employee: {fullName}");
+                    AddAuditLog(adminId, $"Added a new employee: {fullName} (Employee #: {result.employeeNumber})");
 
-                    ShowMessage("✅ Employee added successfully!", true);
+                    // Show success message with employee number
+                    string script = $@"
+                        Swal.fire({{
+                            icon: 'success',
+                            title: 'Employee Added Successfully!',
+                            html: '<strong>Employee Number:</strong> {result.employeeNumber}<br><strong>Name:</strong> {fullName}',
+                            confirmButtonColor: '#2563eb'
+                        }});
+                    ";
+                    ScriptManager.RegisterStartupScript(this, GetType(), "showSuccess", script, true);
 
                     // Reset form
                     txtLastName.Text = txtFirstName.Text = txtMiddleName.Text = txtEmail.Text = txtPhone.Text = "";
@@ -183,7 +192,7 @@ namespace RRCManagementSystem
             }
         }
 
-        private int InsertEmployee(string lastName, string firstName, string middleName,
+        private (int employeeId, string employeeNumber) InsertEmployee(string lastName, string firstName, string middleName,
                                    string email, string phone, string position, string profileImage)
         {
             using (var conn = new SqlConnection(connectionString))
@@ -200,8 +209,16 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 20).Value = "Active";
 
                 conn.Open();
-                object result = cmd.ExecuteScalar(); // NewEmployeeID from SP
-                return (result != null && int.TryParse(result.ToString(), out int id)) ? id : 0;
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        int employeeId = reader["NewEmployeeID"] != DBNull.Value ? Convert.ToInt32(reader["NewEmployeeID"]) : 0;
+                        string employeeNumber = reader["EmployeeNumber"] != DBNull.Value ? reader["EmployeeNumber"].ToString() : "";
+                        return (employeeId, employeeNumber);
+                    }
+                }
+                return (0, "");
             }
         }
 

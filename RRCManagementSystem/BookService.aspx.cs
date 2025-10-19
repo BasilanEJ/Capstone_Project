@@ -78,9 +78,12 @@ namespace RRCManagementSystem
                     {
                         btnBook.Enabled = false;
                         ScriptManager.RegisterStartupScript(this, GetType(), "noQuote", @"
-                            Swal.fire('No Quotation', 
-                                      'Please wait for the inspector to create a quotation.', 
-                                      'info');", true);
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'No Quotation Available', 
+                                text: 'Please wait for the inspector to create a quotation.',
+                                confirmButtonColor: '#2563eb'
+                            });", true);
                     }
                 }
             }
@@ -93,7 +96,12 @@ namespace RRCManagementSystem
             if (string.IsNullOrWhiteSpace(txtDate.Text) || string.IsNullOrWhiteSpace(txtTime.Text))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "missing",
-                    "Swal.fire('Missing Info', 'Please select a preferred date and time.', 'warning');", true);
+                    @"Swal.fire({
+                        icon: 'warning',
+                        title: 'Missing Information',
+                        text: 'Please select a preferred date and time.',
+                        confirmButtonColor: '#2563eb'
+                    });", true);
                 return;
             }
 
@@ -103,15 +111,26 @@ namespace RRCManagementSystem
                 !DateTime.TryParse($"{txtDate.Text} {txtTime.Text}", CultureInfo.GetCultureInfo("en-PH"), DateTimeStyles.None, out selectedDateTime))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "invalid",
-                    "Swal.fire('Invalid Input', 'Invalid date or time format.', 'error');", true);
+                    @"Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Input',
+                        text: 'Invalid date or time format.',
+                        confirmButtonColor: '#dc2626'
+                    });", true);
                 return;
             }
 
-            // Ensure date/time is in the future
-            if (selectedDateTime < DateTime.Now)
+            // Ensure date/time is at least 1 hour in the future
+            DateTime oneHourFromNow = DateTime.Now.AddHours(1);
+            if (selectedDateTime < oneHourFromNow)
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "pastDate",
-                    "Swal.fire('Invalid Schedule', 'Please choose a future date and time.', 'error');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "tooSoon",
+                    @"Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Schedule',
+                        text: 'Please choose a date and time at least 1 hour from now.',
+                        confirmButtonColor: '#dc2626'
+                    });", true);
                 return;
             }
 
@@ -120,7 +139,12 @@ namespace RRCManagementSystem
             if (!int.TryParse(hfQuotationID.Value, out quotationId) || quotationId <= 0)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "noQuoteId",
-                    "Swal.fire('Error', 'Missing quotation reference.', 'error');", true);
+                    @"Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Missing quotation reference.',
+                        confirmButtonColor: '#dc2626'
+                    });", true);
                 return;
             }
 
@@ -191,7 +215,12 @@ namespace RRCManagementSystem
                         .Replace("\n", " ");
 
                     ScriptManager.RegisterStartupScript(this, GetType(), "sqlErr",
-                        $"Swal.fire('Error', 'Failed to create booking: {safeMessage}', 'error');", true);
+                        $@"Swal.fire({{
+                            icon: 'error',
+                            title: 'Booking Failed',
+                            text: 'Failed to create booking: {safeMessage}',
+                            confirmButtonColor: '#dc2626'
+                        }});", true);
                     return;
                 }
             }
@@ -199,18 +228,29 @@ namespace RRCManagementSystem
             // Final validation: Was the booking successfully created?
             if (newBookingId > 0)
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "booked",
-                    $"Swal.fire('Success', 'Your service has been booked! (Code: {newBookingCode})', 'success');", true);
+                // Success - redirect to Home.aspx with success message
+                string successScript = $@"
+                    Swal.fire({{
+                        icon: 'success',
+                        title: 'Booking Confirmed!',
+                        html: 'Your service has been successfully booked.<br><strong>Booking Code: {newBookingCode}</strong>',
+                        confirmButtonColor: '#16a34a',
+                        confirmButtonText: 'Go to Home'
+                    }}).then((result) => {{
+                        window.location.href = 'Home.aspx';
+                    }});";
 
-                // Reset fields
-                txtDate.Text = "";
-                txtTime.Text = "";
-                txtNotes.Text = "";
+                ScriptManager.RegisterStartupScript(this, GetType(), "booked", successScript, true);
             }
             else
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "fail",
-                    "Swal.fire('Error', 'No booking was created. Please try again.', 'error');", true);
+                    @"Swal.fire({
+                        icon: 'error',
+                        title: 'Booking Failed',
+                        text: 'No booking was created. Please try again.',
+                        confirmButtonColor: '#dc2626'
+                    });", true);
             }
         }
 

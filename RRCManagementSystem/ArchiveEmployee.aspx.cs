@@ -54,6 +54,12 @@ namespace RRCManagementSystem
             }
         }
 
+        protected void gvArchivedEmployees_PageIndexChanging(object sender, GridViewPageEventArgs e)
+        {
+            gvArchivedEmployees.PageIndex = e.NewPageIndex;
+            LoadArchivedEmployees();
+        }
+
         protected void gvArchivedEmployees_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (!int.TryParse(e.CommandArgument?.ToString(), out int employeeID))
@@ -190,7 +196,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         private void Toast(string icon, string title, string text, int timerMs = 2000)
         {
             string extra = timerMs > 0 ? $"showConfirmButton:false, timer:{timerMs}" : "showConfirmButton:true";
@@ -230,6 +235,5 @@ namespace RRCManagementSystem
 
             base.Render(writer);
         }
-
     }
 }

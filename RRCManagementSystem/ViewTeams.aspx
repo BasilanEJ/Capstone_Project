@@ -36,7 +36,7 @@
                                 <%# Eval("Status") %>
                             </span>
                             
-                            <%-- Placeholder to conditionally show the Delete Button --%>
+
                             <asp:PlaceHolder ID="phDeleteTeam" runat="server" Visible="false">
                                 <asp:Button ID="btnDeleteTeam" runat="server" 
                                     Text="Delete Team" 

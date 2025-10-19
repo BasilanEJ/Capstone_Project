@@ -65,9 +65,9 @@ namespace RRCManagementSystem
                     ? $"✅ You have {dt.Rows.Count} booking(s)."
                     : "⚠️ You have no bookings yet.";
 
-                lblMessage.ForeColor = dt.Rows.Count > 0
-                    ? System.Drawing.Color.Green
-                    : System.Drawing.Color.Orange;
+                lblMessage.CssClass = dt.Rows.Count > 0
+                    ? "block"
+                    : "block";
             }
         }
 
@@ -143,13 +143,7 @@ namespace RRCManagementSystem
             if (e.Row.RowType == DataControlRowType.DataRow)
             {
                 string status = DataBinder.Eval(e.Row.DataItem, "Status").ToString();
-                int statusCol = 5; // Column index for Status
-                if (status == "Assigned")
-                    e.Row.Cells[statusCol].CssClass = "status-assigned";
-                else if (status == "Pending")
-                    e.Row.Cells[statusCol].CssClass = "status-pending";
-                else if (status == "Cancelled")
-                    e.Row.Cells[statusCol].CssClass = "status-cancelled";
+                // Status styling is now handled in the template field
             }
         }
 
@@ -193,8 +187,8 @@ namespace RRCManagementSystem
                 if (lt != null)
                 {
                     lt.Text = status == "Completed"
-                        ? "<span class='badge-success'>Done</span>"
-                        : "<span class='badge-secondary'>Pending</span>";
+                        ? "<span class='progress-badge progress-done'><i class='fas fa-check-circle mr-1'></i>Done</span>"
+                        : "<span class='progress-badge progress-pending'><i class='far fa-clock mr-1'></i>Pending</span>";
                 }
             }
         }
@@ -207,7 +201,13 @@ namespace RRCManagementSystem
         {
             if (string.IsNullOrWhiteSpace(hfSelectedScheduleID.Value))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "NoSched", "Swal.fire('Oops', 'No schedule selected.', 'warning');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "NoSched",
+                    @"Swal.fire({
+                        icon: 'warning',
+                        title: 'No Schedule Selected',
+                        text: 'Please select a schedule first.',
+                        confirmButtonColor: '#2563eb'
+                    });", true);
                 return;
             }
 
@@ -216,18 +216,44 @@ namespace RRCManagementSystem
 
             if (string.IsNullOrWhiteSpace(txtNewScheduleDate.Text) || string.IsNullOrWhiteSpace(txtNewScheduleTime.Text))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "MissingDT", "Swal.fire('Missing', 'Please pick date and time.', 'warning');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "MissingDT",
+                    @"Swal.fire({
+                        icon: 'warning',
+                        title: 'Missing Information',
+                        text: 'Please select both date and time.',
+                        confirmButtonColor: '#2563eb'
+                    });", true);
                 return;
             }
 
             if (!DateTime.TryParse(txtNewScheduleDate.Text, out DateTime newDate) ||
                 !TimeSpan.TryParse(txtNewScheduleTime.Text, out TimeSpan newTime))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "BadDT", "Swal.fire('Invalid', 'Invalid date or time.', 'error');", true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "BadDT",
+                    @"Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Input',
+                        text: 'Invalid date or time format.',
+                        confirmButtonColor: '#dc2626'
+                    });", true);
                 return;
             }
 
             DateTime newScheduledDate = newDate.Date.Add(newTime);
+
+            // Validate: must be at least 1 hour from now
+            DateTime oneHourFromNow = DateTime.Now.AddHours(1);
+            if (newScheduledDate < oneHourFromNow)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "TooSoon",
+                    @"Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Schedule',
+                        text: 'Please select a date and time at least 1 hour from now.',
+                        confirmButtonColor: '#dc2626'
+                    });", true);
+                return;
+            }
 
             // Insert reschedule request
             using (var con = new SqlConnection(connectionString))
@@ -238,17 +264,42 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
                 cmd.Parameters.Add("@NewScheduledDate", SqlDbType.DateTime).Value = newScheduledDate;
 
-                con.Open();
-                cmd.ExecuteNonQuery();
-            }
+                try
+                {
+                    con.Open();
+                    cmd.ExecuteNonQuery();
 
-            ScriptManager.RegisterStartupScript(this, GetType(), "ReqSent",
-                "Swal.fire('Sent!', 'Your reschedule request has been submitted for approval.', 'success');", true);
+                    ScriptManager.RegisterStartupScript(this, GetType(), "ReqSent",
+                        @"Swal.fire({
+                            icon: 'success',
+                            title: 'Request Sent!',
+                            text: 'Your reschedule request has been submitted for approval.',
+                            confirmButtonColor: '#16a34a'
+                        }).then(() => {
+                            hideModal();
+                        });", true);
+                }
+                catch (Exception ex)
+                {
+                    string safeMessage = ex.Message
+                        .Replace("'", "\\'")
+                        .Replace("\"", "\\\"")
+                        .Replace("\r", "")
+                        .Replace("\n", " ");
+
+                    ScriptManager.RegisterStartupScript(this, GetType(), "ReqError",
+                        $@"Swal.fire({{
+                            icon: 'error',
+                            title: 'Request Failed',
+                            text: 'Unable to submit request: {safeMessage}',
+                            confirmButtonColor: '#dc2626'
+                        }});", true);
+                }
+            }
 
             hfSelectedScheduleID.Value = "";
             LoadUpcomingOperations(clientId);
             LoadAllOperations(clientId);
-            ScriptManager.RegisterStartupScript(this, GetType(), "HideModal", "hideModal();", true);
         }
 
         private void CancelBooking(int bookingId)
@@ -259,18 +310,47 @@ namespace RRCManagementSystem
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
 
-                con.Open();
-                int rows = cmd.ExecuteNonQuery();
+                try
+                {
+                    con.Open();
+                    int rows = cmd.ExecuteNonQuery();
 
-                if (rows > 0)
-                {
-                    ScriptManager.RegisterStartupScript(this, GetType(), "CancelSuccess",
-                        "Swal.fire('Cancelled!', 'Booking cancelled successfully.', 'success');", true);
+                    if (rows > 0)
+                    {
+                        ScriptManager.RegisterStartupScript(this, GetType(), "CancelSuccess",
+                            @"Swal.fire({
+                                icon: 'success',
+                                title: 'Booking Cancelled',
+                                text: 'Your booking has been cancelled successfully.',
+                                confirmButtonColor: '#16a34a'
+                            });", true);
+                    }
+                    else
+                    {
+                        ScriptManager.RegisterStartupScript(this, GetType(), "CancelFail",
+                            $@"Swal.fire({{
+                                icon: 'warning',
+                                title: 'Unable to Cancel',
+                                text: 'Booking may already be processed or assigned. Please contact support. (ID: {bookingId})',
+                                confirmButtonColor: '#f59e0b'
+                            }});", true);
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    ScriptManager.RegisterStartupScript(this, GetType(), "CancelFail",
-                        $"Swal.fire('Oops!', 'Unable to cancel. Booking may already be processed. BookingID: {bookingId}', 'warning');", true);
+                    string safeMessage = ex.Message
+                        .Replace("'", "\\'")
+                        .Replace("\"", "\\\"")
+                        .Replace("\r", "")
+                        .Replace("\n", " ");
+
+                    ScriptManager.RegisterStartupScript(this, GetType(), "CancelError",
+                        $@"Swal.fire({{
+                            icon: 'error',
+                            title: 'Cancellation Failed',
+                            text: 'Error: {safeMessage}',
+                            confirmButtonColor: '#dc2626'
+                        }});", true);
                 }
             }
 
@@ -346,7 +426,6 @@ namespace RRCManagementSystem
                         int op = Convert.ToInt32(rdr["OperationNumber"]);
 
                         lblContractStatus.Text = $"⚠️ You missed Operation #{op} on {missedDate:MMMM dd, yyyy}. Please contact us to reschedule.";
-                        lblContractStatus.CssClass = "alert alert-warning fw-bold mt-4 d-block";
                         lblContractStatus.Visible = true;
                     }
                 }

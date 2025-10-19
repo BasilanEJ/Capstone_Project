@@ -33,6 +33,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.ScriptManager ScriptManager1;
 
         /// <summary>
+        /// lblMessage control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblMessage;
+
+        /// <summary>
         /// lblInstruction control.
         /// </summary>
         /// <remarks>
@@ -40,6 +49,15 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Label lblInstruction;
+
+        /// <summary>
+        /// pnlQRCode control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlQRCode;
 
         /// <summary>
         /// imgQRCode control.
@@ -51,6 +69,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Image imgQRCode;
 
         /// <summary>
+        /// pnlManualEntryLink control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlManualEntryLink;
+
+        /// <summary>
         /// txtCode control.
         /// </summary>
         /// <remarks>
@@ -58,6 +85,15 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.HiddenField txtCode;
+
+        /// <summary>
+        /// hdnSecretKey control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hdnSecretKey;
 
         /// <summary>
         /// btnVerify control.
@@ -69,12 +105,12 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Button btnVerify;
 
         /// <summary>
-        /// lblMessage control.
+        /// lblSecretKey control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblMessage;
+        protected global::System.Web.UI.WebControls.Label lblSecretKey;
     }
 }

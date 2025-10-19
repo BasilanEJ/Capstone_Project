@@ -11,7 +11,7 @@ namespace RRCManagementSystem
 {
 
 
-    public partial class Payment
+    public partial class CMS
     {
 
         /// <summary>
@@ -24,255 +24,300 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.ScriptManager ScriptManager1;
 
         /// <summary>
-        /// updPaymentDetails control.
+        /// upCMS control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.UpdatePanel updPaymentDetails;
+        protected global::System.Web.UI.UpdatePanel upCMS;
 
         /// <summary>
-        /// lblServiceName control.
+        /// imgHeroBannerPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblServiceName;
+        protected global::System.Web.UI.WebControls.Image imgHeroBannerPreview;
 
         /// <summary>
-        /// lblPaymentPlan control.
+        /// fuHeroBanner control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblPaymentPlan;
+        protected global::System.Web.UI.WebControls.FileUpload fuHeroBanner;
 
         /// <summary>
-        /// lblNextInstallment control.
+        /// btnUpdateHeroBanner control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal lblNextInstallment;
+        protected global::System.Web.UI.WebControls.Button btnUpdateHeroBanner;
 
         /// <summary>
-        /// litNextDue control.
+        /// imgBaitingPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal litNextDue;
+        protected global::System.Web.UI.WebControls.Image imgBaitingPreview;
 
         /// <summary>
-        /// lblTotalPrice control.
+        /// fuBaiting control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal lblTotalPrice;
+        protected global::System.Web.UI.WebControls.FileUpload fuBaiting;
 
         /// <summary>
-        /// lblAlreadyPaid control.
+        /// imgTermitePreventionPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal lblAlreadyPaid;
+        protected global::System.Web.UI.WebControls.Image imgTermitePreventionPreview;
 
         /// <summary>
-        /// lblRemaining control.
+        /// fuTermitePrevention control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal lblRemaining;
+        protected global::System.Web.UI.WebControls.FileUpload fuTermitePrevention;
 
         /// <summary>
-        /// lblBasePrice control.
+        /// imgSoilPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblBasePrice;
+        protected global::System.Web.UI.WebControls.Image imgSoilPreview;
 
         /// <summary>
-        /// lblTravelExpense control.
+        /// fuSoil control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblTravelExpense;
+        protected global::System.Web.UI.WebControls.FileUpload fuSoil;
 
         /// <summary>
-        /// lblMiscellaneous control.
+        /// imgReticulationPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblMiscellaneous;
+        protected global::System.Web.UI.WebControls.Image imgReticulationPreview;
 
         /// <summary>
-        /// Label1 control.
+        /// fuReticulation control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label Label1;
+        protected global::System.Web.UI.WebControls.FileUpload fuReticulation;
 
         /// <summary>
-        /// paymentPlanContainer control.
+        /// imgMoundPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel paymentPlanContainer;
+        protected global::System.Web.UI.WebControls.Image imgMoundPreview;
 
         /// <summary>
-        /// ddlPlanChoice control.
+        /// fuMound control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.DropDownList ddlPlanChoice;
+        protected global::System.Web.UI.WebControls.FileUpload fuMound;
 
         /// <summary>
-        /// txtCustomAmount control.
+        /// imgGeneralPestPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtCustomAmount;
+        protected global::System.Web.UI.WebControls.Image imgGeneralPestPreview;
 
         /// <summary>
-        /// lblCustomAmountError control.
+        /// fuGeneralPest control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblCustomAmountError;
+        protected global::System.Web.UI.WebControls.FileUpload fuGeneralPest;
 
         /// <summary>
-        /// lblMessage control.
+        /// imgTickFleasPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblMessage;
+        protected global::System.Web.UI.WebControls.Image imgTickFleasPreview;
 
         /// <summary>
-        /// lblReminder control.
+        /// fuTickFleas control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblReminder;
+        protected global::System.Web.UI.WebControls.FileUpload fuTickFleas;
 
         /// <summary>
-        /// hfMinRequired control.
+        /// imgBedbugsPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfMinRequired;
+        protected global::System.Web.UI.WebControls.Image imgBedbugsPreview;
 
         /// <summary>
-        /// hfSelectedPlan control.
+        /// fuBedbugs control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfSelectedPlan;
+        protected global::System.Web.UI.WebControls.FileUpload fuBedbugs;
 
         /// <summary>
-        /// hfPayPalBookingID control.
+        /// imgRatsPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfPayPalBookingID;
+        protected global::System.Web.UI.WebControls.Image imgRatsPreview;
 
         /// <summary>
-        /// hfPayPalAmount control.
+        /// fuRats control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfPayPalAmount;
+        protected global::System.Web.UI.WebControls.FileUpload fuRats;
 
         /// <summary>
-        /// hfPayPalClientID control.
+        /// btnUpdateServices control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfPayPalClientID;
+        protected global::System.Web.UI.WebControls.Button btnUpdateServices;
 
         /// <summary>
-        /// hiddenCheckoutURL control.
+        /// imgAboutPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hiddenCheckoutURL;
+        protected global::System.Web.UI.WebControls.Image imgAboutPreview;
 
         /// <summary>
-        /// hiddenReference control.
+        /// fuAbout control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hiddenReference;
+        protected global::System.Web.UI.WebControls.FileUpload fuAbout;
 
         /// <summary>
-        /// btnPayHere control.
+        /// btnUpdateAbout control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnPayHere;
+        protected global::System.Web.UI.WebControls.Button btnUpdateAbout;
 
         /// <summary>
-        /// updPayPal control.
+        /// imgVideoThumbPreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.UpdatePanel updPayPal;
+        protected global::System.Web.UI.WebControls.Image imgVideoThumbPreview;
 
         /// <summary>
-        /// gvPaymentHistory control.
+        /// fuVideoThumbnail control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvPaymentHistory;
+        protected global::System.Web.UI.WebControls.FileUpload fuVideoThumbnail;
+
+        /// <summary>
+        /// txtVimeoVideoId control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtVimeoVideoId;
+
+        /// <summary>
+        /// btnUpdateVideo control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnUpdateVideo;
+
+        /// <summary>
+        /// imgCOPreview control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Image imgCOPreview;
+
+        /// <summary>
+        /// fuCO control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.FileUpload fuCO;
+
+        /// <summary>
+        /// btnUpdateCO control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnUpdateCO;
     }
 }

@@ -2,7 +2,8 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using RRCManagementSystem.Helpers; // For AESHelper and PasswordHelper
+using System.Text.RegularExpressions;
+using RRCManagementSystem.Helpers; 
 
 namespace RRCManagementSystem
 {
@@ -15,16 +16,13 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 lblMessage.Text = "";
-
-                // 🔑 1) TOKEN path (preferred) - Direct reset link via email
                 var token = Request.QueryString["token"];
                 if (!string.IsNullOrWhiteSpace(token))
                 {
-                    HandleAdminTokenReset(); // Validates token, loads email and role into ViewState
+                    HandleAdminTokenReset(); 
                     return;
                 }
 
-                // 🔐 2) OTP/session fallback path
                 if (!(Session["IsOTPVerified"] is bool ok && ok) || Session["Email"] == null)
                 {
                     lblMessage.ForeColor = System.Drawing.Color.Red;
@@ -32,8 +30,6 @@ namespace RRCManagementSystem
                     btnResetPassword.Enabled = false;
                     return;
                 }
-
-                // Confirm that email exists in Users table
                 if (!IsEmailInUsers(Session["Email"].ToString()))
                 {
                     lblMessage.ForeColor = System.Drawing.Color.Red;
@@ -42,7 +38,6 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                // OTP path validated
                 ViewState["Email"] = Session["Email"].ToString();
                 ViewState["Role"] = "Admin";
                 lblMessage.ForeColor = System.Drawing.Color.Green;
@@ -50,9 +45,7 @@ namespace RRCManagementSystem
             }
         }
 
-        /// <summary>
-        /// Check if given email exists using SHA-256 hash (no plain text search)
-        /// </summary>
+
         private bool IsEmailInUsers(string email)
         {
             string emailHash = AESHelper.ComputeSHA256(email);
@@ -66,9 +59,6 @@ namespace RRCManagementSystem
             }
         }
 
-        /// <summary>
-        /// Validates token and retrieves associated encrypted email + expiry
-        /// </summary>
         private void HandleAdminTokenReset()
         {
             string token = Request.QueryString["token"];
@@ -93,7 +83,6 @@ namespace RRCManagementSystem
                     {
                         if (rdr.Read())
                         {
-                            // Decrypt the email from DB
                             string encryptedEmail = rdr["Email"]?.ToString();
                             string decryptedEmail = string.Empty;
 
@@ -142,9 +131,6 @@ namespace RRCManagementSystem
             }
         }
 
-        /// <summary>
-        /// Resets the password for admin or client accounts
-        /// </summary>
         protected void btnResetPassword_Click(object sender, EventArgs e)
         {
             string newPassword = txtNewPassword.Text.Trim();
@@ -161,6 +147,19 @@ namespace RRCManagementSystem
                 return;
             }
 
+            if (newPassword.Length < 8 || newPassword.Length > 64)
+            {
+                lblMessage.Text = "**Password Policy.** Your password must be between 8 and 64 characters in length.";
+                return;
+            }
+
+            Regex strongPasswordRegex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,64}$");
+            if (!strongPasswordRegex.IsMatch(newPassword))
+            {
+                lblMessage.Text = "**Password Policy.** Your password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (e.g., @$!%*?&.).";
+                return;
+            }
+
             string email = ViewState["Email"]?.ToString();
             string role = ViewState["Role"]?.ToString();
 
@@ -171,41 +170,43 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Hash new password using Argon2
             string hashedPassword = PasswordHelper.HashPassword(newPassword);
-
-            // Encrypt email for DB lookup
             string emailHash = AESHelper.ComputeSHA256(email);
 
             int rows = 0;
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand(
-                role == "Admin" ? "dbo.spPassword_ResetAdmin" : "dbo.spPassword_ResetClient", conn))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
+            bool isUserRole = false;
 
-                if (role == "Admin")
+            using (var conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                using (var checkCmd = new SqlCommand("SELECT COUNT(*) FROM Roles WHERE RoleName = @RoleName", conn))
                 {
+                    checkCmd.Parameters.AddWithValue("@RoleName", role);
+                    int count = Convert.ToInt32(checkCmd.ExecuteScalar());
+                    isUserRole = (count > 0);
+                }
+
+
+                string procedureName = isUserRole ? "dbo.spPassword_ResetAdmin" : "dbo.spPassword_ResetClient";
+
+                using (var cmd = new SqlCommand(procedureName, conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
                     cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, -1).Value = hashedPassword;
-                }
-                else
-                {
-                    cmd.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
-                    cmd.Parameters.Add("@PasswordHash", SqlDbType.NVarChar, 256).Value = hashedPassword;
-                }
 
-                try
-                {
-                    conn.Open();
-                    object o = cmd.ExecuteScalar();
-                    rows = (o == null || o == DBNull.Value) ? 0 : Convert.ToInt32(o);
-                }
-                catch (Exception ex)
-                {
-                    lblMessage.ForeColor = System.Drawing.Color.Red;
-                    lblMessage.Text = "⚠ Error resetting password: " + ex.Message;
-                    return;
+                    try
+                    {
+                        object o = cmd.ExecuteScalar();
+                        rows = (o == null || o == DBNull.Value) ? 0 : Convert.ToInt32(o);
+                    }
+                    catch (Exception ex)
+                    {
+                        lblMessage.ForeColor = System.Drawing.Color.Red;
+                        lblMessage.Text = "⚠ Error resetting password: " + ex.Message;
+                        return;
+                    }
                 }
             }
 
@@ -215,8 +216,7 @@ namespace RRCManagementSystem
                 lblMessage.CssClass = "success-message";
                 lblMessage.Text = "✅ Password reset successful! Redirecting to login...";
 
-                // Clear OTP-related sessions if client
-                if (role == "Client")
+                if (!isUserRole) 
                 {
                     Session["OTP"] = null;
                     Session["IsOTPVerified"] = null;
@@ -231,5 +231,6 @@ namespace RRCManagementSystem
                 lblMessage.Text = $"⚠ Failed to reset password. Email={email}, Role={role}.";
             }
         }
+
     }
 }

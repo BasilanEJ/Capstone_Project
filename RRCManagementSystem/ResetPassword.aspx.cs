@@ -2,6 +2,7 @@
 using System;
 using System.Configuration;
 using System.Data;
+using System.Text.RegularExpressions;
 using System.Data.SqlClient;
 
 namespace RRCManagementSystem
@@ -24,12 +25,12 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                // ✅ Validate token via stored procedure (returns email if token is valid & not expired)
+
                 string emailFromToken = GetEmailByValidToken(token);
                 if (!string.IsNullOrEmpty(emailFromToken))
                 {
                     ViewState["ClientEmail"] = emailFromToken;
-                    // keep button enabled
+
                 }
                 else
                 {
@@ -52,7 +53,7 @@ namespace RRCManagementSystem
                     con.Open();
                     object result = cmd.ExecuteScalar();
 
-                    // Decrypt the returned EmailEnc
+
                     return result != null ? AESHelper.DecryptEmail(result.ToString()) : null;
                 }
                 catch (Exception ex)
@@ -80,17 +81,26 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string email = ViewState["ClientEmail"]?.ToString();
-            if (string.IsNullOrEmpty(email))
+            if (newPassword.Length < 8 || newPassword.Length > 64)
             {
-                ShowSweetAlert("Error", "Client email not found or session expired.", "error", true);
+                ShowSweetAlert("Password Policy", "Your password must be between 8 and 64 characters in length.", "warning", true);
                 return;
             }
 
-            // ✅ Compute email hash
-            string emailHash = AESHelper.ComputeSHA256WithPepper(email);
+            Regex strongPasswordRegex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,64}$");
+            if (!strongPasswordRegex.IsMatch(newPassword))
+            {
+                ShowSweetAlert("Password Policy", "Your password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (e.g., @$!%*?&.).", "warning", true);
+                return;
+            }
 
-            // ✅ Hash password (Argon2 or your preferred hashing method)
+            string email = ViewState["ClientEmail"]?.ToString();
+            if (string.IsNullOrEmpty(email))
+            {
+                ShowSweetAlert("Error", "Client email not found or session expired. Please restart the process.", "error", true);
+                return;
+            }
+            string emailHash = AESHelper.ComputeSHA256WithPepper(email);
             string hashedPassword = PasswordHelper.HashPassword(newPassword);
 
             int rows = 0;
@@ -109,7 +119,7 @@ namespace RRCManagementSystem
                 }
                 catch (Exception ex)
                 {
-                    ShowSweetAlert("Server Error", "Error: " + ex.Message, "error", true);
+                    ShowSweetAlert("Server Error", "Error resetting password: " + ex.Message, "error", true);
                     return;
                 }
             }

@@ -179,8 +179,28 @@ namespace RRCManagementSystem
                     audit.ExecuteNonQuery();
                 }
 
-                lblMessage.Text = rows > 0 ? "✅ Employee updated successfully!" : "⚠ No changes saved.";
-                lblMessage.ForeColor = rows > 0 ? System.Drawing.Color.Green : System.Drawing.Color.OrangeRed;
+                if (rows > 0)
+                {
+                    // Show success message with SweetAlert and redirect
+                    string script = @"
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Employee Updated!',
+                            text: 'The employee information has been successfully updated.',
+                            confirmButtonColor: '#2563eb',
+                            timer: 2000,
+                            timerProgressBar: true
+                        }).then(() => {
+                            window.location.href = 'AllEmployee.aspx';
+                        });
+                    ";
+                    ScriptManager.RegisterStartupScript(this, GetType(), "showSuccessAndRedirect", script, true);
+                }
+                else
+                {
+                    lblMessage.Text = "⚠ No changes saved.";
+                    lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
+                }
             }
         }
     }

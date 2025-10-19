@@ -39,6 +39,7 @@
         /* New Image Modal Specific Styles */
         /* Use z-index higher than 'addStockModal' (z-50) for layering */
         .image-modal-overlay {
+            /* This class will now only define background/transition, not initial hiding */
             background-color: rgba(0, 0, 0, 0.85); /* Slightly darker overlay for images */
             transition: opacity 0.3s ease-in-out;
         }
@@ -145,9 +146,9 @@
                             <ItemTemplate>
                                 <asp:Label ID="lblQuantity" runat="server"
                                     Text='<%# Eval("Type").ToString() == "Bottled Chemical" ? Eval("Quantity") + " bottles" :
-                                                Eval("Type").ToString() == "Sachet Pack Chemical" ? Eval("Quantity") + " packs" :
-                                                Eval("Type").ToString() == "Safety Gear" ? Eval("Quantity") + " pcs" :
-                                                Eval("Quantity") + " unit(s)" %>' />
+                                                 Eval("Type").ToString() == "Sachet Pack Chemical" ? Eval("Quantity") + " packs" :
+                                                 Eval("Type").ToString() == "Safety Gear" ? Eval("Quantity") + " pcs" :
+                                                 Eval("Quantity") + " unit(s)" %>' />
                             </ItemTemplate>
                         </asp:TemplateField>
 
@@ -162,11 +163,11 @@
 
                         <asp:TemplateField HeaderText="Image">
                             <ItemTemplate>
-                                <asp:Image ID="imgItem" runat="server"
-                                    ImageUrl='<%# Eval("ImagePath") %>'
-                                    Width="70px" Height="70px"
-                                    CssClass="rounded shadow cursor-pointer hover:scale-110 transition object-cover"
-                                    onclick='<%# $"showImageModal(\"{Eval("ImagePath")}\"); return false;" %>' />
+                                <img src='<%# ResolveUrl(Eval("ImagePath").ToString()) %>'
+                                     alt="Item Image"
+                                     class="rounded shadow cursor-pointer hover:scale-110 transition object-cover"
+                                     style="width: 70px; height: 70px;"
+                                     onclick='showImageModal("<%# ResolveUrl(Eval("ImagePath").ToString()) %>"); return false;' />
                             </ItemTemplate>
                         </asp:TemplateField>
 
@@ -227,8 +228,8 @@
         </div>
     </div>
 
-    <div id="imageModal" class="fixed inset-0 z-50 flex items-center justify-center image-modal-overlay hidden" 
-         onclick="if (event.target.id === 'imageModal') hideImageModal()">
+    <div id="imageModal" class="fixed inset-0 z-50 flex items-center justify-center image-modal-overlay opacity-0 pointer-events-none" 
+        onclick="if (event.target.id === 'imageModal') hideImageModal()">
         
         <div class="image-modal-content" onclick="event.stopPropagation()">
             
@@ -247,18 +248,21 @@
         // Image Modal
         function showImageModal(src) {
             document.getElementById('modalImage').src = src;
-            document.getElementById('imageModal').classList.remove('hidden');
+            // 💡 FIX: Remove opacity-0 and pointer-events-none to show, allowing transition to opacity: 0.85 (from CSS)
+            document.getElementById('imageModal').classList.remove('opacity-0', 'pointer-events-none');
             document.body.style.overflow = 'hidden'; // Prevent background scrolling
         }
         function hideImageModal() {
-            document.getElementById('imageModal').classList.add('hidden');
+            // 💡 FIX: Add opacity-0 and pointer-events-none to hide, allowing smooth transition
+            document.getElementById('imageModal').classList.add('opacity-0', 'pointer-events-none');
             document.body.style.overflow = ''; // Re-enable background scrolling
         }
 
         // Add event listener to close image modal on 'Escape' key press
         document.addEventListener('keydown', function(event) {
             const imageModal = document.getElementById('imageModal');
-            if (event.key === 'Escape' && !imageModal.classList.contains('hidden')) {
+            // Check for the initial hiding classes instead of 'hidden'
+            if (event.key === 'Escape' && !imageModal.classList.contains('opacity-0')) {
                 hideImageModal();
             }
         });

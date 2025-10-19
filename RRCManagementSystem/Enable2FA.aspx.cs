@@ -37,12 +37,19 @@ namespace RRCManagementSystem
             string base32Secret = Base32Encoding.ToString(secretKey);
             Session["2FA_Secret"] = base32Secret;
 
-            // 2) Build otpauth URI
+            // 2) Check if user is Inspector - only show manual entry link for Inspectors
+            string role = Session["Pending2FA_Role"]?.ToString() ?? "";
+            bool isInspector = string.Equals(role, "Inspector", StringComparison.OrdinalIgnoreCase);
+
+            // Show "Can't scan?" link only for Inspectors
+            pnlManualEntryLink.Visible = isInspector;
+
+            // 3) Build otpauth URI
             string email = Session["Pending2FA_Email"].ToString();
             string issuer = "RRCManagementSystem";
             string otpauthUrl = $"otpauth://totp/{issuer}:{email}?secret={base32Secret}&issuer={issuer}";
 
-            // 3) Render QR
+            // 4) Render QR Code (shown to all users)
             using (var qrGen = new QRCodeGenerator())
             using (var data = qrGen.CreateQrCode(otpauthUrl, QRCodeGenerator.ECCLevel.Q))
             using (var qr = new QRCode(data))
@@ -52,6 +59,29 @@ namespace RRCManagementSystem
                 bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
                 imgQRCode.ImageUrl = "data:image/png;base64," + Convert.ToBase64String(ms.ToArray());
             }
+
+            // 5) Prepare secret key for manual entry (in modal for Inspectors)
+            lblSecretKey.Text = FormatSecretKey(base32Secret);
+            hdnSecretKey.Value = base32Secret; // Store clean version without spaces for copying
+        }
+
+        /// <summary>
+        /// Formats the secret key with spaces for better readability
+        /// Example: JBSW Y3DP EHPK 3PXP
+        /// </summary>
+        private string FormatSecretKey(string secret)
+        {
+            if (string.IsNullOrEmpty(secret)) return "";
+
+            // Insert a space every 4 characters for readability
+            string formatted = "";
+            for (int i = 0; i < secret.Length; i++)
+            {
+                if (i > 0 && i % 4 == 0)
+                    formatted += " ";
+                formatted += secret[i];
+            }
+            return formatted;
         }
 
         protected void btnVerify_Click(object sender, EventArgs e)
@@ -124,10 +154,14 @@ namespace RRCManagementSystem
             Session.Remove("Pending2FA_UserID");
             Session.Remove("2FA_Secret");
 
-            // Redirect to appropriate dashboard
+            // Redirect to appropriate dashboard based on role
             string redirect = "~/Dashboard.aspx";
-            if (string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase)) redirect = "~/SuperAdminDashboard.aspx";
-            else if (string.Equals(role, "Inspector", StringComparison.OrdinalIgnoreCase)) redirect = "~/InspectorDashboard.aspx";
+            if (string.Equals(role, "RootAdmin", StringComparison.OrdinalIgnoreCase))
+                redirect = "~/RootDashboard.aspx";
+            else if (string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                redirect = "~/SuperAdminDashboard.aspx";
+            else if (string.Equals(role, "Inspector", StringComparison.OrdinalIgnoreCase))
+                redirect = "~/InspectorDashboard.aspx";
 
             Response.Redirect(redirect, false);
             Context.ApplicationInstance.CompleteRequest();

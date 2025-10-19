@@ -90,9 +90,7 @@ namespace RRCManagementSystem
             BindUsers(txtSearch.Text);
         }
 
-        /* =========================
-           Grid actions
-           ========================= */
+
         protected void gvAdmins_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName == "EditAdmin" && int.TryParse(e.CommandArgument.ToString(), out int userID))
