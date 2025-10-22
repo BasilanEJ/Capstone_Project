@@ -11,10 +11,85 @@ using System.Web.Script.Serialization;
 
 namespace RRCManagementSystem
 {
+
+    public class EnhancedLockoutInfo
+    {
+        public bool IsLocked { get; set; }
+        public DateTime? LockedUntil { get; set; }
+        public string LockoutReason { get; set; }
+        public int FailedAttempts { get; set; }
+    }
+
+    public class EnhancedDeviceInfo
+    {
+        public string DeviceFingerprint { get; set; }
+        public string CanvasFingerprint { get; set; }
+        public string HardwareID { get; set; }
+        public string OSInfo { get; set; }
+        public string BrowserName { get; set; }
+        public string ScreenResolution { get; set; }
+        public string TimezoneOffset { get; set; }
+        public string Language { get; set; }
+        public int? HardwareConcurrency { get; set; }
+        public int? ColorDepth { get; set; }
+        public int? DeviceMemory { get; set; }
+        public int? MaxTouchPoints { get; set; }
+        public string Platform { get; set; }
+    }
+
     public partial class Login : Page
     {
         private static readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-        private const int IpWindowMinutes = 5;
+        private const int IpWindowMinutes = 15;
+        private const int DeviceLockoutMinutes = 15;
+        private const int MaxAttempts = 5;
+
+
+        private EnhancedDeviceInfo ParseEnhancedDeviceInfo()
+        {
+            return new EnhancedDeviceInfo
+            {
+                DeviceFingerprint = hiddenFingerprint.Value?.Trim() ?? "",
+                CanvasFingerprint = hiddenCanvasFingerprint.Value?.Trim() ?? "",
+                HardwareID = hiddenHardwareID.Value?.Trim() ?? "", 
+                OSInfo = hiddenOSInfo.Value?.Trim() ?? "",
+                BrowserName = hiddenBrowserName.Value?.Trim() ?? "",
+                ScreenResolution = hiddenScreenResolution.Value?.Trim() ?? "",
+                TimezoneOffset = hiddenTimezoneOffset.Value?.Trim() ?? "",
+                Language = hiddenLanguage.Value?.Trim() ?? "",
+                HardwareConcurrency = TryParseInt(hiddenHardwareConcurrency.Value),
+                ColorDepth = TryParseInt(hiddenColorDepth.Value),
+                DeviceMemory = TryParseInt(hiddenDeviceMemory.Value),
+                MaxTouchPoints = TryParseInt(hiddenMaxTouchPoints.Value),
+                Platform = hiddenPlatform.Value?.Trim() ?? ""
+            };
+        }
+
+        private int? TryParseInt(string value)
+        {
+            if (int.TryParse(value, out int result))
+                return result;
+            return null;
+        }
+
+
+        private string GetIPSubnet(string ip)
+        {
+            if (string.IsNullOrEmpty(ip)) return "";
+
+            try
+            {
+                var parts = ip.Split('.');
+                if (parts.Length >= 3)
+                {
+                    return $"{parts[0]}.{parts[1]}.{parts[2]}";
+                }
+            }
+            catch { }
+
+            return ip;
+        }
+
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -50,22 +125,26 @@ namespace RRCManagementSystem
             }
         }
 
+
         protected void btnLogin_Click(object sender, EventArgs e)
         {
             lblMessage.Text = "";
-            string ip = Request.UserHostAddress ?? "";
 
-            // --- Security Check: IP Rate Limiting ---
-            if (GetFailedIPAttempts(ip, IpWindowMinutes) >= 5)
+            string ip = Request.UserHostAddress ?? "";
+            string ipSubnet = GetIPSubnet(ip);
+            string userAgent = Request.UserAgent ?? "";
+
+            EnhancedDeviceInfo deviceInfo = ParseEnhancedDeviceInfo();
+
+            if (string.IsNullOrEmpty(deviceInfo.DeviceFingerprint))
             {
-                lblMessage.Text = $"**Access Denied.** Too many failed login attempts from this network address. Please wait {IpWindowMinutes} minutes before trying again.";
+                lblMessage.Text = "**System Error.** Unable to identify your device. Please refresh the page and try again.";
                 return;
             }
 
             string email = txtEmail.Text.Trim();
             string password = txtPassword.Text.Trim();
 
-            // --- Input Validation Checks ---
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
                 lblMessage.Text = "**Required Fields.** Please enter both your email address and password.";
@@ -93,16 +172,64 @@ namespace RRCManagementSystem
             Regex strongPasswordRegex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,64}$");
             if (!strongPasswordRegex.IsMatch(password))
             {
-                // Note: We show this error *before* DB lookup, as it pertains to the *password field itself*, not credentials.
                 lblMessage.Text = "**Password Policy.** Your password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (e.g., @$!%*?&.).";
+                return;
+            }
+
+            string emailHash = AESHelper.ComputeSHA256(email);
+
+            // Check lockout status
+            EnhancedLockoutInfo lockoutInfo = CheckAllLockoutLayers(
+                deviceInfo.DeviceFingerprint,
+                deviceInfo.CanvasFingerprint,
+                emailHash,
+                ipSubnet,
+                deviceInfo
+            );
+
+            // FIX: Handle expired lockouts properly
+            if (lockoutInfo.IsLocked)
+            {
+                // Check if the lockout has actually expired
+                if (lockoutInfo.LockedUntil.HasValue && lockoutInfo.LockedUntil.Value <= DateTime.Now)
+                {
+                    // Lockout has expired - reset it and allow login attempt to continue
+                    ResetAllLockoutLayers(
+                        deviceInfo.DeviceFingerprint,
+                        deviceInfo.CanvasFingerprint,
+                        emailHash,
+                        ipSubnet,
+                        deviceInfo.HardwareID
+                    );
+                }
+                else
+                {
+                    // Lockout is still active - block the attempt
+                    pnlCaptcha.Visible = true;
+                    string lockoutMessage = lockoutInfo.LockoutReason == "Device"
+                        ? "**Device Blocked.** Too many failed attempts from this device."
+                        : lockoutInfo.LockoutReason == "Email"
+                        ? "**Account Locked.** Too many failed attempts for this email address."
+                        : "**Network Blocked.** Too many failed attempts from this network.";
+
+                    lblMessage.Text = $"{lockoutMessage} Please try again after {lockoutInfo.LockedUntil.Value:hh:mm tt}.";
+                    return;
+                }
+            }
+
+            // Check IP-based lockout
+            if (GetFailedIPAttempts(ip, IpWindowMinutes) >= 5)
+            {
+                DateTime ipLockoutExpires = DateTime.Now.AddMinutes(IpWindowMinutes);
+                lblMessage.Text = $"**Access Denied.** Too many failed login attempts from this IP address. Please try again after {ipLockoutExpires:hh:mm tt}.";
                 return;
             }
 
             try
             {
-                string emailHash = AESHelper.ComputeSHA256(email);
+                bool loginSuccessful = false;
 
-                // Try Admin/SuperAdmin/Inspector login
+                // Try to authenticate user (admin/staff)
                 using (var conn = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand("dbo.spAuth_GetUserByEmail", conn))
                 {
@@ -130,54 +257,55 @@ namespace RRCManagementSystem
                                 catch { decryptedEmail = "[Decryption Error]"; }
                             }
 
-                            // --- Account Status Checks ---
                             if (status.Equals("Deleted", StringComparison.OrdinalIgnoreCase))
                             {
-                                // IMPORTANT SECURITY: Use generic message for "not found" or "deleted" accounts
                                 lblMessage.Text = "**Login Failed.** Invalid email address or password. Please try again.";
-                                return;
+                                goto FailureCleanup;
                             }
+
                             if (!status.Equals("Active", StringComparison.OrdinalIgnoreCase) && !status.Equals("Available", StringComparison.OrdinalIgnoreCase))
                             {
                                 lblMessage.Text = "**Account Status.** Your account is currently not active. Please contact support for assistance.";
-                                return;
+                                goto FailureCleanup;
                             }
 
-                            // --- Account Lockout Check ---
                             if (lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
                             {
                                 pnlCaptcha.Visible = true;
                                 lblMessage.Text = $"**Account Locked.** This account is temporarily locked. Please try again after {Convert.ToDateTime(lockoutObj):hh:mm tt}.";
-                                return;
+                                goto FailureCleanup;
                             }
 
-                            // --- CAPTCHA Requirement Check (for high failure rate on this user) ---
                             if (failedAttempts >= 5)
                             {
                                 pnlCaptcha.Visible = true;
                                 string captchaResponse = Request.Form["g-recaptcha-response"];
 
-                                if (string.IsNullOrEmpty(captchaResponse))
+                                if (string.IsNullOrEmpty(captchaResponse) || !IsCaptchaValid())
                                 {
                                     lblMessage.Text = "**Security Check.** Due to multiple failed attempts, please complete the CAPTCHA to continue.";
-                                    return;
-                                }
-
-                                if (!IsCaptchaValid())
-                                {
-                                    lblMessage.Text = "**Security Check Failed.** CAPTCHA verification failed. Please try again.";
-                                    return;
+                                    goto FailureCleanup;
                                 }
                             }
 
-                            // --- Password Verification ---
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
+                                // Successful login
+                                loginSuccessful = true;
                                 ResetFailedLogin(userID);
+
+                                // Reset all device/IP lockouts
+                                ResetAllLockoutLayers(
+                                    deviceInfo.DeviceFingerprint,
+                                    deviceInfo.CanvasFingerprint,
+                                    emailHash,
+                                    ipSubnet,
+                                    deviceInfo.HardwareID
+                                );
+
                                 LogIPAttempt(ip, true);
                                 AddAuditLog(userID, $"{role} {userName} passed password; 2FA pending.");
 
-                                // All users (including Inspector) now go through 2FA flow
                                 Session["Pending2FA_UserID"] = userID;
                                 Session["Pending2FA_Email"] = decryptedEmail;
                                 Session["Pending2FA_Name"] = userName;
@@ -189,43 +317,55 @@ namespace RRCManagementSystem
                             }
                             else
                             {
-                                // --- Failed Password / Credential Check ---
+                                // Wrong password
                                 HandleFailedLogin(userID);
-                                LogIPAttempt(ip, false);
-                                const int MaxAttempts = 5;
-                                int remaining = Math.Max(0, MaxAttempts - (failedAttempts + 1));
 
-                                // IMPORTANT SECURITY: Generic failure message
+                                int remaining = Math.Max(0, MaxAttempts - (failedAttempts + 1));
                                 lblMessage.Text = $"**Login Failed.** Invalid email address or password. You have {remaining} attempt(s) remaining before your account is locked.";
 
                                 if (failedAttempts + 1 >= 5)
                                     pnlCaptcha.Visible = true;
-                                return;
+
+                                goto FailureCleanup;
                             }
                         }
                     }
                 }
 
-                // Try client login if no staff/admin user was found
-                TryClientLogin(email, password, ip);
+                // If user not found, try client login
+                if (!loginSuccessful)
+                {
+                    TryClientLogin(email, password, emailHash, ip, ipSubnet, deviceInfo);
+                    return;
+                }
             }
-            // --- Catch Blocks (Generic User-Facing Error) ---
             catch (SqlException sqlEx)
             {
                 System.Diagnostics.Debug.WriteLine($"SQL Error: {sqlEx.Message}");
                 System.Diagnostics.Debug.WriteLine($"Procedure: {sqlEx.Procedure}, Line: {sqlEx.LineNumber}");
                 lblMessage.Text = "**System Error.** An unexpected database error occurred. Please try again later. If the problem persists, contact support.";
+                goto FailureCleanup;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Stack: {ex.StackTrace}");
                 lblMessage.Text = "**System Error.** An unexpected error occurred. Please try again later. If the problem persists, contact support.";
+                goto FailureCleanup;
             }
+
+        FailureCleanup:
+            LogIPAttempt(ip, false);
+            RecordFailedAttemptAllLayers(deviceInfo, emailHash, ipSubnet, ip, userAgent);
+            return;
         }
 
-        private void TryClientLogin(string email, string password, string ip)
+
+        private void TryClientLogin(string email, string password, string emailHash, string ip, string ipSubnet, EnhancedDeviceInfo deviceInfo)
         {
+            string userAgent = Request.UserAgent ?? "";
+            bool loginSuccessful = false;
+
             try
             {
                 using (var conn = new SqlConnection(connectionString))
@@ -246,14 +386,12 @@ namespace RRCManagementSystem
                             string name = reader["Name"]?.ToString() ?? "";
                             string decryptedClientEmail = "";
 
-                            // Safely read FailedAttempts
                             int failedAttempts = 0;
                             if (reader.HasColumn("FailedAttempts") && reader["FailedAttempts"] != DBNull.Value)
                             {
                                 failedAttempts = Convert.ToInt32(reader["FailedAttempts"]);
                             }
 
-                            // Safely read LockoutUntil
                             object lockoutObj = null;
                             if (reader.HasColumn("LockoutUntil"))
                             {
@@ -266,48 +404,58 @@ namespace RRCManagementSystem
                                 catch { decryptedClientEmail = "[Decryption Error]"; }
                             }
 
-                            // --- Client Account Status Checks ---
                             if (status.Equals("Deleted", StringComparison.OrdinalIgnoreCase))
                             {
-                                // IMPORTANT SECURITY: Use generic message for "not found" or "deleted" accounts
                                 lblMessage.Text = "**Login Failed.** Invalid email address or password. Please try again.";
-                                return;
+                                goto ClientFailureCleanup;
                             }
+
                             if (!status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                             {
                                 lblMessage.Text = "**Account Status.** Your client account is not yet approved. Please wait for an administrator to approve your registration.";
-                                return;
+                                goto ClientFailureCleanup;
                             }
 
-                            // --- Client Account Lockout Check ---
-                            if (lockoutObj != null && lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
+                            // FIX: Check if lockout has expired before blocking
+                            if (lockoutObj != null && lockoutObj != DBNull.Value)
                             {
-                                pnlCaptcha.Visible = true;
-                                lblMessage.Text = $"**Account Locked.** This client account is temporarily locked. Please try again after {Convert.ToDateTime(lockoutObj):hh:mm tt}.";
-                                return;
+                                DateTime lockoutTime = Convert.ToDateTime(lockoutObj);
+
+                                if (lockoutTime > DateTime.Now)
+                                {
+                                    // Still locked
+                                    pnlCaptcha.Visible = true;
+                                    lblMessage.Text = $"**Account Locked.** This client account is temporarily locked. Please try again after {lockoutTime:hh:mm tt}.";
+                                    goto ClientFailureCleanup;
+                                }
+                                // If lockout has expired, continue with login attempt (don't block)
                             }
 
-                            // --- CAPTCHA Requirement Check (for high failure rate on this client user) ---
                             if (failedAttempts >= 5)
                             {
                                 pnlCaptcha.Visible = true;
                                 string captchaResponse = Request.Form["g-recaptcha-response"];
-                                if (string.IsNullOrEmpty(captchaResponse))
+                                if (string.IsNullOrEmpty(captchaResponse) || !IsCaptchaValid())
                                 {
                                     lblMessage.Text = "**Security Check.** Due to multiple failed attempts, please complete the CAPTCHA to continue.";
-                                    return;
-                                }
-                                if (!IsCaptchaValid())
-                                {
-                                    lblMessage.Text = "**Security Check Failed.** CAPTCHA verification failed. Please try again.";
-                                    return;
+                                    goto ClientFailureCleanup;
                                 }
                             }
 
-                            // --- Client Password Verification ---
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
+                                // Successful login
+                                loginSuccessful = true;
                                 ResetClientFailedLogin(clientId);
+                                ResetAllLockoutLayers(
+                                    deviceInfo.DeviceFingerprint,
+                                    deviceInfo.CanvasFingerprint,
+                                    clientEmailHash,
+                                    ipSubnet,
+                                    deviceInfo.HardwareID
+                                );
+
+                                LogIPAttempt(ip, true);
 
                                 Guid newSessionID = Guid.NewGuid();
                                 using (var updateConn = new SqlConnection(connectionString))
@@ -329,7 +477,6 @@ namespace RRCManagementSystem
                                 Session["Role"] = "Client";
                                 Session["SessionID"] = newSessionID;
 
-                                LogIPAttempt(ip, true);
                                 AddAuditLog(clientId, $"Client {name} logged in (single session started).");
 
                                 Response.Redirect("Home.aspx", false);
@@ -338,26 +485,22 @@ namespace RRCManagementSystem
                             }
                             else
                             {
-                                // --- Failed Client Password / Credential Check ---
+                                // Wrong password
                                 HandleClientFailedLogin(clientId);
-                                LogIPAttempt(ip, false);
-                                const int MaxAttempts = 5;
-                                int remaining = Math.Max(0, MaxAttempts - (failedAttempts + 1));
 
-                                // IMPORTANT SECURITY: Generic failure message
+                                int remaining = Math.Max(0, MaxAttempts - (failedAttempts + 1));
                                 lblMessage.Text = $"**Login Failed.** Invalid email address or password. You have {remaining} attempt(s) remaining before your account is locked.";
 
                                 if (failedAttempts + 1 >= 5)
                                     pnlCaptcha.Visible = true;
 
-                                return;
+                                goto ClientFailureCleanup;
                             }
                         }
                         else
                         {
-                            // --- Account Not Found Check ---
                             lblMessage.Text = "**Login Failed.** Invalid email address or password. Please try again.";
-                            LogIPAttempt(ip, false);
+                            goto ClientFailureCleanup;
                         }
                     }
                 }
@@ -365,33 +508,134 @@ namespace RRCManagementSystem
             catch (SqlException sqlEx)
             {
                 System.Diagnostics.Debug.WriteLine($"Client Login SQL Error: {sqlEx.Message}");
-                System.Diagnostics.Debug.WriteLine($"Procedure: {sqlEx.Procedure}, Line: {sqlEx.LineNumber}");
-                throw; // Re-throw to be caught by the main btnLogin_Click handler
+                lblMessage.Text = "**System Error.** An unexpected database error occurred. Please try again later.";
+                goto ClientFailureCleanup;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Client Login Error: {ex.Message}");
-                throw; // Re-throw to be caught by the main btnLogin_Click handler
+                lblMessage.Text = "**System Error.** An unexpected error occurred. Please try again later.";
+                goto ClientFailureCleanup;
             }
+
+        ClientFailureCleanup:
+            LogIPAttempt(ip, false);
+            RecordFailedAttemptAllLayers(deviceInfo, emailHash, ipSubnet, ip, userAgent);
+            return;
         }
 
-        private bool IsCaptchaValid()
+
+        private EnhancedLockoutInfo CheckAllLockoutLayers(
+     string deviceFingerprint,
+     string canvasFingerprint,
+     string emailHash,
+     string ipSubnet,
+     EnhancedDeviceInfo deviceInfo)
         {
-            string response = Request.Form["g-recaptcha-response"];
-            if (string.IsNullOrEmpty(response)) return false;
+            EnhancedLockoutInfo info = new EnhancedLockoutInfo();
 
-            using (var client = new WebClient())
+            try
             {
-                string secret = ConfigurationManager.AppSettings["RecaptchaSecretKey"];
-                string googleResponse = client.DownloadString(
-                    $"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}"
-                );
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spDeviceLockout_CheckAllLayers", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@DeviceFingerprint", SqlDbType.NVarChar, 500).Value = deviceFingerprint;
+                    cmd.Parameters.Add("@CanvasFingerprint", SqlDbType.NVarChar, 500).Value = (object)canvasFingerprint ?? DBNull.Value;
+                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)deviceInfo.HardwareID ?? DBNull.Value;  
+                    cmd.Parameters.Add("@EmailHash", SqlDbType.NVarChar, 64).Value = (object)emailHash ?? DBNull.Value;
+                    cmd.Parameters.Add("@IPSubnet", SqlDbType.NVarChar, 20).Value = (object)ipSubnet ?? DBNull.Value;
+                    cmd.Parameters.Add("@ScreenResolution", SqlDbType.NVarChar, 50).Value = (object)deviceInfo.ScreenResolution ?? DBNull.Value;
+                    cmd.Parameters.Add("@Platform", SqlDbType.NVarChar, 100).Value = (object)deviceInfo.Platform ?? DBNull.Value;
+                    cmd.Parameters.Add("@HardwareConcurrency", SqlDbType.Int).Value = (object)deviceInfo.HardwareConcurrency ?? DBNull.Value;
 
-                var js = new JavaScriptSerializer();
-                dynamic jsonData = js.Deserialize<dynamic>(googleResponse);
-                return jsonData["success"] == true;
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            info.IsLocked = reader["IsLocked"] != DBNull.Value && Convert.ToBoolean(reader["IsLocked"]);
+                            info.LockedUntil = reader["LockedUntil"] != DBNull.Value ? (DateTime?)reader["LockedUntil"] : null;
+                            info.LockoutReason = reader["LockoutReason"]?.ToString() ?? "";
+                            info.FailedAttempts = reader["FailedAttempts"] != DBNull.Value ? Convert.ToInt32(reader["FailedAttempts"]) : 0;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CheckAllLockoutLayers Error: {ex.Message}");
+            }
+
+            return info;
+        }
+
+        private void RecordFailedAttemptAllLayers(EnhancedDeviceInfo deviceInfo, string emailHash, string ipSubnet, string ip, string userAgent)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spDeviceLockout_RecordFailure", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@DeviceFingerprint", SqlDbType.NVarChar, 500).Value = deviceInfo.DeviceFingerprint;
+                    cmd.Parameters.Add("@CanvasFingerprint", SqlDbType.NVarChar, 500).Value = (object)deviceInfo.CanvasFingerprint ?? DBNull.Value;
+                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)deviceInfo.HardwareID ?? DBNull.Value; 
+                    cmd.Parameters.Add("@EmailHash", SqlDbType.NVarChar, 64).Value = (object)emailHash ?? DBNull.Value;
+                    cmd.Parameters.Add("@IPSubnet", SqlDbType.NVarChar, 20).Value = (object)ipSubnet ?? DBNull.Value;
+                    cmd.Parameters.Add("@LockoutMinutes", SqlDbType.Int).Value = DeviceLockoutMinutes;
+                    cmd.Parameters.Add("@MaxAttempts", SqlDbType.Int).Value = MaxAttempts;
+
+                    cmd.Parameters.Add("@LastIPAddress", SqlDbType.NVarChar, 50).Value = ip;
+                    cmd.Parameters.Add("@UserAgent", SqlDbType.NVarChar, 500).Value = userAgent.Length > 500 ? userAgent.Substring(0, 500) : userAgent;
+                    cmd.Parameters.Add("@OSInfo", SqlDbType.NVarChar, 150).Value = deviceInfo.OSInfo;
+                    cmd.Parameters.Add("@BrowserName", SqlDbType.NVarChar, 100).Value = deviceInfo.BrowserName;
+                    cmd.Parameters.Add("@ScreenResolution", SqlDbType.NVarChar, 50).Value = deviceInfo.ScreenResolution;
+                    cmd.Parameters.Add("@TimezoneOffset", SqlDbType.NVarChar, 10).Value = deviceInfo.TimezoneOffset;
+                    cmd.Parameters.Add("@Language", SqlDbType.NVarChar, 50).Value = deviceInfo.Language;
+                    cmd.Parameters.Add("@HardwareConcurrency", SqlDbType.Int).Value = (object)deviceInfo.HardwareConcurrency ?? DBNull.Value;
+                    cmd.Parameters.Add("@ColorDepth", SqlDbType.Int).Value = (object)deviceInfo.ColorDepth ?? DBNull.Value;
+                    cmd.Parameters.Add("@DeviceMemory", SqlDbType.Int).Value = (object)deviceInfo.DeviceMemory ?? DBNull.Value;
+                    cmd.Parameters.Add("@MaxTouchPoints", SqlDbType.Int).Value = (object)deviceInfo.MaxTouchPoints ?? DBNull.Value;
+                    cmd.Parameters.Add("@Platform", SqlDbType.NVarChar, 100).Value = deviceInfo.Platform;
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RecordFailedAttemptAllLayers Error: {ex.Message}");
             }
         }
+
+        private void ResetAllLockoutLayers(string deviceFingerprint, string canvasFingerprint, string emailHash, string ipSubnet, string hardwareID)  
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spDeviceLockout_ResetAllLayers", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@DeviceFingerprint", SqlDbType.NVarChar, 500).Value = deviceFingerprint;
+                    cmd.Parameters.Add("@CanvasFingerprint", SqlDbType.NVarChar, 500).Value = (object)canvasFingerprint ?? DBNull.Value;
+                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)hardwareID ?? DBNull.Value;  
+                    cmd.Parameters.Add("@EmailHash", SqlDbType.NVarChar, 64).Value = (object)emailHash ?? DBNull.Value;
+                    cmd.Parameters.Add("@IPSubnet", SqlDbType.NVarChar, 20).Value = (object)ipSubnet ?? DBNull.Value;
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ResetAllLockoutLayers Error: {ex.Message}");
+            }
+        }
+
+        // =============================================
+        // Existing Helper Methods (Legacy Support)
+        // =============================================
 
         private int GetFailedIPAttempts(string ip, int windowMinutes)
         {
@@ -512,9 +756,26 @@ namespace RRCManagementSystem
                 System.Diagnostics.Debug.WriteLine($"AddAuditLog Error: {ex.Message}");
             }
         }
+
+        private bool IsCaptchaValid()
+        {
+            string response = Request.Form["g-recaptcha-response"];
+            if (string.IsNullOrEmpty(response)) return false;
+
+            using (var client = new WebClient())
+            {
+                string secret = ConfigurationManager.AppSettings["RecaptchaSecretKey"];
+                string googleResponse = client.DownloadString(
+                    $"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={response}"
+                );
+
+                var js = new JavaScriptSerializer();
+                dynamic jsonData = js.Deserialize<dynamic>(googleResponse);
+                return jsonData["success"] == true;
+            }
+        }
     }
 
-    // Helper extension method
     public static class DataReaderExtensions
     {
         public static bool HasColumn(this IDataReader reader, string columnName)

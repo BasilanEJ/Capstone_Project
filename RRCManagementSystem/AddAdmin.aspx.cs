@@ -59,7 +59,6 @@ namespace RRCManagementSystem
 
         private bool EmailExists(string plainEmail)
         {
-            // Compute hash of the plain email
             string emailHash = AESHelper.ComputeSHA256(plainEmail);
 
             using (var conn = new SqlConnection(connectionString))
@@ -73,9 +72,8 @@ namespace RRCManagementSystem
             }
         }
 
-        private int CreateAdminUser(string name, string plainEmail, string role, string resetToken, DateTime tokenExpiry)
+        private (int userId, string employeeId) CreateAdminUser(string name, string plainEmail, string role, string resetToken, DateTime tokenExpiry)
         {
-            // Encrypt and hash the email
             string encryptedEmail = AESHelper.EncryptEmail(plainEmail);
             string emailHash = AESHelper.ComputeSHA256(plainEmail);
 
@@ -90,44 +88,33 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@ResetToken", SqlDbType.NVarChar, 100).Value = resetToken;
                 cmd.Parameters.Add("@TokenExpiry", SqlDbType.DateTime).Value = tokenExpiry;
 
-                var pOut = cmd.Parameters.Add("@NewUserID", SqlDbType.Int);
-                pOut.Direction = ParameterDirection.Output;
+                var pOutUserId = cmd.Parameters.Add("@NewUserID", SqlDbType.Int);
+                pOutUserId.Direction = ParameterDirection.Output;
+
+                var pOutEmployeeId = cmd.Parameters.Add("@NewEmployeeID", SqlDbType.VarChar, 20);
+                pOutEmployeeId.Direction = ParameterDirection.Output;
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
-                return (int)pOut.Value;
+
+                int userId = (int)pOutUserId.Value;
+                string employeeId = pOutEmployeeId.Value.ToString();
+
+                return (userId, employeeId);
             }
         }
 
-        private void SavePermissionsBulk(int userId)
+        /// <summary>
+        /// Copy role permissions from RolePermissions to AdminPermissions for the new user
+        /// </summary>
+        private void CopyRolePermissionsToUser(int userId, string roleName)
         {
-            var tvp = new DataTable();
-            tvp.Columns.Add("ModuleName", typeof(string));
-            tvp.Columns.Add("CanView", typeof(bool));
-            tvp.Columns.Add("CanAdd", typeof(bool));
-            tvp.Columns.Add("CanEdit", typeof(bool));
-            tvp.Columns.Add("CanDelete", typeof(bool));
-
-            foreach (RepeaterItem item in rptPermissions.Items)
-            {
-                string module = ((HiddenField)item.FindControl("hfModuleName")).Value;
-                bool canView = ((CheckBox)item.FindControl("chkView")).Checked;
-                bool canAdd = ((CheckBox)item.FindControl("chkAdd")).Checked;
-                bool canEdit = ((CheckBox)item.FindControl("chkEdit")).Checked;
-                bool canDelete = ((CheckBox)item.FindControl("chkDelete")).Checked;
-
-                tvp.Rows.Add(module, canView, canAdd, canEdit, canDelete);
-            }
-
             using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.spAdminPermissions_BulkReplace", conn))
+            using (var cmd = new SqlCommand("dbo.spAdminPermissions_CopyFromRole", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
-
-                var p = cmd.Parameters.AddWithValue("@Perms", tvp);
-                p.SqlDbType = SqlDbType.Structured;
-                p.TypeName = "dbo.AdminPermissionTVP";
+                cmd.Parameters.Add("@RoleName", SqlDbType.NVarChar, 100).Value = roleName;
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
@@ -135,24 +122,8 @@ namespace RRCManagementSystem
         }
 
         /* =========================
-           UI / EVENTS
+           FORM SUBMISSION
            ========================= */
-
-        protected void ddlRole_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            string selectedRole = ddlRole.SelectedValue;
-
-            if (!string.IsNullOrEmpty(selectedRole))
-            {
-                LoadDefaultPermissions(0, selectedRole);
-            }
-            else
-            {
-                rptPermissions.Visible = false;
-                rptPermissions.DataSource = null;
-                rptPermissions.DataBind();
-            }
-        }
 
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
@@ -192,23 +163,23 @@ namespace RRCManagementSystem
             }
 
             string resetToken = Guid.NewGuid().ToString();
-            DateTime tokenExpiry = DateTime.Now.AddHours(1);
+            DateTime tokenExpiry = DateTime.Now.AddHours(24);
 
             try
             {
-                // 1) Create user via SP
-                int newUserId = CreateAdminUser(name, email, role, resetToken, tokenExpiry);
+                // Step 1: Create user account
+                var (newUserId, employeeId) = CreateAdminUser(name, email, role, resetToken, tokenExpiry);
 
-                // 2) Save permissions via TVP
-                SavePermissionsBulk(newUserId);
+                // Step 2: Copy role permissions to AdminPermissions for this user
+                CopyRolePermissionsToUser(newUserId, role);
 
-                // 3) Email invite
-                bool emailSent = SendResetEmail(email, resetToken, role);
+                // Step 3: Send invitation email
+                bool emailSent = SendResetEmail(email, resetToken, role, employeeId);
 
                 if (emailSent)
-                    ShowSuccess("User account created and email sent successfully!", true);
+                    ShowSuccess($"✅ User account created successfully!<br/>Employee ID: <strong>{employeeId}</strong><br/>Role: <strong>{role}</strong><br/>Permissions have been assigned based on the role.", true);
                 else
-                    ShowWarning("User account created, but failed to send email.");
+                    ShowWarning($"User account created (Employee ID: {employeeId}), but failed to send email.");
             }
             catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
             {
@@ -218,50 +189,6 @@ namespace RRCManagementSystem
             {
                 ShowError("⚠ Error creating user: " + ex.Message);
             }
-        }
-
-        private void LoadDefaultPermissions(int userId, string role)
-        {
-            string[] modules = {
-                "Dashboard",
-                "ManageInquiry",
-                "ClientApproval",
-                "CreateCustomerAccount",
-                "ManageEmployees",
-                "ManageItem",
-                "ManageEquipment",
-                "ManageClient",
-                "ManageBooking",
-                "Sales&Transaction",
-                "ManageSupplier",
-                "ManageServices",
-                "AdminReports",
-                "AdminGuide"
-            };
-
-            DataTable dt = new DataTable();
-            dt.Columns.Add("ModuleName");
-            dt.Columns.Add("CanView", typeof(bool));
-            dt.Columns.Add("CanAdd", typeof(bool));
-            dt.Columns.Add("CanEdit", typeof(bool));
-            dt.Columns.Add("CanDelete", typeof(bool));
-
-            bool fullPermission = role.Equals("Admin", StringComparison.OrdinalIgnoreCase);
-
-            foreach (string module in modules)
-            {
-                var row = dt.NewRow();
-                row["ModuleName"] = module;
-                row["CanView"] = fullPermission;
-                row["CanAdd"] = fullPermission;
-                row["CanEdit"] = fullPermission;
-                row["CanDelete"] = fullPermission;
-                dt.Rows.Add(row);
-            }
-
-            rptPermissions.DataSource = dt;
-            rptPermissions.DataBind();
-            rptPermissions.Visible = true;
         }
 
         /* =========================
@@ -280,17 +207,15 @@ namespace RRCManagementSystem
                 || email.EndsWith("@outlook.com", StringComparison.OrdinalIgnoreCase);
         }
 
-        private bool SendResetEmail(string toEmail, string token, string role)
+        private bool SendResetEmail(string toEmail, string token, string role, string employeeId)
         {
             try
             {
-                // Use CultureInfo to correctly format the role for a professional appearance.
                 TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
                 string formattedRole = textInfo.ToTitleCase((role ?? "").ToLower());
                 string resetLink = $"https://rrcmngmnt.com/ResetAdminPassword.aspx?type=admin&token={token}";
                 string subject = "Set Your Password - RRC Management System";
 
-                // Updated HTML body with a professional, table-based layout and inline CSS for email client compatibility.
                 string body = $@"
 <!DOCTYPE html PUBLIC ""-//W3C//DTD XHTML 1.0 Transitional//EN"" ""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"">
 <html xmlns=""http://www.w3.org/1999/xhtml"">
@@ -299,22 +224,11 @@ namespace RRCManagementSystem
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
     <title>Set Your Password - RRC Management System</title>
     <style type=""text/css"">
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin: 0; padding: 0; background-color: #f4f7fa; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f7fa; }}
         table {{ border-collapse: collapse; }}
         a {{ text-decoration: none; }}
-        .button {{
-            background-color: #2b6cb0;
-            color: #ffffff;
-            font-size: 16px;
-            font-weight: bold;
-            padding: 12px 24px;
-            border-radius: 6px;
-            display: inline-block;
-        }}
+        .button {{ background-color: #2b6cb0; color: #ffffff; font-size: 16px; font-weight: bold; padding: 12px 24px; border-radius: 6px; display: inline-block; }}
         .link-text {{ color: #2b6cb0; text-decoration: underline; word-break: break-all; }}
-        .content-box {{ background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); padding: 30px; }}
-        .header {{ background-color: #1a202c; padding: 20px 0; }}
-        .footer {{ font-size: 12px; color: #718096; margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; }}
     </style>
 </head>
 <body style=""margin: 0; padding: 0; background-color: #f4f7fa;"">
@@ -332,7 +246,14 @@ namespace RRCManagementSystem
                             <h2 style=""color: #2d3748; font-size: 24px; margin: 0 0 15px;"">Welcome to RRC Management System</h2>
                             <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">Hello,</p>
                             <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px;"">You have been invited to join the RRC Management System as a <strong>{formattedRole}</strong>. To get started, you'll need to set your password.</p>
-                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px;"">Please click the button below to continue:</p>
+                            
+                            <div style=""background-color: #edf2f7; border-left: 4px solid #2b6cb0; padding: 15px; margin: 20px 0; border-radius: 4px;"">
+                                <p style=""color: #2d3748; font-size: 14px; margin: 0 0 8px;""><strong>Your Account Details:</strong></p>
+                                <p style=""color: #4a5568; font-size: 14px; margin: 0;"">Employee ID: <strong>{employeeId}</strong></p>
+                                <p style=""color: #4a5568; font-size: 14px; margin: 5px 0 0;"">Role: <strong>{formattedRole}</strong></p>
+                            </div>
+
+                            <p style=""color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 30px;"">Please click the button below to set your password and activate your account:</p>
                             <p align=""center"" style=""margin: 0; text-align: center;"">
                                 <a href=""{resetLink}"" class=""button"" style=""background-color: #2b6cb0; color: #ffffff; font-size: 16px; font-weight: bold; padding: 12px 24px; border-radius: 6px; display: inline-block;"">Set Password</a>
                             </p>
@@ -343,9 +264,9 @@ namespace RRCManagementSystem
                     <tr>
                         <td align=""center"" style=""padding-top: 20px;"">
                             <p style=""font-size: 12px; color: #718096; margin: 0; text-align: center;"">
-                                This link will expire in 1 hour. If you did not request this, you can safely ignore this email.
+                                This link will expire in 24 hours. If you did not request this, you can safely ignore this email.
                                 <br/><br/>
-                                &copy; 2024 RRC Management System. All rights reserved.
+                                &copy; 2025 RRC Management System. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -358,9 +279,10 @@ namespace RRCManagementSystem
 
                 using (var mail = new MailMessage())
                 {
-                    // NOTE: Using a professional domain email (e.g., support@rrcmngmnt.com)
-                    // is highly recommended to improve deliverability and avoid spam filters.
-                    mail.From = new MailAddress("rrctermiteandpestcontrol@gmail.com", "RRC Management System");
+                    mail.From = new MailAddress(
+                        ConfigurationManager.AppSettings["SmtpEmail"] ?? "rrctermiteandpestcontrol@gmail.com",
+                        "RRC Management System"
+                    );
                     mail.To.Add(toEmail);
                     mail.Subject = subject;
                     mail.Body = body;
@@ -368,12 +290,9 @@ namespace RRCManagementSystem
 
                     using (var smtp = new SmtpClient("smtp.gmail.com", 587))
                     {
-                        // NOTE: The credentials should be stored in a secure location,
-                        // like a configuration file (as you noted in your comment),
-                        // and not hardcoded here.
                         smtp.Credentials = new NetworkCredential(
-                            "rrctermiteandpestcontrol@gmail.com",
-                            "pktz jwzp tbvx qheq"
+                            ConfigurationManager.AppSettings["SmtpEmail"] ?? "rrctermiteandpestcontrol@gmail.com",
+                            ConfigurationManager.AppSettings["SmtpPassword"] ?? "pktz jwzp tbvx qheq"
                         );
                         smtp.EnableSsl = true;
                         smtp.Send(mail);
@@ -383,14 +302,10 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
-                // Logging the full exception in a real application is a better practice
-                // to help with debugging.
                 System.Diagnostics.Debug.WriteLine("Email error: " + ex.Message);
                 return false;
             }
         }
-
-
 
         private void ShowSuccess(string message, bool redirect)
         {
@@ -398,7 +313,7 @@ namespace RRCManagementSystem
                 Swal.fire({{
                     icon: 'success',
                     title: 'Success',
-                    text: '{message}',
+                    html: '{message}',
                     confirmButtonColor: '#3085d6'
                 }})";
 
@@ -420,7 +335,7 @@ namespace RRCManagementSystem
                 Swal.fire({{
                     icon: 'warning',
                     title: 'Warning',
-                    text: '{message}',
+                    html: '{message}',
                     confirmButtonColor: '#f27474'
                 }});
             ", true);

@@ -77,19 +77,41 @@ namespace RRCManagementSystem
 
                     gvAdmins.DataSource = dt;
                     gvAdmins.DataBind();
+
+                    // Show result count message
+                    if (dt.Rows.Count == 0)
+                    {
+                        lblMessage.Text = string.IsNullOrWhiteSpace(keyword)
+                            ? "No users found."
+                            : $"No users found matching '{keyword}'.";
+                        lblMessage.CssClass = "text-muted text-center d-block mb-3";
+                    }
+                    else
+                    {
+                        lblMessage.Text = string.IsNullOrWhiteSpace(keyword)
+                            ? $"Showing {dt.Rows.Count} user(s)."
+                            : $"Found {dt.Rows.Count} user(s) matching '{keyword}'.";
+                        lblMessage.CssClass = "text-success text-center d-block mb-3";
+                    }
                 }
                 catch (Exception ex)
                 {
                     lblMessage.Text = "⚠ Error loading users: " + ex.Message;
+                    lblMessage.CssClass = "text-danger text-center d-block mb-3 fw-bold";
                 }
             }
+        }
+
+        // Auto-search when user types (triggered by AutoPostBack on txtSearch)
+        protected void txtSearch_TextChanged(object sender, EventArgs e)
+        {
+            BindUsers(txtSearch.Text);
         }
 
         protected void btnSearch_Click(object sender, EventArgs e)
         {
             BindUsers(txtSearch.Text);
         }
-
 
         protected void gvAdmins_RowCommand(object sender, GridViewCommandEventArgs e)
         {
@@ -106,6 +128,7 @@ namespace RRCManagementSystem
             if (!int.TryParse(hfUserToArchive.Value, out int userId))
             {
                 lblMessage.Text = "⚠ Invalid user selection.";
+                lblMessage.CssClass = "text-danger text-center d-block mb-3 fw-bold";
                 return;
             }
 
@@ -140,18 +163,17 @@ namespace RRCManagementSystem
                     else
                     {
                         lblMessage.Text = "⚠ No matching user found to archive (or user is SuperAdmin).";
+                        lblMessage.CssClass = "text-warning text-center d-block mb-3 fw-bold";
                     }
                 }
                 catch (Exception ex)
                 {
                     lblMessage.Text = "⚠ Error archiving user: " + ex.Message;
+                    lblMessage.CssClass = "text-danger text-center d-block mb-3 fw-bold";
                 }
             }
         }
 
-        /* =========================
-           UI helpers
-           ========================= */
         private void Toast(string title, string text, string icon)
         {
             var script = $@"Swal.fire({{

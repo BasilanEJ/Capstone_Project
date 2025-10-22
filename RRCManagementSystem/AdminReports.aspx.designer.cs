@@ -24,15 +24,6 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblMessage;
 
         /// <summary>
-        /// ReportsUpdatePanel control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.UpdatePanel ReportsUpdatePanel;
-
-        /// <summary>
         /// txtFromDate control.
         /// </summary>
         /// <remarks>
@@ -67,6 +58,15 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Button btnExportPDF;
+
+        /// <summary>
+        /// ReportsUpdatePanel control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.UpdatePanel ReportsUpdatePanel;
 
         /// <summary>
         /// lblTotalInquiries control.

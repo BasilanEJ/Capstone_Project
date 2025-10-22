@@ -229,6 +229,7 @@
     <Content Include="InspectedInquiry.aspx" />
     <Content Include="InspectorAreaScope.aspx" />
     <Content Include="InspectorDashboard.aspx" />
+    <Content Include="js\enhanced-fingerprint.js" />
     <Content Include="Login.aspx" />
     <Content Include="Logout.aspx" />
     <Content Include="Maintenance.aspx" />
@@ -246,18 +247,17 @@
     <Content Include="PayMongoWebhook.ashx" />
     <Content Include="PayPalWebhook.ashx" />
     <Content Include="Anchor.ashx" />
-    <None Include="Properties\PublishProfiles\FolderProfile.pubxml" />
+    <Content Include="GetFAQs.ashx" />
     <None Include="Properties\PublishProfiles\FolderProfile1.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile2.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile3.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile4.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile5.pubxml" />
-    <None Include="Properties\PublishProfiles\rrc.com - Web Deploy.pubxml" />
-    <None Include="Properties\PublishProfiles\rrc.pubxml" />
     <None Include="Properties\PublishProfiles\RRCManagement - Web Deploy.pubxml" />
     <None Include="Properties\PublishProfiles\rrcmngmnt.com - Web Deploy.pubxml" />
     <Content Include="Reticulation.aspx" />
     <Content Include="RootAdmin.Master" />
+    <None Include="Properties\PublishProfiles\rrcmngmnt.pubxml" />
     <None Include="Scripts\jquery-3.7.1.intellisense.js" />
     <Content Include="ManageItem.aspx" />
     <Content Include="ManagePayment.aspx" />
@@ -313,6 +313,7 @@
     <Content Include="TermitePrevention.aspx" />
     <Content Include="TotalStocks.aspx" />
     <Content Include="TransactionHistory.aspx" />
+    <Content Include="TravelExpense.aspx" />
     <Content Include="Unauthorized.aspx" />
     <Content Include="VerifyOTP.aspx" />
     <Content Include="VerifyTOTP.aspx" />
@@ -752,6 +753,9 @@
     <Compile Include="GenerateSuperAdminPassword.aspx.designer.cs">
       <DependentUpon>GenerateSuperAdminPassword.aspx</DependentUpon>
     </Compile>
+    <Compile Include="GetFAQs.ashx.cs">
+      <DependentUpon>GetFAQs.ashx</DependentUpon>
+    </Compile>
     <Compile Include="GetInspectionDetails.ashx.cs">
       <DependentUpon>GetInspectionDetails.ashx</DependentUpon>
     </Compile>
@@ -789,6 +793,7 @@
     <Compile Include="Home.aspx.designer.cs">
       <DependentUpon>Home.aspx</DependentUpon>
     </Compile>
+    <Compile Include="ImageHelper.cs" />
     <Compile Include="Inquiry.Master.cs">
       <DependentUpon>Inquiry.Master</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -829,7 +834,6 @@
     </Compile>
     <Compile Include="Login.aspx.cs">
       <DependentUpon>Login.aspx</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Login.aspx.designer.cs">
       <DependentUpon>Login.aspx</DependentUpon>
@@ -1117,6 +1121,13 @@
     </Compile>
     <Compile Include="TransactionHistory.aspx.designer.cs">
       <DependentUpon>TransactionHistory.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="TravelExpense.aspx.cs">
+      <DependentUpon>TravelExpense.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="TravelExpense.aspx.designer.cs">
+      <DependentUpon>TravelExpense.aspx</DependentUpon>
     </Compile>
     <Compile Include="Unauthorized.aspx.cs">
       <DependentUpon>Unauthorized.aspx</DependentUpon>

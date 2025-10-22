@@ -61,6 +61,18 @@ namespace RRCManagementSystem
                         lblMiscellaneous.Text = $"₱{misc:N2}";
                         lblTotalPrice.Text = $"₱{totalPrice:N2}";
 
+                        // NEW: Load and display miscellaneous details
+                        string miscDetails = SafeGetString(reader, "MiscellaneousDetails", null);
+                        if (!string.IsNullOrWhiteSpace(miscDetails))
+                        {
+                            pnlMiscDetails.Visible = true;
+                            litMiscDetails.Text = FormatMiscellaneousDetails(miscDetails);
+                        }
+                        else
+                        {
+                            pnlMiscDetails.Visible = false;
+                        }
+
                         // Contract detection
                         bool isContractCol = SafeGetBool(reader, "IsContract", false);
                         string serviceType = SafeGetString(reader, "ServiceType", null);
@@ -78,15 +90,39 @@ namespace RRCManagementSystem
                     {
                         btnBook.Enabled = false;
                         ScriptManager.RegisterStartupScript(this, GetType(), "noQuote", @"
-                            Swal.fire({
-                                icon: 'info',
-                                title: 'No Quotation Available', 
-                                text: 'Please wait for the inspector to create a quotation.',
-                                confirmButtonColor: '#2563eb'
-                            });", true);
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'No Quotation Available', 
+                        text: 'Please wait for the inspector to create a quotation.',
+                        confirmButtonColor: '#2563eb'
+                    });", true);
                     }
                 }
             }
+        }
+
+        // NEW: Helper method to format miscellaneous details for display
+        private string FormatMiscellaneousDetails(string miscDetails)
+        {
+            if (string.IsNullOrWhiteSpace(miscDetails))
+                return string.Empty;
+
+            // Split by semicolon (e.g., "Food Allowance: ₱300.00; Parking Fee: ₱50.00")
+            var items = miscDetails.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+            var html = new System.Text.StringBuilder();
+            foreach (var item in items)
+            {
+                var trimmedItem = item.Trim();
+                if (!string.IsNullOrEmpty(trimmedItem))
+                {
+                    html.Append($"<div class='text-sm text-gray-600 flex justify-between'>");
+                    html.Append($"<span>• {System.Web.HttpUtility.HtmlEncode(trimmedItem)}</span>");
+                    html.Append("</div>");
+                }
+            }
+
+            return html.ToString();
         }
 
         // -------------------- Booking Submission --------------------

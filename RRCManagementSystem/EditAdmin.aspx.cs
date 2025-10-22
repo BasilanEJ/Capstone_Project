@@ -38,23 +38,6 @@ namespace RRCManagementSystem
                 // Register ItemDataBound after binding
                 rptPermissions.ItemDataBound += rptPermissions_ItemDataBound;
             }
-
-            // ✅ Show SweetAlert2 success message after postback (optional flag from previous save)
-            if (Session["ShowSuccess"] != null && (bool)Session["ShowSuccess"])
-            {
-                Session.Remove("ShowSuccess");
-
-                string script = @"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
-<script>
-Swal.fire({
-    icon: 'success',
-    title: 'Changes Saved',
-    text: 'The admin permissions were updated successfully!',
-    confirmButtonColor: '#007bff'
-});
-</script>";
-                ClientScript.RegisterStartupScript(this.GetType(), "SuccessAlert", script);
-            }
         }
 
         /* =========================
@@ -259,13 +242,39 @@ Swal.fire({
                         }
 
                         tx.Commit();
-                        Session["ShowSuccess"] = true; // optional flag for SweetAlert
-                        lblMessage.Text = "✅ Admin updated successfully!";
+
+                        // ✅ Show success alert with redirect after 2 seconds
+                        string successScript = @"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
+<script>
+Swal.fire({
+    icon: 'success',
+    title: 'Changes Saved',
+    text: 'The admin permissions were updated successfully!',
+    confirmButtonColor: '#007bff',
+    timer: 2000,
+    timerProgressBar: true,
+    showConfirmButton: false
+}).then(function() {
+    window.location.href = 'ViewAdmin.aspx';
+});
+</script>";
+                        ClientScript.RegisterStartupScript(this.GetType(), "SuccessAlert", successScript);
                     }
                     catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
                     {
                         tx.Rollback();
                         lblMessage.Text = "⚠ Email already exists. Please use a different email.";
+
+                        string duplicateScript = @"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
+<script>
+Swal.fire({
+    icon: 'warning',
+    title: 'Duplicate Email',
+    text: 'Email already exists. Please use a different email.',
+    confirmButtonColor: '#ffc107'
+});
+</script>";
+                        ClientScript.RegisterStartupScript(this.GetType(), "DuplicateAlert", duplicateScript);
                     }
                     catch (Exception ex)
                     {

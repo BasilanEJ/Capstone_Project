@@ -10,6 +10,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script src="js/enhanced-fingerprint.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 
     <style>
@@ -456,6 +457,20 @@
                             </div>
                         </div>
 
+<asp:HiddenField ID="hiddenFingerprint" runat="server" />
+<asp:HiddenField ID="hiddenCanvasFingerprint" runat="server" />
+<asp:HiddenField ID="hiddenHardwareID" runat="server" />
+<asp:HiddenField ID="hiddenOSInfo" runat="server" />
+<asp:HiddenField ID="hiddenBrowserName" runat="server" />
+<asp:HiddenField ID="hiddenScreenResolution" runat="server" />
+<asp:HiddenField ID="hiddenTimezoneOffset" runat="server" />
+<asp:HiddenField ID="hiddenLanguage" runat="server" />
+<asp:HiddenField ID="hiddenHardwareConcurrency" runat="server" />
+<asp:HiddenField ID="hiddenColorDepth" runat="server" />
+<asp:HiddenField ID="hiddenDeviceMemory" runat="server" />
+<asp:HiddenField ID="hiddenMaxTouchPoints" runat="server" />
+<asp:HiddenField ID="hiddenPlatform" runat="server" />
+
                         <asp:Panel ID="pnlCaptcha" runat="server" Visible="false" CssClass="captcha-container">
                             <div class="g-recaptcha" data-sitekey="6Ld6VrcrAAAAAGnZnUl3beqIS2JViuw5O5s0WlBh"></div>
                         </asp:Panel>
@@ -602,6 +617,9 @@
                 Sys.WebForms.PageRequestManager.getInstance().add_endRequest(initScripts);
             }
         </script>
+
+       
+
     </form>
 </body>
 </html>

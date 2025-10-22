@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Data;
 using System.Text.RegularExpressions;
 using System.Data.SqlClient;
+using System.Web;
 
 namespace RRCManagementSystem
 {
@@ -25,12 +26,10 @@ namespace RRCManagementSystem
                     return;
                 }
 
-
                 string emailFromToken = GetEmailByValidToken(token);
                 if (!string.IsNullOrEmpty(emailFromToken))
                 {
                     ViewState["ClientEmail"] = emailFromToken;
-
                 }
                 else
                 {
@@ -53,7 +52,6 @@ namespace RRCManagementSystem
                     con.Open();
                     object result = cmd.ExecuteScalar();
 
-
                     return result != null ? AESHelper.DecryptEmail(result.ToString()) : null;
                 }
                 catch (Exception ex)
@@ -63,7 +61,6 @@ namespace RRCManagementSystem
                 }
             }
         }
-
 
         protected void btnResetPassword_Click(object sender, EventArgs e)
         {
@@ -126,7 +123,7 @@ namespace RRCManagementSystem
 
             if (rows > 0)
             {
-                ShowSweetAlert("Success", "Password has been set! You may now log in.", "success", true, "Login.aspx");
+                ShowSweetAlert("Success", "Password has been reset! You may now log in.", "success", true, "Login.aspx");
             }
             else
             {
@@ -134,10 +131,14 @@ namespace RRCManagementSystem
             }
         }
 
-
         private void ShowSweetAlert(string title, string message, string icon, bool showButton, string redirectUrl = "")
         {
-            ltScript.Text = $@"
+            // Escape single quotes to prevent JavaScript errors
+            title = HttpUtility.JavaScriptStringEncode(title);
+            message = HttpUtility.JavaScriptStringEncode(message);
+            redirectUrl = HttpUtility.JavaScriptStringEncode(redirectUrl);
+
+            string script = $@"
 <script>
     Swal.fire({{
         title: '{title}',
@@ -147,9 +148,11 @@ namespace RRCManagementSystem
         timer: 3000,
         timerProgressBar: true
     }}).then(() => {{
-        {(string.IsNullOrEmpty(redirectUrl) ? "" : $"window.location.href = '{redirectUrl}';")}
+        {(!string.IsNullOrEmpty(redirectUrl) ? $"window.location.href = '{redirectUrl}';" : "")}
     }});
 </script>";
+
+            ltScript.Text = script;
         }
     }
 }

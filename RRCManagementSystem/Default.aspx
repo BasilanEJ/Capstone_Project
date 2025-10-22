@@ -68,13 +68,109 @@
             color: var(--dark);
         }
 
-        /* ============ Modern Hero Banner ============ */
-        .hero { 
-            margin-top: 0; 
-            padding: 0;
-            position: relative;
-            overflow: hidden;
-        }
+
+/* Add this CSS to your Default.aspx <style> section to fix the spacing */
+
+/* ============ Fix Section Spacing ============ */
+
+/* Hero Banner (first section) - No padding */
+.hero:first-of-type {
+    margin-top: 0;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* About section (second hero section) - Add padding */
+.hero:not(:first-of-type) {
+    margin-top: 0;
+    padding: 80px 0; /* Add vertical padding */
+    position: relative;
+    overflow: hidden;
+    background: var(--white);
+}
+
+/* About section specific spacing */
+.hero .container {
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+/* Video section spacing */
+.video-hero {
+    position: relative;
+    width: 100%;
+    background-color: #000;
+    overflow: hidden;
+    margin-top: 60px; /* Add top margin */
+    margin-bottom: 60px; /* Add bottom margin */
+}
+
+/* Ensure all major sections have proper spacing */
+section {
+    margin-bottom: 40px;
+}
+
+/* Services section already has padding, ensure it's consistent */
+.services {
+    padding: 80px 0;
+    background: linear-gradient(to bottom, #ffffff 0%, var(--light-bg) 100%);
+    margin-bottom: 0; /* Remove margin since it has padding */
+}
+
+/* Blog section spacing */
+.blog-section {
+    text-align: center;
+    padding: 80px 20px;
+    background: var(--white);
+    margin-bottom: 0;
+}
+
+/* C&O section spacing */
+.co-section {
+    text-align: center;
+    padding: 80px 20px;
+    background: var(--light-bg);
+    margin-bottom: 0;
+}
+
+/* Reviews section spacing */
+.reviews-section {
+    text-align: center;
+    padding: 80px 20px;
+    background: var(--white);
+    margin-bottom: 0;
+}
+
+/* Inquiry form spacing */
+.inquiry-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    min-height: 60vh;
+    background: var(--light-bg);
+    padding: 60px 20px;
+    margin-top: 0;
+}
+
+/* Mobile responsive spacing adjustments */
+@media (max-width: 575.98px) {
+    .hero {
+        padding: 40px 0;
+    }
+    
+    .video-hero {
+        margin-top: 40px;
+        margin-bottom: 40px;
+    }
+    
+    .services,
+    .blog-section,
+    .co-section,
+    .reviews-section {
+        padding: 60px 20px;
+    }
+}
         
         .hero-banner { 
             width: 100%; 
@@ -89,6 +185,17 @@
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-lg);
         }
+
+#chkTerms.ClientID + .form-check-label {
+    color: #000000;
+    font-weight: 500;
+}
+
+/* Specifically for the terms modal */
+#termsModal .form-check-label {
+    color: #000000 !important;
+    font-weight: 500;
+}
 
         /* Smooth fade-in animations */
         @keyframes fadeInUp { 
@@ -154,6 +261,17 @@
             transform: scaleX(0);
             transition: transform 0.4s ease;
         }
+        .service-highlight {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 4px solid #f59e0b;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    font-style: italic;
+    color: #78350f;
+    font-weight: 500;
+}
+
 
         .service-card:hover {
             transform: translateY(-8px);
@@ -225,88 +343,170 @@
         }
 
         /* ============ Modern Modal Design ============ */
-        .modal-backdrop {
-            background-color: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(4px);
-        }
+      
+.modal-backdrop {
+    background-color: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+}
 
-        .modal.fade .modal-dialog {
-            transform: translateY(-50px) scale(0.95);
-            opacity: 0;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+.modal.fade .modal-dialog {
+    transform: translateY(-30px) scale(0.97);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-        .modal.show .modal-dialog {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
+.modal.show .modal-dialog {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
 
-        .modal-content {
-            border-radius: var(--radius-lg);
-            border: none;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            background: var(--white);
-        }
+.modal-content {
+    border-radius: 20px;
+    border: none;
+    overflow: hidden;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.25);
+    background: #ffffff;
+}
 
-        .modal-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border-bottom: none;
-            padding: 20px 28px;
-        }
+.modal-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    color: white;
+    border-bottom: none;
+    padding: 28px 32px;
+    position: relative;
+}
 
-        .modal-header .modal-title {
-            font-size: 22px;
-            font-weight: 600;
-            letter-spacing: -0.3px;
-        }
+.modal-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%);
+}
 
-        .modal-header .btn-close {
-            filter: invert(1);
-            opacity: 0.9;
-        }
+.modal-header .modal-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
 
-        .modal-body {
-            padding: 32px 28px;
-        }
+.modal-header .btn-close {
+    filter: invert(1) brightness(1.2);
+    opacity: 0.95;
+    transition: all 0.3s ease;
+    padding: 12px;
+}
 
-        .modal-body img {
-            border-radius: var(--radius-md);
-            margin-bottom: 24px;
-            max-width: 400px;
-            max-height: 350px;
-            width: 100%;
-            height: auto;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-            object-fit: cover;
-            box-shadow: var(--shadow-md);
-        }
+.modal-header .btn-close:hover {
+    opacity: 1;
+    transform: rotate(90deg);
+}
 
-        .modal-body p {
-            font-size: 16px;
-            color: var(--gray);
-            line-height: 1.7;
-            text-align: justify;
-            margin-bottom: 20px;
-        }
+.modal-body {
+    padding: 40px 32px;
+    background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%);
+}
 
-        .modal-body ul {
-            list-style-type: none;
-            padding-left: 0;
-            margin-top: 20px;
-        }
+.modal-body img {
+    border-radius: 16px;
+    margin-bottom: 32px;
+    max-width: 100%;
+    width: 100%;
+    max-height: 380px;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    transition: transform 0.3s ease;
+}
 
-        .modal-body ul li {
-            text-align: justify;
-            font-size: 15px;
-            padding: 8px 0;
-            color: var(--dark);
-            text-indent: -1.5rem;
-            padding-left: 1.5rem;
-        }
+.modal-body img:hover {
+    transform: scale(1.02);
+}
+
+.modal-body p {
+    font-size: 16px;
+    color: #475569;
+    line-height: 1.8;
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+.modal-body p:first-of-type::first-letter {
+    font-size: 2.2em;
+    font-weight: 700;
+    color: #2563eb;
+    float: left;
+    line-height: 0.9;
+    margin-right: 8px;
+    margin-top: 4px;
+}
+
+.modal-body ul {
+    list-style: none;
+    padding: 0;
+    margin: 32px 0 0 0;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    padding: 24px 28px;
+    border-left: 4px solid #2563eb;
+}
+
+.modal-body ul li {
+    font-size: 15px;
+    padding: 12px 0;
+    color: #334155;
+    font-weight: 500;
+    display: flex;
+    align-items: flex-start;
+    line-height: 1.6;
+}
+
+.modal-body ul li::before {
+    content: '✓';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: white;
+    border-radius: 50%;
+    margin-right: 12px;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.modal-body strong {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+/* Enhanced scrollbar for modal */
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
 
         .modal-footer {
             background: var(--light-bg);
@@ -342,7 +542,37 @@
             .video-hero { height: auto; }
             .video-hero .ratio-box { position: relative; width: 100%; padding-top: 56.25%; }
             .video-hero .video-layer { position: absolute; inset: 0; }
-        }
+             .modal-header {
+        padding: 24px;
+    }
+    
+    .modal-header .modal-title {
+        font-size: 22px;
+    }
+    
+    .modal-body {
+        padding: 28px 24px;
+    }
+    
+    .modal-body img {
+        max-height: 280px;
+        margin-bottom: 24px;
+    }
+    
+    .modal-body p {
+        font-size: 15px;
+    }
+    
+    .modal-body ul {
+        padding: 20px;
+    }
+    
+    .modal-body ul li {
+        font-size: 14px;
+        padding: 10px 0;
+    }
+}
+        
 
         .video-hero .thumb,
         .video-hero iframe {
@@ -770,22 +1000,21 @@
         }
     </style>
 
+
     <!-- ====== HERO BANNER ====== -->
-    <section class="hero">
+     <section class="hero lazy-section">
         <div class="container-fluid p-0 position-relative">
-            <img src="/images/rrc1.png" alt="Pest Control Banner" class="hero-banner img-fluid">
+            <asp:Image ID="imgHeroBanner" runat="server" alt="Pest Control Banner" CssClass="hero-banner img-fluid" />
         </div>
     </section>
 
-    <!-- ====== SERVICES SECTION ====== -->
-    <section class="services py-5">
+    <section class="services py-5 lazy-section">
         <div class="container">
             <div class="text-center mb-4">
                 <h2 style="color: gray;">WE PROVIDE THE BEST</h2>
                 <h1 style="color: blue;">Termite and Pest Control Services</h1>
             </div>
-
-            <div id="servicesCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div id="servicesCarousel" class="carousel slide">
                 <div class="carousel-inner">
 
                     <!-- ====== TERMITE CONTROL SERVICES ====== -->
@@ -796,7 +1025,7 @@
                             <!-- Baiting System -->
                             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
                                 <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalBaiting">
-                                    <img src="/images/service-baiting.jpg" alt="Baiting System" class="service-image">
+                                    <asp:Image ID="imgBaiting" runat="server" alt="Baiting System" CssClass="service-image" />
                                     <h4>Baiting System</h4>
                                     <p class="small">Above Ground and In Ground for Colony Elimination</p>
                                 </div>
@@ -805,7 +1034,7 @@
                             <!-- Termite Prevention -->
                             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
                                 <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalTermitePrevention">
-                                    <img src="/images/service-termite-prevention.jpg" alt="Termite Prevention" class="service-image">
+                                    <asp:Image ID="imgTermitePrevention" runat="server" alt="Termite Prevention" CssClass="service-image" />
                                     <h4>Termite Prevention</h4>
                                     <p class="small">Stops infestations before they begin with long-term barrier protection</p>
                                 </div>
@@ -814,7 +1043,7 @@
                             <!-- Soil Poisoning -->
                             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
                                 <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalSoilPoisoning">
-                                    <img src="/images/service-soil.jpg" alt="Soil Poisoning" class="service-image">
+                                    <asp:Image ID="imgSoil" runat="server" alt="Soil Poisoning" CssClass="service-image" />
                                     <h4>Soil Poisoning</h4>
                                     <p class="small">Build a strong foundation with termite-proof protection for new & existing homes.</p>
                                 </div>
@@ -823,7 +1052,7 @@
                             <!-- Reticulation -->
                             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
                                 <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalReticulation">
-                                    <img src="/images/services-reticulations.jpg" alt="Reticulation" class="service-image">
+                                    <asp:Image ID="imgReticulation" runat="server" alt="Reticulation" CssClass="service-image" />
                                     <h4>Reticulation</h4>
                                     <p class="small">Smart termite defense with a hidden pipe system for hassle-free treatments.</p>
                                 </div>
@@ -832,7 +1061,7 @@
                             <!-- Mound Demolition -->
                             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
                                 <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalMoundDemolition">
-                                    <img src="/images/service-mound.jpg" alt="Mound Demolition" class="service-image">
+                                    <asp:Image ID="imgMound" runat="server" alt="Mound Demolition" CssClass="service-image" />
                                     <h4>Mound Demolition</h4>
                                     <p class="small">Directly eliminate termite colonies by targeting the queen at the source.</p>
                                 </div>
@@ -848,7 +1077,7 @@
                             <!-- General Pest Control -->
                             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
                                 <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalGeneralPest">
-                                    <img src="/images/service-general-pest.jpg" alt="General Pest Control" class="service-image">
+                                    <asp:Image ID="imgGeneralPest" runat="server" alt="General Pest Control" CssClass="service-image" />
                                     <h4>General Pest Control</h4>
                                     <p class="small">Cockroaches, Ants, Mosquitoes, Flies</p>
                                 </div>
@@ -857,7 +1086,7 @@
                             <!-- Tick & Fleas Control -->
                             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
                                 <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalTickFleas">
-                                    <img src="/images/service-tick-fleas.jpg" alt="Tick & Fleas Control" class="service-image">
+                                    <asp:Image ID="imgTickFleas" runat="server" alt="Tick & Fleas Control" CssClass="service-image" />
                                     <h4>Tick & Fleas Control</h4>
                                     <p class="small">Breaks the breeding cycle and protects your pets & family</p>
                                 </div>
@@ -866,7 +1095,7 @@
                             <!-- Bedbugs Control -->
                             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
                                 <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalBedbugs">
-                                    <img src="/images/service-bedbugs.jpg" alt="Bedbugs Control" class="service-image">
+                                    <asp:Image ID="imgBedbugs" runat="server" alt="Bedbugs Control" CssClass="service-image" />
                                     <h4>Bedbugs Control</h4>
                                     <p class="small">Thorough inspection and treatment for lasting relief</p>
                                 </div>
@@ -875,7 +1104,7 @@
                             <!-- Rat / Rodents Control -->
                             <div class="col-lg-2 col-md-3 col-sm-4 col-6">
                                 <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalRatControl">
-                                    <img src="/images/service-rats.jpg" alt="Rat Control" class="service-image">
+                                    <asp:Image ID="imgRats" runat="server" alt="Rat Control" CssClass="service-image" />
                                     <h4>Rat / Rodents Control</h4>
                                     <p class="small">Safe and effective removal to prevent health risks</p>
                                 </div>
@@ -902,285 +1131,186 @@
          TERMITE CONTROL SERVICES MODALS
     ====================================== -->
 
-    <!-- Baiting System Modal -->
-    <div class="modal fade" id="modalBaiting" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Baiting System</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <img src="/images/service-baiting.jpg" alt="Baiting System" class="img-fluid mb-3 rounded">
-                    <p>
-                        Our termite baiting system is one of the most advanced and environmentally responsible methods
-                        available for colony elimination. Bait stations are carefully placed above ground in active areas
-                        and in-ground around the perimeter of your property. Termites consume the specially formulated
-                        bait and unknowingly spread it throughout the colony, including to the queen.
-                    </p>
-                    <p>
-                        This process leads to the gradual but complete elimination of the entire termite population.
-                        Regular inspections ensure the stations remain effective and monitored over time.
-                    </p>
-                    <ul>
-                        <li>✅ Targets the colony at its source</li>
-                        <li>✅ Minimal chemical use, safe for sensitive environments</li>
-                        <li>✅ Monitored and maintained for long-term effectiveness</li>
-                        <li>✅ Safe for families, pets, and the environment</li>
-                    </ul>
-                </div>
+    
+<!-- REPLACE ALL EXISTING SERVICE MODALS WITH THESE DYNAMIC VERSIONS -->
+
+<!-- Baiting System Modal -->
+<div class="modal fade" id="modalBaiting" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><asp:Literal ID="litBaitingTitle" runat="server" /></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <asp:Image ID="imgModalBaiting" runat="server" alt="Baiting System" loading="lazy" />
+                <asp:Literal ID="litBaitingDescription" runat="server" Mode="PassThrough" />
+                <ul>
+                    <asp:Literal ID="litBaitingBullets" runat="server" Mode="PassThrough" />
+                </ul>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Termite Prevention Modal -->
-    <div class="modal fade" id="modalTermitePrevention" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Termite Prevention</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <img src="/images/service-termite-prevention.jpg" alt="Termite Prevention" class="img-fluid mb-3 rounded">
-                    <p>
-                        Prevention is the smartest and most cost-effective way to handle termites before they cause damage.
-                        Our preventive services create a protective barrier that blocks termites from ever reaching your property.
-                        Using a mix of physical barriers, liquid termiticides, and advanced technology,
-                        we provide coverage for both new and existing structures.
-                    </p>
-                    <p>
-                        Regular inspections allow us to identify risks early and reinforce your defenses,
-                        protecting your property value and preventing expensive repairs in the future.
-                    </p>
-                    <ul>
-                        <li>✅ Stops infestations before they begin</li>
-                        <li>✅ Long-term barrier protection for homes and businesses</li>
-                        <li>✅ Reduces costly repair risks by preventing structural damage</li>
-                        <li>✅ Ideal for both residential and commercial properties</li>
-                    </ul>
-                </div>
+<!-- Termite Prevention Modal -->
+<div class="modal fade" id="modalTermitePrevention" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><asp:Literal ID="litTermitePreventionTitle" runat="server" /></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <asp:Image ID="imgModalTermitePrevention" runat="server" alt="Termite Prevention" loading="lazy" />
+                <asp:Literal ID="litTermitePreventionDescription" runat="server" Mode="PassThrough" />
+                <ul>
+                    <asp:Literal ID="litTermitePreventionBullets" runat="server" Mode="PassThrough" />
+                </ul>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Soil Poisoning Modal -->
-    <div class="modal fade" id="modalSoilPoisoning" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Soil Poisoning (Pre & Post Construction)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <img src="/images/service-soil.jpg" alt="Soil Poisoning" class="img-fluid mb-3 rounded">
-                    <p>
-                        Soil treatment, also called soil poisoning, is one of the most trusted termite-proofing techniques.
-                        For pre-construction, we apply a termiticide treatment to the soil before the foundation is laid,
-                        creating a shield that termites cannot cross.
-                    </p>
-                    <p>
-                        For post-construction, we drill around the foundation and inject chemicals deep into the soil to
-                        reinforce protection. Both methods create a continuous chemical barrier that protects against termite entry.
-                    </p>
-                    <ul>
-                        <li>✅ Essential for long-term structural protection</li>
-                        <li>✅ Provides defense for both new builds and existing properties</li>
-                        <li>✅ Creates a continuous barrier termites cannot cross</li>
-                        <li>✅ Peace of mind against hidden termite threats</li>
-                    </ul>
-                </div>
+<!-- Soil Poisoning Modal -->
+<div class="modal fade" id="modalSoilPoisoning" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><asp:Literal ID="litSoilTitle" runat="server" /></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <asp:Image ID="imgModalSoil" runat="server" alt="Soil Poisoning" loading="lazy" />
+                <asp:Literal ID="litSoilDescription" runat="server" Mode="PassThrough" />
+                <ul>
+                    <asp:Literal ID="litSoilBullets" runat="server" Mode="PassThrough" />
+                </ul>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Reticulation Modal -->
-    <div class="modal fade" id="modalReticulation" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Reticulation (Perforated Pipe System)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <img src="/images/services-reticulations.jpg" alt="Reticulation" class="img-fluid mb-3 rounded">
-                    <p>
-                        Our reticulation system is a modern termite management solution that makes re-treatment simple and efficient.
-                        A network of underground perforated pipes is installed around your property's foundation,
-                        allowing termiticide to be evenly distributed in the soil.
-                    </p>
-                    <p>
-                        When it's time for re-application, chemicals can be delivered directly into the system without drilling
-                        or damaging floors. This provides a long-term, cost-effective solution for termite management.
-                    </p>
-                    <ul>
-                        <li>✅ Even, reliable distribution of termiticide</li>
-                        <li>✅ Easy re-application without drilling or disruption</li>
-                        <li>✅ Long-lasting and cost-effective protection</li>
-                        <li>✅ Discreet system that preserves your property's appearance</li>
-                    </ul>
-                </div>
+<!-- Reticulation Modal -->
+<div class="modal fade" id="modalReticulation" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><asp:Literal ID="litReticulationTitle" runat="server" /></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <asp:Image ID="imgModalReticulation" runat="server" alt="Reticulation" loading="lazy" />
+                <asp:Literal ID="litReticulationDescription" runat="server" Mode="PassThrough" />
+                <ul>
+                    <asp:Literal ID="litReticulationBullets" runat="server" Mode="PassThrough" />
+                </ul>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Mound Demolition Modal -->
-    <div class="modal fade" id="modalMoundDemolition" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Mound Demolition (Queen Finder)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <img src="/images/service-mound.jpg" alt="Mound Demolition" class="img-fluid mb-3 rounded">
-                    <p>
-                        For properties with visible termite mounds, mound demolition provides a direct and highly effective treatment.
-                        Our specialists carefully dismantle the mound, apply treatment, and locate the queen for elimination.
-                        Removing the queen ensures the colony cannot rebuild and prevents further spread.
-                    </p>
-                    <ul>
-                        <li>✅ Fast and decisive colony elimination</li>
-                        <li>✅ Long-term results by directly targeting the queen</li>
-                        <li>✅ Prevents spread of termites to nearby areas</li>
-                        <li>✅ Effective solution for large outdoor infestations</li>
-                    </ul>
-                </div>
+<!-- Mound Demolition Modal -->
+<div class="modal fade" id="modalMoundDemolition" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><asp:Literal ID="litMoundTitle" runat="server" /></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <asp:Image ID="imgModalMound" runat="server" alt="Mound Demolition" loading="lazy" />
+                <asp:Literal ID="litMoundDescription" runat="server" Mode="PassThrough" />
+                <ul>
+                    <asp:Literal ID="litMoundBullets" runat="server" Mode="PassThrough" />
+                </ul>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- ======================================
-         GENERAL PEST CONTROL SERVICES MODALS
-    ====================================== -->
-
-    <!-- General Pest Control Modal -->
-    <div class="modal fade" id="modalGeneralPest" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">General Pest Control Treatment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <img src="/images/service-general-pest.jpg" alt="General Pest Control" class="img-fluid mb-3 rounded">
-                    <p>
-                        Our general pest control services cover the most common pests that threaten health, hygiene, and comfort.
-                        Each pest is treated using specialized methods:
-                    </p>
-                    <ul>
-                        <li><strong>Cockroaches:</strong> Targeted sprays and gel baits reach deep into hiding places.</li>
-                        <li><strong>Ants:</strong> Eliminate visible ants and hidden colonies to prevent reinfestation.</li>
-                        <li><strong>Mosquitoes:</strong> Reduce breeding areas and apply larvicides and residual sprays.</li>
-                        <li><strong>Flies:</strong> Traps, sprays, and sanitation recommendations reduce contamination risks.</li>
-                    </ul>
-                    <p>
-                        This integrated approach ensures healthier, cleaner, and pest-free surroundings.
-                    </p>
-                    <ul>
-                        <li>✅ Comprehensive coverage for common household pests</li>
-                        <li>✅ Treatments tailored to each species and infestation level</li>
-                        <li>✅ Protects families and businesses from health risks</li>
-                        <li>✅ Creates a cleaner, more comfortable environment</li>
-                    </ul>
-                </div>
+<!-- General Pest Control Modal -->
+<div class="modal fade" id="modalGeneralPest" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><asp:Literal ID="litGeneralPestTitle" runat="server" /></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <asp:Image ID="imgModalGeneralPest" runat="server" alt="General Pest Control" loading="lazy" />
+                <asp:Literal ID="litGeneralPestDescription" runat="server" Mode="PassThrough" />
+                <ul>
+                    <asp:Literal ID="litGeneralPestBullets" runat="server" Mode="PassThrough" />
+                </ul>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Tick & Fleas Control Modal -->
-    <div class="modal fade" id="modalTickFleas" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Tick & Fleas Control</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <img src="/images/service-tick-fleas.jpg" alt="Tick & Fleas Control" class="img-fluid mb-3 rounded">
-                    <p>
-                        Ticks and fleas are more than just annoying—they can transmit harmful diseases to both humans and pets.
-                        Our treatments target every stage of their lifecycle, from eggs to adults, to break the cycle of infestation.
-                    </p>
-                    <p>
-                        We focus on key areas such as carpets, pet bedding, gardens, and shaded spots where these pests thrive,
-                        while providing preventive advice for long-term protection.
-                    </p>
-                    <ul>
-                        <li>✅ Safe for households with pets and children</li>
-                        <li>✅ Breaks the breeding cycle for long-term results</li>
-                        <li>✅ Reduces risks of diseases like Lyme disease and flea-borne fevers</li>
-                        <li>✅ Targets indoor and outdoor hotspots</li>
-                    </ul>
-                </div>
+<!-- Tick & Fleas Control Modal -->
+<div class="modal fade" id="modalTickFleas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><asp:Literal ID="litTickFleasTitle" runat="server" /></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <asp:Image ID="imgModalTickFleas" runat="server" alt="Tick & Fleas Control" loading="lazy" />
+                <asp:Literal ID="litTickFleasDescription" runat="server" Mode="PassThrough" />
+                <ul>
+                    <asp:Literal ID="litTickFleasBullets" runat="server" Mode="PassThrough" />
+                </ul>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Bedbugs Control Modal -->
-    <div class="modal fade" id="modalBedbugs" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Bedbugs Control</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <img src="/images/service-bedbugs.jpg" alt="Bedbugs Control" class="img-fluid mb-3 rounded">
-                    <p>
-                        Bedbugs are notorious for hiding in hard-to-reach areas like mattresses, furniture, and cracks.
-                        Our service begins with a thorough inspection to identify all hiding spots, followed by targeted treatments
-                        like heat and residual sprays to kill bedbugs at every stage.
-                    </p>
-                    <p>
-                        Follow-up visits ensure complete eradication and prevent re-infestation, restoring comfort and peace of mind.
-                    </p>
-                    <ul>
-                        <li>✅ Comprehensive inspection to locate infestations</li>
-                        <li>✅ Treatments that eliminate eggs, nymphs, and adults</li>
-                        <li>✅ Effective for both minor and severe infestations</li>
-                        <li>✅ Restful, bite-free sleep restored</li>
-                    </ul>
-                </div>
+<!-- Bedbugs Control Modal -->
+<div class="modal fade" id="modalBedbugs" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><asp:Literal ID="litBedbugsTitle" runat="server" /></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <asp:Image ID="imgModalBedbugs" runat="server" alt="Bedbugs Control" loading="lazy" />
+                <asp:Literal ID="litBedbugsDescription" runat="server" Mode="PassThrough" />
+                <ul>
+                    <asp:Literal ID="litBedbugsBullets" runat="server" Mode="PassThrough" />
+                </ul>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Rat & Rodents Control Modal -->
-    <div class="modal fade" id="modalRatControl" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Rat & Rodents Control</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <img src="/images/service-rats.jpg" alt="Rat & Rodents Control" class="img-fluid mb-3 rounded">
-                    <p>
-                        Rodents like rats and mice pose serious threats to health and property. They spread diseases,
-                        contaminate food, and can cause electrical fires by chewing wires.
-                    </p>
-                    <p>
-                        Our service uses traps, baits, and exclusion methods to remove infestations and prevent recurrence.
-                        We also seal entry points and advise on sanitation practices to keep them away for good.
-                    </p>
-                    <ul>
-                        <li>✅ Safe and effective elimination methods</li>
-                        <li>✅ Preventive measures to block future infestations</li>
-                        <li>✅ Protects property from costly damage</li>
-                        <li>✅ Reduces health risks linked to rodent-borne diseases</li>
-                    </ul>
-                </div>
+<!-- Rat & Rodents Control Modal -->
+<div class="modal fade" id="modalRatControl" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><asp:Literal ID="litRatsTitle" runat="server" /></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <asp:Image ID="imgModalRats" runat="server" alt="Rat & Rodents Control" loading="lazy" />
+                <asp:Literal ID="litRatsDescription" runat="server" Mode="PassThrough" />
+                <ul>
+                    <asp:Literal ID="litRatsBullets" runat="server" Mode="PassThrough" />
+                </ul>
             </div>
         </div>
     </div>
+</div>
 
     <!-- ====== ABOUT SPLIT ====== -->
-    <section class="hero">
+      <section class="hero lazy-section">
         <div class="container">
             <div class="row align-items-center gy-4">
                 <div class="col-md-6 text-center">
-                    <img src="/images/ppe.png" alt="Pest Control Worker" class="img-fluid hero-img">
+                    <asp:Image ID="imgAbout" runat="server" alt="Pest Control Worker" CssClass="img-fluid hero-img" />
                 </div>
 
                 <div class="col-md-6">
@@ -1201,63 +1331,64 @@
     </section>
 
     <!-- ====== RESPONSIVE VIDEO (VIMEO) ====== -->
-    <section class="hero video-hero">
+  <section class="hero video-hero lazy-section">
         <div class="ratio-box d-md-none"></div>
         <h1 class="video-title"></h1>
 
         <div class="video-layer">
-            <img id="videoThumbnail" src="/images/banner tv.jpg" alt="Video Thumbnail" class="thumb" style="cursor:pointer;">
+            <asp:Image ID="imgVideoThumbnail" runat="server" alt="Video Thumbnail" CssClass="thumb" style="cursor:pointer;" />
             <iframe id="vimeoVideo"
-                    src="https://player.vimeo.com/video/1009218555?loop=1&muted=0"
+                    src=""
                     allow="autoplay; fullscreen"
                     allowfullscreen
                     style="display:none;"></iframe>
             <div id="playButton" class="play-btn">▶ Play</div>
         </div>
     </section>
+    
+    <asp:HiddenField ID="hfVimeoVideoId" runat="server" />
+    <asp:HiddenField ID="hfVideoType" runat="server" />
 
-    <!-- ====== Blog Section ====== -->
-    <section class="blog-section">
-        <h2>Read our Blogs</h2>
-        <div class="blog-cards">
-            
-            <!-- Blog Card 1 -->
-            <a href="DIY.aspx" class="blog-card">
-                <img src="/Images/DIY.jpg" alt="DIY vs Professional Pest Control">
-                <div class="blog-card-content">
-                    <h3>DIY pest control vs. hiring a pest control company: What's the difference?</h3>
-                </div>
-            </a>
+  <section class="blog-section lazy-section">
+    <h2>Read our Blogs</h2>
+    <div class="blog-cards">
+        
+        <!-- Blog Card 1 -->
+        <a href="DIY.aspx" class="blog-card">
+            <asp:Image ID="imgBlog1" runat="server" alt="DIY vs Professional Pest Control" />
+            <div class="blog-card-content">
+                <h3>DIY pest control vs. hiring a pest control company: What's the difference?</h3>
+            </div>
+        </a>
 
-            <!-- Blog Card 2 -->
-            <a href="Eskwela.aspx" class="blog-card">
-                <img src="/Images/blog2.jpg" alt="Brigada Eskwela Anti-Dengue">
-                <div class="blog-card-content">
-                    <h3>Brigada Eskwela Anti-Dengue Campaign: Ensuring a Safe and Healthy Learning Environment</h3>
-                </div>
-            </a>
+        <!-- Blog Card 2 -->
+        <a href="Eskwela.aspx" class="blog-card">
+            <asp:Image ID="imgBlog2" runat="server" alt="Brigada Eskwela Anti-Dengue" />
+            <div class="blog-card-content">
+                <h3>Brigada Eskwela Anti-Dengue Campaign: Ensuring a Safe and Healthy Learning Environment</h3>
+            </div>
+        </a>
 
-            <!-- Blog Card 3 -->
-            <a href="Termite.aspx" class="blog-card">
-                <img src="/Images/blog3.jpg" alt="Termite Swarms">
-                <div class="blog-card-content">
-                    <h3>Don't Let Termite Swarms Take Over Your Home!</h3>
-                </div>
-            </a>
+        <!-- Blog Card 3 -->
+        <a href="Termite.aspx" class="blog-card">
+            <asp:Image ID="imgBlog3" runat="server" alt="Termite Swarms" />
+            <div class="blog-card-content">
+                <h3>Don't Let Termite Swarms Take Over Your Home!</h3>
+            </div>
+        </a>
 
-        </div>
-    </section>
-
+    </div>
+</section>
     <!-- ====== C&O ====== -->
-    <section class="co-section">
+   <section class="co-section lazy-section">
         <h2>Certifications & Organizations</h2>
         <div style="display:flex; justify-content:center; align-items:center; margin-top:20px;">
-            <img src="/images/c&o.png" alt="Certifications & Organizations">
+            <asp:Image ID="imgCO" runat="server" alt="Certifications & Organizations" />
         </div>
     </section>
 
     <!-- ====== REVIEWS ====== -->
-    <section class="reviews-section">
+    <section class="reviews-section lazy-section">
         <h2>What our customers are saying</h2>
 
         <div class="reviews-grid">
@@ -1534,9 +1665,9 @@
 
                                         <div class="mt-3 form-check">
                                             <asp:CheckBox ID="chkTerms" runat="server" CssClass="form-check-input" />
-                                            <label class="form-check-label" for="<%= chkTerms.ClientID %>">
-                                                I agree to the Terms &amp; Conditions and Privacy Policy.
-                                            </label>
+                                            <label class="form-check-label" for="<%= chkTerms.ClientID %>" style="color: #000000 !important; font-weight: 500;">
+                                                    I agree to the Terms &amp; Conditions and Privacy Policy.
+                                                </label>
                                             
                                             <span id="termsError" style="display:none; color:red; font-size:13px; margin-top:5px;">
                                                 Please agree to the terms and conditions before submitting.
@@ -1544,9 +1675,14 @@
                                         </div>
                                     </div>
 
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
-                                    </div>
+                                  <div class="modal-footer">
+    <button type="button" class="btn btn-primary" id="btnTermsOk" data-bs-dismiss="modal" style="display: none;">
+        OK
+    </button>
+    <span id="termsHint" style="color: #6c757d; font-size: 14px; font-style: italic;">
+        ✓ Please agree to the terms to continue
+    </span>
+</div>
 
                                 </div>
                             </div>
@@ -1571,6 +1707,45 @@
     </asp:UpdatePanel>
 
     <script>
+        // Toggle OK button visibility based on checkbox
+        document.addEventListener('DOMContentLoaded', function () {
+            const chkTerms = document.getElementById('<%= chkTerms.ClientID %>');
+        const btnTermsOk = document.getElementById('btnTermsOk');
+        const termsHint = document.getElementById('termsHint');
+        
+        if (chkTerms && btnTermsOk && termsHint) {
+            // Function to toggle button visibility
+            function toggleOkButton() {
+                if (chkTerms.checked) {
+                    btnTermsOk.style.display = 'inline-block';
+                    termsHint.style.display = 'none';
+                } else {
+                    btnTermsOk.style.display = 'none';
+                    termsHint.style.display = 'inline-block';
+                }
+            }
+            
+            // Initial check
+            toggleOkButton();
+            
+            // Listen for checkbox changes
+            chkTerms.addEventListener('change', toggleOkButton);
+        }
+    });
+
+    function validateTerms() {
+        var chkTerms = document.getElementById('<%= chkTerms.ClientID %>');
+
+            if (!chkTerms.checked) {
+                var termsModal = new bootstrap.Modal(document.getElementById('termsModal'));
+                termsModal.show();
+                return false;
+            }
+            return true;
+        }
+    </script>
+
+    <script>
         function validateTerms() {
             var chkTerms = document.getElementById('<%= chkTerms.ClientID %>');
 
@@ -1584,23 +1759,53 @@
     </script>
 
     <script>
-        // --- Vimeo Play logic ---
-        const playButton = document.getElementById("playButton");
-        const videoThumbnail = document.getElementById("videoThumbnail");
-        const vimeoVideo = document.getElementById("vimeoVideo");
 
-        if (playButton && videoThumbnail && vimeoVideo) {
+        const videoId = document.getElementById('<%= hfVimeoVideoId.ClientID %>').value;
+    const videoType = document.getElementById('<%= hfVideoType.ClientID %>') ?
+            document.getElementById('<%= hfVideoType.ClientID %>').value : 'YouTube';
+
+        const videoIframe = document.getElementById("vimeoVideo");
+
+        if (videoIframe && videoId) {
+            let embedUrl = '';
+
+            if (videoType === 'YouTube') {
+                embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&autohide=1&showinfo=0`;
+            } else if (videoType === 'Vimeo') {
+                embedUrl = `https://player.vimeo.com/video/${videoId}?loop=1&muted=0`;
+            }
+
+            videoIframe.setAttribute("src", embedUrl);
+        }
+
+        // Video play logic
+        const playButton = document.getElementById("playButton");
+        const videoThumbnail = document.getElementById('<%= imgVideoThumbnail.ClientID %>');
+
+        if (playButton && videoThumbnail && videoIframe) {
             playButton.addEventListener("click", function () {
-                const src = vimeoVideo.getAttribute("src");
-                const nextSrc = src.includes("autoplay=1") ? src : (src + (src.includes("?") ? "&" : "?") + "autoplay=1");
-                vimeoVideo.setAttribute("src", nextSrc);
+                const src = videoIframe.getAttribute("src");
+                let nextSrc = '';
+
+                if (videoType === 'YouTube') {
+                    // Add autoplay parameter for YouTube
+                    nextSrc = src.includes("autoplay=1") ? src : (src + (src.includes("?") ? "&" : "?") + "autoplay=1");
+                } else if (videoType === 'Vimeo') {
+                    // Add autoplay parameter for Vimeo
+                    nextSrc = src.includes("autoplay=1") ? src : (src + (src.includes("?") ? "&" : "?") + "autoplay=1");
+                }
+
+                videoIframe.setAttribute("src", nextSrc);
 
                 videoThumbnail.style.display = "none";
                 playButton.style.display = "none";
-                vimeoVideo.style.display = "block";
+                videoIframe.style.display = "block";
             });
         }
+    </script>
 
+    <script>
+     
         // --- Contact number validation ---
         function isDigit(e) {
             const charCode = e.which || e.keyCode;

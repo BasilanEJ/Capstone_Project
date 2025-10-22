@@ -10,11 +10,10 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        /*
-         * INLINE STYLES MATCHING Login.aspx
-         */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -69,7 +68,18 @@
             box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
         }
         
-        /* Removed .logo as it wasn't in the original HTML */
+        .logo {
+            width: 100%;
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
 
         h2 {
             color: #1a1a1a;
@@ -117,8 +127,7 @@
             color: #999;
         }
 
-        /* Using the Sign In button blue gradient for the main action */
-        .btn-login { /* Renamed from btn-submit to btn-login for consistency */
+        .btn-login {
             width: 100%;
             padding: 15px;
             font-size: clamp(15px, 4vw, 17px);
@@ -142,42 +151,12 @@
             transform: translateY(0);
         }
         
-        /* Message Container Styling (Used for the optional label) */
-        #messageContainer {
-            margin-top: 10px;
-            margin-bottom: 20px; 
-            width: 100%;
-            transition: all 0.3s ease;
-            opacity: 0;
-            transform: translateY(-10px);
+        .btn-login:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
         }
 
-        #messageContainer.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .message {
-            font-size: clamp(12px, 3.5vw, 13px);
-            color: #dc3545; /* Default error color */
-            line-height: 1.6;
-            padding: 14px 16px;
-            background: none;
-            border-radius: 8px;
-            text-align: left;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            max-width: 100%;
-            box-sizing: border-box;
-        }
-        
-        .message strong {
-            font-weight: 600;
-            margin-right: 5px;
-            white-space: nowrap;
-        }
-
-        /* Validation Message Styling */
         .validation-message {
             font-size: 12px;
             color: #666;
@@ -188,13 +167,12 @@
             min-height: 16px; 
         }
 
-        /* Checkbox Style */
         .checkbox-container {
             width: 100%;
             text-align: left;
             font-size: 13px;
             color: #444;
-            margin-bottom: 25px; /* Adjust spacing before the button */
+            margin-bottom: 25px;
         }
         
         .checkbox-container input[type="checkbox"] {
@@ -203,8 +181,39 @@
             accent-color: #007bff;
         }
 
+        .links-container {
+            margin-top: 25px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 0 10px;
+        }
+
+        .link {
+            color: #007bff;
+            text-decoration: none;
+            font-size: clamp(13px, 3.5vw, 14px);
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .link:hover {
+            color: #0056b3;
+            background: rgba(0, 123, 255, 0.1);
+        }
 
         /* Responsive adjustments */
+        @media screen and (max-width: 768px) {
+            .login-container {
+                padding: 40px 30px;
+            }
+        }
+
         @media screen and (max-width: 480px) {
             .login-container {
                 padding: 30px 20px;
@@ -213,12 +222,74 @@
                 max-width: 100%;
             }
 
+            .login-container:hover {
+                transform: none !important;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            }
+
+            .logo {
+                max-width: 150px;
+                margin-bottom: 16px;
+            }
+
             .input {
                 padding: 13px 16px;
             }
 
             .btn-login {
                 padding: 14px;
+            }
+
+            .links-container {
+                margin-top: 20px;
+            }
+        }
+
+        @media screen and (max-width: 360px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            .logo {
+                max-width: 140px;
+            }
+
+            .input {
+                padding: 12px 14px;
+            }
+        }
+
+        /* Landscape mode for mobile */
+        @media screen and (max-height: 600px) and (orientation: landscape) {
+            body {
+                align-items: flex-start;
+                padding-top: 15px;
+            }
+
+            .login-container {
+                margin: 15px auto;
+                padding: 25px 30px;
+            }
+
+            .logo {
+                max-width: 120px;
+                margin-bottom: 12px;
+            }
+
+            h2 {
+                margin-bottom: 5px;
+            }
+
+            .subtitle {
+                margin-bottom: 15px;
+            }
+
+            .input-group {
+                margin-bottom: 12px;
+            }
+
+            .links-container {
+                margin-top: 15px;
             }
         }
     </style>
@@ -229,14 +300,11 @@
         <div class="login-container">
             <img src="images/logorrc.png" alt="RRC Logo" class="logo" />
             
-            <h2 class="mb-2">Reset Password</h2>
+            <h2>Reset Password</h2>
             
             <p class="subtitle">
                 Please enter a new password that meets the security requirements.
             </p>
-
-            <div id="messageContainer">
-                </div>
 
             <div class="input-group">
                 <asp:TextBox ID="txtNewPassword" runat="server" CssClass="input" TextMode="Password"
@@ -251,7 +319,8 @@
             </div>
 
             <div class="checkbox-container">
-                <input type="checkbox" onclick="togglePasswords()" id="chkShowPass" /> <label for="chkShowPass">Show Passwords</label>
+                <input type="checkbox" onclick="togglePasswords()" id="chkShowPass" /> 
+                <label for="chkShowPass">Show Passwords</label>
             </div>
 
             <asp:Button ID="btnResetPassword" runat="server" Text="Reset Password" 
@@ -259,22 +328,24 @@
                         OnClick="btnResetPassword_Click" 
                         UseSubmitBehavior="false" />
             
+            <div class="links-container">
+                <a href="Login.aspx" class="link">
+                    <i class="fa-solid fa-arrow-left" style="margin-right: 5px;"></i>Back to Login
+                </a>
+            </div>
+
             <asp:Literal ID="ltScript" runat="server" />
         </div>
     </form>
 
 <script>
     // --- START: Client-side Validation Logic ---
-
-    // Updated colors to match consistent CSS colors
     const COLOR_RED = "#dc3545";
     const COLOR_GREEN = "#28a745";
     const COLOR_BLUE = "#007bff";
 
     function validatePasswordStrength(password) {
-        // Requires: 8-64 chars, 1 lower, 1 upper, 1 digit, 1 special (@$!%*?&.)
         const serverPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,64}$/;
-
         const strengthMsg = document.getElementById("passwordStrengthMsg");
 
         if (password.length === 0) {
@@ -285,7 +356,6 @@
         }
 
         if (!serverPasswordRegex.test(password)) {
-            // Detailed messages for user experience (UX) based on the server-side rules
             if (password.length < 8) {
                 strengthMsg.innerText = "❌ Password must be at least 8 characters long.";
             } else if (password.length > 64) {
@@ -303,7 +373,6 @@
             }
             strengthMsg.style.color = COLOR_RED;
         } else {
-            // Optional: Provide a medium/strong indicator based on length
             if (password.length >= 12) {
                 strengthMsg.innerText = "✅ Strong password.";
                 strengthMsg.style.color = COLOR_GREEN;
@@ -346,37 +415,8 @@
 
     // --- END: Client-side Validation Logic ---
 
-
-    // Function to handle message display and viewport fix (from Login.aspx)
     function initScripts() {
-        // Note: ResetPassword.aspx provided in prompt did not have lblMessage, but I've added a messageContainer 
-        // structure for consistency if the C# code-behind uses it.
-        const msgContainer = document.getElementById('messageContainer');
-        const msgLabel = msgContainer ? document.getElementById('lblMessage') : null; // Assuming ID is not ClientID if Literal is used
-
-        if (msgContainer && msgLabel) {
-            const text = msgLabel.innerText.trim();
-            if (text !== "") {
-                const errorRegex = /^(.*?\.?)\s*(.*)$/;
-                const match = text.match(errorRegex);
-                let formattedText = text;
-
-                if (match && match[1].length > 0) {
-                    const boldPart = match[1].trim();
-                    const restOfMessage = match[2].trim();
-                    formattedText = `<strong>${boldPart}</strong> ${restOfMessage}`;
-                } else {
-                    formattedText = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-                }
-
-                msgLabel.innerHTML = formattedText;
-                msgContainer.classList.add('show');
-            } else {
-                msgContainer.classList.remove('show');
-            }
-        }
-
-        // Prevent zoom on iOS (copied from Login.aspx)
+        // Prevent zoom on iOS
         const el = document.querySelector('meta[name=viewport]');
         if (el !== null) {
             let content = el.getAttribute('content');

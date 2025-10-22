@@ -70,43 +70,50 @@
 
                 <div class="border-t border-gray-100"></div>
 
-                <!-- Pricing Breakdown -->
-                <div class="bg-gray-50 rounded-xl p-5 space-y-4">
-                    <h3 class="font-semibold text-gray-800 flex items-center mb-3">
-                        <i class="fas fa-calculator mr-2 text-blue-600"></i>
-                        Pricing Breakdown
-                    </h3>
+               <!-- Replace the existing Miscellaneous section in the Pricing Breakdown -->
+<div class="bg-gray-50 rounded-xl p-5 space-y-4">
+    <h3 class="font-semibold text-gray-800 flex items-center mb-3">
+        <i class="fas fa-calculator mr-2 text-blue-600"></i>
+        Pricing Breakdown
+    </h3>
 
-                    <!-- Base Price -->
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Base Service Price</span>
-                        <asp:Label ID="lblBasePrice" runat="server"
-                            CssClass="font-semibold text-gray-800" />
-                    </div>
+    <!-- Base Price -->
+    <div class="flex justify-between items-center">
+        <span class="text-gray-600">Base Service Price</span>
+        <asp:Label ID="lblBasePrice" runat="server"
+            CssClass="font-semibold text-gray-800" />
+    </div>
 
-                    <!-- Travel Expense -->
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Travel Expense</span>
-                        <asp:Label ID="lblTravelExpense" runat="server"
-                            CssClass="font-semibold text-gray-800" />
-                    </div>
+    <!-- Travel Expense -->
+    <div class="flex justify-between items-center">
+        <span class="text-gray-600">Travel Expense</span>
+        <asp:Label ID="lblTravelExpense" runat="server"
+            CssClass="font-semibold text-gray-800" />
+    </div>
 
-                    <!-- Miscellaneous -->
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Miscellaneous</span>
-                        <asp:Label ID="lblMiscellaneous" runat="server"
-                            CssClass="font-semibold text-gray-800" />
-                    </div>
+    <!-- Miscellaneous with Details -->
+    <div class="space-y-2">
+        <div class="flex justify-between items-center">
+            <span class="text-gray-600">Miscellaneous</span>
+            <asp:Label ID="lblMiscellaneous" runat="server"
+                CssClass="font-semibold text-gray-800" />
+        </div>
+        
+        <!-- Miscellaneous Details Breakdown -->
+        <asp:Panel ID="pnlMiscDetails" runat="server" Visible="false" 
+            CssClass="ml-4 pl-4 border-l-2 border-blue-200 space-y-1">
+            <asp:Literal ID="litMiscDetails" runat="server" />
+        </asp:Panel>
+    </div>
 
-                    <div class="border-t border-gray-200 pt-3 mt-3">
-                        <div class="flex justify-between items-center">
-                            <span class="text-lg font-bold text-gray-800">Total Price</span>
-                            <asp:Label ID="lblTotalPrice" runat="server"
-                                CssClass="text-2xl font-bold text-blue-600" />
-                        </div>
-                    </div>
-                </div>
-
+    <div class="border-t border-gray-200 pt-3 mt-3">
+        <div class="flex justify-between items-center">
+            <span class="text-lg font-bold text-gray-800">Total Price</span>
+            <asp:Label ID="lblTotalPrice" runat="server"
+                CssClass="text-2xl font-bold text-blue-600" />
+        </div>
+    </div>
+</div>
                 <div class="border-t border-gray-100"></div>
 
                 <!-- Preferred Schedule -->

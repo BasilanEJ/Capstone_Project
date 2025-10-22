@@ -34,6 +34,7 @@ namespace RRCManagementSystem
             }
         }
 
+      
         // ---------------------- UI actions ----------------------
 
         protected void TabButton_Click(object sender, EventArgs e)
@@ -69,53 +70,96 @@ namespace RRCManagementSystem
 
         protected void btnExportPDF_Click(object sender, EventArgs e)
         {
-            LoadAllReportData(); // Refresh data to ensure all grids are up-to-date before export
-
-            string userName = Session["Name"]?.ToString() ?? "Unknown User";
-            string logoPath = Server.MapPath("~/Images/logorrc.png");
-
-            var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 60f, 40f); // Increased top/bottom margins for header/footer
-            using (var ms = new MemoryStream())
+            try
             {
-                PdfWriter writer = PdfWriter.GetInstance(doc, ms);
+                // Load all data to ensure grids are populated
+                LoadAllReportData();
 
-                // Use the new custom header/footer event handler
-                writer.PageEvent = new PdfHeaderFooter("All Reports", userName, logoPath);
+                string userName = Session["Name"]?.ToString() ?? "Unknown User";
+                string logoPath = Server.MapPath("~/Images/logorrc.png");
 
-                string userPassword = Session["Password"]?.ToString() ?? "default123";
-                writer.SetEncryption(
-                    Encoding.UTF8.GetBytes(userPassword),
-                    Encoding.UTF8.GetBytes(userPassword),
-                    PdfWriter.ALLOW_PRINTING,
-                    PdfWriter.ENCRYPTION_AES_128
-                );
-                doc.Open();
+                // Create the PDF document
+                var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 60f, 40f);
+                byte[] pdfBytes;
 
-                AddGridToPDF(doc, gvUserAccounts, "👤 User Accounts");
-                AddGridToPDF(doc, gvInquiries, "📬 Inquiries");
-                AddGridToPDF(doc, gvApprovedClients, "✅ Approved Clients");
-                AddGridToPDF(doc, gvInventorySnapshots, "📦 Total Stocks Snapshot (Daily)");
-                AddGridToPDF(doc, gvInventory, "📦 Inventory Details");
-                AddGridToPDF(doc, gvSales, "💳 Sales");
-                AddGridToPDF(doc, gvEquipment, "🛠️ Equipment Status");
-                AddGridToPDF(doc, gvBookings, "📅 Booking Details");
-                AddGridToPDF(doc, gvInspections, "🔍 Inspection Details");
-                AddGridToPDF(doc, gvInquiryEstimation, "📑 Inquiry Estimation");
-                AddGridToPDF(doc, gvTeamsSummary, "👥 Team Summary");
-                AddGridToPDF(doc, gvTeamMembers, "👨‍👩‍👧‍👦 Team Members");
+                using (var ms = new MemoryStream())
+                {
+                    PdfWriter writer = PdfWriter.GetInstance(doc, ms);
+                    writer.PageEvent = new PdfHeaderFooter("All Reports", userName, logoPath);
 
-                doc.Close();
+                    string userPassword = Session["Password"]?.ToString() ?? "default123";
+                    writer.SetEncryption(
+                        Encoding.UTF8.GetBytes(userPassword),
+                        Encoding.UTF8.GetBytes(userPassword),
+                        PdfWriter.ALLOW_PRINTING,
+                        PdfWriter.ENCRYPTION_AES_128
+                    );
 
-                Response.Clear();
-                Response.ContentType = "application/pdf";
-                Response.AddHeader("content-disposition", $"attachment;filename=All_Reports_{DateTime.Now:yyyyMMdd}.pdf");
-                Response.Cache.SetCacheability(HttpCacheability.NoCache);
-                Response.BinaryWrite(ms.ToArray());
-                Response.Flush();
-                Response.SuppressContent = true;
-                HttpContext.Current.ApplicationInstance.CompleteRequest();
+                    doc.Open();
+
+                    // Add all grids to PDF
+                    AddGridToPDF(doc, gvUserAccounts, "👤 User Accounts");
+                    AddGridToPDF(doc, gvInquiries, "📬 Inquiries");
+                    AddGridToPDF(doc, gvApprovedClients, "✅ Approved Clients");
+                    AddGridToPDF(doc, gvInventorySnapshots, "📦 Total Stocks Snapshot (Daily)");
+                    AddGridToPDF(doc, gvInventory, "📦 Inventory Details");
+                    AddGridToPDF(doc, gvSales, "💳 Sales");
+                    AddGridToPDF(doc, gvEquipment, "🛠️ Equipment Status");
+                    AddGridToPDF(doc, gvBookings, "📅 Booking Details");
+                    AddGridToPDF(doc, gvInspections, "🔍 Inspection Details");
+                    AddGridToPDF(doc, gvInquiryEstimation, "📑 Inquiry Estimation");
+                    AddGridToPDF(doc, gvTeamsSummary, "👥 Team Summary");
+                    AddGridToPDF(doc, gvTeamMembers, "👨‍👩‍👧‍👦 Team Members");
+
+                    doc.Close();
+
+                    // Store the PDF bytes before closing the stream
+                    pdfBytes = ms.ToArray();
+                }
+
+                // Log audit BEFORE sending response
+                AddAuditLog(Convert.ToInt32(Session["UserID"]), "Exported All Reports to PDF");
+
+                // NOW send the PDF - clear everything first
+                HttpContext.Current.Response.Clear();
+                HttpContext.Current.Response.ClearContent();
+                HttpContext.Current.Response.ClearHeaders();
+                HttpContext.Current.Response.Buffer = true;
+                HttpContext.Current.Response.ContentType = "application/pdf";
+                HttpContext.Current.Response.AddHeader("Content-Disposition",
+                    $"attachment; filename=All_Reports_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+                HttpContext.Current.Response.AddHeader("Content-Length", pdfBytes.Length.ToString());
+                HttpContext.Current.Response.Cache.SetCacheability(HttpCacheability.NoCache);
+                HttpContext.Current.Response.Cache.SetNoStore();
+
+                // Write the PDF bytes
+                HttpContext.Current.Response.BinaryWrite(pdfBytes);
+                HttpContext.Current.Response.Flush();
+
+                // End the response - this will throw ThreadAbortException
+                HttpContext.Current.Response.End();
             }
-            AddAuditLog(Convert.ToInt32(Session["UserID"]), "Exported All Reports to PDF");
+            catch (System.Threading.ThreadAbortException)
+            {
+
+            }
+            catch (Exception ex)
+            {
+                // Log the actual error
+                System.Diagnostics.Debug.WriteLine($"ERROR in btnExportPDF_Click: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+
+                // Try to show error to user (may not work if response already started)
+                try
+                {
+                    lblMessage.Text = "Error generating PDF: " + ex.Message;
+                    lblMessage.CssClass = "text-red-500 font-medium mb-2";
+                }
+                catch
+                {
+                    // Response already sent, can't show message
+                }
+            }
         }
 
         protected void btnExportTeamsSummary_Click(object sender, EventArgs e)
@@ -127,12 +171,31 @@ namespace RRCManagementSystem
         {
             if (gvTeamMembers.Rows.Count > 0) ExportGridViewToPDF(gvTeamMembers, "Team_Members_Report");
         }
-        
+
         protected void btnExportUsers_Click(object sender, EventArgs e)
         {
-            if (gvUserAccounts.Rows.Count > 0) ExportGridViewToPDF(gvUserAccounts, "Users_Report");
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("btnExportUsers_Click called");
+
+                if (gvUserAccounts.Rows.Count == 0)
+                {
+                    lblMessage.Text = "No user data to export.";
+                    lblMessage.CssClass = "text-red-500 font-medium mb-2";
+                    return;
+                }
+
+                ExportGridViewToPDF(gvUserAccounts, "Users_Report");
+                System.Diagnostics.Debug.WriteLine("Export completed successfully");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ERROR: {ex.Message}");
+                lblMessage.Text = "Error: " + ex.Message;
+                lblMessage.CssClass = "text-red-500 font-medium mb-2";
+            }
         }
-        
+
         protected void btnExportSales_Click(object sender, EventArgs e)
         {
             if (gvSales.Rows.Count > 0) ExportGridViewToPDF(gvSales, "Sales_Report");

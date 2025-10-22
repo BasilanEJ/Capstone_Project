@@ -12,21 +12,28 @@
             </h1>
         </div>
         
+   <div class="bg-white shadow-md rounded-xl p-6 mb-8 flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-6">
+    <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
+        <label class="font-semibold text-gray-700">From:</label>
+        <asp:TextBox ID="txtFromDate" runat="server" TextMode="Date" CssClass="p-2 border border-gray-300 rounded-lg w-full sm:w-auto" />
+        <label class="font-semibold text-gray-700">To:</label>
+        <asp:TextBox ID="txtToDate" runat="server" TextMode="Date" CssClass="p-2 border border-gray-300 rounded-lg w-full sm:w-auto" />
+    </div>
+    <div class="flex space-x-4 w-full md:w-auto">
+        <asp:Button ID="btnFilter" runat="server" Text="Filter" 
+            CssClass="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" 
+            OnClick="btnFilter_Click" />
+        <asp:Button ID="btnExportPDF" runat="server" Text="Export All to PDF" 
+            UseSubmitBehavior="true"
+            CausesValidation="false"
+            CssClass="w-full bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-200" 
+            OnClick="btnExportPDF_Click" />
+    </div>
+</div>
+
         <asp:UpdatePanel ID="ReportsUpdatePanel" runat="server" UpdateMode="Conditional">
             <ContentTemplate>
-                <div class="bg-white shadow-md rounded-xl p-6 mb-8 flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-6">
-                    <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
-                        <label class="font-semibold text-gray-700">From:</label>
-                        <asp:TextBox ID="txtFromDate" runat="server" TextMode="Date" CssClass="p-2 border border-gray-300 rounded-lg w-full sm:w-auto" />
-                        <label class="font-semibold text-gray-700">To:</label>
-                        <asp:TextBox ID="txtToDate" runat="server" TextMode="Date" CssClass="p-2 border border-gray-300 rounded-lg w-full sm:w-auto" />
-                    </div>
-                    <div class="flex space-x-4 w-full md:w-auto">
-                        <asp:Button ID="btnFilter" runat="server" Text="Filter" CssClass="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" OnClick="btnFilter_Click" />
-                        <asp:Button ID="btnExportPDF" runat="server" Text="Export All to PDF" CssClass="w-full bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-200" OnClick="btnExportPDF_Click" />
-                    </div>
-                </div>
-
+              
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <div class="bg-white shadow-md rounded-xl p-6 text-center transition-transform duration-200 hover:scale-[1.02]">
                         <h4 class="text-lg font-medium text-gray-500 mb-2">Total Inquiries</h4>
@@ -356,6 +363,22 @@
                     </div>
                 </asp:Panel>
             </ContentTemplate>
+
+                <Triggers>
+        <asp:PostBackTrigger ControlID="btnExportUsers" />
+        <asp:PostBackTrigger ControlID="btnExportInquiries" />
+        <asp:PostBackTrigger ControlID="btnExportClients" />
+        <asp:PostBackTrigger ControlID="btnExportInventory" />
+        <asp:PostBackTrigger ControlID="btnExportInventorySnapshots" />
+        <asp:PostBackTrigger ControlID="btnExportEquipment" />
+        <asp:PostBackTrigger ControlID="btnExportSales" />
+        <asp:PostBackTrigger ControlID="btnExportBookings" />
+        <asp:PostBackTrigger ControlID="btnExportInspections" />
+        <asp:PostBackTrigger ControlID="btnExportInquiryEstimation" />
+        <asp:PostBackTrigger ControlID="btnExportTeamsSummary" />
+        <asp:PostBackTrigger ControlID="btnExportTeamMembers" />
+    </Triggers>
+
         </asp:UpdatePanel>
     </div>
 

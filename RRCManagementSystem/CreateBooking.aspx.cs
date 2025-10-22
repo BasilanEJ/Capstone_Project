@@ -5,10 +5,12 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.Linq;
+using System.Web.Script.Serialization;
 using System.Web.Script.Services;
 using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using RRCManagementSystem.Helpers;
 
 namespace RRCManagementSystem
 {
@@ -53,8 +55,8 @@ namespace RRCManagementSystem
                 con.Open();
 
                 ddlServices.DataSource = cmd.ExecuteReader();
-                ddlServices.DataTextField = "Name";      // Display service name
-                ddlServices.DataValueField = "ServiceID"; // Store service ID
+                ddlServices.DataTextField = "Name";
+                ddlServices.DataValueField = "ServiceID";
                 ddlServices.DataBind();
 
                 ddlServices.Items.Insert(0, new ListItem("-- Select a Service --", ""));
@@ -102,48 +104,21 @@ namespace RRCManagementSystem
             return prefix + sequence.ToString("D4");
         }
 
-        /// <summary>
-        /// Recalculate total whenever SQM, travel, misc, or service changes
-        /// </summary>
-        protected void RecalculateTotal(object sender, EventArgs e)
+        protected void ddlServices_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (int.TryParse(ddlServices.SelectedValue, out int serviceId) && serviceId > 0)
-            {
-                int sqm = 0;
-                decimal travel = 0, misc = 0;
+            hfInquiryVisible.Value = "true";
 
-                // Parse values from textboxes
-                int.TryParse(txtSQM.Text.Trim(), out sqm);
-                decimal.TryParse(txtTravelExpense.Text.Trim(), out travel);
-                decimal.TryParse(txtMiscellaneous.Text.Trim(), out misc);
-
-                // ✅ Now pass both serviceId and sqm to get the correct tier price
-                decimal price = GetServicePricePerSQM(serviceId, sqm);
-
-                // Total is direct price + travel + misc
-                decimal total = price + travel + misc;
-                txtTotalPrice.Text = total.ToString("F2");
-            }
-            else
-            {
-                txtTotalPrice.Text = "0.00";
-            }
+            ScriptManager.RegisterStartupScript(this, GetType(), "showInquiryBackground",
+                "document.getElementById('inquiryBackground').style.display = 'block';", true);
         }
 
         /// <summary>
-        /// Trigger recalculation when dropdown selection changes
+        /// Class for miscellaneous expense items
         /// </summary>
-        protected void ddlServices_SelectedIndexChanged(object sender, EventArgs e)
+        public class MiscExpenseItem
         {
-            // Mark as visible in the server-side HiddenField
-            hfInquiryVisible.Value = "true";
-
-            // Keep the Inquiry Background div visible
-            ScriptManager.RegisterStartupScript(this, GetType(), "showInquiryBackground",
-                "document.getElementById('inquiryBackground').style.display = 'block';", true);
-
-            // Recalculate total
-            RecalculateTotal(sender, e);
+            public string description { get; set; }
+            public decimal amount { get; set; }
         }
 
         /// <summary>
@@ -151,7 +126,6 @@ namespace RRCManagementSystem
         /// </summary>
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
-            // Must be logged in as Inspector
             if (Session["UserID"] == null || Session["Role"] == null ||
                 !string.Equals(Session["Role"].ToString(), "Inspector", StringComparison.OrdinalIgnoreCase))
             {
@@ -160,7 +134,6 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Client validation
             if (string.IsNullOrWhiteSpace(hfClientID.Value) || !int.TryParse(hfClientID.Value, out int clientId))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "selectClient",
@@ -168,7 +141,6 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // SQM validation
             if (!int.TryParse(txtSQM.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int sqm))
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "invalidSQM",
@@ -176,15 +148,13 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Total Price validation
-            if (!decimal.TryParse(txtTotalPrice.Text.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal total) || total <= 0)
+            if (!decimal.TryParse(hfTotalPrice.Value.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal total) || total <= 0)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "invalidPrice",
                     "Swal.fire('Invalid', 'Please enter a valid total price.', 'error');", true);
                 return;
             }
 
-            // Service must be selected
             if (!int.TryParse(ddlServices.SelectedValue, out int serviceId) || serviceId <= 0)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "noServices",
@@ -192,16 +162,42 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Get travel and misc amounts
-            decimal.TryParse(txtTravelExpense.Text.Trim(), out decimal travel);
-            decimal.TryParse(txtMiscellaneous.Text.Trim(), out decimal misc);
+            // FIXED: Read from hidden field instead of ReadOnly textbox
+            decimal.TryParse(hfTravelExpense.Value.Trim(), out decimal travel);
+
+            // Parse miscellaneous items from hidden field
+            decimal misc = 0;
+            string miscDetails = "";
+
+            if (!string.IsNullOrEmpty(hfMiscellaneousItems.Value) && hfMiscellaneousItems.Value != "[]")
+            {
+                try
+                {
+                    var serializer = new JavaScriptSerializer();
+                    var miscItems = serializer.Deserialize<List<MiscExpenseItem>>(hfMiscellaneousItems.Value);
+
+                    if (miscItems != null && miscItems.Count > 0)
+                    {
+                        foreach (var item in miscItems)
+                        {
+                            misc += item.amount;
+                            miscDetails += $"{item.description}: ₱{item.amount:N2}; ";
+                        }
+
+                        miscDetails = miscDetails.TrimEnd(';', ' ');
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error parsing miscellaneous items: {ex.Message}");
+                }
+            }
 
             string serviceName = ddlServices.SelectedItem.Text;
             int inspectorId = Convert.ToInt32(Session["UserID"], CultureInfo.InvariantCulture);
 
             bool isContract = GetIsAnyContract(serviceId.ToString());
 
-            // Insert into PendingQuotations
             string quotationCode;
             int newId = InsertPendingQuotation(
                 clientId: clientId,
@@ -210,18 +206,18 @@ namespace RRCManagementSystem
                 serviceId: serviceId,
                 sqm: sqm,
                 price: total,
-                travel: travel,
+                travel: travel,  // Now correctly reading from hfTravelExpense
                 misc: misc,
+                miscDetails: miscDetails,
                 isContract: isContract,
                 quotationCode: out quotationCode
             );
 
-            // Add client notification
             try
             {
                 var ph = new CultureInfo("en-PH");
                 string priceText = string.Format(ph, "{0:C}", total);
-                string deepLink = "BookService.aspx?tab=quotes"; // client portal link
+                string deepLink = "BookService.aspx?tab=quotes";
 
                 AddNotification(
                     clientId: clientId,
@@ -234,26 +230,13 @@ namespace RRCManagementSystem
             }
             catch
             {
-                // Notification failure is non-critical
+                // Non-critical
             }
 
-            // Success message
             ScriptManager.RegisterStartupScript(this, GetType(), "success",
-                $"Swal.fire('Success', 'Quotation submitted successfully!<br/>Quotation Code: <b>{quotationCode}</b>', 'success');", true);
-
-            // Reset form
-            txtClientSearch.Text = "";
-            hfClientID.Value = "";
-            ddlServices.ClearSelection();
-            txtSQM.Text = "";
-            txtTravelExpense.Text = "";
-            txtMiscellaneous.Text = "";
-            txtTotalPrice.Text = "";
+                $"Swal.fire('Success', 'Quotation submitted successfully!<br/>Quotation Code: <b>{quotationCode}</b>', 'success').then(function() {{ window.location.reload(); }});", true);
         }
 
-        /// <summary>
-        /// Inserts a new notification record for the client
-        /// </summary>
         private void AddNotification(
             int clientId,
             string type,
@@ -278,9 +261,6 @@ namespace RRCManagementSystem
             }
         }
 
-        /// <summary>
-        /// Check if the selected service is a contract type
-        /// </summary>
         private bool GetIsAnyContract(string serviceIdCsv)
         {
             using (var con = new SqlConnection(connectionString))
@@ -299,13 +279,10 @@ namespace RRCManagementSystem
             }
         }
 
-        /// <summary>
-        /// Inserts a new Pending Quotation record into the database
-        /// </summary>
         private int InsertPendingQuotation(
             int clientId, int inspectorId, string serviceName, int serviceId,
-            int sqm, decimal price, decimal travel, decimal misc, bool isContract,
-            out string quotationCode)
+            int sqm, decimal price, decimal travel, decimal misc, string miscDetails,
+            bool isContract, out string quotationCode)
         {
             quotationCode = GenerateQuotationCode();
 
@@ -331,11 +308,70 @@ namespace RRCManagementSystem
                 con.Open();
                 cmd.ExecuteNonQuery();
 
-                return (pOutId.Value == DBNull.Value) ? 0 : Convert.ToInt32(pOutId.Value);
+                int pendingQuotationId = (pOutId.Value == DBNull.Value) ? 0 : Convert.ToInt32(pOutId.Value);
+
+                // Save miscellaneous details separately
+                if (pendingQuotationId > 0 && !string.IsNullOrEmpty(miscDetails))
+                {
+                    SaveMiscellaneousDetails(con, pendingQuotationId, miscDetails);
+                }
+
+                return pendingQuotationId;
             }
         }
 
-        // ===== Ajax AutoComplete for Client Search =====
+        /// <summary>
+        /// Save miscellaneous expense details
+        /// </summary>
+        private void SaveMiscellaneousDetails(SqlConnection con, int pendingQuotationId, string miscDetails)
+        {
+            // Update in PendingQuotations table (if you have a MiscellaneousDetails column)
+            try
+            {
+                using (var cmd = new SqlCommand(@"
+                    UPDATE dbo.PendingQuotations 
+                    SET MiscellaneousDetails = @MiscDetails 
+                    WHERE PendingQuotationID = @ID", con))
+                {
+                    cmd.Parameters.AddWithValue("@MiscDetails", miscDetails);
+                    cmd.Parameters.AddWithValue("@ID", pendingQuotationId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch
+            {
+                // Column might not exist, that's okay
+                System.Diagnostics.Debug.WriteLine("MiscellaneousDetails column not found or error updating.");
+            }
+        }
+
+        // ===== WebMethods =====
+
+        /// <summary>
+        /// WebMethod for client-side price calculation
+        /// </summary>
+        [WebMethod]
+        [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
+        public static decimal GetServicePrice(int serviceId, int sqm)
+        {
+            string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("sp_GetServicePriceByID", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@ServiceID", SqlDbType.Int).Value = serviceId;
+                cmd.Parameters.Add("@SQM", SqlDbType.Int).Value = sqm;
+
+                con.Open();
+                object result = cmd.ExecuteScalar();
+                return (result != null && result != DBNull.Value) ? Convert.ToDecimal(result) : 0;
+            }
+        }
+
+        /// <summary>
+        /// Ajax AutoComplete for Client Search
+        /// </summary>
         [WebMethod]
         [ScriptMethod]
         public static List<string> SearchClients(string prefixText, int count)
@@ -367,10 +403,89 @@ namespace RRCManagementSystem
             return results;
         }
 
-        /* =========================================================
-           PageMethods WebMethod: Fetch InquiryCode + recent Findings
-           Called by setClientID() in CreateBooking.aspx
-           ========================================================= */
+        /// <summary>
+        /// Get client's travel expense based on location
+        /// </summary>
+        [WebMethod]
+        [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
+        public static decimal GetClientTravelExpense(int clientId)
+        {
+            string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+            decimal travelPrice = 0;
+
+            using (var con = new SqlConnection(cs))
+            {
+                con.Open();
+
+                // First, get client's encrypted region and city
+                string regionEnc = null, cityEnc = null;
+                using (var cmd = new SqlCommand(@"
+                    SELECT RegionEnc, CityEnc 
+                    FROM dbo.Clients 
+                    WHERE ClientID = @ClientID", con))
+                {
+                    cmd.Parameters.AddWithValue("@ClientID", clientId);
+
+                    using (var rdr = cmd.ExecuteReader())
+                    {
+                        if (rdr.Read())
+                        {
+                            regionEnc = rdr["RegionEnc"] as string;
+                            cityEnc = rdr["CityEnc"] as string;
+                        }
+                    }
+                }
+
+                // Decrypt the region and city
+                string region = null, city = null;
+                if (!string.IsNullOrEmpty(regionEnc))
+                {
+                    try
+                    {
+                        region = AESHelper.DecryptField(regionEnc);
+                    }
+                    catch
+                    {
+                        region = null;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(cityEnc))
+                {
+                    try
+                    {
+                        city = AESHelper.DecryptField(cityEnc);
+                    }
+                    catch
+                    {
+                        city = null;
+                    }
+                }
+
+                // If we have decrypted region and city, fetch travel price
+                if (!string.IsNullOrEmpty(region) && !string.IsNullOrEmpty(city))
+                {
+                    using (var cmd = new SqlCommand("sp_TravelExpenses_GetPrice", con))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@Region", region);
+                        cmd.Parameters.AddWithValue("@City", city);
+
+                        using (var rdr = cmd.ExecuteReader())
+                        {
+                            if (rdr.Read() && rdr["TravelPrice"] != DBNull.Value)
+                            {
+                                travelPrice = Convert.ToDecimal(rdr["TravelPrice"]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return travelPrice;
+        }
+
+        // ===== WebMethod: Get Client Inquiry Summary =====
         public class FindingDto
         {
             public string Text { get; set; }
@@ -471,7 +586,7 @@ ORDER BY ch.CreatedAt DESC;";
                     using (var rdr = cmd.ExecuteReader())
                     {
                         DateTime? latest = null;
-                        TimeZoneInfo phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"); // Philippine Time
+                        TimeZoneInfo phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
 
                         while (rdr.Read())
                         {
@@ -485,7 +600,6 @@ ORDER BY ch.CreatedAt DESC;";
                                 ? (DateTime?)null
                                 : Convert.ToDateTime(rdr["CreatedAt"], CultureInfo.InvariantCulture);
 
-                            // ✅ Convert to Philippine Time
                             if (createdAt.HasValue)
                             {
                                 createdAt = TimeZoneInfo.ConvertTimeFromUtc(createdAt.Value, phTimeZone);
@@ -507,7 +621,6 @@ ORDER BY ch.CreatedAt DESC;";
                                 latest = createdAt;
                         }
 
-                        // ✅ Convert and set the latest updated timestamp
                         if (latest.HasValue)
                         {
                             dto.LastUpdated = latest.Value.ToString("MMM dd, yyyy h:mm tt", CultureInfo.InvariantCulture);

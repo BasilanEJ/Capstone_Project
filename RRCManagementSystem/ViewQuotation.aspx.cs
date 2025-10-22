@@ -51,7 +51,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         protected void btnSearch_Click(object sender, EventArgs e)
         {
             gvQuotations.PageIndex = 0;
@@ -72,6 +71,15 @@ namespace RRCManagementSystem
         {
             gvQuotations.PageIndex = e.NewPageIndex;
             LoadQuotations();
+        }
+
+        // NEW: Handle row data bound for custom formatting
+        protected void gvQuotations_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                // You can add additional row formatting here if needed
+            }
         }
 
         private void LoadQuotations()
@@ -103,7 +111,6 @@ namespace RRCManagementSystem
                     : "No quotations found for the selected filters.";
             }
         }
-
 
         private static DateTime? ParseDate(string s)
         {

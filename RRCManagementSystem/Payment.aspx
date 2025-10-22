@@ -419,31 +419,41 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
                     </div>
                 </div>
 
-                <!-- Pricing Breakdown Card -->
-                <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <i class="fas fa-calculator text-blue-600"></i>
-                        Pricing Breakdown
-                    </h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center py-3 border-b border-gray-100">
-                            <span class="text-gray-700 font-medium">Base Service Price (Based on SQM)</span>
-                            <asp:Label ID="lblBasePrice" runat="server" CssClass="text-gray-900 font-semibold text-lg" />
-                        </div>
-                        <div class="flex justify-between items-center py-3 border-b border-gray-100">
-                            <span class="text-gray-700 font-medium">Travel Expense</span>
-                            <asp:Label ID="lblTravelExpense" runat="server" CssClass="text-gray-900 font-semibold text-lg" />
-                        </div>
-                        <div class="flex justify-between items-center py-3 border-b border-gray-100">
-                            <span class="text-gray-700 font-medium">Miscellaneous</span>
-                            <asp:Label ID="lblMiscellaneous" runat="server" CssClass="text-gray-900 font-semibold text-lg" />
-                        </div>
-                        <div class="flex justify-between items-center py-4 bg-blue-50 rounded-lg px-4 mt-4">
-                            <span class="text-gray-900 font-bold text-lg">Total Price</span>
-                            <asp:Label ID="Label1" runat="server" CssClass="text-blue-600 font-bold text-2xl" />
-                        </div>
-                    </div>
-                </div>
+            <!-- Pricing Breakdown Card -->
+<div class="bg-white rounded-xl shadow-md p-6 mb-6">
+    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+        <i class="fas fa-calculator text-blue-600"></i>
+        Pricing Breakdown
+    </h3>
+    <div class="space-y-3">
+        <div class="flex justify-between items-center py-3 border-b border-gray-100">
+            <span class="text-gray-700 font-medium">Base Service Price (Based on SQM)</span>
+            <asp:Label ID="lblBasePrice" runat="server" CssClass="text-gray-900 font-semibold text-lg" />
+        </div>
+        <div class="flex justify-between items-center py-3 border-b border-gray-100">
+            <span class="text-gray-700 font-medium">Travel Expense</span>
+            <asp:Label ID="lblTravelExpense" runat="server" CssClass="text-gray-900 font-semibold text-lg" />
+        </div>
+        
+        <!-- Miscellaneous with Details -->
+        <div class="py-3 border-b border-gray-100">
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700 font-medium">Miscellaneous</span>
+                <asp:Label ID="lblMiscellaneous" runat="server" CssClass="text-gray-900 font-semibold text-lg" />
+            </div>
+            <!-- Miscellaneous Details Breakdown -->
+            <asp:Panel ID="pnlMiscDetails" runat="server" Visible="false" 
+                CssClass="ml-4 pl-4 border-l-2 border-blue-200 mt-2 space-y-1">
+                <asp:Literal ID="litMiscDetails" runat="server" />
+            </asp:Panel>
+        </div>
+        
+        <div class="flex justify-between items-center py-4 bg-blue-50 rounded-lg px-4 mt-4">
+            <span class="text-gray-900 font-bold text-lg">Total Price</span>
+            <asp:Label ID="Label1" runat="server" CssClass="text-blue-600 font-bold text-2xl" />
+        </div>
+    </div>
+</div>
 
                 <!-- Payment Plan Selection -->
                 <asp:Panel ID="paymentPlanContainer" runat="server" Visible="true" CssClass="bg-white rounded-xl shadow-md p-6 mb-6">

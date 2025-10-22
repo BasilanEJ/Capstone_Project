@@ -1,356 +1,373 @@
-﻿<%@ Page Title="About RRC Termite & Pest Control" Language="C#" MasterPageFile="~/Inquiry.Master" AutoEventWireup="true" CodeBehind="AboutUs.aspx.cs" Inherits="RRCManagementSystem.AboutUs" %>
+﻿<%@ Page Title="Services" Language="C#" MasterPageFile="~/Inquiry.Master" AutoEventWireup="true" CodeBehind="Services.aspx.cs" Inherits="RRCManagementSystem.Services" %>
 
-<%-- 1. CONTENT FOR THE <HEAD> SECTION (Styles and External Links) --%>
-<asp:Content ID="HeadScriptsAndStyles" ContentPlaceHolderID="HeadContent" runat="server">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
+<asp:Content ID="Content1" ContentPlaceHolderID="PageTitle" runat="server">
+    Services - RRC Termite and Pest Control
+</asp:Content>
 
-    <script>
-        // Tailwind config for RRC colors
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        rrcblue: {
-                            DEFAULT: '#60A5FA',
-                            50: '#F3F9FF',
-                            100: '#E8F3FF',
-                            200: '#CFE8FF',
-                            300: '#A7D3FF',
-                            700: '#1E40AF'
-                        }
-                    },
-                    boxShadow: {
-                        'card-lg': '0 10px 30px rgba(20, 23, 34, 0.08)'
-                    }
-                }
-            }
-        };
-    </script>
-
+<asp:Content ID="Content2" ContentPlaceHolderID="HeadContent" runat="server">
     <style>
-        /* Remove hero image background */
-        .hero-section {
-            background-color: #F9FBFF;
-            background-image: linear-gradient(180deg, #E8F3FF 0%, #FFFFFF 100%);
+        /* Services Page Specific Styles */
+        .services-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 120px 0 80px;
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
         }
 
-        /* Client logos animation */
-        .client-logo {
-            margin-bottom: 5px;
-            filter: none !important;
-            opacity: 1 !important;
-            transition: transform 0.3s ease, filter 0.3s ease;
+        .services-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') bottom center no-repeat;
+            background-size: cover;
         }
 
-        /* Optional: small hover zoom effect */
-        .client-logo:hover {
-            transform: scale(1.05);
+        .services-hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
 
-        /* Uniform client card sizing */
-        .client-card {
-            height: 160px;
+        .services-hero p {
+            font-size: 1.3rem;
+            max-width: 700px;
+            margin: 0 auto;
+            opacity: 0.95;
+        }
+
+        /* Service Cards */
+        .service-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            height: 100%;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
         }
 
-        .client-logo-container {
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 12px;
+        .service-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
         }
 
-        .client-name {
-            height: 40px;
+        .service-icon {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            /* Placeholder while loading */
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        /* Add loading animation for lazy images */
+        img[data-src] {
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+
+        img.lazy-loaded {
+            opacity: 1;
+        }
+
+        .service-content {
+            padding: 30px;
+            flex-grow: 1;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            flex-direction: column;
+        }
+
+        .service-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .service-description {
+            color: #718096;
+            line-height: 1.7;
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+
+        .service-features {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+
+        .service-features li {
+            padding: 8px 0;
+            color: #4a5568;
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .service-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #48bb78;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .btn-learn-more {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            align-self: flex-start;
+        }
+
+        .btn-learn-more:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 80px 0;
+            color: white;
             text-align: center;
+            margin-top: 80px;
+        }
+
+        .cta-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .cta-section p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.95;
+        }
+
+        .btn-cta {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cta:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            color: #764ba2;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .services-hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .services-hero p {
+                font-size: 1.1rem;
+            }
+
+            .service-icon {
+                height: 200px;
+            }
+
+            .cta-section h2 {
+                font-size: 2rem;
+            }
+        }
+
+        /* Fade-in animation for lazy sections */
+        .lazy-section {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .lazy-section.loaded {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </asp:Content>
 
-
-<%-- 2. CONTENT FOR THE <body> SECTION (All visual elements) --%>
-<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-
-    <section class="hero-section py-20 md:py-28 text-gray-800 relative overflow-hidden">
-        <div class="container mx-auto px-6 md:px-8 text-center">
-            <div data-aos="fade-down" data-aos-duration="900">
-                <h1 class="text-4xl md:text-6xl font-extrabold text-rrcblue-700 mb-4 leading-tight">
-                    Take Command and Control of Your Pest Problem
-                </h1>
-                <p class="text-lg md:text-2xl text-gray-700 mb-3">
-                    Your Partner in Safe and Reliable Pest Control.
-                </p>
-                <p class="text-sm md:text-base text-gray-500 italic">
-                    Please don't pet the pests.
-                </p>
-            </div>
-        </div>
-        <div class="absolute inset-0 -z-10 opacity-10 bg-gradient-to-r from-rrcblue-100 via-white to-rrcblue-50"></div>
-    </section>
-
-    <section id="about" class="bg-white py-20">
-        <div class="container mx-auto px-6 md:px-8">
-            <div class="grid md:grid-cols-2 gap-10 items-center">
-                <div data-aos="fade-right" data-aos-duration="800">
-                    <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">About RRC Termite & Pest Control Services</h2>
-                    <p class="text-gray-600 leading-relaxed mb-4">
-                        It all began with a small capital in 2008. Through hard work, skilled staff, and continuous improvement,
-                        RRC grew into a quality-focused pest control service that balances world-class methods with affordability.
-                        <strong>RRC — Recovery, Resource, and Control</strong> — helps clients retrieve assets from pest damage,
-                        control infestations, and prevent recurrences.
-                    </p>
-                    <p class="text-gray-600 leading-relaxed">
-                        We pride ourselves on having the talent, experience, and tools necessary to provide effective, safe, and timely
-                        pest management solutions for homes and businesses.
-                    </p>
-                </div>
-
-                <div data-aos="fade-left" data-aos-duration="800">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:scale-105 transition-transform duration-500">
-                        <img src="/Images/rrcteam.png" alt="RRC Team" class="w-full h-100 object-cover">
-                    </div>
-                </div>
-            </div>
+<asp:Content ID="Content3" ContentPlaceHolderID="MainContent" runat="server">
+    <!-- Hero Section -->
+    <section class="services-hero">
+        <div class="container">
+            <h1>Our Professional Services</h1>
+            <p>Comprehensive termite and pest control solutions tailored to protect your property</p>
         </div>
     </section>
 
-    <section id="mv" class="bg-rrcblue-50 py-20">
-        <div class="container mx-auto px-6 md:px-8">
-            <h3 class="text-center text-3xl font-bold text-gray-800 mb-12" data-aos="fade-up">Mission • Vision • Values</h3>
-            <div class="grid sm:grid-cols-1 md:grid-cols-3 gap-8">
-                <div data-aos="zoom-in" data-aos-delay="50" class="bg-white rounded-2xl p-8 shadow hover:shadow-xl transform hover:-translate-y-2 transition">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="p-3 bg-rrcblue-100 rounded-lg">
-                            <svg class="w-7 h-7 text-rrcblue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4"></path>
-                            </svg>
+    <!-- Services Grid -->
+    <section class="lazy-section" style="padding: 80px 0;">
+        <div class="container">
+            <div class="row g-4">
+                <!-- Termite Baiting System -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="service-card">
+                        <img data-src="Images/baiting-system.jpg" 
+                             alt="Termite Baiting System" 
+                             class="service-icon"
+                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
+                        <div class="service-content">
+                            <h3 class="service-title">Termite Baiting System</h3>
+                            <p class="service-description">
+                                Advanced baiting technology that eliminates entire termite colonies. Our system uses strategically placed monitoring stations to detect and eliminate termites before they damage your property.
+                            </p>
+                            <ul class="service-features">
+                                <li>Above-ground & in-ground options</li>
+                                <li>Colony elimination technology</li>
+                                <li>Continuous monitoring</li>
+                                <li>Environmentally friendly</li>
+                            </ul>
+                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
                         </div>
-                        <h4 class="text-lg font-semibold">Our Mission</h4>
                     </div>
-                    <p class="text-gray-600">
-                        To satisfy our clients by giving safe and effective treatments, creating jobs, and providing quality service at reasonable prices.
-                    </p>
                 </div>
 
-                <div data-aos="zoom-in" data-aos-delay="150" class="bg-white rounded-2xl p-8 shadow hover:shadow-xl transform hover:-translate-y-2 transition">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="p-3 bg-rrcblue-100 rounded-lg">
-                            <svg class="w-7 h-7 text-rrcblue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2l3 7h7l-5.5 4.2L20 22l-8-5-8 5 1.5-8.8L0 9h7l3-7z"></path>
-                            </svg>
+                <!-- Termite Prevention -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="service-card">
+                        <img data-src="Images/termite-prevention.jpg" 
+                             alt="Termite Prevention" 
+                             class="service-icon"
+                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
+                        <div class="service-content">
+                            <h3 class="service-title">Termite Prevention</h3>
+                            <p class="service-description">
+                                Proactive protection services including soil poisoning treatments for both pre-construction and post-construction properties. Create an impenetrable barrier against termite infestation.
+                            </p>
+                            <ul class="service-features">
+                                <li>Pre-construction treatment</li>
+                                <li>Post-construction protection</li>
+                                <li>Long-lasting barriers</li>
+                                <li>Annual inspections included</li>
+                            </ul>
+                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
                         </div>
-                        <h4 class="text-lg font-semibold">Our Vision</h4>
                     </div>
-                    <p class="text-gray-600">
-                        To be the leading pest control service in the country that values clients' needs by providing safe and effective treatment for peace of mind.
-                    </p>
                 </div>
 
-                <div data-aos="zoom-in" data-aos-delay="250" class="bg-white rounded-2xl p-8 shadow hover:shadow-xl transform hover:-translate-y-2 transition">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="p-3 bg-rrcblue-100 rounded-lg">
-                            <svg class="w-7 h-7 text-rrcblue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zM4 20v-2a4 4 0 014-4h8a4 4 0 014 4v2"></path>
-                            </svg>
+                <!-- Soil Poisoning -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="service-card">
+                        <img data-src="Images/soil-poisoning.jpg" 
+                             alt="Soil Poisoning Treatment" 
+                             class="service-icon"
+                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
+                        <div class="service-content">
+                            <h3 class="service-title">Soil Poisoning</h3>
+                            <p class="service-description">
+                                Comprehensive soil treatment that creates a chemical barrier around your property's foundation. Ideal for both new construction and existing structures requiring maximum protection.
+                            </p>
+                            <ul class="service-features">
+                                <li>Foundation perimeter treatment</li>
+                                <li>EPA-approved termiticides</li>
+                                <li>Long-term protection</li>
+                                <li>Warranty included</li>
+                            </ul>
+                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
                         </div>
-                        <h4 class="text-lg font-semibold">Our Values</h4>
-                    </div>
-                    <ul class="text-gray-600 space-y-2">
-                        <li><strong>Integrity:</strong> We conduct business responsibly and ethically.</li>
-                        <li><strong>Accountability:</strong> We honor commitments and accept responsibility.</li>
-                        <li><strong>Transparency:</strong> We promote open communication and trust.</li>
-                        <li><strong>Teamwork:</strong> We collaborate to achieve great results.</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="philosophy" class="bg-white py-20">
-        <div class="container mx-auto px-6 md:px-8">
-            <div class="md:flex md:items-center md:gap-10">
-                <div class="md:w-1/2" data-aos="fade-right">
-                    <h3 class="text-3xl font-bold mb-4 text-gray-800">Our Philosophies</h3>
-                    <p class="text-gray-600 leading-relaxed">
-                        Working in a team spirit towards a common vision, our commitment and dedication strive to satisfy client requirements in the most cost-effective manner.
-                        We follow a <strong>"customer comes first"</strong> philosophy and foster quality excellence, continuous improvement, and long-term partnerships.
-                    </p>
-                </div>
-                <div class="md:w-1/2 mt-6 md:mt-0" data-aos="fade-left">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:scale-105 transition-transform duration-500">
-                        <img src="/Images/teamrrc.jpg" alt="Philosophy" class="w-full h-64 object-cover" />
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="clients" class="bg-rrcblue-50 py-20">
-        <div class="container mx-auto px-6 md:px-8">
-            <h3 class="text-3xl font-bold text-center text-gray-800" data-aos="fade-up">
-                Our Clients
-            </h3>
-            <p class="text-center text-gray-600 mt-2 mb-12">
-                Trusted by organizations across industries.
-            </p>
-
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 items-stretch">
-                <div class="client-card p-4 bg-white rounded-xl shadow hover:shadow-lg transition" data-aos="zoom-in">
-                    <div class="client-logo-container">
-                        <img src="/Images/tesda.png" alt="TESDA" class="client-logo max-h-16 object-contain">
-                    </div>
-                    <div class="client-name">
-                        <p class="text-sm font-semibold text-gray-700">TESDA</p>
                     </div>
                 </div>
 
-                <div class="client-card p-4 bg-white rounded-xl shadow hover:shadow-lg transition" data-aos="zoom-in" data-aos-delay="80">
-                    <div class="client-logo-container">
-                        <img src="/Images/petron.png" alt="Petron" class="client-logo max-h-16 object-contain">
-                    </div>
-                    <div class="client-name">
-                        <p class="text-sm font-semibold text-gray-700">Petron Corporation</p>
-                    </div>
-                </div>
-
-                <div class="client-card p-4 bg-white rounded-xl shadow hover:shadow-lg transition" data-aos="zoom-in" data-aos-delay="160">
-                    <div class="client-logo-container">
-                        <img src="/Images/brinks.png" alt="Brinks" class="client-logo max-h-16 object-contain">
-                    </div>
-                    <div class="client-name">
-                        <p class="text-sm font-semibold text-gray-700">Brinks Philippines Inc.</p>
-                    </div>
-                </div>
-
-                <div class="client-card p-4 bg-white rounded-xl shadow hover:shadow-lg transition" data-aos="zoom-in" data-aos-delay="240">
-                    <div class="client-logo-container">
-                        <img src="/Images/biosolution.png" alt="Biosolutions" class="client-logo max-h-16 object-contain">
-                    </div>
-                    <div class="client-name">
-                        <p class="text-sm font-semibold text-gray-700">Biosolutions International Corp.</p>
+                <!-- Reticulation System -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="service-card">
+                        <img data-src="Images/reticulation.jpg" 
+                             alt="Reticulation System" 
+                             class="service-icon"
+                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
+                        <div class="service-content">
+                            <h3 class="service-title">Reticulation System</h3>
+                            <p class="service-description">
+                                Perforated pipe system installed beneath your property that allows for easy reapplication of termiticides without drilling. Perfect for long-term termite management with minimal disruption.
+                            </p>
+                            <ul class="service-features">
+                                <li>Perforated pipe installation</li>
+                                <li>Easy reapplication access</li>
+                                <li>No drilling required after installation</li>
+                                <li>Cost-effective maintenance</li>
+                            </ul>
+                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
+                        </div>
                     </div>
                 </div>
 
-                <div class="client-card p-4 bg-white rounded-xl shadow hover:shadow-lg transition" data-aos="zoom-in" data-aos-delay="320">
-                    <div class="client-logo-container">
-                        <img src="/Images/vcmc.png" alt="VCMC" class="client-logo max-h-16 object-contain">
-                    </div>
-                    <div class="client-name">
-                        <p class="text-sm font-semibold text-gray-700">Valenzuela Citicare Medical Center</p>
+                <!-- Mound Demolition -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="service-card">
+                        <img data-src="Images/mound-demolition.jpg" 
+                             alt="Mound Demolition" 
+                             class="service-icon"
+                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
+                        <div class="service-content">
+                            <h3 class="service-title">Mound Demolition (Queen Finder)</h3>
+                            <p class="service-description">
+                                Specialized service to locate and eliminate termite queens within mounds. Our expert technicians use advanced techniques to ensure complete colony elimination at the source.
+                            </p>
+                            <ul class="service-features">
+                                <li>Queen termite location & elimination</li>
+                                <li>Complete mound treatment</li>
+                                <li>Colony eradication</li>
+                                <li>Follow-up inspection</li>
+                            </ul>
+                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
+                        </div>
                     </div>
                 </div>
 
-                <div class="client-card p-4 bg-white rounded-xl shadow hover:shadow-lg transition" data-aos="zoom-in" data-aos-delay="400">
-                    <div class="client-logo-container">
-                        <img src="/Images/boc.png" alt="BOC" class="client-logo max-h-16 object-contain">
-                    </div>
-                    <div class="client-name">
-                        <p class="text-sm font-semibold text-gray-700">Bureau of Customs</p>
+                <!-- General Pest Control -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="service-card">
+                        <img data-src="Images/general-pest.jpg" 
+                             alt="General Pest Control" 
+                             class="service-icon"
+                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
+                        <div class="service-content">
+                            <h3 class="service-title">General Pest Control</h3>
+                            <p class="service-description">
+                                One-time comprehensive pest control service targeting cockroaches, ants, mosquitoes, flies, ticks, fleas, bedbugs, rats, and rodents. Keep your property pest-free and healthy.
+                            </p>
+                            <ul class="service-features">
+                                <li>Cockroach & ant elimination</li>
+                                <li>Flying insect control</li>
+                                <li>Bedbug treatment</li>
+                                <li>Rodent control & removal</li>
+                            </ul>
+                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="team" class="bg-white py-20">
-        <div class="container mx-auto px-6 md:px-8">
-            <h3 class="text-3xl font-bold text-center text-gray-800 mb-12" data-aos="fade-up">Our Dedicated Team</h3>
-            <div class="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div data-aos="zoom-in">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:scale-105 transition-transform duration-500">
-                        <img src="/Images/Sprayer.png" alt="Team 1" class="w-full h-80 object-cover" />
-                    </div>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="100">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:scale-105 transition-transform duration-500">
-                        <img src="/Images/team2.png" alt="Team 2" class="w-full h-80 object-cover" />
-                    </div>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="200">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:scale-105 transition-transform duration-500">
-                        <img src="/Images/team3.png" alt="Team 3" class="w-full h-80 object-cover" />
-                    </div>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="300">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:scale-105 transition-transform duration-500">
-                        <img src="/Images/teamapt.png" alt="Team 4" class="w-full h-80 object-cover" />
-                    </div>
-                </div>
-            </div>
+    <!-- CTA Section -->
+    <section class="cta-section lazy-section">
+        <div class="container">
+            <h2>Ready to Protect Your Property?</h2>
+            <p>Contact us today for a free consultation and inspection</p>
+            <a href="Inquiry.aspx" class="btn-cta">Schedule Free Inspection</a>
         </div>
     </section>
-
-    <section id="completed" class="bg-white py-20">
-        <div class="container mx-auto px-6 md:px-8 text-center">
-            <h3 class="text-3xl font-bold text-gray-800 mb-12" data-aos="fade-up">Completed Projects</h3>
-            <div class="grid sm:grid-cols-1 md:grid-cols-3 gap-8">
-                <div data-aos="zoom-in">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:shadow-2xl transition-transform duration-500 hover:-translate-y-2">
-                        <img src="/Images/completed1.jpg" alt="Taytay Rizal" class="w-full h-80 object-cover">
-                    </div>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="100">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:shadow-2xl transition-transform duration-500 hover:-translate-y-2">
-                        <img src="/Images/completed2.png" alt="Completed Project 2" class="w-full h-80 object-cover">
-                    </div>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="200">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:shadow-2xl transition-transform duration-500 hover:-translate-y-2">
-                        <img src="/Images/completed3.png" alt="Completed Project 3" class="w-full h-80 object-cover">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="ongoing" class="bg-rrcblue-50 py-20">
-        <div class="container mx-auto px-6 md:px-8 text-center">
-            <h3 class="text-3xl font-bold text-gray-800 mb-12" data-aos="fade-up">Ongoing Projects</h3>
-            <div class="grid sm:grid-cols-1 md:grid-cols-3 gap-8">
-                <div data-aos="zoom-in">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:shadow-2xl transition-transform duration-500 hover:-translate-y-2">
-                        <img src="/Images/ongoing1.png" alt="Punta Fuego" class="w-full h-80 object-cover">
-                    </div>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="100">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:shadow-2xl transition-transform duration-500 hover:-translate-y-2">
-                        <img src="/Images/ongoing2.png" alt="Ongoing Project 2" class="w-full h-80 object-cover">
-                    </div>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="200">
-                    <div class="rounded-2xl overflow-hidden shadow-card-lg hover:shadow-2xl transition-transform duration-500 hover:-translate-y-2">
-                        <img src="/Images/ongoing3.png" alt="Ongoing Project 3" class="w-full h-80 object-cover">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="bg-white py-10 text-center">
-        <a href="Default.aspx"
-            class="inline-block bg-rrcblue-700 text-white font-semibold px-6 py-3 rounded-full shadow hover:bg-rrcblue-300 hover:shadow-lg transition duration-300 ease-in-out">
-            ← Back to Home
-        </a>
-    </section>
-
-    <%-- AOS Initialization Script (placed at the bottom of the body for best performance) --%>
-    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-    <script>
-        // Initialize AOS
-        AOS.init({
-            once: true,
-            offset: 100,
-            duration: 800,
-            easing: 'ease-in-out'
-        });
-    </script>
-
 </asp:Content>

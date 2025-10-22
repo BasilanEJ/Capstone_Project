@@ -11,343 +11,643 @@
     <!-- Bootstrap & Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 
     <!-- Optional per-page head additions -->
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
     <style>
-        /* ===== Base / Typography ===== */
-        html { scroll-behavior: smooth; }
-        body { font-family: Arial, sans-serif; animation: fadeIn .8s ease-in-out; padding-top:70px; }
-        .top-header { font-size:14px; }
-        .contact-info i { margin-right:5px; }
+        /* ===== Modern Design Variables ===== */
+        :root {
+            --primary-color: #0d6efd;
+            --primary-hover: #0b5ed7;
+            --success-color: #28a745;
+            --success-hover: #218838;
+            --dark-bg: #1a1a2e;
+            --light-bg: #f8f9fa;
+            --text-dark: #212529;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,.12);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-        /* ===== Navbar ===== */
-        .navbar { padding:15px 0; transition: all .3s ease-in-out; }
-        .navbar-brand .logo, .navbar-brand img { height:50px; max-height:60px; transition:max-height .3s ease-in-out; }
-        .navbar-nav .nav-link { font-size:16px; font-weight:600; color:#333; }
-        .navbar-nav .nav-link:hover { color:#007bff; }
-        .navbar-nav .btn-primary { font-weight:bold; padding:8px 15px; border-radius:5px; }
+        /* ===== Base / Typography ===== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html { 
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            animation: fadeIn .8s ease-in-out;
+            padding-top: 80px;
+            overflow-x: hidden;
+            background: var(--light-bg);
+        }
+
+        /* ===== Modern Navbar ===== */
+        .navbar { 
+            padding: 16px 0;
+            transition: var(--transition);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95) !important;
+            border-bottom: 1px solid rgba(0,0,0,.05);
+        }
+
+        .navbar-brand .logo, 
+        .navbar-brand img { 
+            height: 50px;
+            max-height: 60px;
+            transition: var(--transition);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,.1));
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .navbar-nav .nav-link { 
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-dark);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .navbar-nav .nav-link:hover { 
+            color: var(--primary-color);
+            transform: translateY(-1px);
+        }
 
         /* Sticky scroll navbar */
-        .scroll-navbar { position:fixed; top:0; left:0; width:100%; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,.1); background:#fff; }
-        .show-navbar { top:0; }
-
-        /* ===== Footer ===== */
-        .footer { text-align:center; font-size:14px; }
-
-        /* ===== Animations ===== */
-        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
-        @keyframes fadeSlideDown { from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:none;} }
-        header.top-header { animation: fadeSlideDown .8s ease-in-out; }
-
-        /* ===== Layout container responsiveness ===== */
-        .container { max-width: 1200px; }
-        @media (min-width: 1400px) { .container { max-width: 1320px; } }
-        @media (min-width: 1600px) { .container { max-width: 1440px; } }
-
-        /* ===== Responsive tweaks ===== */
-        @media (max-width: 992px) {
-          .navbar-brand img{ max-height:50px; }
-          .navbar-nav{ text-align:center; }
-          .navbar-toggler{ transition: transform .3s ease-in-out; }
-          .navbar-toggler:hover{ transform: scale(1.1); }
-        }
-        @media (max-width: 768px) {
-          .navbar-brand img{ max-height:45px; }
-          .container{ padding:0 15px; }
-          .footer p{ font-size:14px; }
-        }
-        @media (max-width: 576px) {
-          .top-header{ font-size:14px; padding:8px 0; }
-          .contact-info span{ display:block; margin-bottom:5px; }
-          .social-icons a{ font-size:16px; }
+        .scroll-navbar { 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: var(--shadow-md);
         }
 
-        /* ===================== Modern Floating Chat (Glass) ===================== */
-        :root{
-          --chat-accent:#0d6efd;
-          --chat-bg:#ffffffcc;
-          --chat-border:#e9ecef;
-          --chat-text:#212529;
-          --chat-muted:#6c757d;
-          --chat-bot:#f1f5ff;
-          --chat-user:#e8f5e9;
-          --shadow:0 12px 30px rgba(0,0,0,.15);
-        }
-
-        .rrc-chat{ position:fixed; right:20px; bottom:20px; z-index:2000; pointer-events:none; }
-        .rrc-chat *{ box-sizing:border-box; }
-        .rrc-chat .chat-toggle{
-          pointer-events:auto;
-          width:64px; height:64px; border-radius:50%; border:0; cursor:pointer;
-          background:var(--chat-accent); color:#fff; font-size:24px; position:relative;
-          display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow);
-          transition: transform .18s ease, box-shadow .18s ease;
-        }
-        .rrc-chat .chat-toggle:hover{ transform: translateY(-2px); box-shadow:0 16px 36px rgba(13,110,253,.35); }
-        .rrc-chat .pulse{ position:absolute; inset:0; border-radius:50%;
-          box-shadow:0 0 0 0 rgba(13,110,253,.45); animation:pulse 2s infinite; }
-        @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(13,110,253,.45);} 70%{box-shadow:0 0 0 20px rgba(13,110,253,0);} 100%{box-shadow:0 0 0 0 rgba(13,110,253,0);} }
-
-        .rrc-chat .chat-panel{
-          pointer-events:auto;
-          width:min(480px, 95vw);
-          background:var(--chat-bg); backdrop-filter: blur(12px);
-          border:1px solid var(--chat-border); border-radius:16px; overflow:hidden;
-          box-shadow:var(--shadow);
-          position:absolute; right:0; bottom:78px; display:none;
-        }
-        .rrc-chat.open .chat-panel{ display:flex; flex-direction:column; animation:pop .14s ease; }
-        @keyframes pop{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
-        .rrc-chat.open .chat-toggle{ transform: scale(.96); }
-
-        .chat-header{
-          display:flex; align-items:center; justify-content:space-between; gap:8px;
-          padding:10px 12px; border-bottom:1px solid var(--chat-border);
-          background:linear-gradient(180deg, rgba(13,110,253,.12), rgba(13,110,253,0));
-        }
-        .chat-header .title{ display:flex; align-items:center; gap:10px; color:var(--chat-text); font-weight:700; }
-        .chat-header .status{ font-size:12px; color:var(--chat-muted); }
-        .chat-header .icon-btn{ border:0; background:transparent; width:36px; height:36px; border-radius:10px; cursor:pointer; color:var(--chat-text); }
-        .chat-header .icon-btn:hover{ background:rgba(13,110,253,.08); }
-
-        .chat-body{ height:480px; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth; }
-        .msg{ max-width:86%; padding:10px 12px; border-radius:12px; line-height:1.4; font-size:14px; color:var(--chat-text); box-shadow:0 2px 8px rgba(0,0,0,.06); }
-        .msg.bot{ background:var(--chat-bot); border:1px solid var(--chat-border); border-top-left-radius:4px; }
-        .msg.user{ background:var(--chat-user); border-top-right-radius:4px; margin-left:auto; }
-        .msg .time{ display:block; margin-top:6px; font-size:11px; color:var(--chat-muted); }
-        .fade-in{ animation:fadeIn .16s ease; }
-        @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
-
-        /* Dropdown row */
-        .faq-row { display:flex; gap:8px; align-items:center; padding:8px; border-top:1px solid var(--chat-border); background:linear-gradient(0deg, rgba(13,110,253,.06), rgba(13,110,253,0)); }
-        .faq-row .form-select{ flex:1; }
-        .faq-row .btn{ white-space:nowrap; }
-
-        .typing{ display:inline-flex; gap:4px; align-items:center; padding:8px 10px; border-radius:12px; background:var(--chat-bot); border:1px solid var(--chat-border); }
-        .dot{ width:6px; height:6px; border-radius:50%; background:var(--chat-muted); opacity:.6; animation:bounce 1.2s infinite; }
-        .dot:nth-child(2){ animation-delay:.15s; } .dot:nth-child(3){ animation-delay:.3s; }
-        @keyframes bounce{ 0%,80%,100%{transform:scale(.8);} 40%{transform:scale(1);} }
-
-        html, body {
-  overflow-x: hidden;
-  width: 100%;
-}
-
-/* Universal responsive safety */
-* {
-  box-sizing: border-box;
-  max-width: 100%;
-}
-
-/* Floating chat container fix */
-.rrc-chat {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 2000;
-  pointer-events: auto;
-  overflow: visible;
-  max-width: calc(100vw - 32px);
-}
-
-/* Prevent animation overflow */
-.rrc-chat .pulse {
-  clip-path: circle(50%);
-  overflow: hidden;
-}
-
-/* Ensure chat panel fits mobile screens */
-.rrc-chat .chat-panel {
-  width: 90vw;
-  max-width: 400px;
-  right: 0;
-  bottom: 80px;
-  border-radius: 12px;
-}
-
-/* Adjust for very small devices */
-@media (max-width: 480px) {
-  .rrc-chat {
-    right: 12px;
-    bottom: 12px;
-  }
-
-  .rrc-chat .chat-panel {
-    width: 95vw;
-    bottom: 70px;
-  }
-}
-
-
-        .btn-success {
-          background-color: #28a745;
-          border: none;
-          font-weight: 600;
-          padding: 8px 18px;
-          border-radius: 6px;
-          transition: all 0.3s ease;
-        }
-        .btn-success:hover {
-          background-color: #218838;
-          transform: translateY(-2px);
-        }
-        
-        /* ===== Navbar Buttons ===== */
+        /* ===== Modern Buttons ===== */
         .nav-btn {
-          font-weight: 600;
-          border-radius: 8px;
-          padding: 8px 18px;
-          min-width: 120px;
-          text-align: center;
-          transition: all 0.3s ease;
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 10px 24px;
+            min-width: 120px;
+            text-align: center;
+            transition: var(--transition);
+            border: none;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
         }
 
-        /* ===== Inquire Now Shake Animation ===== */
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
-          20%, 40%, 60%, 80% { transform: translateX(3px); }
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
         }
 
-        @keyframes pulseGlow {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.6); }
-          50% { box-shadow: 0 0 10px 5px rgba(40, 167, 69, 0.4); }
+        .nav-btn:hover::before {
+            width: 300px;
+            height: 300px;
         }
 
         .btn-success.nav-btn {
-          background-color: #28a745;
-          border: none;
-          animation: shake 2s ease-in-out infinite 2s, pulseGlow 4s infinite;
+            background: linear-gradient(135deg, var(--success-color), #20c997);
+            animation: pulseGlow 3s infinite;
         }
 
         .btn-success.nav-btn:hover {
-          background-color: #218838;
-          transform: scale(1.05);
-          animation: none;
+            background: linear-gradient(135deg, var(--success-hover), #1ba87d);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
         }
 
         .btn-primary.nav-btn {
-          background-color: #0d6efd;
-          border: none;
+            background: linear-gradient(135deg, var(--primary-color), #0056b3);
         }
+
         .btn-primary.nav-btn:hover {
-          background-color: #0b5ed7;
-          transform: translateY(-2px);
+            background: linear-gradient(135deg, var(--primary-hover), #004494);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4);
         }
 
-        /* ===== Scroll to Top Button ===== */
-        .scroll-top-btn {
-          position: fixed;
-          bottom: 100px;
-          right: 20px;
-          background-color: #808080;
-          color: white;
-          border: none;
-          border-radius: 50%;
-          width: 56px;
-          height: 56px;
-          font-size: 20px;
-          cursor: pointer;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-          display: none;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.3s ease;
-          z-index: 1999;
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
+            50% { box-shadow: 0 0 20px 8px rgba(40, 167, 69, 0.2); }
         }
 
-        .scroll-top-btn:hover {
-          background-color: #0b5ed7;
-          transform: translateY(-3px);
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+        /* ===== Smart Scroll Button (Up/Down Toggle) ===== */
+        .scroll-toggle-btn {
+            position: fixed;
+            bottom: 110px;
+            right: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            z-index: 1999;
         }
 
-        /* ===== Responsive Navbar Buttons ===== */
-        @media (max-width: 992px) {
-          .navbar-nav {
-            text-align: center;
-            width: 100%;
-          }
-          .nav-item {
-            width: 100%;
+        .scroll-toggle-btn:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 8px 28px rgba(102, 126, 234, 0.5);
+        }
+
+        .scroll-toggle-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        /* ===== Modern Chat Assistant ===== */
+        .rrc-chat { 
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 2000;
+            max-width: calc(100vw - 48px);
+        }
+
+        .rrc-chat .chat-toggle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--primary-color), #0056b3);
+            color: #fff;
+            font-size: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .rrc-chat .chat-toggle:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 12px 32px rgba(13, 110, 253, 0.4);
+        }
+
+        .rrc-chat .pulse {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(13,110,253,.6); }
+            70% { box-shadow: 0 0 0 20px rgba(13,110,253,0); }
+            100% { box-shadow: 0 0 0 0 rgba(13,110,253,0); }
+        }
+
+        .rrc-chat .chat-panel {
+            width: min(420px, 92vw);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0,0,0,.08);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            position: absolute;
+            right: 0;
+            bottom: 80px;
+            display: none;
+            flex-direction: column;
+        }
+
+        .rrc-chat.open .chat-panel {
+            display: flex;
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ===== Modern Chat Header ===== */
+        .chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 20px 16px;
+            background: linear-gradient(135deg, rgba(13,110,253,.08), rgba(102,126,234,.08));
+            border-bottom: 1px solid rgba(0,0,0,.06);
+        }
+
+        .chat-header .title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-header .title img {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            object-fit: cover;
+            box-shadow: var(--shadow-sm);
+            background: transparent;
+            padding: 0;
+        }
+
+        .chat-header .title-text {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--text-dark);
+            line-height: 1.2;
+        }
+
+        .chat-header .status {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chat-header .icon-btn {
+            border: none;
+            background: rgba(0,0,0,.04);
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: var(--text-dark);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-header .icon-btn:hover {
+            background: rgba(13,110,253,.12);
+            transform: scale(1.05);
+        }
+
+        /* ===== Modern Chat Body ===== */
+        .chat-body {
+            height: 440px;
+            overflow-y: auto;
+            padding: 20px;
             display: flex;
             flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-body::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,.2);
+            border-radius: 10px;
+        }
+
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            line-height: 1.5;
+            font-size: 14px;
+            box-shadow: var(--shadow-sm);
+            animation: messageSlide 0.3s ease;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg.bot {
+            background: linear-gradient(135deg, #f1f5ff, #e8f2ff);
+            border: 1px solid rgba(13,110,253,.15);
+            border-top-left-radius: 4px;
+            align-self: flex-start;
+        }
+
+        .msg.user {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-top-right-radius: 4px;
+            align-self: flex-end;
+        }
+
+        .msg .time {
+            display: block;
+            margin-top: 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+            opacity: 0.8;
+        }
+
+        .typing {
+            display: inline-flex;
+            gap: 4px;
             align-items: center;
-          }
-          .nav-btn {
-            width: 80%;
-            margin: 6px 0;
-            font-size: 15px;
-          }
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #f1f5ff, #e8f2ff);
+            border: 1px solid rgba(13,110,253,.15);
+            align-self: flex-start;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            opacity: 0.6;
+            animation: bounce 1.4s infinite;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1.1); opacity: 1; }
+        }
+
+        /* ===== Modern FAQ Section ===== */
+        .faq-section {
+            padding: 16px 20px;
+            background: linear-gradient(0deg, rgba(13,110,253,.04), transparent);
+            border-top: 1px solid rgba(0,0,0,.06);
+        }
+
+        .faq-section label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .faq-section .form-select {
+            border-radius: 12px;
+            border: 2px solid rgba(0,0,0,.08);
+            padding: 10px 14px;
+            font-size: 14px;
+            transition: var(--transition);
+            background-color: white;
+            margin-bottom: 10px;
+        }
+
+        .faq-section .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(13,110,253,.1);
+            outline: none;
+        }
+
+        .faq-section .btn {
+            width: 100%;
+            border-radius: 12px;
+            padding: 12px;
+            font-weight: 600;
+            border: none;
+            background: linear-gradient(135deg, var(--primary-color), #0056b3);
+            transition: var(--transition);
+        }
+
+        .faq-section .btn:hover {
+            background: linear-gradient(135deg, var(--primary-hover), #004494);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(13, 110, 253, 0.3);
+        }
+
+        /* ===== Footer ===== */
+        .footer {
+            background: var(--dark-bg);
+            color: white;
+            padding: 40px 0;
+            margin-top: 60px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,.1);
+        }
+
+        .footer a {
+            transition: var(--transition);
+        }
+
+        .footer a:hover {
+            color: var(--primary-color) !important;
+            transform: translateY(-2px);
+        }
+
+        /* ===== Animations ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ===== Container ===== */
+        .container {
+            max-width: 1200px;
+        }
+
+        @media (min-width: 1400px) {
+            .container { max-width: 1320px; }
+        }
+
+        @media (min-width: 1600px) {
+            .container { max-width: 1440px; }
+        }
+
+        /* ===== Responsive Design ===== */
+        @media (max-width: 992px) {
+            body { padding-top: 70px; }
+            
+            .navbar-brand img { max-height: 50px; }
+            
+            .navbar-nav {
+                text-align: center;
+                width: 100%;
+                padding: 16px 0;
+            }
+            
+            .nav-item {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin: 4px 0;
+            }
+            
+            .nav-btn {
+                width: 85%;
+                margin: 6px 0;
+            }
+
+            .scroll-toggle-btn {
+                bottom: 95px;
+                right: 20px;
+            }
         }
 
         @media (max-width: 768px) {
-          .btn-success.nav-btn {
-            animation: pulseGlow 4s infinite;
-          }
-          
-          .scroll-top-btn {
-            width: 50px;
-            height: 50px;
-            font-size: 18px;
-            bottom: 95px;
-          }
+            .navbar-brand img { max-height: 45px; }
+            
+            .scroll-toggle-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 18px;
+            }
+
+            .rrc-chat .chat-toggle {
+                width: 56px;
+                height: 56px;
+                font-size: 24px;
+            }
+
+            .chat-body {
+                height: 380px;
+            }
         }
 
         @media (max-width: 576px) {
-          .nav-btn {
-            width: 90%;
-            font-size: 14px;
-            padding: 10px 0;
-          }
-          
-          .scroll-top-btn {
-            width: 48px;
-            height: 48px;
-            font-size: 16px;
-            bottom: 90px;
-            right: 15px;
-          }
-          
-          .rrc-chat {
-            right: 15px;
-          }
+            body { padding-top: 65px; }
+            
+            .nav-btn {
+                width: 90%;
+                font-size: 14px;
+            }
+
+            .scroll-toggle-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 16px;
+                bottom: 90px;
+                right: 16px;
+            }
+
+            .rrc-chat {
+                right: 16px;
+                bottom: 16px;
+            }
+
+            .rrc-chat .chat-toggle {
+                width: 52px;
+                height: 52px;
+                font-size: 22px;
+            }
+
+            .rrc-chat .chat-panel {
+                width: 95vw;
+                bottom: 70px;
+            }
+
+            .chat-body {
+                height: 360px;
+            }
         }
 
-        /* Chat safe-zone on very small screens */
-        @media (max-width: 400px){
-          .rrc-chat .chat-panel { width: 95vw; }
-          .chat-body { height: 420px; }
+        @media (max-width: 400px) {
+            .chat-body { height: 340px; }
         }
+
+
+        /* ============ Lazy Loading Styles ============ */
+
+/* Image lazy loading placeholder */
+img[data-src] {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    min-height: 200px;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Fade in effect when image loads */
+img.lazy-loaded {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Section lazy loading */
+.lazy-section {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.lazy-section.loaded {
+    opacity: 1;
+    transform: translateY(0);
+}
+
     </style>
+
+ 
+
 </head>
 
 <body>
-  <form id="form1" runat="server" enctype="multipart/form-data">
+    <form id="form1" runat="server" enctype="multipart/form-data">
 
         <!-- Scroll Navbar -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white scroll-navbar" id="scrollNavbar">
+        <nav class="navbar navbar-expand-lg navbar-light scroll-navbar" id="scrollNavbar">
             <div class="container">
-                <!-- Brand -->
                 <a class="navbar-brand" href="Default.aspx" aria-label="RRC Home">
-                    <img src="/images/rrclogo.jpg" alt="RRC Termite" class="logo" />
+                    <img src="/images/logorrc.png" alt="RRC Termite" class="logo" />
                 </a>
 
-                <!-- Toggler -->
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
-                <!-- Links -->
                 <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                     <ul class="navbar-nav ms-auto align-items-center gap-2">
                         <li class="nav-item d-flex gap-2 flex-wrap justify-content-center">
-                            <a href="#inquiryForm" class="btn btn-success nav-btn">Inquire Now</a>
-                            <a href="../Login.aspx" class="btn btn-primary nav-btn">Login</a>
+                            <a href="#inquiryForm" class="btn btn-success nav-btn">Get a Free Inspection</a>
+                            <a href="../Login.aspx" class="btn btn-primary nav-btn">Users Login</a>
                         </li>
                     </ul>
                 </div>
@@ -359,62 +659,56 @@
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </div>
 
-        <!-- ===== Scroll to Top Button ===== -->
-        <button id="scrollToTopBtn" class="scroll-top-btn" aria-label="Scroll to top">
-            <i class="fas fa-arrow-up"></i>
+        <!-- Smart Scroll Toggle Button (Up/Down) -->
+        <button id="scrollToggleBtn" class="scroll-toggle-btn" aria-label="Scroll navigation">
+            <i class="fas fa-arrow-down"></i>
         </button>
 
-        <!-- ===================== Floating Modern Chat Assistant (FAQ-only via Dropdown) ===================== -->
+        <!-- Modern Floating Chat Assistant -->
         <div class="rrc-chat" id="rrcChat" aria-live="polite">
-            <!-- Toggle button -->
             <button type="button" class="chat-toggle" id="chatToggle" aria-label="Open chat">
                 <i class="fa-solid fa-message"></i>
                 <span class="pulse" aria-hidden="true"></span>
             </button>
 
-            <!-- Chat panel -->
             <div class="chat-panel" role="dialog" aria-modal="false" aria-labelledby="chatTitle">
                 <div class="chat-header">
                     <div class="title">
-                        <img src="/images/rrclogo.jpg" alt="RRC" style="width:28px;height:28px;border-radius:6px;object-fit:cover;">
+                        <img src="/images/rrclogo.jpg" alt="RRC">
                         <div>
-                            <div id="chatTitle">RRC Assistant</div>
+                            <div class="title-text" id="chatTitle">RRC Assistant</div>
                             <div class="status">
                                 <i class="fa-solid fa-circle" style="font-size:8px;color:#27ae60;"></i>
                                 Online
                             </div>
                         </div>
                     </div>
-                    <div class="d-flex gap-1">
-                        <button type="button" class="icon-btn" id="closeChat" title="Close" aria-label="Close">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
+                    <button type="button" class="icon-btn" id="closeChat" title="Close" aria-label="Close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
 
                 <div class="chat-body" id="chatBody">
-                    <!-- Welcome message -->
-                    <div class="msg bot fade-in">
-                        Hi! I'm your RRC Assistant. Select a question from the dropdown below to see quick answers about bookings, services, or inspections.
+                    <div class="msg bot">
+                        Hi! 👋 I'm your RRC Assistant. Select a question below to get instant answers about our services, bookings, and more.
                         <span class="time" data-time></span>
                     </div>
                 </div>
 
-                <!-- FAQ dropdown + Ask button -->
-                <div class="faq-row">
+                <div class="faq-section">
+                    <label for="faqSelect">Quick Questions</label>
                     <select class="form-select" id="faqSelect" aria-label="Select a frequently asked question">
-                        <option value="" selected disabled>Choose a question…</option>
-                        <!-- options will be injected by JS from FAQ array -->
+                        <option value="" selected disabled>Choose a question...</option>
                     </select>
                     <button type="button" class="btn btn-primary" id="askBtn">
-                        Ask
+                        <i class="fa-solid fa-paper-plane me-2"></i>Ask
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Footer -->
-        <footer class="footer bg-dark text-white py-4 mt-4">
+        <footer class="footer">
             <div class="container text-center">
                 <p>&copy; <%= DateTime.Now.Year %> RRC Termite &amp; Pest Control. All rights reserved.</p>
                 <p>
@@ -426,171 +720,465 @@
             </div>
         </footer>
 
-        <!-- Optional per-page scripts -->
         <asp:ContentPlaceHolder ID="ScriptContent" runat="server" />
 
     </form>
 
-    <!-- Bootstrap Bundle (JS) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script>
-        // ===== Scroll to Top Button Behavior =====
-        const scrollBtn = document.getElementById("scrollToTopBtn");
+<script>
+    // ===== Smart Scroll Toggle Button (Up/Down Navigation) =====
+    (function () {
+        const scrollBtn = document.getElementById("scrollToggleBtn");
+        const icon = scrollBtn.querySelector("i");
 
-        window.addEventListener("scroll", () => {
-            if (window.scrollY > 300) {
+        function getDocumentHeight() {
+            return Math.max(
+                document.body.scrollHeight,
+                document.documentElement.scrollHeight
+            );
+        }
+
+        function getCurrentScroll() {
+            return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        }
+
+        function updateScrollButton() {
+            const scrollTop = getCurrentScroll();
+            const windowHeight = window.innerHeight;
+            const documentHeight = getDocumentHeight();
+
+            if (scrollTop > 300) {
                 scrollBtn.style.display = "flex";
             } else {
                 scrollBtn.style.display = "none";
+                return;
             }
+
+            const isAtBottom = (scrollTop + windowHeight) >= (documentHeight - 100);
+
+            if (isAtBottom) {
+                icon.className = "fas fa-arrow-up";
+            } else {
+                icon.className = "fas fa-arrow-down";
+            }
+        }
+
+        scrollBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const scrollTop = getCurrentScroll();
+            const windowHeight = window.innerHeight;
+            const documentHeight = getDocumentHeight();
+            const isAtBottom = (scrollTop + windowHeight) >= (documentHeight - 100);
+
+            if (isAtBottom) {
+                if (window.location.hash) {
+                    history.pushState("", document.title, window.location.pathname + window.location.search);
+                }
+
+                window.scrollTo({
+                    top: 0,
+                    left: 0,
+                    behavior: "smooth"
+                });
+
+                setTimeout(() => {
+                    document.documentElement.scrollTop = 0;
+                    document.body.scrollTop = 0;
+                    window.pageYOffset = 0;
+                }, 50);
+
+                setTimeout(() => {
+                    icon.className = "fas fa-arrow-down";
+                }, 500);
+            } else {
+                const maxScroll = documentHeight - windowHeight;
+                window.scrollTo({
+                    top: maxScroll,
+                    left: 0,
+                    behavior: "smooth"
+                });
+                setTimeout(() => {
+                    icon.className = "fas fa-arrow-up";
+                }, 500);
+            }
+
+            return false;
         });
 
-        scrollBtn.addEventListener("click", () => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
+        let scrollTimeout;
+        window.addEventListener("scroll", () => {
+            if (scrollTimeout) {
+                window.cancelAnimationFrame(scrollTimeout);
+            }
+            scrollTimeout = window.requestAnimationFrame(updateScrollButton);
         });
-    </script>
 
-    <!-- ===== Scroll Navbar behavior ===== -->
-    <script>
-        (function(){
-            let lastScrollTop = 0;
-            const navbar = document.getElementById("scrollNavbar");
-            window.addEventListener("scroll", function(){
-                const st = window.pageYOffset || document.documentElement.scrollTop;
-                if (st < lastScrollTop) {
-                    navbar.classList.add("show-navbar");
-                } else {
-                    navbar.classList.remove("show-navbar");
-                }
-                lastScrollTop = st <= 0 ? 0 : st;
-            });
-        })();
-    </script>
+        window.addEventListener("resize", updateScrollButton);
+        setTimeout(updateScrollButton, 100);
+    })();
 
-    <!-- ===== Modern Chat Assistant Logic (Dropdown FAQ) ===== -->
-    <script>
-        (function () {
-            const chat = document.getElementById('rrcChat');
-            const toggle = document.getElementById('chatToggle');
-            const closeBtn = document.getElementById('closeChat');
-            const bodyEl = document.getElementById('chatBody');
-            const select = document.getElementById('faqSelect');
-            const askBtn = document.getElementById('askBtn');
+    // ===== Scroll Navbar Behavior =====
+    (function () {
+        // Navbar is now always visible, no hide/show behavior
+    })();
 
-            // Persisted open/close state only
-            const savedOpen = localStorage.getItem('rrcChatOpen');
-            if (savedOpen === '1') { chat.classList.add('open'); }
 
-            // ---- ANSWER BANK (Your reduced FAQ list) ----
-            const FAQ = [
-                {
-                    q: "How to book?",
-                    a: "You can submit an inquiry through our inquiry page. Once submitted, our admin will review and dispatch an inspector to check your property."
-                },
-                {
-                    q: "Do you have free inspection?",
-                    a: "Our ocular inspections are FREE within serviceable areas. Send an inquiry here and set the date/time you're available."
-                },
-                {
-                    q: "What are your business hours?",
-                    a: "We're open 24/7. You can submit inquiries and bookings anytime."
-                },
-                {
-                    q: "What services do you offer?",
-                    a: "Two service types: Contractual (Baiting System—Above/ In-Ground for colony elimination, Termite Prevention, Soil Poisoning—Pre/Post Construction, Reticulation—Perforated Pipe, Mound Demolition—Queen Finder) and One-Time (General Pest Control for cockroaches, ants, mosquitoes, flies, tick & fleas, bedbugs, rats/rodents)."
-                },
-                {
-                    q: "What areas do you cover?",
-                    a: "We mainly cover NCR and can also reach Pangasinan and Batangas (north and south areas)."
-                },
-                {
-                    q: "How can I contact you?",
-                    a: "Email: rrctermiteandpestcontrol@gmail.com. Smart: +63 947 721 7510 / +63 961 340 3036. Globe: +63 967 047 9074 / +63 967 047 9056."
-                },
-                {
-                    q: "What payment methods do you accept?",
-                    a: "We accept PayPal and PayMongo, plus cash on-hand, online transactions, and bank transfers (arranged with admin)."
-                }
+    // ===== RRC Chat Assistant with Auto-Path Detection =====
+    (function () {
+        'use strict';
+
+        const chat = document.getElementById('rrcChat');
+        const toggle = document.getElementById('chatToggle');
+        const closeBtn = document.getElementById('closeChat');
+        const bodyEl = document.getElementById('chatBody');
+        const select = document.getElementById('faqSelect');
+        const askBtn = document.getElementById('askBtn');
+        const chatPanel = chat.querySelector('.chat-panel');
+
+        let FAQ = [];
+
+        // Load FAQs with auto-path detection
+        function loadFAQs() {
+            console.log('🔄 Loading FAQs from server...');
+
+            const paths = [
+                'GetFAQs.ashx',
+                '/GetFAQs.ashx',
+                '../GetFAQs.ashx',
+                './GetFAQs.ashx',
+                'Handlers/GetFAQs.ashx',
+                '/Handlers/GetFAQs.ashx'
             ];
 
-            // Populate dropdown from FAQ list
-            function populateDropdown() {
-                const frag = document.createDocumentFragment();
-                FAQ.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.value = item.q;
-                    opt.textContent = item.q;
-                    frag.appendChild(opt);
-                });
-                select.appendChild(frag);
+            tryFetchPaths(paths);
+        }
+
+        async function tryFetchPaths(paths) {
+            for (const path of paths) {
+                try {
+                    console.log(`🔍 Trying path: ${path}`);
+
+                    const response = await fetch(path, {
+                        method: 'GET',
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        console.warn(`⚠️ Path ${path} returned status ${response.status}`);
+                        continue;
+                    }
+
+                    const text = await response.text();
+                    console.log('📄 Raw response preview:', text.substring(0, 200));
+
+                    const data = JSON.parse(text);
+                    console.log(`📊 Successfully parsed ${data.length} FAQs`);
+
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        FAQ = data;
+                        populateDropdown();
+                        console.log(`✅ SUCCESS! Loaded ${FAQ.length} FAQs from: ${path}`);
+                        console.log('📋 FAQ Questions:', FAQ.map(f => f.q));
+                        return;
+                    } else {
+                        console.warn(`⚠️ Path ${path} returned empty array`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Error with path ${path}:`, error.message);
+                }
             }
 
-            function nowTime() {
-                const d = new Date();
-                return d.toLocaleString('en-PH', { hour: '2-digit', minute: '2-digit' });
+            console.error('❌ All paths failed. Using fallback FAQ');
+            useFallbackFAQ();
+        }
+
+        function useFallbackFAQ() {
+            console.log('⚠️ Using fallback FAQ');
+            FAQ = [{
+                q: "How to book?",
+                a: "You can submit an inquiry through our inquiry page. Once submitted, our admin will review and dispatch an inspector to check your property."
+            }];
+            populateDropdown();
+        }
+
+        function populateDropdown() {
+            console.log('🔨 Populating dropdown with', FAQ.length, 'items');
+
+            while (select.options.length > 1) {
+                select.remove(1);
             }
 
-            function addMsg(text, who = 'bot') {
-                const wrap = document.createElement('div');
-                wrap.className = `msg ${who} fade-in`;
-                wrap.innerHTML = `${text}<span class="time">${nowTime()}</span>`;
-                bodyEl.appendChild(wrap);
-                bodyEl.scrollTop = bodyEl.scrollHeight;
-                return wrap;
+            if (FAQ.length === 0) {
+                console.warn('⚠️ No FAQs to populate');
+                return;
             }
 
-            function addTyping() {
-                const box = document.createElement('div');
-                box.className = 'typing fade-in';
-                box.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-                bodyEl.appendChild(box);
-                bodyEl.scrollTop = bodyEl.scrollHeight;
-                return box;
-            }
+            const frag = document.createDocumentFragment();
 
-            function answerFor(question) {
-                const qClean = String(question).trim().toLowerCase();
-                const hit = FAQ.find(x => x.q.trim().toLowerCase() === qClean);
-                return hit ? hit.a : "Sorry, that's not in our FAQs yet.";
-            }
-
-            function sendFAQ(questionText) {
-                addMsg(questionText, 'user');
-                const typing = addTyping();
-                setTimeout(() => {
-                    typing.remove();
-                    addMsg(answerFor(questionText), 'bot');
-                }, 450);
-            }
-
-            // Ask button handler
-            askBtn.addEventListener('click', () => {
-                const val = select.value;
-                if (!val) {
-                    // simple nudge
-                    select.classList.add('is-invalid');
-                    setTimeout(() => select.classList.remove('is-invalid'), 1000);
+            FAQ.forEach((item, index) => {
+                if (!item.q || !item.a) {
+                    console.warn(`⚠️ Invalid FAQ item at index ${index}:`, item);
                     return;
                 }
+
+                const opt = document.createElement('option');
+                opt.value = item.q;
+                opt.textContent = item.q;
+                frag.appendChild(opt);
+                console.log(`➕ Added FAQ ${index + 1}: "${item.q}"`);
+            });
+
+            select.appendChild(frag);
+            console.log('✅ Dropdown now has', select.options.length - 1, 'FAQ options');
+        }
+
+        function nowTime() {
+            const d = new Date();
+            return d.toLocaleString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
+        function addMsg(text, who = 'bot') {
+            const wrap = document.createElement('div');
+            wrap.className = `msg ${who}`;
+            const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            wrap.innerHTML = `${escapedText}<span class="time">${nowTime()}</span>`;
+            bodyEl.appendChild(wrap);
+            bodyEl.scrollTop = bodyEl.scrollHeight;
+            return wrap;
+        }
+
+        function addTyping() {
+            const box = document.createElement('div');
+            box.className = 'typing';
+            box.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+            bodyEl.appendChild(box);
+            bodyEl.scrollTop = bodyEl.scrollHeight;
+            return box;
+        }
+
+        function answerFor(question) {
+            const qClean = String(question).trim().toLowerCase();
+            const hit = FAQ.find(x => x.q.trim().toLowerCase() === qClean);
+
+            if (hit) {
+                console.log('✅ Found answer for:', question);
+                return hit.a;
+            } else {
+                console.warn('⚠️ No answer found for:', question);
+                return "Sorry, I don't have information about that. Please contact us directly for assistance.";
+            }
+        }
+
+        function sendFAQ(questionText) {
+            if (!questionText || questionText.trim() === '') {
+                console.warn('⚠️ Empty question submitted');
+                return;
+            }
+
+            console.log('💬 Sending FAQ:', questionText);
+            addMsg(questionText, 'user');
+
+            const typing = addTyping();
+            setTimeout(() => {
+                typing.remove();
+                const answer = answerFor(questionText);
+                addMsg(answer, 'bot');
+            }, 600);
+        }
+
+        function closeChat() {
+            chat.classList.remove('open');
+            localStorage.setItem('rrcChatOpen', '0');
+            console.log('Chat closed');
+        }
+
+        function openChat() {
+            chat.classList.add('open');
+            localStorage.setItem('rrcChatOpen', '1');
+            console.log('Chat opened');
+        }
+
+        select.addEventListener('change', () => {
+            const val = select.value;
+            console.log('Dropdown changed to:', val);
+            if (val) {
                 sendFAQ(val);
-            });
+                setTimeout(() => {
+                    select.value = '';
+                }, 100);
+            }
+        });
 
-            // Toggle open/close (no page scroll changes)
-            toggle.addEventListener('click', () => {
-                chat.classList.toggle('open');
-                localStorage.setItem('rrcChatOpen', chat.classList.contains('open') ? '1' : '0');
-            });
-            closeBtn.addEventListener('click', () => {
-                chat.classList.remove('open');
-                localStorage.setItem('rrcChatOpen', '0');
-            });
+        askBtn.addEventListener('click', () => {
+            const val = select.value;
+            if (!val) {
+                console.warn('⚠️ No question selected');
+                select.classList.add('is-invalid');
+                setTimeout(() => select.classList.remove('is-invalid'), 1000);
+                return;
+            }
+            sendFAQ(val);
+            select.value = '';
+        });
 
-            // Initializations
-            populateDropdown();
-            const t = document.querySelector('[data-time]');
-            if (t) { t.textContent = nowTime(); }
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (chat.classList.contains('open')) {
+                closeChat();
+            } else {
+                openChat();
+            }
+        });
+
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeChat();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (chat.classList.contains('open')) {
+                if (!chat.contains(e.target)) {
+                    closeChat();
+                }
+            }
+        });
+
+        chatPanel.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        console.log('🚀 Initializing RRC Chat Assistant...');
+        loadFAQs();
+
+        const timeEl = document.querySelector('[data-time]');
+        if (timeEl) {
+            timeEl.textContent = nowTime();
+        }
+
+        const savedOpen = localStorage.getItem('rrcChatOpen');
+        if (savedOpen === '1') {
+            openChat();
+        }
+
+        window.debugFAQ = function () {
+            console.log('Current FAQ array:', FAQ);
+            console.log('Dropdown options count:', select.options.length - 1);
+            return FAQ;
+        };
+
+        console.log('✅ Chat Assistant initialized. Type debugFAQ() in console to inspect.');
+    })();
+</script>
+
+    <script>
+        // ============ Modern Lazy Loading System ============
+
+        (function () {
+            'use strict';
+
+            // Configuration
+            const config = {
+                rootMargin: '50px',
+                threshold: 0.01
+            };
+
+
+            // Lazy load images
+            function lazyLoadImages() {
+                const images = document.querySelectorAll('img[data-src]');
+
+                if ('IntersectionObserver' in window) {
+                    const imageObserver = new IntersectionObserver(function (entries, observer) {
+                        entries.forEach(function (entry) {
+                            if (entry.isIntersecting) {
+                                const img = entry.target;
+                                const src = img.getAttribute('data-src');
+
+                                if (src) {
+                                    img.src = src;
+                                    img.removeAttribute('data-src');
+                                    img.classList.add('lazy-loaded');
+                                    imageObserver.unobserve(img);
+                                }
+                            }
+                        });
+                    }, config);
+
+                    images.forEach(function (img) {
+                        imageObserver.observe(img);
+                    });
+                } else {
+                    // Fallback for older browsers
+                    images.forEach(function (img) {
+                        const src = img.getAttribute('data-src');
+                        if (src) {
+                            img.src = src;
+                            img.removeAttribute('data-src');
+                            img.classList.add('lazy-loaded');
+                        }
+                    });
+                }
+            }
+
+            // Lazy load sections
+            function lazyLoadSections() {
+                const sections = document.querySelectorAll('.lazy-section');
+
+                if ('IntersectionObserver' in window) {
+                    const sectionObserver = new IntersectionObserver(function (entries) {
+                        entries.forEach(function (entry) {
+                            if (entry.isIntersecting) {
+                                entry.target.classList.add('loaded');
+                                sectionObserver.unobserve(entry.target);
+                            }
+                        });
+                    }, {
+                        rootMargin: '0px',
+                        threshold: 0.1
+                    });
+
+                    sections.forEach(function (section) {
+                        sectionObserver.observe(section);
+                    });
+                } else {
+                    // Fallback
+                    sections.forEach(function (section) {
+                        section.classList.add('loaded');
+                    });
+                }
+            }
+
+            // Initialize on DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    lazyLoadImages();
+                    lazyLoadSections();
+                });
+            } else {
+                lazyLoadImages();
+                lazyLoadSections();
+            }
+
+            // Re-initialize after UpdatePanel postback
+            if (typeof Sys !== 'undefined') {
+                Sys.WebForms.PageRequestManager.getInstance().add_endRequest(function () {
+                    lazyLoadImages();
+                    lazyLoadSections();
+                });
+            }
         })();
     </script>
+
 </body>
 </html>

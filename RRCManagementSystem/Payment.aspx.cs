@@ -154,10 +154,7 @@ namespace RRCManagementSystem
 
         private DateTime ComputeNextDueDate(string plan, DateTime approvalDate, List<DateTime> paidDates)
         {
-            // Rule:
-            //  - 50-25-25: 50% due +3 days from approval; 2nd 25% due +1 month from 1st txn; last 25% due +1 month from 2nd txn
-            //  - 70-30   : 70% due +3 days from approval; 30% due +1 month from 1st txn
-            //  - 100     : one-time due +3 days from approval
+
             plan = (plan ?? "").Trim();
             if (string.Equals(plan, "70-30", StringComparison.OrdinalIgnoreCase))
             {
@@ -296,6 +293,9 @@ namespace RRCManagementSystem
             lblMiscellaneous.Text = "₱0.00";
             Label1.Text = "₱0.00"; // Total Price
 
+            pnlMiscDetails.Visible = false;
+            litMiscDetails.Text = "";
+
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.usp_Payment_ClientLatestAssignedInfo", con))
             {
@@ -335,6 +335,8 @@ namespace RRCManagementSystem
 
                     decimal miscellaneous = reader["Miscellaneous"] == DBNull.Value ? 0m :
                         Convert.ToDecimal(reader["Miscellaneous"], CultureInfo.InvariantCulture);
+
+                    string miscDetails = reader["MiscellaneousDetails"]?.ToString() ?? "";
 
                     string dbPlanRaw = reader["PaymentPlan"]?.ToString() ?? "";
                     int bookingId = Convert.ToInt32(reader["BookingID"], CultureInfo.InvariantCulture);
@@ -459,6 +461,17 @@ namespace RRCManagementSystem
                     lblMiscellaneous.Text = $"₱{miscellaneous:N2}";
                     Label1.Text = $"₱{fullPrice:N2}"; // Total Price
 
+                    if (!string.IsNullOrWhiteSpace(miscDetails))
+                    {
+                        pnlMiscDetails.Visible = true;
+                        litMiscDetails.Text = FormatMiscellaneousDetails(miscDetails);
+                    }
+                    else
+                    {
+                        pnlMiscDetails.Visible = false;
+                    }
+
+
                     // ---------------- PAYPAL CONFIGURATION ----------------
                     hfPayPalBookingID.Value = bookingId.ToString(CultureInfo.InvariantCulture);
 
@@ -498,6 +511,28 @@ namespace RRCManagementSystem
         }
 
 
+        private string FormatMiscellaneousDetails(string miscDetails)
+        {
+            if (string.IsNullOrWhiteSpace(miscDetails))
+                return string.Empty;
+
+            // Split by semicolon (e.g., "Food Allowance: ₱300.00; Parking Fee: ₱50.00")
+            var items = miscDetails.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+            var html = new System.Text.StringBuilder();
+            foreach (var item in items)
+            {
+                var trimmedItem = item.Trim();
+                if (!string.IsNullOrEmpty(trimmedItem))
+                {
+                    html.Append("<div class='text-sm text-gray-600 flex justify-between py-1'>");
+                    html.Append($"<span>• {System.Web.HttpUtility.HtmlEncode(trimmedItem)}</span>");
+                    html.Append("</div>");
+                }
+            }
+
+            return html.ToString();
+        }
 
         // ======= Canonical total via SaleID =============================================
         private int GetSaleIdByBooking(int bookingId)
