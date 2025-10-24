@@ -4,6 +4,7 @@
 <html lang="en">
 <head runat="server">
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
     <title>System Admin Panel</title>
 
@@ -14,50 +15,452 @@
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Header Styles */
+        #header {
+            height: 70px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        #header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+            color: #fff;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo i {
+            font-size: 1.8rem;
+            color: #198754;
+        }
+
+        #toggleBtn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        #toggleBtn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Sidebar Styles */
+        #sidebar {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            width: 280px;
+            height: calc(100vh - 70px);
+            background: linear-gradient(180deg, #000000 0%, #1a1a1a 100%);
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: transform 0.3s ease-in-out;
+            z-index: 1040;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: #198754;
+            border-radius: 3px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: #146c43;
+        }
+
+        .sidebar-content {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            padding-bottom: 20px;
+        }
+
+        /* Navigation Styles */
+        .nav-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+            padding: 16px 20px !important;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-link:hover {
+            background: rgba(25, 135, 84, 0.1) !important;
+            color: #fff !important;
+            padding-left: 25px !important;
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            margin-right: 12px;
+            font-size: 1.1rem;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(90deg, #198754 0%, #146c43 100%) !important;
+            color: #fff !important;
+            font-weight: 600;
+            border-left: 4px solid #0f5132;
+        }
+
+        /* Dropdown Styles */
+        .has-dropdown > a {
+            position: relative;
+        }
+
+        .has-dropdown > a .fa-chevron-down {
+            transition: transform 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .has-dropdown.active > a .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        .accordion {
+            background: rgba(0, 0, 0, 0.3);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .accordion:not(.d-none) {
+            max-height: 500px;
+        }
+
+        .accordion .nav-link {
+            padding-left: 55px !important;
+            font-size: 0.9rem;
+        }
+
+        .accordion .nav-link:hover {
+            padding-left: 60px !important;
+            background: rgba(25, 135, 84, 0.15) !important;
+        }
+
+        /* Logout Button */
+        #btnLogout {
+            margin: 20px auto;
+            width: 85%;
+            padding: 12px;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        #btnLogout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+        }
+
+        /* Main Content */
+        #mainContent {
+            margin-left: 280px;
+            margin-top: 70px;
+            padding: 30px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: calc(100vh - 130px);
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Footer */
+        #footer {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #fff;
+            text-align: center;
+            padding: 15px;
+            position: fixed;
+            bottom: 0;
+            left: 280px;
+            width: calc(100% - 280px);
+            z-index: 1030;
+            transition: all 0.3s ease;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            font-size: 0.9rem;
+        }
+
+        /* Overlay for mobile */
+        #sidebarOverlay {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1039;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #sidebarOverlay.show {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Tablet Styles */
+        @media (max-width: 992px) {
+            #sidebar {
+                width: 260px;
+            }
+
+            #mainContent {
+                margin-left: 260px;
+            }
+
+            #footer {
+                left: 260px;
+                width: calc(100% - 260px);
+            }
+        }
+
+        /* Logo Styling */
+.header-logo img {
+    height: 40px;
+    width: auto;
+    max-width: 200px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    transition: transform 0.3s ease;
+}
+
+.header-logo img:hover {
+    transform: scale(1.05);
+}
+
+/* Mobile Logo */
+@media (max-width: 640px) {
+    .header-logo img {
+        height: 32px;
+        max-width: 150px;
+    }
+}
+
+/* Header Title Styling */
+.header-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    font-size: 1.5rem;
+    color: #fff;
+}
+
+/* Hide title on mobile to prevent overlap */
+@media (max-width: 768px) {
+    .header-title {
+        display: none;
+    }
+}
+
+        /* Mobile Styles */
         @media (max-width: 768px) {
+            #header h2 {
+                font-size: 1.2rem;
+            }
+
             #sidebar {
                 transform: translateX(-100%);
-                transition: transform 0.3s ease-in-out;
-                z-index: 1040;
-                position: fixed;
-                background-color: #000;
-                height: 100vh;
-                top: 60px;
                 width: 280px;
             }
+
             #sidebar.show {
                 transform: translateX(0);
             }
+
             #mainContent {
                 margin-left: 0 !important;
+                padding: 20px 15px;
             }
+
             #footer {
                 left: 0 !important;
                 width: 100% !important;
+                font-size: 0.85rem;
+                padding: 12px;
+            }
+
+            #toggleBtn {
+                display: block !important;
+            }
+
+            .nav-link {
+                font-size: 0.9rem;
+            }
+
+            #btnLogout {
+                width: 90%;
             }
         }
-        .nav-link.active {
-    background-color: #198754 !important;
-    font-weight: bold;
-}
 
+        /* Small Mobile Styles */
+        @media (max-width: 576px) {
+            #header {
+                height: 60px;
+                padding: 0 15px;
+            }
+
+            #header h2 {
+                font-size: 1rem;
+            }
+
+            #sidebar {
+                top: 60px;
+                height: calc(100vh - 60px);
+                width: 100%;
+                max-width: 280px;
+            }
+
+            #mainContent {
+                margin-top: 60px;
+                padding: 15px 10px;
+                min-height: calc(100vh - 110px);
+            }
+
+            .nav-link {
+                padding: 14px 15px !important;
+                font-size: 0.85rem;
+            }
+
+            .nav-link:hover {
+                padding-left: 20px !important;
+            }
+
+            .accordion .nav-link {
+                padding-left: 45px !important;
+            }
+
+            .accordion .nav-link:hover {
+                padding-left: 50px !important;
+            }
+
+            #footer {
+                font-size: 0.8rem;
+                padding: 10px;
+            }
+        }
+
+        /* Landscape Mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            #sidebar {
+                width: 250px;
+            }
+        }
+
+        /* Hide toggle button on desktop */
+        @media (min-width: 769px) {
+            #toggleBtn {
+                display: none !important;
+            }
+        }
     </style>
 
     <script type="text/javascript">
         function toggleSidebar() {
             const sidebar = document.getElementById("sidebar");
+            const overlay = document.getElementById("sidebarOverlay");
+
             sidebar.classList.toggle("show");
+            overlay.classList.toggle("show");
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            const overlay = document.getElementById("sidebarOverlay");
+
+            sidebar.classList.remove("show");
+            overlay.classList.remove("show");
         }
 
         document.addEventListener("DOMContentLoaded", function () {
+            // Handle dropdown toggles
             document.querySelectorAll(".has-dropdown > a").forEach(function (toggle) {
                 toggle.addEventListener("click", function (e) {
                     e.preventDefault();
                     const parent = this.closest(".has-dropdown");
+
+                    // Close all other dropdowns
+                    document.querySelectorAll(".has-dropdown").forEach(function (item) {
+                        if (item !== parent) {
+                            item.classList.remove("active");
+                            item.querySelector(".accordion").classList.add("d-none");
+                        }
+                    });
+
+                    // Toggle current dropdown
                     parent.classList.toggle("active");
                     const submenu = parent.querySelector(".accordion");
-                    if (submenu) submenu.classList.toggle("d-none");
+                    if (submenu) {
+                        submenu.classList.toggle("d-none");
+                    }
                 });
+            });
+
+            // Close sidebar when clicking on a link on mobile
+            if (window.innerWidth <= 768) {
+                document.querySelectorAll("#sidebar a:not(.has-dropdown > a)").forEach(function (link) {
+                    link.addEventListener("click", function () {
+                        closeSidebar();
+                    });
+                });
+            }
+
+            // Handle window resize
+            window.addEventListener("resize", function () {
+                if (window.innerWidth > 768) {
+                    document.getElementById("sidebar").classList.remove("show");
+                    document.getElementById("sidebarOverlay").classList.remove("show");
+                }
             });
         });
     </script>
@@ -67,126 +470,133 @@
         <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="true" />
 
 
-        <!-- Header -->
-        <header class="bg-dark text-white d-flex align-items-center px-4 justify-content-between" style="height: 60px; position: fixed; top: 0; left: 0; width: 100%; z-index: 1050;">
-            <h2 class="mb-0">SystemAdmin Panel</h2>
-            <button class="btn btn-outline-light d-md-none" type="button" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
-            </button>
-        </header>
+<header id="header">
+    <div class="header-logo">
+        <img src="/images/logorrc.png" alt="RRC Management Logo" style="height: 40px; width: auto; max-width: 200px; object-fit: contain; filter: brightness(0) invert(1);" />
+    </div>
+    <h2 class="header-title">SystemAdmin Panel</h2>
+    <button id="toggleBtn" class="btn d-md-none" type="button" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+</header>
+
+        <!-- Sidebar Overlay (Mobile) -->
+        <div id="sidebarOverlay" onclick="closeSidebar()"></div>
 
         <!-- Sidebar -->
-       <aside id="sidebar" class="bg-black text-white position-fixed d-flex flex-column" style="top: 60px; left: 0; width: 280px; height: calc(100vh - 60px); overflow-y: auto;">
-    <ul class="nav flex-column">
-        <li class="nav-item border-bottom">
-            <a class='nav-link text-white px-4 py-3 <%= GetActiveClass("SuperAdminDashboard.aspx") %>' href="SuperAdminDashboard.aspx">
-                <i class="fas fa-home me-2"></i> Dashboard
-            </a>
-        </li>
+        <aside id="sidebar">
+            <div class="sidebar-content">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class='nav-link <%= GetActiveClass("SuperAdminDashboard.aspx") %>' href="SuperAdminDashboard.aspx">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
 
-        <li class="nav-item has-dropdown border-bottom">
-            <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-user-shield me-2"></i> Manage Users</span><i class="fas fa-chevron-down"></i>
-            </a>
-            <ul class="nav flex-column accordion d-none bg-dark">
-                <li>
-                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("ViewAdmin.aspx") %>' href="ViewAdmin.aspx">
-                        <i class="fas fa-list me-2"></i> View Users
-                    </a>
-                </li>
-                <li>
-                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("AddAdmin.aspx") %>' href="AddAdmin.aspx">
-                        <i class="fas fa-plus me-2"></i> Add User
-                    </a>
-                </li>
-                <li>
-                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("ArchivedAdmins.aspx") %>' href="ArchivedAdmins.aspx">
-                        <i class="fas fa-archive me-2"></i> Archive User Accounts
-                    </a>
-                </li>
-            </ul>
-        </li>
+                    <li class="nav-item has-dropdown">
+                        <a href="#" class="nav-link d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-user-shield"></i> Manage Users</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </a>
+                        <ul class="nav flex-column accordion d-none">
+                            <li>
+                                <a class='nav-link <%= GetActiveClass("ViewAdmin.aspx") %>' href="ViewAdmin.aspx">
+                                    <i class="fas fa-list"></i> View Users
+                                </a>
+                            </li>
+                            <li>
+                                <a class='nav-link <%= GetActiveClass("AddAdmin.aspx") %>' href="AddAdmin.aspx">
+                                    <i class="fas fa-plus"></i> Add User
+                                </a>
+                            </li>
+                            <li>
+                                <a class='nav-link <%= GetActiveClass("ArchivedAdmins.aspx") %>' href="ArchivedAdmins.aspx">
+                                    <i class="fas fa-archive"></i> Archive User Accounts
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
 
-        <li class="nav-item has-dropdown border-bottom">
-            <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-user-tag me-2"></i> Manage Roles</span><i class="fas fa-chevron-down"></i>
-            </a>
-            <ul class="nav flex-column accordion d-none bg-dark">
-                <li>
-                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("ViewRole.aspx") %>' href="ViewRole.aspx">
-                        <i class="fas fa-list me-2"></i> View Roles
-                    </a>
-                </li>
-                <li>
-                    <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("AddRole.aspx") %>' href="AddRole.aspx">
-                        <i class="fas fa-plus me-2"></i> Add Role
-                    </a>
-                </li>
-            </ul>
-        </li>
+                    <li class="nav-item has-dropdown">
+                        <a href="#" class="nav-link d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-user-tag"></i> Manage Roles</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </a>
+                        <ul class="nav flex-column accordion d-none">
+                            <li>
+                                <a class='nav-link <%= GetActiveClass("ViewRole.aspx") %>' href="ViewRole.aspx">
+                                    <i class="fas fa-list"></i> View Roles
+                                </a>
+                            </li>
+                            <li>
+                                <a class='nav-link <%= GetActiveClass("AddRole.aspx") %>' href="AddRole.aspx">
+                                    <i class="fas fa-plus"></i> Add Role
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
 
-        <li class="nav-item border-bottom">
-            <a class='nav-link text-white px-4 py-3 <%= GetActiveClass("AuditLogs.aspx") %>' href="AuditLogs.aspx">
-                <i class="fas fa-file-alt me-2"></i> Audit Logs
-            </a>
-        </li>
+                    <li class="nav-item">
+                        <a class='nav-link <%= GetActiveClass("AuditLogs.aspx") %>' href="AuditLogs.aspx">
+                            <i class="fas fa-file-alt"></i> Audit Logs
+                        </a>
+                    </li>
 
-<li class="nav-item has-dropdown border-bottom">
-    <a href="#" class="nav-link text-white px-4 py-3 d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-cogs me-2"></i> System Settings</span><i class="fas fa-chevron-down"></i>
-    </a>
-    <ul class="nav flex-column accordion d-none bg-dark">
-        <li>
-            <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("SystemChanges.aspx") %>' href="SystemChanges.aspx">
-                <i class="fas fa-tools me-2"></i> System Changes
-            </a>
-        </li>
-        <li>
-            <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("InspectorAreaScope.aspx") %>' href="InspectorAreaScope.aspx">
-                <i class="fas fa-map-marked-alt me-2"></i> Inspector Area Scope
-            </a>
-        </li>
-        <li>
-            <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("CMS.aspx") %>' href="CMS.aspx" title="Manage Inquiry Page Content">
-                <i class="fas fa-edit me-2"></i> Inquiry Page CMS
-            </a>
-        </li>
-        <li>
-            <a class='nav-link text-white ps-5 py-2 <%= GetActiveClass("TravelExpense.aspx") %>' href="TravelExpense.aspx" title="Set and manage travel expenses">
-                <i class="fas fa-money-bill-wave me-2"></i> Travel Expense Management
-            </a>
-        </li>
-    </ul>
-</li>
+                    <li class="nav-item has-dropdown">
+                        <a href="#" class="nav-link d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-cogs"></i> System Settings</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </a>
+                        <ul class="nav flex-column accordion d-none">
+                            <li>
+                                <a class='nav-link <%= GetActiveClass("SystemChanges.aspx") %>' href="SystemChanges.aspx">
+                                    <i class="fas fa-tools"></i> System Changes
+                                </a>
+                            </li>
+                            <li>
+                                <a class='nav-link <%= GetActiveClass("InspectorAreaScope.aspx") %>' href="InspectorAreaScope.aspx">
+                                    <i class="fas fa-map-marked-alt"></i> Inspector Area Scope
+                                </a>
+                            </li>
+                            <li>
+                                <a class='nav-link <%= GetActiveClass("CMS.aspx") %>' href="CMS.aspx" title="Manage Inquiry Page Content">
+                                    <i class="fas fa-edit"></i> Inquiry Page CMS
+                                </a>
+                            </li>
+                            <li>
+                                <a class='nav-link <%= GetActiveClass("TravelExpense.aspx") %>' href="TravelExpense.aspx" title="Set and manage travel expenses">
+                                    <i class="fas fa-money-bill-wave"></i> Travel Expense Management
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
 
+                    <li class="nav-item">
+                        <a class='nav-link <%= GetActiveClass("Reports.aspx") %>' href="Reports.aspx">
+                            <i class="fas fa-chart-bar"></i> Reports
+                        </a>
+                    </li>
 
+                    <li class="nav-item">
+                        <a class='nav-link <%= GetActiveClass("SuperAdminProfile.aspx") %>' href="SuperAdminProfile.aspx">
+                            <i class="fas fa-user-cog"></i> My Profile
+                        </a>
+                    </li>
+                </ul>
 
-        <li class="nav-item border-bottom">
-            <a class='nav-link text-white px-4 py-3 <%= GetActiveClass("Reports.aspx") %>' href="Reports.aspx">
-                <i class="fas fa-chart-bar me-2"></i> Reports
-            </a>
-        </li>
-
-        <li class="nav-item border-bottom">
-            <a class='nav-link text-white px-4 py-3 <%= GetActiveClass("SuperAdminProfile.aspx") %>' href="SuperAdminProfile.aspx">
-                <i class="fas fa-user-cog me-2"></i> My Profile
-            </a>
-        </li>
-    </ul>
-
-    <asp:LinkButton ID="btnLogout" runat="server" CssClass="btn btn-danger fw-bold w-75 mx-auto my-4 d-block" OnClick="btnLogout_Click">
-        <i class="fas fa-sign-out-alt me-2"></i> Logout
-    </asp:LinkButton>
-</aside>
-
+                <asp:LinkButton ID="btnLogout" runat="server" CssClass="btn btn-danger fw-bold d-block" OnClick="btnLogout_Click">
+                    <i class="fas fa-sign-out-alt me-2"></i> Logout
+                </asp:LinkButton>
+            </div>
+        </aside>
 
         <!-- Main Content -->
-        <main id="mainContent" class="flex-grow-1" style="margin-left: 280px; margin-top: 60px; padding: 30px; background-color: #f3f4f6; min-height: calc(100vh - 100px);">
+        <main id="mainContent">
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </main>
 
         <!-- Footer -->
-        <footer id="footer" class="bg-dark text-white text-center py-3 position-fixed bottom-0" style="left: 280px; width: calc(100% - 280px); z-index: 1030;">
+        <footer id="footer">
             &copy; 2025 RRC Management System - SystemAdmin
         </footer>
     </form>

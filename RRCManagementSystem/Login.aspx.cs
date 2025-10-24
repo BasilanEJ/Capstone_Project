@@ -1,17 +1,18 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Net;
+using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Web;
-using System.Web.UI;
-using RRCManagementSystem.Helpers;
 using System.Web.Script.Serialization;
+using System.Web.UI;
 
 namespace RRCManagementSystem
 {
-
     public class EnhancedLockoutInfo
     {
         public bool IsLocked { get; set; }
@@ -43,7 +44,12 @@ namespace RRCManagementSystem
         private const int IpWindowMinutes = 15;
         private const int DeviceLockoutMinutes = 15;
         private const int MaxAttempts = 5;
-
+        private const int CaptchaThreshold = 3;
+        private const int UserIPMaxAttempts = 5;
+        private const int UserIPLockoutMinutes = 15;
+        private const int MultiUserThreshold = 3;
+        private const int IPFullLockoutMinutes = 60;
+        private const int AttackWindowMinutes = 15;
 
         private EnhancedDeviceInfo ParseEnhancedDeviceInfo()
         {
@@ -51,7 +57,7 @@ namespace RRCManagementSystem
             {
                 DeviceFingerprint = hiddenFingerprint.Value?.Trim() ?? "",
                 CanvasFingerprint = hiddenCanvasFingerprint.Value?.Trim() ?? "",
-                HardwareID = hiddenHardwareID.Value?.Trim() ?? "", 
+                HardwareID = hiddenHardwareID.Value?.Trim() ?? "",
                 OSInfo = hiddenOSInfo.Value?.Trim() ?? "",
                 BrowserName = hiddenBrowserName.Value?.Trim() ?? "",
                 ScreenResolution = hiddenScreenResolution.Value?.Trim() ?? "",
@@ -65,13 +71,218 @@ namespace RRCManagementSystem
             };
         }
 
+        // ============================================
+        // NEW METHODS FOR SMART IP LOCKOUT
+        // ============================================
+
+        /// <summary>
+        /// Check if the entire IP address is locked (attack mode)
+        /// </summary>
+        private bool IsIPFullyLocked(string ip, out DateTime? lockedUntil, out string reason)
+        {
+            lockedUntil = null;
+            reason = null;
+
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spIPLockout_CheckFullIPLock", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            bool isLocked = reader["IsLocked"] != DBNull.Value && Convert.ToBoolean(reader["IsLocked"]);
+
+                            if (isLocked)
+                            {
+                                lockedUntil = reader["LockedUntil"] != DBNull.Value
+                                    ? Convert.ToDateTime(reader["LockedUntil"])
+                                    : (DateTime?)null;
+                                reason = reader["LockoutReason"]?.ToString();
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"IsIPFullyLocked Error: {ex.Message}");
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Check if specific User+IP combination is locked
+        /// </summary>
+        private bool IsUserIPLocked(string ip, string emailHash, out DateTime? lockedUntil, out int failedAttempts)
+        {
+            lockedUntil = null;
+            failedAttempts = 0;
+
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spIPLockout_CheckUserIPLock", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
+                    cmd.Parameters.Add("@EmailHash", SqlDbType.NVarChar, 64).Value = emailHash ?? "";
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            bool isLocked = reader["IsLocked"] != DBNull.Value && Convert.ToBoolean(reader["IsLocked"]);
+
+                            if (isLocked)
+                            {
+                                lockedUntil = reader["LockedUntil"] != DBNull.Value
+                                    ? Convert.ToDateTime(reader["LockedUntil"])
+                                    : (DateTime?)null;
+                                failedAttempts = reader["FailedAttempts"] != DBNull.Value
+                                    ? Convert.ToInt32(reader["FailedAttempts"])
+                                    : 0;
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"IsUserIPLocked Error: {ex.Message}");
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Record login attempt for User+IP combination
+        /// </summary>
+        private void LogUserIPAttempt(string ip, string emailHash, bool success, string userAgent)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spIPLockout_RecordUserIPAttempt", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
+                    cmd.Parameters.Add("@EmailHash", SqlDbType.NVarChar, 64).Value = emailHash ?? "";
+                    cmd.Parameters.Add("@IsSuccess", SqlDbType.Bit).Value = success;
+                    cmd.Parameters.Add("@UserAgent", SqlDbType.NVarChar, 500).Value = userAgent ?? "";
+                    cmd.Parameters.Add("@MaxAttempts", SqlDbType.Int).Value = UserIPMaxAttempts;
+                    cmd.Parameters.Add("@LockoutMinutes", SqlDbType.Int).Value = UserIPLockoutMinutes;
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LogUserIPAttempt Error: {ex.Message}");
+            }
+        }
+
+        private bool DetectMultiUserAttack(string ip, out int distinctUsers)
+        {
+            distinctUsers = 0;
+
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spIPLockout_DetectMultiUserAttack", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
+                    cmd.Parameters.Add("@WindowMinutes", SqlDbType.Int).Value = AttackWindowMinutes;
+                    cmd.Parameters.Add("@DistinctUserThreshold", SqlDbType.Int).Value = MultiUserThreshold;
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            distinctUsers = reader["DistinctUsersFailed"] != DBNull.Value
+                                ? Convert.ToInt32(reader["DistinctUsersFailed"])
+                                : 0;
+
+                            bool isAttack = reader["IsAttackDetected"] != DBNull.Value
+                                && Convert.ToBoolean(reader["IsAttackDetected"]);
+
+                            return isAttack;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DetectMultiUserAttack Error: {ex.Message}");
+            }
+
+            return false;
+        }
+
+        private void LockFullIPAddress(string ip, string reason, int distinctUsers)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spIPLockout_LockFullIP", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
+                    cmd.Parameters.Add("@LockoutMinutes", SqlDbType.Int).Value = IPFullLockoutMinutes;
+                    cmd.Parameters.Add("@LockoutReason", SqlDbType.NVarChar, 255).Value = reason ?? "Multiple user attack detected";
+                    cmd.Parameters.Add("@DistinctUsersAttempted", SqlDbType.Int).Value = distinctUsers;
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+
+                    System.Diagnostics.Debug.WriteLine($"🚨 SECURITY ALERT: Full IP lockout applied to {ip}. Reason: {reason}. Distinct users: {distinctUsers}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LockFullIPAddress Error: {ex.Message}");
+            }
+        }
+
+        private void ResetUserIPLockout(string ip, string emailHash)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spIPLockout_ResetUserIP", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip ?? "";
+                    cmd.Parameters.Add("@EmailHash", SqlDbType.NVarChar, 64).Value = emailHash ?? "";
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ResetUserIPLockout Error: {ex.Message}");
+            }
+        }
+
         private int? TryParseInt(string value)
         {
             if (int.TryParse(value, out int result))
                 return result;
             return null;
         }
-
 
         private string GetIPSubnet(string ip)
         {
@@ -89,7 +300,6 @@ namespace RRCManagementSystem
 
             return ip;
         }
-
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -125,13 +335,12 @@ namespace RRCManagementSystem
             }
         }
 
-
         protected void btnLogin_Click(object sender, EventArgs e)
         {
             lblMessage.Text = "";
 
             string ip = Request.UserHostAddress ?? "";
-            string ipSubnet = GetIPSubnet(ip);
+            string ipSubnet = null;  // Keep as null to disable subnet lockout
             string userAgent = Request.UserAgent ?? "";
 
             EnhancedDeviceInfo deviceInfo = ParseEnhancedDeviceInfo();
@@ -139,7 +348,7 @@ namespace RRCManagementSystem
             if (string.IsNullOrEmpty(deviceInfo.DeviceFingerprint))
             {
                 lblMessage.Text = "**System Error.** Unable to identify your device. Please refresh the page and try again.";
-                return;
+                return;  // ✅ NO FAILURE RECORDED - Not a login attempt
             }
 
             string email = txtEmail.Text.Trim();
@@ -148,52 +357,83 @@ namespace RRCManagementSystem
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
                 lblMessage.Text = "**Required Fields.** Please enter both your email address and password.";
-                return;
+                return;  // ✅ NO FAILURE RECORDED - Not a login attempt
             }
 
             if (email.Length > 100)
             {
                 lblMessage.Text = "**Input Error.** The email address entered is too long. The maximum allowed is 100 characters.";
-                return;
+                return;  // ✅ NO FAILURE RECORDED - Validation error
             }
 
             if (!Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase))
             {
                 lblMessage.Text = "**Input Error.** Please enter a valid email address format.";
-                return;
+                return;  // ✅ NO FAILURE RECORDED - Validation error
             }
 
             if (password.Length < 8 || password.Length > 64)
             {
                 lblMessage.Text = "**Password Policy.** Your password must be between 8 and 64 characters in length.";
-                return;
+                return;  // ✅ NO FAILURE RECORDED - Validation error
             }
 
             Regex strongPasswordRegex = new Regex(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,64}$");
             if (!strongPasswordRegex.IsMatch(password))
             {
                 lblMessage.Text = "**Password Policy.** Your password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (e.g., @$!%*?&.).";
-                return;
+                return;  // ✅ NO FAILURE RECORDED - Validation error
             }
 
             string emailHash = AESHelper.ComputeSHA256(email);
 
-            // Check lockout status
+            // ============================================
+            // ⭐ TIER 1: Check if entire IP is locked (attack mode)
+            // ============================================
+            DateTime? ipLockedUntil;
+            string ipLockReason;
+            if (IsIPFullyLocked(ip, out ipLockedUntil, out ipLockReason))
+            {
+                string timeRemaining = ipLockedUntil.HasValue
+                    ? ipLockedUntil.Value.ToString("hh:mm tt")
+                    : "some time";
+
+                lblMessage.Text = $"**Security Alert.** This network has been temporarily blocked due to suspicious activity. Please try again after {timeRemaining}.";
+                return;  // ✅ NO FAILURE RECORDED - Already locked
+            }
+
+            // ============================================
+            // ⭐ TIER 2: Check if User+IP combination is locked
+            // ============================================
+            DateTime? userIpLockedUntil;
+            int userIpFailedAttempts;
+            if (IsUserIPLocked(ip, emailHash, out userIpLockedUntil, out userIpFailedAttempts))
+            {
+                string timeRemaining = userIpLockedUntil.HasValue
+                    ? userIpLockedUntil.Value.ToString("hh:mm tt")
+                    : "15 minutes";
+
+                lblMessage.Text = $"**Account Temporarily Locked.** Too many failed login attempts for this account from your location. Please try again after {timeRemaining}.";
+                return;  // ✅ NO FAILURE RECORDED - Already locked
+            }
+
+            // ============================================
+            // TIER 3: Check device lockout status (existing)
+            // ============================================
             EnhancedLockoutInfo lockoutInfo = CheckAllLockoutLayers(
                 deviceInfo.DeviceFingerprint,
                 deviceInfo.CanvasFingerprint,
                 emailHash,
-                ipSubnet,
+                ipSubnet,  // null = subnet lockout disabled
                 deviceInfo
             );
 
-            // FIX: Handle expired lockouts properly
+            // Handle expired lockouts properly
             if (lockoutInfo.IsLocked)
             {
-                // Check if the lockout has actually expired
                 if (lockoutInfo.LockedUntil.HasValue && lockoutInfo.LockedUntil.Value <= DateTime.Now)
                 {
-                    // Lockout has expired - reset it and allow login attempt to continue
+                    // Lockout expired, reset it
                     ResetAllLockoutLayers(
                         deviceInfo.DeviceFingerprint,
                         deviceInfo.CanvasFingerprint,
@@ -204,7 +444,7 @@ namespace RRCManagementSystem
                 }
                 else
                 {
-                    // Lockout is still active - block the attempt
+                    // Still locked
                     pnlCaptcha.Visible = true;
                     string lockoutMessage = lockoutInfo.LockoutReason == "Device"
                         ? "**Device Blocked.** Too many failed attempts from this device."
@@ -213,16 +453,21 @@ namespace RRCManagementSystem
                         : "**Network Blocked.** Too many failed attempts from this network.";
 
                     lblMessage.Text = $"{lockoutMessage} Please try again after {lockoutInfo.LockedUntil.Value:hh:mm tt}.";
-                    return;
+                    return;  // ✅ NO FAILURE RECORDED - Already locked
                 }
             }
 
-            // Check IP-based lockout
-            if (GetFailedIPAttempts(ip, IpWindowMinutes) >= 5)
+            // ⭐ UPDATED CAPTCHA ENFORCEMENT - Check both device and user+IP attempts
+            if (lockoutInfo.FailedAttempts >= CaptchaThreshold || userIpFailedAttempts >= CaptchaThreshold)
             {
-                DateTime ipLockoutExpires = DateTime.Now.AddMinutes(IpWindowMinutes);
-                lblMessage.Text = $"**Access Denied.** Too many failed login attempts from this IP address. Please try again after {ipLockoutExpires:hh:mm tt}.";
-                return;
+                pnlCaptcha.Visible = true;
+
+                string captchaResponse = Request.Form["g-recaptcha-response"];
+                if (string.IsNullOrEmpty(captchaResponse) || !IsCaptchaValid())
+                {
+                    lblMessage.Text = "**Security Verification Required.** Please complete the CAPTCHA to continue.";
+                    return;  // ✅ NO FAILURE RECORDED - CAPTCHA not completed
+                }
             }
 
             try
@@ -257,6 +502,7 @@ namespace RRCManagementSystem
                                 catch { decryptedEmail = "[Decryption Error]"; }
                             }
 
+                            // ✅ Check account status BEFORE checking password
                             if (status.Equals("Deleted", StringComparison.OrdinalIgnoreCase))
                             {
                                 lblMessage.Text = "**Login Failed.** Invalid email address or password. Please try again.";
@@ -269,32 +515,24 @@ namespace RRCManagementSystem
                                 goto FailureCleanup;
                             }
 
+                            // ✅ Check if account is locked BEFORE checking password
                             if (lockoutObj != DBNull.Value && Convert.ToDateTime(lockoutObj) > DateTime.Now)
                             {
                                 pnlCaptcha.Visible = true;
                                 lblMessage.Text = $"**Account Locked.** This account is temporarily locked. Please try again after {Convert.ToDateTime(lockoutObj):hh:mm tt}.";
-                                goto FailureCleanup;
+                                return;  // ✅ NO FAILURE RECORDED - Already locked
                             }
 
-                            if (failedAttempts >= 5)
+                            if (failedAttempts >= 3)
                             {
                                 pnlCaptcha.Visible = true;
-                                string captchaResponse = Request.Form["g-recaptcha-response"];
-
-                                if (string.IsNullOrEmpty(captchaResponse) || !IsCaptchaValid())
-                                {
-                                    lblMessage.Text = "**Security Check.** Due to multiple failed attempts, please complete the CAPTCHA to continue.";
-                                    goto FailureCleanup;
-                                }
                             }
 
+                            // ✅ NOW CHECK PASSWORD - Using PasswordHelper as in working code
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
-                                // Successful login
-                                loginSuccessful = true;
+                                // ✅ SUCCESS - Reset all lockouts
                                 ResetFailedLogin(userID);
-
-                                // Reset all device/IP lockouts
                                 ResetAllLockoutLayers(
                                     deviceInfo.DeviceFingerprint,
                                     deviceInfo.CanvasFingerprint,
@@ -303,7 +541,14 @@ namespace RRCManagementSystem
                                     deviceInfo.HardwareID
                                 );
 
+                                // ⭐ Reset User+IP lockout
+                                ResetUserIPLockout(ip, emailHash);
+
+                                // Log successful attempts
                                 LogIPAttempt(ip, true);
+                                LogUserIPAttempt(ip, emailHash, true, userAgent);
+
+                                // ✅ FIXED: Proper 2FA handling like the old working code
                                 AddAuditLog(userID, $"{role} {userName} passed password; 2FA pending.");
 
                                 Session["Pending2FA_UserID"] = userID;
@@ -313,19 +558,36 @@ namespace RRCManagementSystem
 
                                 Response.Redirect(is2FAEnabled ? "VerifyTOTP.aspx" : "Enable2FA.aspx", false);
                                 Context.ApplicationInstance.CompleteRequest();
+                                loginSuccessful = true;
                                 return;
                             }
                             else
                             {
-                                // Wrong password
+                                // ❌ WRONG PASSWORD - THIS is where we record failures
                                 HandleFailedLogin(userID);
 
-                                int remaining = Math.Max(0, MaxAttempts - (failedAttempts + 1));
+                                int newFailedAttempts = failedAttempts + 1;
+                                int remaining = Math.Max(0, MaxAttempts - newFailedAttempts);
+
+                                // Send security alerts
+                                if (newFailedAttempts == CaptchaThreshold)
+                                {
+                                    SendSecurityAlertToUser(decryptedEmail, newFailedAttempts, ip, deviceInfo, DateTime.Now);
+                                    SendSecurityAlertToSuperAdmin(decryptedEmail, newFailedAttempts, ip, deviceInfo, DateTime.Now);
+                                }
+
+                                if (newFailedAttempts >= MaxAttempts)
+                                {
+                                    SendLockoutAlertToSuperAdmin(decryptedEmail, ip, deviceInfo, DateTime.Now, newFailedAttempts);
+                                    SendLockoutAlertToUser(decryptedEmail, ip, deviceInfo, DateTime.Now);
+                                }
+
                                 lblMessage.Text = $"**Login Failed.** Invalid email address or password. You have {remaining} attempt(s) remaining before your account is locked.";
 
-                                if (failedAttempts + 1 >= 5)
+                                if (newFailedAttempts >= CaptchaThreshold)
                                     pnlCaptcha.Visible = true;
 
+                                // ✅ ONLY record failure for wrong password
                                 goto FailureCleanup;
                             }
                         }
@@ -344,22 +606,75 @@ namespace RRCManagementSystem
                 System.Diagnostics.Debug.WriteLine($"SQL Error: {sqlEx.Message}");
                 System.Diagnostics.Debug.WriteLine($"Procedure: {sqlEx.Procedure}, Line: {sqlEx.LineNumber}");
                 lblMessage.Text = "**System Error.** An unexpected database error occurred. Please try again later. If the problem persists, contact support.";
-                goto FailureCleanup;
+                return;  // ✅ NO FAILURE RECORDED - System error, not user fault
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Stack: {ex.StackTrace}");
                 lblMessage.Text = "**System Error.** An unexpected error occurred. Please try again later. If the problem persists, contact support.";
-                goto FailureCleanup;
+                return;  // ✅ NO FAILURE RECORDED - System error, not user fault
             }
 
         FailureCleanup:
+            // ✅ ONLY REACHED FOR ACTUAL AUTHENTICATION FAILURES (wrong password)
             LogIPAttempt(ip, false);
-            RecordFailedAttemptAllLayers(deviceInfo, emailHash, ipSubnet, ip, userAgent);
+            LogUserIPAttempt(ip, emailHash, false, userAgent);
+
+            // Record the failed attempt
+            RecordFailedAttemptAllLayers(
+                deviceInfo,
+                emailHash,
+                ipSubnet,
+                ip,
+                userAgent
+            );
+
+            // ⭐ Check for multi-user attack
+            int distinctUsers;
+            if (DetectMultiUserAttack(ip, out distinctUsers))
+            {
+                LockFullIPAddress(ip, $"Multiple account breach attempt detected ({distinctUsers} different accounts)", distinctUsers);
+
+                lblMessage.Text = "**Security Alert.** Suspicious activity detected from your network. Access has been temporarily restricted.";
+                return;
+            }
+
+            // GET UPDATED LOCKOUT INFO AFTER RECORDING FAILURE
+            EnhancedLockoutInfo updatedLockoutInfo = CheckAllLockoutLayers(
+                deviceInfo.DeviceFingerprint,
+                deviceInfo.CanvasFingerprint,
+                emailHash,
+                ipSubnet,
+                deviceInfo
+            );
+
+            int currentAttempts = updatedLockoutInfo.FailedAttempts;
+
+            if (currentAttempts == CaptchaThreshold)
+            {
+                SendSecurityAlertToUser(email, currentAttempts, ip, deviceInfo, DateTime.Now);
+                SendSecurityAlertToSuperAdmin(email, currentAttempts, ip, deviceInfo, DateTime.Now);
+            }
+
+            // Send CRITICAL lockout notifications when account is locked (5 attempts)
+            if (updatedLockoutInfo.IsLocked && currentAttempts >= MaxAttempts)
+            {
+                SendLockoutAlertToSuperAdmin(email, ip, deviceInfo, DateTime.Now, currentAttempts);
+                SendLockoutAlertToUser(email, ip, deviceInfo, DateTime.Now);
+
+                // Update the error message to reflect lockout
+                lblMessage.Text = $"**Account Temporarily Locked.** Too many failed login attempts. Please try again in {DeviceLockoutMinutes} minutes.";
+            }
+
+            // Show CAPTCHA for next attempt if threshold reached
+            if (currentAttempts >= CaptchaThreshold)
+            {
+                pnlCaptcha.Visible = true;
+            }
+
             return;
         }
-
 
         private void TryClientLogin(string email, string password, string emailHash, string ip, string ipSubnet, EnhancedDeviceInfo deviceInfo)
         {
@@ -416,7 +731,7 @@ namespace RRCManagementSystem
                                 goto ClientFailureCleanup;
                             }
 
-                            // FIX: Check if lockout has expired before blocking
+                            // Check if lockout has expired before blocking
                             if (lockoutObj != null && lockoutObj != DBNull.Value)
                             {
                                 DateTime lockoutTime = Convert.ToDateTime(lockoutObj);
@@ -428,10 +743,9 @@ namespace RRCManagementSystem
                                     lblMessage.Text = $"**Account Locked.** This client account is temporarily locked. Please try again after {lockoutTime:hh:mm tt}.";
                                     goto ClientFailureCleanup;
                                 }
-                                // If lockout has expired, continue with login attempt (don't block)
                             }
 
-                            if (failedAttempts >= 5)
+                            if (failedAttempts >= 3)
                             {
                                 pnlCaptcha.Visible = true;
                                 string captchaResponse = Request.Form["g-recaptcha-response"];
@@ -485,13 +799,25 @@ namespace RRCManagementSystem
                             }
                             else
                             {
-                                // Wrong password
                                 HandleClientFailedLogin(clientId);
 
-                                int remaining = Math.Max(0, MaxAttempts - (failedAttempts + 1));
+                                int newFailedAttempts = failedAttempts + 1;
+                                int remaining = Math.Max(0, MaxAttempts - newFailedAttempts);
+
+                                if (newFailedAttempts == CaptchaThreshold)
+                                {
+                                    SendSecurityAlertToUser(email, newFailedAttempts, ip, deviceInfo, DateTime.Now);
+                                    SendSecurityAlertToSuperAdmin(email, newFailedAttempts, ip, deviceInfo, DateTime.Now);
+                                }
+                                if (newFailedAttempts >= MaxAttempts)
+                                {
+                                    SendLockoutAlertToSuperAdmin(email, ip, deviceInfo, DateTime.Now, newFailedAttempts);
+                                    SendLockoutAlertToUser(email, ip, deviceInfo, DateTime.Now);
+                                }
+
                                 lblMessage.Text = $"**Login Failed.** Invalid email address or password. You have {remaining} attempt(s) remaining before your account is locked.";
 
-                                if (failedAttempts + 1 >= 5)
+                                if (newFailedAttempts >= CaptchaThreshold)
                                     pnlCaptcha.Visible = true;
 
                                 goto ClientFailureCleanup;
@@ -524,13 +850,314 @@ namespace RRCManagementSystem
             return;
         }
 
+        private void SendSecurityAlertToUser(string email, int attemptCount, string ip, EnhancedDeviceInfo deviceInfo, DateTime attemptTime)
+        {
+            try
+            {
+                string subject = "Security Alert: Unusual Login Activity Detected";
+
+                string body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #d32f2f; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+        .content {{ background: #f9f9f9; padding: 20px; border: 1px solid #ddd; }}
+        .alert-box {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; }}
+        .details {{ background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }}
+        .details table {{ width: 100%; border-collapse: collapse; }}
+        .details td {{ padding: 8px; border-bottom: 1px solid #eee; }}
+        .details td:first-child {{ font-weight: bold; width: 40%; }}
+        .footer {{ background: #f1f1f1; padding: 15px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 5px 5px; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h2>🔒 Security Alert</h2>
+        </div>
+        <div class='content'>
+            <p>Hello,</p>
+            
+            <div class='alert-box'>
+                <strong>⚠️ Suspicious Activity Detected</strong><br/>
+                We detected {attemptCount} failed login attempts on your RRC Management System account.
+            </div>
+            
+            <p>If this was you, you can safely ignore this email. However, if you did not attempt to log in, your account may be at risk.</p>
+            
+            <div class='details'>
+                <h3>Attempt Details:</h3>
+                <table>
+                    <tr>
+                        <td>Time:</td>
+                        <td>{attemptTime.ToString("MMMM dd, yyyy 'at' hh:mm:ss tt")}</td>
+                    </tr>
+                    <tr>
+                        <td>IP Address:</td>
+                        <td>{ip}</td>
+                    </tr>
+                    <tr>
+                        <td>Browser:</td>
+                        <td>{deviceInfo.BrowserName}</td>
+                    </tr>
+                    <tr>
+                        <td>Operating System:</td>
+                        <td>{deviceInfo.OSInfo}</td>
+                    </tr>
+                    <tr>
+                        <td>Location:</td>
+                        <td>{deviceInfo.TimezoneOffset} (Timezone)</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <h3>What should you do?</h3>
+            <ul>
+                <li><strong>If this was you:</strong> No action needed. You may continue trying to log in.</li>
+                <li><strong>If this wasn't you:</strong> Someone may be trying to access your account. We recommend changing your password immediately.</li>
+            </ul>
+        </div>
+        <div class='footer'>
+            <p>This is an automated security alert from RRC Management System.</p>
+            <p>If you have questions, please contact our support team.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+                SendEmail(email, subject, body, true, MailPriority.High);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SendSecurityAlertToUser Error: {ex.Message}");
+            }
+        }
+
+        private void SendSecurityAlertToSuperAdmin(string targetEmail, int attemptCount, string ip, EnhancedDeviceInfo deviceInfo, DateTime attemptTime)
+        {
+            try
+            {
+                var superAdminEmails = GetSuperAdminEmails();
+
+                if (superAdminEmails.Count == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("No SuperAdmin emails found for security alert");
+                    return;
+                }
+
+                string subject = $"🚨 Security Alert: Failed Login Attempts on {targetEmail}";
+
+                string body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 700px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #d32f2f; color: white; padding: 20px; text-align: center; }}
+        .content {{ background: #f9f9f9; padding: 20px; }}
+        .alert-box {{ background: #ffebee; border-left: 4px solid #d32f2f; padding: 15px; margin: 15px 0; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h2>🚨 Security Incident Alert</h2>
+        </div>
+        <div class='content'>
+            <p>Dear System Admin,</p>
+            <div class='alert-box'>
+                <strong>Multiple failed login attempts detected</strong><br/>
+                Account: {targetEmail}<br/>
+                Attempts: {attemptCount}<br/>
+                IP: {ip}<br/>
+                Time: {attemptTime.ToString("MMMM dd, yyyy 'at' hh:mm:ss tt")}
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+
+                foreach (string adminEmail in superAdminEmails)
+                {
+                    SendEmail(adminEmail, subject, body, true, MailPriority.High);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SendSecurityAlertToSuperAdmin Error: {ex.Message}");
+            }
+        }
+
+        private void SendLockoutAlertToSuperAdmin(string targetEmail, string ip, EnhancedDeviceInfo deviceInfo, DateTime lockoutTime, int totalAttempts)
+        {
+            try
+            {
+                var superAdminEmails = GetSuperAdminEmails();
+
+                if (superAdminEmails.Count == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("No SuperAdmin emails found for lockout alert");
+                    return;
+                }
+
+                string subject = $"🚨 CRITICAL: Account LOCKED - {targetEmail}";
+
+                string body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; color: #333; }}
+        .container {{ max-width: 700px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #b71c1c; color: white; padding: 20px; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h2>🔒 ACCOUNT LOCKOUT ALERT</h2>
+        </div>
+        <div style='padding: 20px;'>
+            <p>Account {targetEmail} has been LOCKED after {totalAttempts} failed attempts.</p>
+            <p>IP: {ip}</p>
+            <p>Time: {lockoutTime.ToString("MMMM dd, yyyy 'at' hh:mm:ss tt")}</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+                foreach (string adminEmail in superAdminEmails)
+                {
+                    SendEmail(adminEmail, subject, body, true, MailPriority.High);
+                }
+
+                System.Diagnostics.Debug.WriteLine($"CRITICAL lockout alert sent to SuperAdmins for account: {targetEmail}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SendLockoutAlertToSuperAdmin Error: {ex.Message}");
+            }
+        }
+
+        private void SendLockoutAlertToUser(string email, string ip, EnhancedDeviceInfo deviceInfo, DateTime lockoutTime)
+        {
+            try
+            {
+                string subject = "🔒 Your Account Has Been Temporarily Locked";
+
+                string body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #d32f2f; color: white; padding: 20px; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h2>🔒 Account Locked</h2>
+        </div>
+        <div style='padding: 20px;'>
+            <p>Your account has been temporarily locked due to multiple failed login attempts.</p>
+            <p>Unlock time: {lockoutTime.AddMinutes(DeviceLockoutMinutes).ToString("hh:mm tt")}</p>
+            <p>If this wasn't you, please reset your password immediately.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+                SendEmail(email, subject, body, true, MailPriority.High);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SendLockoutAlertToUser Error: {ex.Message}");
+            }
+        }
+
+        private List<string> GetSuperAdminEmails()
+        {
+            var emails = new List<string>();
+
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("SELECT Email FROM Users WHERE Role = 'SuperAdmin' AND Status IN ('Active', 'Available')", conn))
+                {
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            string emailEncrypted = reader["Email"].ToString();
+                            if (!string.IsNullOrEmpty(emailEncrypted))
+                            {
+                                try
+                                {
+                                    string decrypted = AESHelper.DecryptEmail(emailEncrypted);
+                                    emails.Add(decrypted);
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"GetSuperAdminEmails - Decryption Error: {ex.Message}");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSuperAdminEmails Error: {ex.Message}");
+            }
+
+            return emails;
+        }
+
+        private void SendEmail(string toEmail, string subject, string body, bool isHtml = false, MailPriority priority = MailPriority.Normal)
+        {
+            try
+            {
+                using (var message = new MailMessage())
+                {
+                    message.From = new MailAddress("rrctermiteandpestcontrol@gmail.com", "RRC Security System");
+                    message.To.Add(toEmail);
+                    message.Subject = subject;
+                    message.Body = body;
+                    message.IsBodyHtml = isHtml;
+                    message.Priority = priority;
+
+                    using (var smtp = new SmtpClient())
+                    {
+                        smtp.Timeout = 10000;
+                        smtp.Send(message);
+                    }
+                }
+
+                System.Diagnostics.Debug.WriteLine($"✅ Email sent successfully to: {toEmail}");
+            }
+            catch (SmtpException smtpEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ SMTP Error: {smtpEx.StatusCode} - {smtpEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ SendEmail Error: {ex.Message}");
+            }
+        }
 
         private EnhancedLockoutInfo CheckAllLockoutLayers(
-     string deviceFingerprint,
-     string canvasFingerprint,
-     string emailHash,
-     string ipSubnet,
-     EnhancedDeviceInfo deviceInfo)
+            string deviceFingerprint,
+            string canvasFingerprint,
+            string emailHash,
+            string ipSubnet,
+            EnhancedDeviceInfo deviceInfo)
         {
             EnhancedLockoutInfo info = new EnhancedLockoutInfo();
 
@@ -542,7 +1169,7 @@ namespace RRCManagementSystem
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@DeviceFingerprint", SqlDbType.NVarChar, 500).Value = deviceFingerprint;
                     cmd.Parameters.Add("@CanvasFingerprint", SqlDbType.NVarChar, 500).Value = (object)canvasFingerprint ?? DBNull.Value;
-                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)deviceInfo.HardwareID ?? DBNull.Value;  
+                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)deviceInfo.HardwareID ?? DBNull.Value;
                     cmd.Parameters.Add("@EmailHash", SqlDbType.NVarChar, 64).Value = (object)emailHash ?? DBNull.Value;
                     cmd.Parameters.Add("@IPSubnet", SqlDbType.NVarChar, 20).Value = (object)ipSubnet ?? DBNull.Value;
                     cmd.Parameters.Add("@ScreenResolution", SqlDbType.NVarChar, 50).Value = (object)deviceInfo.ScreenResolution ?? DBNull.Value;
@@ -580,7 +1207,7 @@ namespace RRCManagementSystem
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@DeviceFingerprint", SqlDbType.NVarChar, 500).Value = deviceInfo.DeviceFingerprint;
                     cmd.Parameters.Add("@CanvasFingerprint", SqlDbType.NVarChar, 500).Value = (object)deviceInfo.CanvasFingerprint ?? DBNull.Value;
-                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)deviceInfo.HardwareID ?? DBNull.Value; 
+                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)deviceInfo.HardwareID ?? DBNull.Value;
                     cmd.Parameters.Add("@EmailHash", SqlDbType.NVarChar, 64).Value = (object)emailHash ?? DBNull.Value;
                     cmd.Parameters.Add("@IPSubnet", SqlDbType.NVarChar, 20).Value = (object)ipSubnet ?? DBNull.Value;
                     cmd.Parameters.Add("@LockoutMinutes", SqlDbType.Int).Value = DeviceLockoutMinutes;
@@ -609,7 +1236,7 @@ namespace RRCManagementSystem
             }
         }
 
-        private void ResetAllLockoutLayers(string deviceFingerprint, string canvasFingerprint, string emailHash, string ipSubnet, string hardwareID)  
+        private void ResetAllLockoutLayers(string deviceFingerprint, string canvasFingerprint, string emailHash, string ipSubnet, string hardwareID)
         {
             try
             {
@@ -619,7 +1246,7 @@ namespace RRCManagementSystem
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@DeviceFingerprint", SqlDbType.NVarChar, 500).Value = deviceFingerprint;
                     cmd.Parameters.Add("@CanvasFingerprint", SqlDbType.NVarChar, 500).Value = (object)canvasFingerprint ?? DBNull.Value;
-                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)hardwareID ?? DBNull.Value;  
+                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)hardwareID ?? DBNull.Value;
                     cmd.Parameters.Add("@EmailHash", SqlDbType.NVarChar, 64).Value = (object)emailHash ?? DBNull.Value;
                     cmd.Parameters.Add("@IPSubnet", SqlDbType.NVarChar, 20).Value = (object)ipSubnet ?? DBNull.Value;
 
@@ -632,10 +1259,6 @@ namespace RRCManagementSystem
                 System.Diagnostics.Debug.WriteLine($"ResetAllLockoutLayers Error: {ex.Message}");
             }
         }
-
-        // =============================================
-        // Existing Helper Methods (Legacy Support)
-        // =============================================
 
         private int GetFailedIPAttempts(string ip, int windowMinutes)
         {
