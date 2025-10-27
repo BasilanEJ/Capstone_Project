@@ -17,7 +17,8 @@ namespace RRCManagementSystem
         {
             if (Session["UserID"] == null || Session["Role"]?.ToString() != "SuperAdmin")
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);  // ✅ Add false parameter
+                Context.ApplicationInstance.CompleteRequest();  // ✅ Add this line
                 return;
             }
 
@@ -28,10 +29,9 @@ namespace RRCManagementSystem
                 CheckFailedLoginThreshold();
                 LoadSummaryCards();
             }
-
-            // ✅ Handle unlock action from JavaScript BEFORE loading data
-            if (IsPostBack)
+            else  // ✅ Use else instead of separate if(IsPostBack)
             {
+                // Handle unlock action from JavaScript BEFORE loading data
                 HandleUnlockFromHiddenFields();
             }
 
@@ -73,19 +73,16 @@ namespace RRCManagementSystem
                         if (rdr.Read())
                         {
                             lblTotalAdmins.Text = Convert.ToString(rdr["TotalUsers"] ?? "0");
-                            lblAuditLogs.Text = Convert.ToString(rdr["TotalAuditLogs"] ?? "0");
                         }
                         else
                         {
                             lblTotalAdmins.Text = "0";
-                            lblAuditLogs.Text = "0";
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     lblTotalAdmins.Text = "0";
-                    lblAuditLogs.Text = "0";
                     LogError("LoadDashboardStats", ex);
                 }
             }

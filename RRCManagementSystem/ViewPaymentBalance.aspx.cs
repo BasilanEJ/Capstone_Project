@@ -34,6 +34,47 @@ namespace RRCManagementSystem
             BindGrid(txtClientName.Text?.Trim());
         }
 
+        // Handle row data binding to apply red highlighting based on payment plan
+        protected void gvBalances_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                // Get the data from the row
+                DataRowView drv = e.Row.DataItem as DataRowView;
+                if (drv != null)
+                {
+                    // Get IsOverdue flag from the stored procedure
+                    int isOverdue = Convert.ToInt32(drv["IsOverdue"]);
+                    int monthsOverdue = Convert.ToInt32(drv["MonthsOverdue"]);
+                    string paymentPlan = drv["PaymentPlan"]?.ToString() ?? "";
+
+                    // If flagged as overdue, apply red styling
+                    if (isOverdue == 1)
+                    {
+                        e.Row.CssClass += " overdue-row";
+
+                        // Add a badge to the months column with context
+                        int monthsColumnIndex = 7; // The MonthsOverdue column (0-indexed, accounting for PaymentPlan column)
+                        if (e.Row.Cells.Count > monthsColumnIndex)
+                        {
+                            string badgeText = "OVERDUE";
+
+                            // Add context based on payment plan
+                            if (paymentPlan.Contains("100"))
+                                badgeText = "OVERDUE (2+ mo)";
+                            else if (paymentPlan.Contains("70") && paymentPlan.Contains("30"))
+                                badgeText = "OVERDUE (3+ mo)";
+                            else if (paymentPlan.Contains("50") && paymentPlan.Contains("25"))
+                                badgeText = "OVERDUE (4+ mo)";
+
+                            e.Row.Cells[monthsColumnIndex].Text +=
+                                $" <span class='overdue-badge'>{badgeText}</span>";
+                        }
+                    }
+                }
+            }
+        }
+
         private void BindGrid(string nameFilter)
         {
             try

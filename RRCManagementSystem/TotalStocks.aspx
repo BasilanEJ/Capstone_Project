@@ -93,7 +93,7 @@
         <asp:GridView ID="gvTotalStocks" runat="server" CssClass="custom-table" AutoGenerateColumns="False" AllowPaging="True" PageSize="15"
             OnPageIndexChanging="gvTotalStocks_PageIndexChanging">
             <Columns>
-                <asp:BoundField DataField="ItemID" HeaderText="Item ID" />
+                <asp:BoundField DataField="ItemID" HeaderText="Item ID" Visible ="False" />
                 <asp:BoundField DataField="Name" HeaderText="Item Name" />
                 <asp:BoundField DataField="Type" HeaderText="Type" />
                 <asp:BoundField DataField="Quantity" HeaderText="Quantity" />

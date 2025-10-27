@@ -554,13 +554,14 @@
                                 <asp:TemplateField HeaderText="Actions">
                                     <ItemTemplate>
                                         <div class="btn-action-group">                                                                               
-                                            <button 
+                                           <button 
                                                 type="button" 
                                                 class="btn-action btn-delete"
-                                                onclick="confirmDelete('<%# Eval("RoleID") %>', '<%# Eval("RoleName") %>')">
+                                                onclick="return confirmDelete('<%# Eval("RoleID") %>', '<%# Eval("RoleName") %>');">
                                                 <i class="fas fa-trash-alt"></i>
                                                 Delete
                                             </button>
+
                                         </div>
                                     </ItemTemplate>
                                 </asp:TemplateField>
@@ -589,43 +590,42 @@
         function confirmDelete(roleId, roleName) {
             Swal.fire({
                 title: 'Delete Role?',
-                html: '<div style="text-align:center;"><i class="fas fa-exclamation-triangle" style="font-size:3rem;color:#dc3545;margin-bottom:15px;"></i><br/>This will <strong style="color:#dc3545;">permanently delete</strong> the role:<br/><strong style="font-size:1.2rem;color:#dc3545;">' + roleName + '</strong><br/><small class="text-muted">⚠️ Users with this role will lose their permissions!</small></div>',
+                html: '<div style="text-align:center;">' +
+                    '<i class="fas fa-exclamation-triangle" style="font-size:3rem;color:#dc3545;margin-bottom:15px;"></i><br/>' +
+                    'This will <strong style="color:#dc3545;">permanently delete</strong> the role:<br/>' +
+                    '<strong style="font-size:1.2rem;color:#dc3545;">' + roleName + '</strong><br/>' +
+                    '<small class="text-muted">⚠️ Users with this role will lose their permissions!</small></div>',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: '<i class="fas fa-trash me-2"></i>Yes, Delete Role',
                 cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
-                customClass: {
-                    popup: 'animated-popup',
-                    confirmButton: 'btn-confirm-custom',
-                    cancelButton: 'btn-cancel-custom'
-                },
-                // Add extra confirmation for delete
                 input: 'checkbox',
                 inputValue: 0,
                 inputPlaceholder: 'I understand this action cannot be undone',
                 inputValidator: (result) => {
-                    return !result && 'You need to confirm this action'
+                    return !result && 'You need to confirm this action';
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Show loading
                     Swal.fire({
                         title: 'Deleting Role...',
                         html: 'Please wait while we delete the role.',
                         allowOutsideClick: false,
                         allowEscapeKey: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
+                        didOpen: () => Swal.showLoading()
                     });
 
                     document.getElementById('<%= hfRoleIDToDelete.ClientID %>').value = roleId;
-                    __doPostBack('DeleteRole', '');
-                }
-            });
+            __doPostBack('DeleteRole', '');
         }
+    });
+
+            // ⛔ Always return false to prevent any form submission
+            return false;
+        }
+
 
         // Filter roles by name (client-side search)
         function filterRoles() {

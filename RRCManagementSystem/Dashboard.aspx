@@ -421,18 +421,27 @@
             .metric-label { font-size: 0.9375rem; }
         }
         
-        .metric-value { 
-            font-size: 2rem;
-            font-weight: 800;
-            line-height: 1;
-            background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        @media (min-width: 640px) {
-            .metric-value { font-size: 2.75rem; }
-        }
+       .metric-value { 
+    /* 1. Start with a smaller font size for mobile */
+    font-size: 1.75rem; 
+    font-weight: 800;
+    
+    /* 2. Add a bit of line-height in case the number needs to wrap */
+    line-height: 1.2; 
+
+
+    overflow-wrap: break-word;
+
+    background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+@media (min-width: 640px) {
+    /* 4. Now, increase the size for tablets and desktops */
+    .metric-value { font-size: 2.75rem; }
+}
         
         /* Modern Section Card */
         .section-card {
@@ -836,6 +845,89 @@
         .animate-delay-2 { animation-delay: 0.2s; opacity: 0; }
         .animate-delay-3 { animation-delay: 0.3s; opacity: 0; }
         .animate-delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+
+        /* ===== vvv ADD THESE NEW STYLES vvv ===== */
+
+/* New GridView Table Styles */
+.grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem; /* 14px */
+}
+
+.grid-table th {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    color: #1e293b;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem; /* 12px */
+    letter-spacing: 0.05em;
+    padding: 1rem 1.5rem; /* 16px 24px */
+    text-align: left;
+    border-bottom: 2px solid #cbd5e1;
+}
+
+.grid-table td {
+    padding: 1rem 1.5rem; /* 16px 24px */
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+    vertical-align: middle;
+}
+
+.grid-table tr:last-child td {
+    border-bottom: none;
+}
+
+.grid-table tr:hover td {
+    background: #f8fafc;
+}
+
+/* "In Stock" Label Style */
+.status-in-stock {
+    color: #059669; /* Green */
+    font-weight: 700;
+    font-size: 0.875rem; /* 14px */
+}
+
+/* "Restock Now!" Flag/Label Style */
+.status-restock-now {
+    color: #dc2626; /* Red */
+    font-weight: 700;
+    font-size: 0.875rem; /* 14px */
+    animation: pulse-red 1.5s ease-in-out infinite;
+}
+
+/* Optional: Animation for the restock flag */
+@keyframes pulse-red {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* vvv ADD THIS STYLE FOR THE DROPDOWN vvv */
+.modern-dropdown {
+    width: 100%;
+    max-width: 300px; /* Or leave at 100% */
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db; /* gray-300 */
+    border-radius: 12px;
+    background-color: white;
+    font-size: 0.875rem; /* 14px */
+    color: #374151; /* gray-700 */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.modern-dropdown:focus {
+    border-color: #3b82f6; /* blue-500 */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    outline: none;
+}
+
+
     </style>
 </asp:Content>
 
@@ -938,20 +1030,89 @@
             });
         </script>
 
+
+<section class="mb-8 sm:mb-10 lg:mb-12">
+    <div class="section-card">
+        <div class="section-header">
+            <i class="fas fa-boxes text-xl"></i>
+            <span>Live Inventory Snapshot</span>
+        </div>
+
+        <%-- UpdatePanel to hold the grid --%>
+        <asp:UpdatePanel ID="upInventory" runat="server" UpdateMode="Conditional">
+            <ContentTemplate>
+                
+                <div class="p-4 sm:p-6 border-b border-gray-200">
+                    <label for="<%= ddlCategoryFilter.ClientID %>" class="block text-sm font-medium text-gray-700 mb-2">
+                        Filter by Category:
+                    </label>
+                    <asp:DropDownList ID="ddlCategoryFilter" runat="server" 
+                        CssClass="modern-dropdown" 
+                        AutoPostBack="true" 
+                        OnSelectedIndexChanged="ddlCategoryFilter_SelectedIndexChanged" 
+                        AppendDataBoundItems="true">
+                    </asp:DropDownList>
+                </div>
+                <div class="overflow-x-auto">
+                    <%-- GridView to display inventory --%>
+                    <asp:GridView ID="gvInventory" runat="server"
+                        AutoGenerateColumns="False"
+                        CssClass="grid-table"
+                        GridLines="None">
+                        <Columns>
+                            <asp:BoundField DataField="Name" HeaderText="Item Name" />
+                           <asp:TemplateField HeaderText="Category">
+    <ItemTemplate>
+        <asp:Label ID="lblCategory" runat="server" 
+            Text='<%# Eval("Type").ToString() == "Safety Gear" ? "Gear" : Eval("Type") %>' />
+    </ItemTemplate>
+</asp:TemplateField>
+                            <asp:BoundField DataField="LiveQuantity" HeaderText="Live Stock" 
+                                ItemStyle-HorizontalAlign="Center" HeaderStyle-HorizontalAlign="Center" />
+                            <asp:BoundField DataField="SnapshotQuantity" HeaderText="Starting Snapshot" 
+                                ItemStyle-HorizontalAlign="Center" HeaderStyle-HorizontalAlign="Center" 
+                                NullDisplayText="N/A" />
+                            <asp:TemplateField HeaderText="Status" HeaderStyle-HorizontalAlign="Center" 
+                                ItemStyle-HorizontalAlign="Center" ItemStyle-Width="200px">
+                                <ItemTemplate>
+                                    <asp:Label ID="lblStatus" runat="server"
+                                        Text="✓ In Stock"
+                                        CssClass="status-in-stock"
+                                        Visible='<%# !Convert.ToBoolean(Eval("RestockFlag")) %>' />
+                                    <asp:Label ID="lblRestockFlag" runat="server"
+                                        Text="Restock Now!"
+                                        CssClass="status-restock-now"
+                                        Visible='<%# Convert.ToBoolean(Eval("RestockFlag")) %>' />
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                        </Columns>
+                        <EmptyDataTemplate>
+                            <div class="p-6 text-center text-gray-500">
+                                No inventory items found.
+                            </div>
+                        </EmptyDataTemplate>
+                    </asp:GridView>
+                </div>
+
+            </ContentTemplate>
+        </asp:UpdatePanel>
+    </div>
+</section>
+
         <section class="mb-8 sm:mb-10 lg:mb-12">
             <div class="section-card">
                 <div class="p-6 sm:p-8">
                     
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                         <h3 class="text-2xl sm:text-3xl font-bold text-gray-800">
-                            <i class="fas fa-chart-bar text-blue-600 mr-2"></i>
+                            <i class="fas fa-chart-line text-blue-600 mr-2"></i>
                             Sales Overview
                         </h3>
                         <div class="flex gap-2">
-                             <button type="button" onclick="setChartType('line')" class="btn-toggle">
+                             <button type="button" onclick="setChartType('line')" class="btn-toggle  active">
                                  <i class="fas fa-chart-line mr-1"></i> Line
                              </button>
-                            <button type="button" onclick="setChartType('bar')" class="btn-toggle active">
+                            <button type="button" onclick="setChartType('bar')" class="btn-toggle">
                                 <i class="fas fa-chart-bar mr-1"></i> Bar
                             </button>
                         </div>

@@ -15,21 +15,21 @@ namespace RRCManagementSystem
         {
             if (Session["UserID"] == null || Session["Role"] == null)
             {
-                Response.Redirect("~/Login.aspx");
+                SafeRedirect("~/Login.aspx");
                 return;
             }
 
             string role = Session["Role"].ToString();
             if (role == "SuperAdmin" || role == "Inspector")
             {
-                Response.Redirect("~/Login.aspx");
+                SafeRedirect("~/Login.aspx");
                 return;
             }
 
             int userId = Convert.ToInt32(Session["UserID"]);
             if (!HasViewPermission(userId, "ManageEmployees"))
             {
-                Response.Redirect("~/Unauthorized.aspx");
+                SafeRedirect("~/Unauthorized.aspx");
                 return;
             }
 
@@ -38,6 +38,13 @@ namespace RRCManagementSystem
                 LoadEmployees();
             }
         }
+
+
+        private void SafeRedirect(string url)
+        {
+            Response.Redirect(url, false);
+            Context.ApplicationInstance.CompleteRequest();
+        } 
 
         private bool HasViewPermission(int adminId, string moduleName)
         {
@@ -81,7 +88,8 @@ namespace RRCManagementSystem
             if (e.CommandName == "EditEmployee")
             {
                 int id = Convert.ToInt32(e.CommandArgument);
-                Response.Redirect("EditEmployee.aspx?EmployeeID=" + id);
+                Response.Redirect("EditEmployee.aspx?EmployeeID=" + id, false);
+                Context.ApplicationInstance.CompleteRequest();
             }
         }
 

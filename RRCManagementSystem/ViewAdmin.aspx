@@ -292,7 +292,6 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
     <div class="container-fluid">
-        <!-- Page Header -->
         <div class="row mb-4">
             <div class="col-12">
                 <nav aria-label="breadcrumb">
@@ -304,9 +303,7 @@
             </div>
         </div>
 
-        <!-- Main Card -->
         <div class="card main-card">
-            <!-- Card Header -->
             <div class="card-header-custom">
                 <h2>
                     <i class="fas fa-users"></i>
@@ -314,9 +311,7 @@
                 </h2>
             </div>
 
-            <!-- Card Body -->
             <div class="card-body-custom">
-                <!-- Search Box -->
                 <div class="search-container d-flex justify-content-between align-items-center flex-wrap">
                     <div class="search-wrapper">
                         <asp:TextBox 
@@ -333,7 +328,6 @@
                     </div>
                 </div>
 
-                <!-- Table Container -->
                 <div class="table-container">
                     <div class="table-responsive">
                         <asp:GridView 
@@ -381,26 +375,30 @@
                                     </ItemTemplate>
                                 </asp:TemplateField>
 
-                                <asp:TemplateField HeaderText="Actions">
-                                    <ItemTemplate>
-                                        <div class="btn-action-group">
-                                            <asp:LinkButton ID="btnEdit" runat="server"
-                                                CommandName="EditAdmin"
-                                                CommandArgument='<%# Eval("UserID") %>'
-                                                CssClass="btn btn-sm btn-primary"
-                                                ToolTip="Edit User">
-                                                <i class="fas fa-edit me-1"></i>Edit
-                                            </asp:LinkButton>
 
-                                            <asp:LinkButton ID="btnDelete" runat="server"
-                                                CssClass="btn btn-sm btn-danger"
-                                                ToolTip="Archive User"
-                                                OnClientClick='<%# "return showArchiveConfirmation(" + Eval("UserID") + ", \u0027" + Eval("EmployeeID") + "\u0027);" %>'>
-                                                <i class="fas fa-archive me-1"></i>Archive
-                                            </asp:LinkButton>
-                                        </div>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
+                                    <asp:TemplateField HeaderText="Actions">
+                                        <ItemTemplate>
+                                            <asp:HiddenField ID="hfRowUserID" runat="server" Value='<%# Eval("UserID") %>' />
+                                            <asp:HiddenField ID="hfRowEmpID" runat="server" Value='<%# Eval("EmployeeID") %>' />
+                                            <div class="btn-action-group">
+                                                <asp:LinkButton ID="btnEdit" runat="server"
+                                                    CommandName="EditAdmin"
+                                                    CommandArgument='<%# Eval("UserID") %>'
+                                                    CssClass="btn btn-sm btn-primary"
+                                                    ToolTip="Edit User">
+                                                    <i class="fas fa-edit me-1"></i>Edit
+                                                </asp:LinkButton>
+
+                                                <button type="button" 
+                                                    class="btn btn-sm btn-danger btn-archive-user" 
+                                                    data-userid='<%# Eval("UserID") %>'
+                                                    data-empid='<%# Eval("EmployeeID") %>'
+                                                    title="Archive User">
+                                                    <i class="fas fa-archive me-1"></i>Archive
+                                                </button>
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
                             </Columns>
 
                             <EmptyDataTemplate>
@@ -417,144 +415,159 @@
                     </div>
                 </div>
 
-                <!-- Message Label -->
                 <asp:Label ID="lblMessage" runat="server" CssClass="text-danger fw-bold mt-3 d-block text-center" />
             </div>
         </div>
     </div>
 
-    <!-- Hidden Fields and Buttons -->
     <asp:HiddenField ID="hfUserToArchive" runat="server" />
     <asp:Button ID="btnConfirmArchive" runat="server" Style="display:none;" OnClick="btnConfirmArchive_Click" />
 
-    <!-- JavaScript Section -->
-    <script type="text/javascript">
-        // Archive Confirmation Dialog
-        function showArchiveConfirmation(userId, employeeId) {
-            if (window.event) window.event.preventDefault();
+<script type="text/javascript">
+    function showArchiveConfirmation(userId, employeeId) {
+        Swal.fire({
+            title: 'Archive User Account?',
+            html: '<div style="text-align:center;">' +
+                '<i class="fas fa-archive" style="font-size:3rem;color:#dc3545;margin-bottom:15px;"></i><br/>' +
+                'This will archive the user account:<br/>' +
+                '<strong style="font-size:1.2rem;color:#4169E1;">' + employeeId + '</strong><br/>' +
+                '<small class="text-muted">You can restore this account later from the Archive.</small>' +
+                '</div>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Archive It!',
+            cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
+            allowOutsideClick: true,
+            allowEscapeKey: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('<%= hfUserToArchive.ClientID %>').value = userId;
 
             Swal.fire({
-                title: 'Archive User Account?',
-                html: '<div style="text-align:center;"><i class="fas fa-archive" style="font-size:3rem;color:#dc3545;margin-bottom:15px;"></i><br/>This will archive the user account:<br/><strong style="font-size:1.2rem;color:#4169E1;">' + employeeId + '</strong><br/><small class="text-muted">You can restore this account later from the Archive.</small></div>',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Archive It!',
-                cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
-                customClass: {
-                    popup: 'animated-popup',
-                    confirmButton: 'btn-confirm-custom',
-                    cancelButton: 'btn-cancel-custom'
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Show loading
-                    Swal.fire({
-                        title: 'Archiving...',
-                        html: 'Please wait while we archive the user account.',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
-                    setTimeout(function () {
-                        document.getElementById('<%= hfUserToArchive.ClientID %>').value = userId;
-                        document.getElementById('<%= btnConfirmArchive.ClientID %>').click();
-                    }, 50);
+                title: 'Archiving...',
+                html: 'Please wait while we archive the user account.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                backdrop: true,
+                didOpen: () => {
+                    Swal.showLoading();
                 }
             });
 
-            return false;
+            setTimeout(function () {
+                document.getElementById('<%= btnConfirmArchive.ClientID %>').click();
+            }, 100);
         }
+        else if (result.dismiss === Swal.DismissReason.cancel) {
+            // ✅ Explicitly close and reset SweetAlert state
+            Swal.close();
+            document.body.style.overflow = 'auto'; // Ensure page scroll is restored
+        }
+    });
+    }
 
-        // Instant Search Filter (Client-Side)
-        function filterAdmins() {
-            var input = document.getElementById('<%= txtSearch.ClientID %>');
-            var filter = input.value.toLowerCase().trim();
-            var table = document.getElementById('<%= gvAdmins.ClientID %>');
+
+    function filterAdmins() {
+        var input = document.getElementById('<%= txtSearch.ClientID %>');
+        var filter = input.value.toLowerCase().trim();
+        var table = document.getElementById('<%= gvAdmins.ClientID %>');
+        
+        if (!table) return;
+
+        var rows = table.getElementsByTagName('tr');
+        var visibleCount = 0;
+        var hasHeader = rows.length > 0 && rows[0].getElementsByTagName('th').length > 0;
+
+        for (var i = hasHeader ? 1 : 0; i < rows.length; i++) {
+            var row = rows[i];
             
-            if (!table) return;
+            if (row.querySelector('.empty-state')) continue;
 
-            var rows = table.getElementsByTagName('tr');
-            var visibleCount = 0;
-            var hasHeader = rows.length > 0 && rows[0].getElementsByTagName('th').length > 0;
+            var empid = row.querySelector('.admin-empid');
+            var name = row.querySelector('.admin-name');
+            var email = row.querySelector('.admin-email');
+            var role = row.querySelector('.admin-role');
 
-            for (var i = hasHeader ? 1 : 0; i < rows.length; i++) {
-                var row = rows[i];
-                
-                // Skip if it's the empty data row
-                if (row.querySelector('.empty-state')) continue;
+            if (empid && name && email && role) {
+                var text = (
+                    empid.textContent + ' ' +
+                    name.textContent + ' ' +
+                    email.textContent + ' ' +
+                    role.textContent
+                ).toLowerCase();
 
-                var empid = row.querySelector('.admin-empid');
-                var name = row.querySelector('.admin-name');
-                var email = row.querySelector('.admin-email');
-                var role = row.querySelector('.admin-role');
-
-                if (empid && name && email && role) {
-                    var text = (
-                        empid.textContent + ' ' +
-                        name.textContent + ' ' +
-                        email.textContent + ' ' +
-                        role.textContent
-                    ).toLowerCase();
-
-                    if (text.includes(filter)) {
-                        row.style.display = '';
-                        visibleCount++;
-                    } else {
-                        row.style.display = 'none';
-                    }
-                }
-            }
-
-            // Show/hide no results message
-            var existingMsg = document.getElementById('noResultsMessage');
-            
-            if (visibleCount === 0 && filter !== '') {
-                if (!existingMsg) {
-                    var msg = document.createElement('div');
-                    msg.id = 'noResultsMessage';
-                    msg.innerHTML = '<i class="fas fa-search-minus"></i><div class="mt-2">No users found matching your search criteria.</div><small class="text-muted">Try adjusting your search terms.</small>';
-                    document.querySelector('.table-responsive').appendChild(msg);
+                if (text.includes(filter)) {
+                    row.style.display = '';
+                    visibleCount++;
                 } else {
-                    existingMsg.style.display = 'block';
+                    row.style.display = 'none';
                 }
-            } else if (existingMsg) {
-                existingMsg.style.display = 'none';
             }
         }
 
-        // Add smooth scroll to top after actions
-        window.addEventListener('load', function() {
-            // Check if there's a success message
-            var lblMessage = document.getElementById('<%= lblMessage.ClientID %>');
-            if (lblMessage && lblMessage.textContent.trim() !== '') {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-
-                // Auto-hide message after 5 seconds
-                setTimeout(function () {
-                    lblMessage.style.transition = 'opacity 0.5s';
-                    lblMessage.style.opacity = '0';
-                    setTimeout(function () {
-                        lblMessage.style.display = 'none';
-                    }, 500);
-                }, 5000);
+        var existingMsg = document.getElementById('noResultsMessage');
+        
+        if (visibleCount === 0 && filter !== '') {
+            if (!existingMsg) {
+                var msg = document.createElement('div');
+                msg.id = 'noResultsMessage';
+                msg.innerHTML = '<i class="fas fa-search-minus"></i>' +
+                               '<div class="mt-2">No users found matching your search criteria.</div>' +
+                               '<small class="text-muted">Try adjusting your search terms.</small>';
+                document.querySelector('.table-responsive').appendChild(msg);
+            } else {
+                existingMsg.style.display = 'block';
             }
-        });
+        } else if (existingMsg) {
+            existingMsg.style.display = 'none';
+        }
+    }
 
-        // Add loading state to edit buttons
-        document.addEventListener('DOMContentLoaded', function () {
-            var editButtons = document.querySelectorAll('[id*="btnEdit"]');
-            editButtons.forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
-                    this.disabled = true;
-                });
+    window.addEventListener('load', function() {
+        var lblMessage = document.getElementById('<%= lblMessage.ClientID %>');
+        if (lblMessage && lblMessage.textContent.trim() !== '') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            setTimeout(function () {
+                lblMessage.style.transition = 'opacity 0.5s';
+                lblMessage.style.opacity = '0';
+                setTimeout(function () {
+                    lblMessage.style.display = 'none';
+                }, 500);
+            }, 5000);
+        }
+    });
+
+    // Use event delegation for archive buttons
+    document.addEventListener('click', function (e) {
+        var archiveBtn = e.target.closest('.btn-archive-user');
+        if (archiveBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var userId = archiveBtn.getAttribute('data-userid');
+            var empId = archiveBtn.getAttribute('data-empid');
+
+            if (userId && empId) {
+                showArchiveConfirmation(userId, empId);
+            }
+        }
+    });
+
+    // Handle edit buttons on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        var editButtons = document.querySelectorAll('[id*="btnEdit"]');
+        editButtons.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+                this.disabled = true;
             });
         });
-    </script>
+    });
+</script>
 
     <style>
         /* SweetAlert Custom Styling */

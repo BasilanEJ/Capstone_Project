@@ -56,8 +56,8 @@
       <h4>Search Client</h4>
       <div class="grid-2">
         <div class="form-group">
-          <label class="form-label">Name or Client ID</label>
-          <asp:TextBox ID="txtClientSearch" runat="server" CssClass="form-control" placeholder="e.g. Delara, Trisha or 1024" />
+          <label class="form-label">Name or ClientNumber</label>
+          <asp:TextBox ID="txtClientSearch" runat="server" CssClass="form-control" placeholder="e.g. Delara, Trisha or CL-2025" />
         </div>
         <div class="form-group" style="display:flex;align-items:flex-end;gap:8px">
           <asp:Button ID="btnSearchClient" runat="server" Text="Search" CssClass="btn btn-primary" OnClick="btnSearchClient_Click" />
@@ -67,25 +67,35 @@
 
       <!-- results -->
       <asp:Panel ID="pnlResults" runat="server" Visible="false">
-        <table class="table-mini">
-          <thead>
-            <tr><th>Client</th><th class="muted">ID</th><th></th></tr>
-          </thead>
-          <tbody>
-            <asp:Repeater ID="rpResults" runat="server" OnItemCommand="rpResults_ItemCommand">
-              <ItemTemplate>
-                <tr>
-                  <td><%# Eval("DisplayName") %></td>
-                  <td class="muted">#<%# Eval("ClientID") %></td>
-                  <td>
-                    <asp:LinkButton runat="server" CommandName="Pick" CommandArgument='<%# Eval("ClientID") %>' CssClass="pill">Select</asp:LinkButton>
-                  </td>
-                </tr>
-              </ItemTemplate>
-            </asp:Repeater>
-          </tbody>
-        </table>
-      </asp:Panel>
+  <table class="table-mini">
+    <thead>
+      <tr>
+        <th>Client</th>
+        <th class="muted">Client No.</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <asp:Repeater ID="rpResults" runat="server" OnItemCommand="rpResults_ItemCommand">
+        <ItemTemplate>
+          <tr>
+            <td><%# Eval("DisplayName") %></td>
+            <td class="muted">#<%# Eval("ClientNumber") %></td>
+            <td>
+              <asp:LinkButton runat="server" 
+                              CommandName="Pick" 
+                              CommandArgument='<%# Eval("ClientID") %>' 
+                              CssClass="pill">
+                Select
+              </asp:LinkButton>
+            </td>
+          </tr>
+        </ItemTemplate>
+      </asp:Repeater>
+    </tbody>
+  </table>
+</asp:Panel>
+
 
       <!-- selected -->
       <asp:Panel ID="pnlChosen" runat="server" Visible="false" style="margin-top:8px">

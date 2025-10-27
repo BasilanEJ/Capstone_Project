@@ -19,14 +19,16 @@ namespace RRCManagementSystem
         {
             if (Session["UserID"] == null || Session["Role"] == null)
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
             var role = Session["Role"].ToString();
             if (role == "SuperAdmin" || role == "Inspector")
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
@@ -123,15 +125,21 @@ namespace RRCManagementSystem
         {
             var dt = new DataTable();
             string sql = @"
-                SELECT TOP 30 c.ClientID,
-                       CASE WHEN ISNULL(LTRIM(RTRIM(c.MiddleName)),'')=''
-                            THEN CONCAT(c.LastName, ', ', c.FirstName)
-                            ELSE CONCAT(c.LastName, ', ', c.FirstName, ' ', c.MiddleName) END AS DisplayName
-                FROM dbo.Clients c
-                WHERE (@qInt IS NOT NULL AND c.ClientID=@qInt)
-                   OR (c.FirstName + ' ' + ISNULL(c.MiddleName,'') + ' ' + c.LastName LIKE '%' + @q + '%')
-                   OR (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName,'') LIKE '%' + @q + '%')
-                ORDER BY c.LastName, c.FirstName;";
+        SELECT TOP 30 
+            c.ClientID,
+            c.ClientNumber,
+            CASE 
+                WHEN ISNULL(LTRIM(RTRIM(c.MiddleName)),'') = '' 
+                    THEN CONCAT(c.LastName, ', ', c.FirstName)
+                ELSE CONCAT(c.LastName, ', ', c.FirstName, ' ', c.MiddleName) 
+            END AS DisplayName
+        FROM dbo.Clients c
+        WHERE 
+            (@qInt IS NOT NULL AND c.ClientID = @qInt)
+            OR (c.FirstName + ' ' + ISNULL(c.MiddleName,'') + ' ' + c.LastName LIKE '%' + @q + '%')
+            OR (c.LastName + ', ' + c.FirstName + ' ' + ISNULL(c.MiddleName,'') LIKE '%' + @q + '%')
+            OR (c.ClientNumber LIKE '%' + @q + '%')
+        ORDER BY c.LastName, c.FirstName;";
 
             int qInt;
             int? asInt = int.TryParse(query, out qInt) ? qInt : (int?)null;
@@ -141,11 +149,14 @@ namespace RRCManagementSystem
             {
                 cmd.Parameters.Add("@q", SqlDbType.NVarChar, 100).Value = (object)query ?? DBNull.Value;
                 cmd.Parameters.Add("@qInt", SqlDbType.Int).Value = (object)asInt ?? DBNull.Value;
+
                 using (var da = new SqlDataAdapter(cmd))
                     da.Fill(dt);
             }
+
             return dt;
         }
+
 
         private (string display, int bookingId, decimal remaining) LoadClientSummary(int clientId)
         {

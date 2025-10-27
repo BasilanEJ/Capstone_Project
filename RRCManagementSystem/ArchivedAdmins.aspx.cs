@@ -23,6 +23,35 @@ namespace RRCManagementSystem
             {
                 LoadArchivedAdmins(null);
             }
+            else
+            {
+                // Handle postback from JavaScript
+                string eventTarget = Request.Form["__EVENTTARGET"];
+                string eventArgument = Request.Form["__EVENTARGUMENT"];
+
+                if (!string.IsNullOrEmpty(eventTarget) && eventTarget == gvArchivedAdmins.UniqueID)
+                {
+                    if (!string.IsNullOrEmpty(eventArgument))
+                    {
+                        var parts = eventArgument.Split('$');
+                        if (parts.Length == 2)
+                        {
+                            string action = parts[0];
+                            if (int.TryParse(parts[1], out int userID))
+                            {
+                                if (action == "RestoreAdmin")
+                                {
+                                    RestoreAdmin(userID);
+                                }
+                                else if (action == "DeletePermanently")
+                                {
+                                    DeleteAdmin(userID);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         /* =========================
@@ -82,23 +111,17 @@ namespace RRCManagementSystem
 
         protected void gvArchivedAdmins_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            var parts = (e.CommandArgument ?? "").ToString().Split('$');
-            string cmdName = e.CommandName;
-            string arg = e.CommandArgument?.ToString();
-
-            if (parts.Length == 2)
+            // This handles direct LinkButton clicks (not JavaScript postbacks)
+            if (!int.TryParse(e.CommandArgument?.ToString(), out int userID))
             {
-                cmdName = parts[0];
-                arg = parts[1];
+                return;
             }
 
-            if (!int.TryParse(arg, out int userID)) return;
-
-            if (cmdName == "RestoreAdmin")
+            if (e.CommandName == "RestoreAdmin")
             {
                 RestoreAdmin(userID);
             }
-            else if (cmdName == "DeletePermanently")
+            else if (e.CommandName == "DeletePermanently")
             {
                 DeleteAdmin(userID);
             }
@@ -115,38 +138,47 @@ namespace RRCManagementSystem
                 try
                 {
                     conn.Open();
-                    int rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
 
+                    int rows = 0;
+
+                    // ✅ Read and close the reader immediately
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            rows = reader.GetInt32(0);
+                        }
+                    } // Reader is disposed here, connection is freed
+
+                    // ✅ Now register the script after reader is closed
                     if (rows > 0)
                     {
-                        // ✅ SweetAlert shows first, then redirect after 3 seconds
                         string script = @"
-                            Swal.fire({
-                                title: 'Restore Successful!',
-                                text: 'The admin account has been restored.',
-                                icon: 'success',
-                                timer: 3000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                window.location.href = 'ViewAdmin.aspx';
-                            });";
+                    Swal.fire({
+                        title: 'Restore Successful!',
+                        text: 'The admin account has been restored.',
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = 'ArchivedAdmins.aspx';
+                    });";
 
                         ScriptManager.RegisterStartupScript(this, GetType(), "RestoreAlert", script, true);
                     }
                     else
                     {
-                        lblMessage.Text = "⚠ Admin not found or not in Archived status.";
-                        LoadArchivedAdmins(txtSearch.Text); // Reload only if no success
+                        lblMessage.Text = "<div class='alert alert-danger'><i class='fas fa-exclamation-triangle alert-icon'></i>Admin not found or not in Archived status.</div>";
+                        LoadArchivedAdmins(txtSearch.Text);
                     }
                 }
                 catch (Exception ex)
                 {
-                    lblMessage.Text = "⚠ Error restoring admin: " + ex.Message;
-                    LoadArchivedAdmins(txtSearch.Text); // Reload only if there is an error
+                    lblMessage.Text = "<div class='alert alert-danger'><i class='fas fa-exclamation-triangle alert-icon'></i>Error restoring admin: " + ex.Message + "</div>";
+                    LoadArchivedAdmins(txtSearch.Text);
                 }
             }
         }
-
 
         private void DeleteAdmin(int userID)
         {
@@ -159,34 +191,43 @@ namespace RRCManagementSystem
                 try
                 {
                     conn.Open();
-                    int rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
 
+                    int rows = 0;
+
+                    // ✅ Read and close the reader immediately
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            rows = reader.GetInt32(0);
+                        }
+                    } // Reader is disposed here, connection is freed
+
+                    // ✅ Now register the script after reader is closed
                     if (rows > 0)
                     {
-                        // ✅ SweetAlert shows first, then redirect after 3 seconds
                         string script = @"
-                            Swal.fire({
-                                title: 'Delete Successful!',
-                                text: 'The admin account has been permanently deleted.',
-                                icon: 'success',
-                                timer: 3000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                window.location.href = 'ViewAdmin.aspx';
-                            });";
+                    Swal.fire({
+                        title: 'Delete Successful!',
+                        text: 'The admin account has been permanently deleted.',
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = 'ArchivedAdmins.aspx';
+                    });";
 
                         ScriptManager.RegisterStartupScript(this, GetType(), "DeleteAlert", script, true);
                     }
                     else
                     {
-                        lblMessage.Text = "⚠ Admin could not be deleted (must be Role=Admin and Status=Archived).";
-                        LoadArchivedAdmins(txtSearch.Text); // Reload only if no success
+                        LoadArchivedAdmins(txtSearch.Text);
                     }
                 }
                 catch (Exception ex)
                 {
-                    lblMessage.Text = "⚠ Error deleting admin: " + ex.Message;
-                    LoadArchivedAdmins(txtSearch.Text); // Reload only if there is an error
+                    lblMessage.Text = "<div class='alert alert-danger'><i class='fas fa-exclamation-triangle alert-icon'></i>Error deleting admin: " + ex.Message + "</div>";
+                    LoadArchivedAdmins(txtSearch.Text);
                 }
             }
         }

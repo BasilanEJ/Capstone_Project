@@ -523,9 +523,81 @@ namespace RRCManagementSystem
                     int sqm = Session["SQM"] != null ? Convert.ToInt32(Session["SQM"]) : 0;
                     decimal usage = GetChemicalUsageBasedOnSQMProc(con, tx, sqm);
 
-                    // 5) Equipments (each selected = quantity 1)
+                    // ✅ NEW: Validate Equipment Selection
                     int selectedEquipCount = 0;
                     var seen = new System.Collections.Generic.HashSet<int>();
+                    foreach (GridViewRow row in gvEquipments.Rows)
+                    {
+                        var chk = row.FindControl("chkAssignEquip") as CheckBox;
+                        if (chk != null && chk.Checked)
+                        {
+                            selectedEquipCount++;
+                        }
+                    }
+
+                    if (selectedEquipCount == 0)
+                    {
+                        lblMessage.Text = "⚠️ Please select at least one equipment.";
+                        lblMessage.ForeColor = System.Drawing.Color.Red;
+                        tx.Rollback();
+                        return;
+                    }
+
+                    // ✅ NEW: Validate Bottled Chemical Selection
+                    int selectedBottledChemCount = 0;
+                    foreach (GridViewRow row in gvChemicals.Rows)
+                    {
+                        var chk = row.FindControl("chkUseChemical") as CheckBox;
+                        if (chk != null && chk.Checked)
+                        {
+                            selectedBottledChemCount++;
+                        }
+                    }
+
+                    if (selectedBottledChemCount == 0)
+                    {
+                        lblMessage.Text = "⚠️ Please select at least one bottled chemical.";
+                        lblMessage.ForeColor = System.Drawing.Color.Red;
+                        tx.Rollback();
+                        return;
+                    }
+
+                    // ✅ NEW: Validate Sachet Chemical Quantity
+                    int totalSachetQty = 0;
+                    foreach (GridViewRow row in gvSachetChemicals.Rows)
+                    {
+                        int qty = 0;
+                        int.TryParse(((TextBox)row.FindControl("txtAssignSachet"))?.Text ?? "0", out qty);
+                        totalSachetQty += qty;
+                    }
+
+                    if (totalSachetQty == 0)
+                    {
+                        lblMessage.Text = "⚠️ Please assign at least one sachet pack chemical.";
+                        lblMessage.ForeColor = System.Drawing.Color.Red;
+                        tx.Rollback();
+                        return;
+                    }
+
+                    // ✅ NEW: Validate Safety Gear Quantity
+                    int totalSafetyQty = 0;
+                    foreach (GridViewRow row in gvSafetyGears.Rows)
+                    {
+                        int qty = 0;
+                        int.TryParse(((TextBox)row.FindControl("txtAssignSafety"))?.Text ?? "0", out qty);
+                        totalSafetyQty += qty;
+                    }
+
+                    if (totalSafetyQty == 0)
+                    {
+                        lblMessage.Text = "⚠️ Please assign at least one safety gear item.";
+                        lblMessage.ForeColor = System.Drawing.Color.Red;
+                        tx.Rollback();
+                        return;
+                    }
+
+                    // 5) Equipments (each selected = quantity 1)
+                    seen.Clear(); // Reset the HashSet
                     foreach (GridViewRow row in gvEquipments.Rows)
                     {
                         var chk = row.FindControl("chkAssignEquip") as CheckBox;
@@ -558,16 +630,7 @@ namespace RRCManagementSystem
                                 ins.Parameters.Add("@QuantityAssigned", SqlDbType.Int).Value = 1;
                                 ins.ExecuteNonQuery();
                             }
-                            selectedEquipCount++;
                         }
-                    }
-
-                    if (selectedEquipCount == 0)
-                    {
-                        lblMessage.Text = "⚠️ Please select at least one equipment.";
-                        lblMessage.ForeColor = System.Drawing.Color.Red;
-                        tx.Rollback();
-                        return;
                     }
 
                     // 6) Bottled chemicals

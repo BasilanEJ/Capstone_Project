@@ -344,31 +344,38 @@
 
                 <asp:Panel ID="pnlEditMode" runat="server" Visible="true">
 
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                            <i class="fas fa-user text-blue-600"></i>
-                            Personal Information
-                        </h3>
-                        
-                        <div class="form-grid">
-                            <div class="form-field">
-                                <label class="form-label">First Name</label>
-                                <asp:TextBox ID="txtFirstName" runat="server" CssClass="form-input-readonly" ReadOnly="true" />
-                            </div>
-                            <div class="form-field">
-                                <label class="form-label">Middle Name</label>
-                                <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-input-readonly" ReadOnly="true" />
-                            </div>
-                            <div class="form-field">
-                                <label class="form-label">Last Name</label>
-                                <asp:TextBox ID="txtLastName" runat="server" CssClass="form-input-readonly" ReadOnly="true" />
-                            </div>
-                            <div class="form-field">
-                                <label class="form-label">Full Name</label>
-                                <asp:TextBox ID="txtName" runat="server" CssClass="form-input-readonly" ReadOnly="true" />
-                            </div>
-                        </div>
-                    </div>
+                 <div class="mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+        <i class="fas fa-user text-blue-600"></i>
+        Personal Information
+    </h3>
+    
+    <div class="form-grid mb-4">
+        <div class="form-field">
+            <label class="form-label">Client Number</label>
+            <asp:TextBox ID="txtClientNumber" runat="server" CssClass="form-input-readonly" ReadOnly="true" />
+        </div>
+    </div>
+    
+    <div class="form-grid">
+        <div class="form-field">
+            <label class="form-label">First Name</label>
+            <asp:TextBox ID="txtFirstName" runat="server" CssClass="form-input-readonly" ReadOnly="true" />
+        </div>
+        <div class="form-field">
+            <label class="form-label">Middle Name</label>
+            <asp:TextBox ID="txtMiddleName" runat="server" CssClass="form-input-readonly" ReadOnly="true" />
+        </div>
+        <div class="form-field">
+            <label class="form-label">Last Name</label>
+            <asp:TextBox ID="txtLastName" runat="server" CssClass="form-input-readonly" ReadOnly="true" />
+        </div>
+        <div class="form-field">
+            <label class="form-label">Full Name</label>
+            <asp:TextBox ID="txtName" runat="server" CssClass="form-input-readonly" ReadOnly="true" />
+        </div>
+    </div>
+</div>
 
                     <div class="section-divider"></div>
 

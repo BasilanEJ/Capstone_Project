@@ -17,6 +17,7 @@ namespace RRCManagementSystem
     {
         private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
+        private bool isFirstGrid = true;
         protected void Page_Load(object sender, EventArgs e)
         {
             if (!IsPostBack)
@@ -97,6 +98,9 @@ namespace RRCManagementSystem
 
                     doc.Open();
 
+                    // RESET the flag for first grid
+                    isFirstGrid = true;
+
                     // Add all grids to PDF
                     AddGridToPDF(doc, gvUserAccounts, "👤 User Accounts");
                     AddGridToPDF(doc, gvInquiries, "📬 Inquiries");
@@ -145,11 +149,9 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
-                // Log the actual error
                 System.Diagnostics.Debug.WriteLine($"ERROR in btnExportPDF_Click: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
 
-                // Try to show error to user (may not work if response already started)
                 try
                 {
                     lblMessage.Text = "Error generating PDF: " + ex.Message;
@@ -157,10 +159,10 @@ namespace RRCManagementSystem
                 }
                 catch
                 {
-                    // Response already sent, can't show message
                 }
             }
         }
+
 
         protected void btnExportTeamsSummary_Click(object sender, EventArgs e)
         {
@@ -615,25 +617,81 @@ namespace RRCManagementSystem
             return dt;
         }
 
-        private void AddGridToPDF(Document doc, GridView grid, string title)
+        private void AddGridToPDF(Document doc, GridView grid, string sectionTitle)
         {
-            if (grid.Rows.Count == 0) return;
-            doc.NewPage();
-            doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
-            doc.Add(new Paragraph("Generated at: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
-            doc.Add(new Paragraph(" "));
+            // Force new page for each section (except the first one)
+            if (!isFirstGrid)
+            {
+                doc.NewPage();
+            }
+            isFirstGrid = false;
+
+            // Section title
+            var titleFont = FontFactory.GetFont("Arial", 14, Font.BOLD, BaseColor.BLACK);
+            var title = new Paragraph(sectionTitle, titleFont)
+            {
+                SpacingBefore = 15f,
+                SpacingAfter = 5f
+            };
+            doc.Add(title);
+
+            // ADD DATE RANGE under the section title
+            if (!string.IsNullOrEmpty(txtFromDate.Text) && !string.IsNullOrEmpty(txtToDate.Text))
+            {
+                string dateRange = $"Report Period: {txtFromDate.Text} to {txtToDate.Text}";
+                var dateFont = FontFactory.GetFont("Arial", 10, Font.ITALIC, BaseColor.DARK_GRAY);
+                var dateParagraph = new Paragraph(dateRange, dateFont)
+                {
+                    SpacingAfter = 10f
+                };
+                doc.Add(dateParagraph);
+            }
+
+            // CHECK IF GRID HAS NO DATA
+            if (grid.Rows.Count == 0)
+            {
+                // Show "No data available" message
+                var noDataFont = FontFactory.GetFont("Arial", 12, Font.ITALIC, BaseColor.GRAY);
+                var noDataMsg = new Paragraph("No data available for this report.", noDataFont)
+                {
+                    Alignment = Element.ALIGN_CENTER,
+                    SpacingBefore = 30f,
+                    SpacingAfter = 10f
+                };
+                doc.Add(noDataMsg);
+
+                // Show generated date
+                var generatedFont = FontFactory.GetFont("Arial", 10, Font.NORMAL, BaseColor.DARK_GRAY);
+                var generatedMsg = new Paragraph($"Generated at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}", generatedFont)
+                {
+                    Alignment = Element.ALIGN_CENTER,
+                    SpacingAfter = 20f
+                };
+                doc.Add(generatedMsg);
+
+                return; // Exit early, no table to add
+            }
+
+            // Continue with table creation if data exists
             int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
-            PdfPTable table = new PdfPTable(visibleCols)
+            if (visibleCols == 0) return;
+
+            var table = new PdfPTable(visibleCols)
             {
                 WidthPercentage = 100,
-                SpacingBefore = 10f
+                SpacingBefore = 5f,
+                SpacingAfter = 10f
             };
+
+            // Header row
             if (grid.HeaderRow != null)
             {
                 foreach (TableCell hc in grid.HeaderRow.Cells)
                 {
-                    string headerText = HttpUtility.HtmlDecode(GetCellText(hc));
-                    PdfPCell headerCell = new PdfPCell(new Phrase(headerText, FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
+                    string headerText = HttpUtility.HtmlDecode(hc.Text ?? "").Trim();
+                    PdfPCell headerCell = new PdfPCell(new Phrase(
+                        headerText,
+                        FontFactory.GetFont("Arial", 12, Font.BOLD, BaseColor.WHITE)))
                     {
                         BackgroundColor = BaseColor.DARK_GRAY,
                         HorizontalAlignment = Element.ALIGN_CENTER,
@@ -642,6 +700,8 @@ namespace RRCManagementSystem
                     table.AddCell(headerCell);
                 }
             }
+
+            // Data rows
             foreach (GridViewRow row in grid.Rows)
             {
                 for (int c = 0; c < row.Cells.Count; c++)
@@ -711,12 +771,10 @@ namespace RRCManagementSystem
             string userName = Session["Name"]?.ToString() ?? "Unknown User";
             string logoPath = Server.MapPath("~/Images/logorrc.png");
 
-            var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 60f, 40f); // Increased top/bottom margins
+            var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 60f, 40f);
             using (var ms = new MemoryStream())
             {
                 var writer = PdfWriter.GetInstance(doc, ms);
-
-                // Use the new custom header/footer event handler with specific title
                 writer.PageEvent = new PdfHeaderFooter(title, userName, logoPath);
 
                 string userPassword = "default123";
@@ -727,10 +785,13 @@ namespace RRCManagementSystem
                     PdfWriter.ENCRYPTION_AES_128
                 );
                 doc.Open();
-
-                // Add report content title (optional, since it's already in header)
-                doc.Add(new Paragraph(title, FontFactory.GetFont("Arial", 16, Font.BOLD)));
-                doc.Add(new Paragraph(" ")); // Spacing
+                if (!string.IsNullOrEmpty(txtFromDate.Text) && !string.IsNullOrEmpty(txtToDate.Text))
+                {
+                    string dateRange = $"Report Period: {txtFromDate.Text} to {txtToDate.Text}";
+                    var dateFont = FontFactory.GetFont("Arial", 11, Font.ITALIC, BaseColor.DARK_GRAY);
+                    doc.Add(new Paragraph(dateRange, dateFont));
+                    doc.Add(new Paragraph(" "));
+                }
 
                 int visibleCols = grid.HeaderRow?.Cells.Count ?? grid.Columns.Count;
                 var table = new PdfPTable(visibleCols) { WidthPercentage = 100, SpacingBefore = 10f };

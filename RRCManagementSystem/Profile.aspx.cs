@@ -47,6 +47,9 @@ namespace RRCManagementSystem
                     {
                         if (r.Read())
                         {
+                            // ✅ Load Client Number
+                            txtClientNumber.Text = r["ClientNumber"]?.ToString() ?? "N/A";
+
                             string first = r["FirstName"]?.ToString() ?? "";
                             string middle = r["MiddleName"]?.ToString() ?? "";
                             string last = r["LastName"]?.ToString() ?? "";

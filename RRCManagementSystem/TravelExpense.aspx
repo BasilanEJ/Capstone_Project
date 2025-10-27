@@ -1,10 +1,12 @@
 ﻿<%@ Page Title="Travel Expense Management" Language="C#" MasterPageFile="~/SuperAdmin.Master" AutoEventWireup="true" CodeBehind="TravelExpense.aspx.cs" Inherits="RRCManagementSystem.TravelExpense" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="HeadContent" runat="server">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <style>
         /* ===================================================================
-           GLOBAL STYLES & VARIABLES
-           =================================================================== */
+            GLOBAL STYLES & VARIABLES
+            =================================================================== */
         :root {
             --primary-blue: #2563eb;
             --primary-dark: #1e40af;
@@ -23,13 +25,13 @@
 
         .expense-container {
             padding: 30px 15px;
-            max-width: 1400px; /* Increased max-width slightly for more table space */
+            max-width: 1400px;
             margin: 0 auto;
         }
 
         /* ===================================================================
-           HEADER & CARD STYLES
-           =================================================================== */
+            HEADER & CARD STYLES
+            =================================================================== */
 
         .expense-header {
             background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-blue) 100%);
@@ -37,14 +39,14 @@
             padding: 30px;
             border-radius: 16px; 
             margin-bottom: 40px;
-            box-shadow: 0 8px 30px rgba(30, 64, 175, 0.4); /* Enhanced shadow */
+            box-shadow: 0 8px 30px rgba(30, 64, 175, 0.4);
             position: relative;
             overflow: hidden; 
         }
 
         .expense-header h1 {
             font-size: 32px;
-            font-weight: 800; /* Bolder */
+            font-weight: 800;
             letter-spacing: -0.8px;
         }
 
@@ -71,8 +73,8 @@
         }
 
         /* ===================================================================
-           FORM CONTROL STYLES
-           =================================================================== */
+            FORM CONTROL STYLES
+            =================================================================== */
 
         .form-select, .form-control {
             border-radius: 10px;
@@ -80,7 +82,7 @@
             padding: 12px 15px;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
             color: var(--text-dark);
-            width: 100%; /* Ensure full width */
+            width: 100%;
         }
         
         .form-select:focus, .form-control:focus {
@@ -114,8 +116,8 @@
         }
         
         /* ===================================================================
-           TABLE STYLES & ALIGNMENT FIXES (CRITICAL CHANGES)
-           =================================================================== */
+            TABLE STYLES & ALIGNMENT FIXES
+            =================================================================== */
 
         .table-responsive {
             border: none;
@@ -127,11 +129,11 @@
         .table {
             border-collapse: separate;
             border-spacing: 0;
-            margin-bottom: 0; /* Remove default margin */
+            margin-bottom: 0;
         }
 
         .table > :not(caption) > * > * {
-            padding: 18px 20px; /* Slightly more vertical padding */
+            padding: 18px 20px;
             vertical-align: middle;
             border-top: none;
         }
@@ -142,10 +144,9 @@
             color: #475569; 
             background-color: #f1f5f9; 
             border-bottom: 1px solid #e2e8f0;
-            text-align: left; /* Default alignment */
+            text-align: left;
         }
         
-        /* Explicit Alignment Classes: Used only when content shouldn't be left-aligned */
         .table thead th.align-center,
         .table tbody td.align-center {
             text-align: center;
@@ -156,12 +157,11 @@
             text-align: right;
         }
         
-        /* Specific content styles */
         .badge {
-            padding: 0.7em 1.1em; /* Increased padding */
+            padding: 0.7em 1.1em;
             font-size: 90%;
             font-weight: 700;
-            border-radius: 25px; /* More rounded */
+            border-radius: 25px;
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -177,17 +177,124 @@
         }
 
         .text-muted-small {
-            color: #94a3b8 !important; /* Lighter text color for dates */
+            color: #94a3b8 !important;
             font-size: 12px;
             line-height: 1.2;
-            display: block; /* Ensure small elements stack cleanly in right-aligned cells */
+            display: block;
+        }
+
+        /* ===================================================================
+            MODAL STYLES
+            =================================================================== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: block;
+        }
+
+        .modal-dialog-custom {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlideIn 0.3s ease forwards;
+        }
+
+        .modal-dialog-custom.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .modal-header-custom {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-blue) 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header-custom h3 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body-custom {
+            padding: 30px;
+        }
+
+        .modal-footer-custom {
+            padding: 20px 30px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
         }
     </style>
 </asp:Content>
 
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
     <div class="expense-container">
-        <!-- Main Header -->
         <div class="expense-header">
             <h1><i class="fas fa-map-marked-alt"></i> Travel Expense Configuration</h1>
             <p>Define standardized travel allowances per region and city for accurate cost quotations. 🚀</p>
@@ -196,11 +303,10 @@
         <asp:UpdatePanel ID="UpdatePanelMain" runat="server" UpdateMode="Conditional">
             <ContentTemplate>
                 
-                <!-- Expense Form Card -->
                 <div class="modern-card">
                     <div class="modern-card-title">
                         <i class="fas fa-plus-circle text-primary"></i>
-                        <asp:Label ID="lblFormTitle" runat="server" Text="Add New Travel Expense" />
+                        Add New Travel Expense
                     </div>
                     
                     <asp:Label ID="lblMessage" runat="server" CssClass="alert d-block mb-4" Visible="false" />
@@ -237,17 +343,12 @@
                             <asp:HiddenField ID="hfTravelExpenseID" runat="server" Value="0" />
                             <asp:HiddenField ID="hfIsActive" runat="server" Value="True" /> 
                             
-                            <asp:Button ID="btnCancel" runat="server" Text="Cancel Edit" 
-                                CssClass="btn btn-secondary me-3" OnClick="btnCancel_Click" Visible="false" />
-                            
                             <asp:Button ID="btnSave" runat="server" Text="Save Expense" 
-                                CssClass="btn btn-primary" OnClick="btnSave_Click">
-                            </asp:Button>
+                                CssClass="btn btn-primary" OnClick="btnSave_Click" />
                         </div>
                     </div>
                 </div>
                 
-
                 <div class="modern-card">
                     <div class="modern-card-title">
                         <i class="fas fa-filter text-info"></i>Filter & Search Expenses
@@ -264,17 +365,17 @@
                             <asp:TextBox ID="txtSearchCity" runat="server" CssClass="form-control" 
                                 placeholder="Type city name..." />
                         </div>
-                        <div class="col-md-2 d-flex gap-2">
-                            <asp:Button ID="btnSearch" runat="server" Text="Apply" 
-                                CssClass="btn btn-info w-50" OnClick="ApplyFilter">
-                            </asp:Button>
-                            <asp:Button ID="btnClearFilter" runat="server" Text="Clear" 
-                                CssClass="btn btn-secondary w-50" OnClick="btnClearFilter_Click" />
+                        <div class="col-md-2">
+                             <div class="d-grid d-md-flex gap-2">
+                                <asp:Button ID="btnSearch" runat="server" Text="Apply" 
+                                    CssClass="btn btn-info" OnClick="ApplyFilter" />
+                                <asp:Button ID="btnClearFilter" runat="server" Text="Clear" 
+                                    CssClass="btn btn-secondary" OnClick="btnClearFilter_Click" />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Configured Expense List Card -->
                 <div class="modern-card p-0">
                     <div class="modern-card-title p-4 pb-3 mb-0 d-flex justify-content-between align-items-center">
                         <span class="m-0">
@@ -293,7 +394,7 @@
                                 GridLines="None" HeaderStyle-CssClass="table-dark-header">
                                 <Columns>
                                     <asp:BoundField DataField="TravelExpenseID" HeaderText="ID" Visible="false" />
-                                   
+                                    
                                     <asp:TemplateField HeaderText="Region">
                                         <ItemTemplate>
                                             <span class="table-row-data">
@@ -329,7 +430,6 @@
 
                                     <asp:TemplateField HeaderText="Last Updated" HeaderStyle-CssClass="align-right" ItemStyle-CssClass="align-right" ItemStyle-Width="180px">
                                         <ItemTemplate>
-
                                             <span class="text-muted-small">
                                                 <i class="fas fa-clock"></i>
                                                 <%# Eval("UpdatedAt") != DBNull.Value 
@@ -338,7 +438,6 @@
                                             </span>
                                         </ItemTemplate>
                                     </asp:TemplateField>
-
 
                                     <asp:TemplateField HeaderText="Actions" HeaderStyle-CssClass="align-center" ItemStyle-CssClass="align-center" ItemStyle-Width="180px">
                                         <ItemTemplate>
@@ -349,14 +448,12 @@
                                                 ToolTip="Edit">
                                                 <i class="fas fa-edit"></i> Edit
                                             </asp:LinkButton>
-                                            <asp:LinkButton ID="btnDelete" runat="server" 
-                                                CommandName="DeleteExpense" 
-                                                CommandArgument='<%# Eval("TravelExpenseID") %>'
-                                                CssClass="btn btn-sm btn-danger" 
-                                                ToolTip="Delete"
-                                                OnClientClick='<%# "return confirmDelete(" + Eval("TravelExpenseID") + ");" %>'>
+                                            <button type="button" 
+                                                class="btn btn-sm btn-danger" 
+                                                onclick='confirmDelete(<%# Eval("TravelExpenseID") %>);'
+                                                title="Delete">
                                                 <i class="fas fa-trash"></i> Delete
-                                            </asp:LinkButton>
+                                            </button>
                                         </ItemTemplate>
                                     </asp:TemplateField>
                                 </Columns>
@@ -365,15 +462,86 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Edit Modal -->
+                <div id="editModal" class="modal-overlay">
+                    <div class="modal-dialog-custom">
+                        <div class="modal-header-custom">
+                            <h3><i class="fas fa-edit"></i> Edit Travel Expense</h3>
+                            <button type="button" class="modal-close-btn" onclick="closeEditModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body-custom">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label for="<%= ddlEditRegion.ClientID %>" class="form-label">
+                                        <i class="fas fa-globe me-1 text-primary"></i>Region <span class="text-danger">*</span>
+                                    </label>
+                                    <asp:DropDownList ID="ddlEditRegion" runat="server" CssClass="form-select" 
+                                        AutoPostBack="true" OnSelectedIndexChanged="ddlEditRegion_SelectedIndexChanged">
+                                    </asp:DropDownList>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="<%= ddlEditCity.ClientID %>" class="form-label">
+                                        <i class="fas fa-city me-1 text-success"></i>City/Municipality <span class="text-danger">*</span>
+                                    </label>
+                                    <asp:DropDownList ID="ddlEditCity" runat="server" CssClass="form-select">
+                                        <asp:ListItem Value="" Text="-- Select Region First --" />
+                                    </asp:DropDownList>
+                                </div>
+
+                                <div class="col-12">
+                                    <label for="<%= txtEditTravelPrice.ClientID %>" class="form-label">
+                                        <i class="fas fa-peso-sign me-1 text-warning"></i>Travel Expense (₱) <span class="text-danger">*</span>
+                                    </label>
+                                    <asp:TextBox ID="txtEditTravelPrice" runat="server" CssClass="form-control" 
+                                        TextMode="Number" step="0.01" min="0" placeholder="e.g., 500.00" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer-custom">
+                            <asp:HiddenField ID="hfEditTravelExpenseID" runat="server" Value="0" />
+                            <asp:HiddenField ID="hfEditIsActive" runat="server" Value="True" />
+                            
+                            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <asp:Button ID="btnUpdateExpense" runat="server" Text="Update Expense" 
+                                CssClass="btn btn-primary" OnClick="btnUpdateExpense_Click" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden Delete Button and HiddenField -->
+                <asp:HiddenField ID="hfDeleteID" runat="server" Value="0" />
+                <asp:Button ID="btnDeleteHidden" runat="server" 
+                    Style="display:none;" 
+                    OnClick="btnDeleteHidden_Click" />
                 
             </ContentTemplate>
         </asp:UpdatePanel>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> <!-- Ensure FontAwesome is loaded -->
     <script>
-        // Use SweetAlert2 for Delete Confirmation
+        // Open edit modal
+        function openEditModal() {
+            document.getElementById('editModal').classList.add('show');
+            document.querySelector('.modal-dialog-custom').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close edit modal
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+            document.querySelector('.modal-dialog-custom').classList.remove('show');
+            document.body.style.overflow = 'auto';
+            return false;
+        }
+
+        // Delete confirmation with hidden button trigger
         function confirmDelete(id) {
             Swal.fire({
                 title: 'Confirm Deletion',
@@ -386,26 +554,23 @@
                 cancelButtonText: '<i class="fas fa-ban"></i> Cancel',
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Manually trigger the postback for the Delete button
-                    const deleteButton = document.querySelector(`a[commandname="DeleteExpense"][commandargument="${id}"]`);
-                    if (deleteButton) {
-                        __doPostBack(deleteButton.name, '');
-                    }
+                    // Store the ID in hidden field
+                    document.getElementById('<%= hfDeleteID.ClientID %>').value = id;
+                    
+                    // Trigger the hidden delete button
+                    document.getElementById('<%= btnDeleteHidden.ClientID %>').click();
                 }
             });
             return false;
         }
 
-        // CORRECTED: Script to handle SweetAlert messages after postback (Called by C#)
+        // Show SweetAlert message
         function showSwalMessage(title, message, icon) {
             Swal.fire({
                 icon: icon,
                 title: title,
                 text: message,
-                showConfirmButton: false,
-                timer: 4000,
-                toast: true,
-                position: 'top-end'
+                confirmButtonColor: '#2563eb'
             });
         }
     </script>

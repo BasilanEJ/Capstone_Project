@@ -108,25 +108,28 @@
                     </div>
                 </asp:Panel>
 
-                <asp:Panel ID="pnlClients" runat="server" Visible="false" CssClass="report-panel">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-2xl font-semibold text-gray-800">✅ Approved Clients</h3>
-                        <asp:Button ID="btnExportClients" runat="server" Text="Export Clients to PDF" CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" OnClick="btnExportClients_Click" />
-                    </div>
-                    <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                        <asp:GridView ID="gvApprovedClients" runat="server" AutoGenerateColumns="False" CssClass="min-w-full custom-table" HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
-                            <Columns>
-                                <asp:TemplateField HeaderText="Client ID">
-                                    <ItemTemplate><%# "Client" + String.Format("{0:D4}", Eval("ClientID")) %></ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:BoundField DataField="FullName" HeaderText="Name" />
-                                <asp:BoundField DataField="Email" HeaderText="Email" />
-                                <asp:BoundField DataField="Address" HeaderText="Address" />
-                                <asp:BoundField DataField="CreatedAt" HeaderText="Date Created" DataFormatString="{0:yyyy-MM-dd}" />
-                            </Columns>
-                        </asp:GridView>
-                    </div>
-                </asp:Panel>
+              <asp:Panel ID="pnlClients" runat="server" Visible="false" CssClass="report-panel">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-2xl font-semibold text-gray-800">✅ Approved Clients</h3>
+        <asp:Button ID="btnExportClients" runat="server" Text="Export Clients to PDF" CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" OnClick="btnExportClients_Click" />
+    </div>
+    <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+        <asp:GridView ID="gvApprovedClients" runat="server" AutoGenerateColumns="False"
+            CssClass="min-w-full custom-table"
+            HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider"
+            RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
+
+            <Columns>
+                <asp:BoundField DataField="ClientNumber" HeaderText="Client Number" />
+                <asp:BoundField DataField="FullName" HeaderText="Name" />
+                <asp:BoundField DataField="Email" HeaderText="Email" />
+                <asp:BoundField DataField="Address" HeaderText="Address" />
+                <asp:BoundField DataField="CreatedAt" HeaderText="Date Created" DataFormatString="{0:yyyy-MM-dd}" />
+            </Columns>
+        </asp:GridView>
+    </div>
+</asp:Panel>
+
 
              
 

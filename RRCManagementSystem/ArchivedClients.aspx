@@ -30,7 +30,8 @@
                             </div>
                         </EmptyDataTemplate>
                         <Columns>
-                            <asp:BoundField DataField="ClientID" HeaderText="Client ID" ReadOnly="True" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200" />
+                            <asp:BoundField DataField="ClientID" HeaderText="Client ID" ReadOnly="True" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200" Visible="False" />
+                               <asp:BoundField DataField="ClientNumber" HeaderText="Client Number" ReadOnly="True" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 border-r border-gray-200" />
                             <asp:BoundField DataField="Name" HeaderText="Name" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200" />
                             <asp:BoundField DataField="Email" HeaderText="Email" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200" />
                             <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200" />

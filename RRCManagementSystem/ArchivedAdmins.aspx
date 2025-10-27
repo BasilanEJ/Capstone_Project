@@ -584,12 +584,14 @@
                                 <asp:TemplateField HeaderText="Actions">
                                     <ItemTemplate>
                                         <div class="btn-action-group">
-                                            <a href="javascript:void(0);"
-                                               class="btn-action btn-restore"
-                                               onclick='return confirmRestore("<%= gvArchivedAdmins.UniqueID %>", "<%# Eval("UserID") %>", "<%# Eval("Name") %>");'>
-                                                <i class="fas fa-undo"></i>
-                                                Restore
-                                            </a>
+                                            <asp:LinkButton ID="btnRestore" runat="server"
+                                                CssClass="btn-action btn-restore"
+                                                OnClientClick='<%# "return confirmRestore(\"" + gvArchivedAdmins.UniqueID + "\", \"" + Eval("UserID") + "\", \"" + Eval("Name") + "\");" %>'
+                                                CommandName="RestoreAdmin"
+                                                CommandArgument='<%# Eval("UserID") %>'>
+                                                <i class="fas fa-undo"></i> Restore
+                                            </asp:LinkButton>
+
 
                                             <a href="javascript:void(0);"
                                                class="btn-action btn-delete"
@@ -622,34 +624,28 @@
         function confirmRestore(gridId, userId, userName) {
             Swal.fire({
                 title: 'Restore User Account?',
-                html: '<div style="text-align:center;"><i class="fas fa-undo" style="font-size:3rem;color:#28a745;margin-bottom:15px;"></i><br/>This will restore the account:<br/><strong style="font-size:1.2rem;color:#198754;">' + userName + '</strong><br/><small class="text-muted">The user will regain access to the system.</small></div>',
+                html: `
+            <div style="text-align:center;">
+                <i class="fas fa-undo" style="font-size:3rem;color:#28a745;margin-bottom:15px;"></i><br/>
+                This will restore the account:<br/>
+                <strong style="font-size:1.2rem;color:#198754;">${userName}</strong><br/>
+                <small class="text-muted">The user will regain access to the system.</small>
+            </div>
+        `,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#28a745',
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Restore Account',
                 cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
-                customClass: {
-                    popup: 'animated-popup',
-                    confirmButton: 'btn-confirm-custom',
-                    cancelButton: 'btn-cancel-custom'
-                }
+                reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Show loading
-                    Swal.fire({
-                        title: 'Restoring...',
-                        html: 'Please wait while we restore the user account.',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
+                    // ✅ Direct postback without loading animation
                     __doPostBack(gridId, 'RestoreAdmin$' + userId);
                 }
             });
+
             return false;
         }
 
@@ -657,44 +653,34 @@
         function confirmDelete(gridId, userId, userName) {
             Swal.fire({
                 title: 'Permanently Delete Account?',
-                html: '<div style="text-align:center;"><i class="fas fa-exclamation-triangle" style="font-size:3rem;color:#dc3545;margin-bottom:15px;"></i><br/>This will <strong style="color:#dc3545;">permanently delete</strong> the account:<br/><strong style="font-size:1.2rem;color:#dc3545;">' + userName + '</strong><br/><small class="text-muted">⚠️ This action cannot be undone!</small></div>',
+                html: `
+            <div style="text-align:center;">
+                <i class="fas fa-exclamation-triangle" style="font-size:3rem;color:#dc3545;margin-bottom:15px;"></i><br/>
+                This will <strong style="color:#dc3545;">permanently delete</strong> the account:<br/>
+                <strong style="font-size:1.2rem;color:#dc3545;">${userName}</strong><br/>
+                <small class="text-muted">⚠️ This action cannot be undone!</small>
+            </div>
+        `,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: '<i class="fas fa-trash me-2"></i>Yes, Delete Permanently',
                 cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
-                customClass: {
-                    popup: 'animated-popup',
-                    confirmButton: 'btn-confirm-custom',
-                    cancelButton: 'btn-cancel-custom'
-                },
-                // Add extra confirmation for delete
+                reverseButtons: true,
                 input: 'checkbox',
                 inputValue: 0,
                 inputPlaceholder: 'I understand this action cannot be undone',
-                inputValidator: (result) => {
-                    return !result && 'You need to confirm this action'
-                }
+                inputValidator: (result) => !result && 'You need to confirm this action'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Show loading
-                    Swal.fire({
-                        title: 'Deleting...',
-                        html: 'Please wait while we permanently delete the account.',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
+                    // ✅ Direct postback without loading animation
                     __doPostBack(gridId, 'DeletePermanently$' + userId);
                 }
             });
+
             return false;
         }
-
         // Page load setup
         document.addEventListener('DOMContentLoaded', function() {
             // Auto-hide success/error messages after 5 seconds

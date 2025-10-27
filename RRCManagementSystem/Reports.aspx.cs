@@ -4,19 +4,32 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Globalization;
+using System.IO;
+using System.Web.UI;
 using System.Web.UI.WebControls;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
 
 namespace RRCManagementSystem
 {
     public partial class Reports : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"]?.ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Session validation
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
+                return;
+            }
+
             if (!IsPostBack)
             {
                 // dropdown items are in .aspx
+                btnExportPDF.Visible = false;
             }
         }
 
@@ -25,6 +38,7 @@ namespace RRCManagementSystem
             lblMessage.Text = "";
             gvReports.DataSource = null;
             gvReports.DataBind();
+            btnExportPDF.Visible = false;
 
             string selected = ddlModule.SelectedValue;
             if (string.IsNullOrEmpty(selected))
@@ -41,14 +55,10 @@ namespace RRCManagementSystem
             // Optional guard
             if (hasFrom && hasTo && fromDate.Date > toDate.Date)
             {
-                lblMessage.Text = "“Date From” must be earlier than or equal to “Date To”.";
+                lblMessage.Text = "Date From must be earlier than or equal to Date To.";
+
                 return;
             }
-
-            // Debug (optional)
-            lblDebug.Text =
-                $"Raw From: {txtDateFrom.Text} | Parsed: {(hasFrom ? fromDate.ToString("yyyy-MM-dd") : "INVALID")}<br/>" +
-                $"Raw To: {txtDateTo.Text} | Parsed: {(hasTo ? toDate.ToString("yyyy-MM-dd") : "INVALID")}";
 
             string procName;
             bool sendDates = true;
@@ -122,7 +132,21 @@ namespace RRCManagementSystem
                     gvReports.DataBind();
 
                     if (dt.Rows.Count == 0)
+                    {
                         lblMessage.Text = "No data found for the selected module and date range.";
+                        btnExportPDF.Visible = false;
+                    }
+                    else
+                    {
+                        // Store data in ViewState for PDF export
+                        ViewState["ReportData"] = dt;
+                        ViewState["ReportModule"] = selected;
+                        ViewState["ReportDateFrom"] = hasFrom ? fromDate.ToString("yyyy-MM-dd") : "";
+                        ViewState["ReportDateTo"] = hasTo ? toDate.ToString("yyyy-MM-dd") : "";
+
+                        // Show export button
+                        btnExportPDF.Visible = true;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -152,6 +176,156 @@ namespace RRCManagementSystem
             }
         }
 
+        protected void btnExportPDF_Click(object sender, EventArgs e)
+        {
+            DataTable dt = ViewState["ReportData"] as DataTable;
+            string module = ViewState["ReportModule"] as string;
+            string dateFrom = ViewState["ReportDateFrom"] as string;
+            string dateTo = ViewState["ReportDateTo"] as string;
+
+            if (dt == null || dt.Rows.Count == 0)
+            {
+                lblMessage.Text = "No data available to export.";
+                return;
+            }
+
+            try
+            {
+                // Create PDF document
+                Document document = new Document(PageSize.A4.Rotate(), 10f, 10f, 60f, 40f); // Increased margins for header/footer
+                MemoryStream memoryStream = new MemoryStream();
+                PdfWriter writer = PdfWriter.GetInstance(document, memoryStream);
+
+                // Get the username for the footer
+                string generatedBy = Session["Name"]?.ToString() ?? "System";
+
+                string logoPath = Server.MapPath("~/Images/logorrc.png"); // Change path as needed
+
+                // Add header/footer with watermark
+                PdfHeaderFooter headerFooter = new PdfHeaderFooter(module + " Report", generatedBy, logoPath);
+                writer.PageEvent = headerFooter;
+
+                document.Open();
+
+                // Add Date Range Info (if applicable)
+                Font dateFont = FontFactory.GetFont("Arial", 10, Font.NORMAL);
+                string dateRange = "";
+                if (!string.IsNullOrEmpty(dateFrom) && !string.IsNullOrEmpty(dateTo))
+                {
+                    dateRange = $"Date Range: {dateFrom} to {dateTo}";
+                }
+                else if (!string.IsNullOrEmpty(dateFrom))
+                {
+                    dateRange = $"From: {dateFrom}";
+                }
+                else if (!string.IsNullOrEmpty(dateTo))
+                {
+                    dateRange = $"To: {dateTo}";
+                }
+
+                if (!string.IsNullOrEmpty(dateRange))
+                {
+                    Paragraph dateInfo = new Paragraph(dateRange, dateFont);
+                    dateInfo.Alignment = Element.ALIGN_CENTER;
+                    dateInfo.SpacingAfter = 15f;
+                    document.Add(dateInfo);
+                }
+
+                // Create PDF Table
+                PdfPTable pdfTable = new PdfPTable(dt.Columns.Count);
+                pdfTable.WidthPercentage = 100;
+                pdfTable.SpacingBefore = 10f;
+                pdfTable.DefaultCell.Padding = 5;
+
+                // Add Headers
+                Font headerFont = FontFactory.GetFont("Arial", 10, Font.BOLD, BaseColor.WHITE);
+                foreach (DataColumn column in dt.Columns)
+                {
+                    PdfPCell cell = new PdfPCell(new Phrase(column.ColumnName, headerFont));
+                    cell.BackgroundColor = new BaseColor(41, 128, 185); // Blue color
+                    cell.HorizontalAlignment = Element.ALIGN_CENTER;
+                    cell.Padding = 5;
+                    pdfTable.AddCell(cell);
+                }
+
+                // Add Data Rows
+                Font cellFont = FontFactory.GetFont("Arial", 9, Font.NORMAL);
+                foreach (DataRow row in dt.Rows)
+                {
+                    foreach (var item in row.ItemArray)
+                    {
+                        PdfPCell cell = new PdfPCell(new Phrase(item?.ToString() ?? "", cellFont));
+                        cell.HorizontalAlignment = Element.ALIGN_CENTER;
+                        cell.Padding = 5;
+                        pdfTable.AddCell(cell);
+                    }
+                }
+
+                document.Add(pdfTable);
+
+                // Add Footer
+                Paragraph footer = new Paragraph($"Total Records: {dt.Rows.Count}", dateFont);
+                footer.Alignment = Element.ALIGN_RIGHT;
+                footer.SpacingBefore = 10f;
+                document.Add(footer);
+
+                document.Close();
+                writer.Close();
+
+                // Send PDF to browser
+                byte[] bytes = memoryStream.ToArray();
+                memoryStream.Close();
+
+
+                int userId = 0;
+                if (Session["UserID"] != null)
+                {
+                    int.TryParse(Session["UserID"].ToString(), out userId);
+                }
+
+                DateTime? from = null;
+                DateTime? to = null;
+
+                if (!string.IsNullOrEmpty(dateFrom))
+                {
+                    DateTime tempFrom;
+                    if (DateTime.TryParseExact(dateFrom, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out tempFrom))
+                    {
+                        from = tempFrom;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(dateTo))
+                {
+                    DateTime tempTo;
+                    if (DateTime.TryParseExact(dateTo, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out tempTo))
+                    {
+                        to = tempTo;
+                    }
+                }
+
+                try
+                {
+                    LogReport(module + " (PDF Export)", userId, from, to, $"{dt.Rows.Count} row(s) exported to PDF");
+                }
+                catch { }
+
+                // Send PDF to browser
+                Response.Clear();
+                Response.ContentType = "application/pdf";
+                Response.AddHeader("Content-Disposition", $"attachment; filename={module}_Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+                Response.Buffer = true;
+                Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+                Response.BinaryWrite(bytes);
+                Response.Flush();
+                Response.SuppressContent = true;
+                Context.ApplicationInstance.CompleteRequest();
+            }
+            catch (Exception ex)
+            {
+                lblMessage.Text = "Error exporting to PDF: " + ex.Message;
+            }
+        }
 
         private void LogReport(string reportType, int generatedBy, DateTime? from, DateTime? to, string remarks)
         {
@@ -171,9 +345,7 @@ namespace RRCManagementSystem
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
-                // int newId = (pOut.Value == DBNull.Value) ? 0 : Convert.ToInt32(pOut.Value); // use if needed
             }
         }
     }
 }
-    

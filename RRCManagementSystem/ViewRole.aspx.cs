@@ -58,48 +58,94 @@ namespace RRCManagementSystem
         {
             try
             {
-                int resultCode;
+                int resultCode = -99;
 
-                using (var conn = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.spRole_DeleteSafe", conn))
+                using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@RoleID", SqlDbType.Int).Value = roleId;
-
-                    var pOut = new SqlParameter("@ResultCode", SqlDbType.Int)
-                    {
-                        Direction = ParameterDirection.Output
-                    };
-                    cmd.Parameters.Add(pOut);
-
                     conn.Open();
-                    cmd.ExecuteNonQuery();
 
-                    resultCode = (pOut.Value == DBNull.Value) ? -99 : Convert.ToInt32(pOut.Value);
+                    // ✅ Step 1: Check if the role exists
+                    string checkRole = "SELECT COUNT(*) FROM Roles WHERE RoleID = @RoleID";
+                    using (SqlCommand cmd = new SqlCommand(checkRole, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@RoleID", roleId);
+                        int count = Convert.ToInt32(cmd.ExecuteScalar());
+                        if (count == 0)
+                        {
+                            resultCode = -1; // Role not found
+                        }
+                    }
+
+                    // ✅ Step 2: Check if users are assigned to this role
+                    if (resultCode != -1)
+                    {
+                        string checkUsers = "SELECT COUNT(*) FROM Users WHERE RoleID = @RoleID";
+                        using (SqlCommand cmd = new SqlCommand(checkUsers, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@RoleID", roleId);
+                            int userCount = Convert.ToInt32(cmd.ExecuteScalar());
+                            if (userCount > 0)
+                            {
+                                resultCode = 0; // Cannot delete (users assigned)
+                            }
+                        }
+                    }
+
+                    // ✅ Step 3: If safe to delete, remove permissions and role
+                    if (resultCode != 0 && resultCode != -1)
+                    {
+                        // Delete RolePermissions first
+                        string deletePermissions = "DELETE FROM RolePermissions WHERE RoleID = @RoleID";
+                        using (SqlCommand cmd = new SqlCommand(deletePermissions, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@RoleID", roleId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // Then delete the Role
+                        string deleteRole = "DELETE FROM Roles WHERE RoleID = @RoleID";
+                        using (SqlCommand cmd = new SqlCommand(deleteRole, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@RoleID", roleId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        resultCode = 1; // Success
+                    }
                 }
 
+                // ✅ Step 4: Handle result messages
                 switch (resultCode)
                 {
                     case 1:
-                        ShowAlert("✅ Role deleted successfully.", "success");
                         LoadRoles();
+                        ScriptManager.RegisterStartupScript(this, GetType(), "deleteSuccess",
+                            "Swal.fire('Deleted!', 'The role and its permissions have been successfully deleted.', 'success');", true);
                         break;
+
                     case 0:
-                        ShowAlert("⚠ Cannot delete. Users are assigned to this role.", "warning");
+                        ScriptManager.RegisterStartupScript(this, GetType(), "cannotDelete",
+                            "Swal.fire('Cannot Delete', 'Users are still assigned to this role.', 'warning');", true);
                         break;
+
                     case -1:
-                        ShowAlert("⚠ Role not found.", "warning");
+                        ScriptManager.RegisterStartupScript(this, GetType(), "notFound",
+                            "Swal.fire('Not Found', 'The specified role does not exist.', 'info');", true);
                         break;
+
                     default:
-                        ShowAlert("❌ Unknown result while deleting role.", "error");
+                        ScriptManager.RegisterStartupScript(this, GetType(), "unknownError",
+                            "Swal.fire('Error', 'An unknown error occurred while deleting the role.', 'error');", true);
                         break;
                 }
             }
             catch (Exception ex)
             {
-                ShowAlert("❌ Error: " + ex.Message, "error");
+                ScriptManager.RegisterStartupScript(this, GetType(), "deleteError",
+                    $"Swal.fire('Error', 'An error occurred: {ex.Message.Replace("'", "\\'")}', 'error');", true);
             }
         }
+
 
         private void ShowAlert(string message, string icon)
         {

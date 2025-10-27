@@ -58,6 +58,25 @@
     .table td { padding:10px; text-align:center; font-size:14px; color:#374151; border:1px solid #e5e7eb; }
     .table tr:nth-child(even){ background:#f9fafb; }
     .table tr:hover{ background:#f1f5f9; }
+    
+    /* Red highlighting for 3+ months overdue */
+    .overdue-row {
+        background-color: #fee2e2 !important;
+    }
+    .overdue-row:hover {
+        background-color: #fecaca !important;
+    }
+    .overdue-badge {
+        display: inline-block;
+        background: #dc2626;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-left: 8px;
+    }
+    
     .no-results-message {
         padding: 20px;
         text-align: center;
@@ -81,7 +100,7 @@
 </div>
 
 <p class="search-hint">
-    <i class="fas fa-info-circle"></i> Start typing to filter results automatically
+    <i class="fas fa-info-circle"></i> Start typing to filter results automatically • Red rows indicate payment overdue
 </p>
 
 <asp:Label ID="lblMessage" runat="server" CssClass="message-label" />
@@ -89,18 +108,26 @@
 <div class="grid-container">
     <asp:GridView ID="gvBalances" runat="server" AutoGenerateColumns="False"
                   CssClass="table table-striped table-bordered" GridLines="None"
-                  EmptyDataText="No balances found.">
+                  EmptyDataText="No balances found."
+                  OnRowDataBound="gvBalances_RowDataBound">
         <RowStyle CssClass="balance-row" />
         <Columns>
-           <asp:BoundField DataField="ClientID" HeaderText="Client ID" Visible="false" />
+            <asp:BoundField DataField="ClientID" HeaderText="Client ID" Visible="false" />
+               <asp:BoundField DataField="ClientNumber" HeaderText="Client Number" ReadOnly="True" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 border-r border-gray-200" />
             <asp:BoundField DataField="ClientName" HeaderText="Client Name" 
                 ItemStyle-CssClass="client-name" />
+            <asp:BoundField DataField="PaymentPlan" HeaderText="Payment Plan" Visible ="false" />
             <asp:BoundField DataField="TotalAmount" HeaderText="Total Amount" 
                 DataFormatString="₱{0:N2}" HtmlEncode="false" />
             <asp:BoundField DataField="AlreadyPaid" HeaderText="Already Paid" 
                 DataFormatString="₱{0:N2}" HtmlEncode="false" />
             <asp:BoundField DataField="RemainingBalance" HeaderText="Remaining Balance" 
                 DataFormatString="₱{0:N2}" HtmlEncode="false" />
+            <asp:BoundField DataField="OldestBookingDate" HeaderText="Oldest Booking" 
+                DataFormatString="{0:MMM dd, yyyy}" HtmlEncode="false" />
+            <asp:BoundField DataField="MonthsOverdue" HeaderText="Months" 
+                ItemStyle-CssClass="months-overdue" />
+            <asp:BoundField DataField="IsOverdue" HeaderText="IsOverdue" Visible="false" />
         </Columns>
     </asp:GridView>
 </div>

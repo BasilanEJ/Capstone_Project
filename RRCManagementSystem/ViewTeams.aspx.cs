@@ -19,7 +19,8 @@ namespace RRCManagementSystem
             // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
@@ -28,7 +29,8 @@ namespace RRCManagementSystem
             // 🔐 Deny SuperAdmin and Inspector
             if (role == "SuperAdmin" || role == "Inspector")
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
@@ -37,7 +39,8 @@ namespace RRCManagementSystem
             // 🔐 View permission check for ManageEmployees module (via SP)
             if (!HasViewPermission(userId, "ManageEmployees"))
             {
-                Response.Redirect("~/Unauthorized.aspx");
+                Response.Redirect("~/Unauthorized.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 

@@ -81,15 +81,9 @@ namespace RRCManagementSystem.Helpers
                 {
                     Image logo = Image.GetInstance(_logoPath);
 
-                    // CHANGE 1: Enlarge logo further (from 80f to 100f)
+
                     logo.ScaleToFit(100f, 100f);
 
-                    // CHANGE 2: Set logo position higher to create a top margin.
-                    // We set the bottom-left corner of the logo. 
-                    // page.Height is the top edge. 
-                    // Using page.Height - 40f puts the bottom of the logo 40 points from the top edge.
-                    // You might need to adjust the headerY position of the text too 
-                    // if the logo is too big and conflicts with the text, but let's try this first.
                     logo.SetAbsolutePosition(document.LeftMargin, page.Height - 40f);
 
                     cb.AddImage(logo); // Use cb.AddImage for foreground drawing in OnEndPage

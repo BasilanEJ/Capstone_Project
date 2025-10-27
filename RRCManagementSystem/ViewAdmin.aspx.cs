@@ -1,10 +1,11 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers; // Make sure AESHelper is accessible
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Drawing;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using RRCManagementSystem.Helpers; // Make sure AESHelper is accessible
 
 namespace RRCManagementSystem
 {
@@ -22,23 +23,17 @@ namespace RRCManagementSystem
             // 🔐 Require login + SuperAdmin
             if (Session["UserID"] == null || Session["Role"] == null || Session["Role"].ToString() != "SuperAdmin")
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
             if (!IsPostBack)
             {
                 BindUsers(null);
-
-                // Show toast if redirected from actions
-                if (Request.QueryString["archived"] == "1")
-                    Toast("Archived!", "User has been successfully archived.", "success");
             }
         }
 
-        /* =========================
-           Data binding via SP
-           ========================= */
         private void BindUsers(string keyword)
         {
             using (var conn = new SqlConnection(connectionString))
@@ -146,7 +141,6 @@ namespace RRCManagementSystem
                 try
                 {
                     conn.Open();
-                    // spUser_Archive returns @@ROWCOUNT as RowsAffected
                     int rows = 0;
                     using (var rdr = cmd.ExecuteReader())
                     {
@@ -156,18 +150,50 @@ namespace RRCManagementSystem
 
                     if (rows > 0)
                     {
-                        // redirect to force fresh bind and show toast
-                        Response.Redirect("ViewAdmin.aspx?archived=1", false);
-                        Context.ApplicationInstance.CompleteRequest();
+                        string script = @"
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Archived!',
+                        text: 'User has been successfully archived.',
+                        showConfirmButton: false,
+                        timer: 1500,
+                        timerProgressBar: true
+                    }).then(function() {
+                        window.location.href = 'ViewAdmin.aspx';
+                    });
+                ";
+                        ScriptManager.RegisterStartupScript(this, GetType(), "archiveSuccess", script, true);
                     }
                     else
                     {
+                        string script = @"
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Cannot Archive',
+                        text: 'No matching user found or user is SuperAdmin.',
+                        confirmButtonColor: '#4169E1'
+                    });
+                ";
+                        ScriptManager.RegisterStartupScript(this, GetType(), "archiveWarning", script, true);
                         lblMessage.Text = "⚠ No matching user found to archive (or user is SuperAdmin).";
                         lblMessage.CssClass = "text-warning text-center d-block mb-3 fw-bold";
                     }
                 }
                 catch (Exception ex)
                 {
+                    string errorMsg = ex.Message.Replace("'", "\\'").Replace("\r", "").Replace("\n", " ");
+                    string script = $@"
+                Swal.close();
+                Swal.fire({{
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error archiving user: {errorMsg}',
+                    confirmButtonColor: '#4169E1'
+                }});
+            ";
+                    ScriptManager.RegisterStartupScript(this, GetType(), "archiveError", script, true);
                     lblMessage.Text = "⚠ Error archiving user: " + ex.Message;
                     lblMessage.CssClass = "text-danger text-center d-block mb-3 fw-bold";
                 }

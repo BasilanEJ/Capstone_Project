@@ -151,55 +151,83 @@ namespace RRCManagementSystem
             }
 
             using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.spEmployee_Update", conn))
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeID;
-                cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = txtLastName.Text.Trim();
-                cmd.Parameters.Add("@FirstName", SqlDbType.NVarChar, 100).Value = txtFirstName.Text.Trim();
-                cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(txtMiddleName.Text) ? (object)DBNull.Value : txtMiddleName.Text.Trim();
-                cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = txtEmail.Text.Trim();
-                cmd.Parameters.Add("@Phone", SqlDbType.NVarChar, 15).Value = phone;
-                cmd.Parameters.Add("@Position", SqlDbType.NVarChar, 50).Value = ddlPosition.SelectedValue;
-                cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 20).Value = ddlStatus.SelectedValue;
-                cmd.Parameters.Add("@ProfileImage", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(profileImagePath) ? (object)DBNull.Value : profileImagePath;
-
                 conn.Open();
-                int rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
 
-                // audit
-                using (var audit = new SqlCommand("dbo.spAudit_Insert", conn))
+                // Get current status to check if it changed
+                string currentStatus = "";
+                using (var cmdCheck = new SqlCommand("SELECT Status FROM Employees WHERE EmployeeID = @EmployeeID", conn))
                 {
-                    audit.CommandType = CommandType.StoredProcedure;
-                    audit.Parameters.Add("@AdminID", SqlDbType.Int).Value = adminId;
-                    string fullName = $"{txtLastName.Text.Trim()}, {txtFirstName.Text.Trim()}" +
-                                      (string.IsNullOrWhiteSpace(txtMiddleName.Text) ? "" : $" {txtMiddleName.Text.Trim()}");
-                    audit.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value =
-                        $"Updated employee (ID: {employeeID}) - Name: {fullName}, Position: {ddlPosition.SelectedValue}, Status: {ddlStatus.SelectedValue}";
-                    audit.ExecuteNonQuery();
+                    cmdCheck.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeID;
+                    var result = cmdCheck.ExecuteScalar();
+                    if (result != null)
+                        currentStatus = result.ToString();
                 }
 
-                if (rows > 0)
+                string newStatus = ddlStatus.SelectedValue;
+                bool statusChanged = currentStatus != newStatus;
+
+                using (var cmd = new SqlCommand("dbo.spEmployee_Update", conn))
                 {
-                    // Show success message with SweetAlert and redirect
-                    string script = @"
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Employee Updated!',
-                            text: 'The employee information has been successfully updated.',
-                            confirmButtonColor: '#2563eb',
-                            timer: 2000,
-                            timerProgressBar: true
-                        }).then(() => {
-                            window.location.href = 'AllEmployee.aspx';
-                        });
-                    ";
-                    ScriptManager.RegisterStartupScript(this, GetType(), "showSuccessAndRedirect", script, true);
-                }
-                else
-                {
-                    lblMessage.Text = "⚠ No changes saved.";
-                    lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeID;
+                    cmd.Parameters.Add("@LastName", SqlDbType.NVarChar, 100).Value = txtLastName.Text.Trim();
+                    cmd.Parameters.Add("@FirstName", SqlDbType.NVarChar, 100).Value = txtFirstName.Text.Trim();
+                    cmd.Parameters.Add("@MiddleName", SqlDbType.NVarChar, 100).Value = string.IsNullOrWhiteSpace(txtMiddleName.Text) ? (object)DBNull.Value : txtMiddleName.Text.Trim();
+                    cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 100).Value = txtEmail.Text.Trim();
+                    cmd.Parameters.Add("@Phone", SqlDbType.NVarChar, 15).Value = phone;
+                    cmd.Parameters.Add("@Position", SqlDbType.NVarChar, 50).Value = ddlPosition.SelectedValue;
+                    cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 20).Value = newStatus;
+                    cmd.Parameters.Add("@ProfileImage", SqlDbType.NVarChar, 255).Value = string.IsNullOrWhiteSpace(profileImagePath) ? (object)DBNull.Value : profileImagePath;
+
+                    int rows = Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+
+                    // If status changed, update StatusChangeDate
+                    if (rows > 0 && statusChanged)
+                    {
+                        using (var cmdDate = new SqlCommand("UPDATE Employees SET StatusChangeDate = @ChangeDate WHERE EmployeeID = @EmployeeID", conn))
+                        {
+                            cmdDate.Parameters.Add("@ChangeDate", SqlDbType.Date).Value = DateTime.Today;
+                            cmdDate.Parameters.Add("@EmployeeID", SqlDbType.Int).Value = employeeID;
+                            cmdDate.ExecuteNonQuery();
+                        }
+                    }
+
+                    // audit
+                    using (var audit = new SqlCommand("dbo.spAudit_Insert", conn))
+                    {
+                        audit.CommandType = CommandType.StoredProcedure;
+                        audit.Parameters.Add("@AdminID", SqlDbType.Int).Value = adminId;
+                        string fullName = $"{txtLastName.Text.Trim()}, {txtFirstName.Text.Trim()}" +
+                                          (string.IsNullOrWhiteSpace(txtMiddleName.Text) ? "" : $" {txtMiddleName.Text.Trim()}");
+                        audit.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value =
+                            $"Updated employee (ID: {employeeID}) - Name: {fullName}, Position: {ddlPosition.SelectedValue}, Status: {newStatus}" +
+                            (statusChanged ? $" (Status changed from {currentStatus} to {newStatus})" : "");
+                        audit.ExecuteNonQuery();
+                    }
+
+                    if (rows > 0)
+                    {
+                        // Show success message with SweetAlert and redirect
+                        string script = @"
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Employee Updated!',
+                        text: 'The employee information has been successfully updated.',
+                        confirmButtonColor: '#2563eb',
+                        timer: 2000,
+                        timerProgressBar: true
+                    }).then(() => {
+                        window.location.href = 'AllEmployee.aspx';
+                    });
+                ";
+                        ScriptManager.RegisterStartupScript(this, GetType(), "showSuccessAndRedirect", script, true);
+                    }
+                    else
+                    {
+                        lblMessage.Text = "⚠ No changes saved.";
+                        lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
+                    }
                 }
             }
         }

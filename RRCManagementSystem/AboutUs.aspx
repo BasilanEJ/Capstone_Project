@@ -1,373 +1,575 @@
-﻿<%@ Page Title="Services" Language="C#" MasterPageFile="~/Inquiry.Master" AutoEventWireup="true" CodeBehind="Services.aspx.cs" Inherits="RRCManagementSystem.Services" %>
+﻿<%@ Page Title="About Us" Language="C#" MasterPageFile="~/Inquiry.Master" AutoEventWireup="true" CodeBehind="AboutUs.aspx.cs" Inherits="RRCManagementSystem.AboutUs" %>
 
-<asp:Content ID="Content1" ContentPlaceHolderID="PageTitle" runat="server">
-    Services - RRC Termite and Pest Control
-</asp:Content>
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <!-- Bootstrap CSS (if not already in master page) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <!-- AOS (Animate On Scroll) -->
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
 
-<asp:Content ID="Content2" ContentPlaceHolderID="HeadContent" runat="server">
     <style>
-        /* Services Page Specific Styles */
-        .services-hero {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 120px 0 80px;
-            color: white;
-            text-align: center;
+        /* Page Animation */
+        .page-content {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 50%, #ffffff 100%);
             position: relative;
             overflow: hidden;
         }
 
-        .services-hero::before {
+        .hero-section::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') bottom center no-repeat;
-            background-size: cover;
+            background: radial-gradient(circle at 30% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            pointer-events: none;
         }
 
-        .services-hero h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        /* Section Headers */
+        .section-header {
+            position: relative;
+            padding-bottom: 1rem;
+            margin-bottom: 3rem;
         }
 
-        .services-hero p {
-            font-size: 1.3rem;
-            max-width: 700px;
-            margin: 0 auto;
-            opacity: 0.95;
+        .section-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            border-radius: 2px;
         }
 
-        /* Service Cards */
-        .service-card {
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        /* Card Hover Effects */
+        .hover-card {
             transition: all 0.3s ease;
             height: 100%;
-            display: flex;
-            flex-direction: column;
         }
 
-        .service-card:hover {
+        .hover-card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
         }
 
-        .service-icon {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-            /* Placeholder while loading */
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        /* Image Container */
+        .image-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
         }
 
-        /* Add loading animation for lazy images */
-        img[data-src] {
-            opacity: 0;
-            transition: opacity 0.3s ease-in;
+        .image-container img {
+            transition: transform 0.5s ease;
         }
 
-        img.lazy-loaded {
-            opacity: 1;
+        .image-container:hover img {
+            transform: scale(1.05);
         }
 
-        .service-content {
-            padding: 30px;
-            flex-grow: 1;
+        /* Client Logo Cards */
+        .client-card {
+            height: 160px;
             display: flex;
             flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            background: white;
         }
 
-        .service-title {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 15px;
+        .client-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
         }
 
-        .service-description {
-            color: #718096;
-            line-height: 1.7;
-            margin-bottom: 20px;
-            flex-grow: 1;
+        .client-logo-container {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
         }
 
-        .service-features {
-            list-style: none;
-            padding: 0;
-            margin: 20px 0;
+        .client-logo {
+            max-height: 64px;
+            object-fit: contain;
+            transition: transform 0.3s ease;
         }
 
-        .service-features li {
-            padding: 8px 0;
-            color: #4a5568;
+        .client-card:hover .client-logo {
+            transform: scale(1.1);
+        }
+
+        .client-name {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        /* Values List */
+        .values-list li {
             position: relative;
-            padding-left: 30px;
+            padding-left: 1.5rem;
         }
 
-        .service-features li::before {
+        .values-list li::before {
             content: '✓';
             position: absolute;
             left: 0;
-            color: #48bb78;
+            color: #3b82f6;
             font-weight: bold;
-            font-size: 1.2rem;
         }
 
-        .btn-learn-more {
-            display: inline-block;
-            padding: 12px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* Project Gallery */
+        .project-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .project-card img {
+            transition: transform 0.5s ease;
+        }
+
+        .project-card:hover img {
+            transform: scale(1.1);
+        }
+
+        /* Back to Home Button */
+        .btn-back-home {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: white;
-            text-decoration: none;
-            border-radius: 8px;
+            padding: 1rem 2.5rem;
+            border-radius: 0.75rem;
             font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
             transition: all 0.3s ease;
-            align-self: flex-start;
-        }
-
-        .btn-learn-more:hover {
-            transform: translateX(5px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            color: white;
-        }
-
-        /* CTA Section */
-        .cta-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 80px 0;
-            color: white;
-            text-align: center;
-            margin-top: 80px;
-        }
-
-        .cta-section h2 {
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-        }
-
-        .cta-section p {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            opacity: 0.95;
-        }
-
-        .btn-cta {
-            display: inline-block;
-            padding: 15px 40px;
-            background: white;
-            color: #667eea;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
             text-decoration: none;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
+            border: none;
         }
 
-        .btn-cta:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-            color: #764ba2;
+        .btn-back-home:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            color: white;
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .services-hero h1 {
-                font-size: 2.5rem;
-            }
-
-            .services-hero p {
-                font-size: 1.1rem;
-            }
-
-            .service-icon {
-                height: 200px;
-            }
-
-            .cta-section h2 {
-                font-size: 2rem;
-            }
+        .btn-back-home i {
+            transition: transform 0.3s ease;
         }
 
-        /* Fade-in animation for lazy sections */
-        .lazy-section {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.6s ease, transform 0.6s ease;
+        .btn-back-home:hover i {
+            transform: translateX(-4px);
         }
 
-        .lazy-section.loaded {
-            opacity: 1;
-            transform: translateY(0);
+        /* Icon Containers */
+        .icon-box {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Stats or Highlight Numbers */
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Additional Styling */
+        .border-top-custom {
+            border-top: 4px solid !important;
+        }
+
+        .text-blue-600 {
+            color: #2563eb;
+        }
+
+        .text-blue-700 {
+            color: #1d4ed8;
+        }
+
+        .bg-gradient-custom {
+            background: linear-gradient(to right, #f9fafb, #eff6ff);
+        }
+
+        .project-card img,
+        .image-container img {
+            width: 100%;
+            height: 320px;
+            object-fit: cover;
         }
     </style>
 </asp:Content>
 
-<asp:Content ID="Content3" ContentPlaceHolderID="MainContent" runat="server">
-    <!-- Hero Section -->
-    <section class="services-hero">
-        <div class="container">
-            <h1>Our Professional Services</h1>
-            <p>Comprehensive termite and pest control solutions tailored to protect your property</p>
-        </div>
-    </section>
-
-    <!-- Services Grid -->
-    <section class="lazy-section" style="padding: 80px 0;">
-        <div class="container">
-            <div class="row g-4">
-                <!-- Termite Baiting System -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="service-card">
-                        <img data-src="Images/baiting-system.jpg" 
-                             alt="Termite Baiting System" 
-                             class="service-icon"
-                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
-                        <div class="service-content">
-                            <h3 class="service-title">Termite Baiting System</h3>
-                            <p class="service-description">
-                                Advanced baiting technology that eliminates entire termite colonies. Our system uses strategically placed monitoring stations to detect and eliminate termites before they damage your property.
-                            </p>
-                            <ul class="service-features">
-                                <li>Above-ground & in-ground options</li>
-                                <li>Colony elimination technology</li>
-                                <li>Continuous monitoring</li>
-                                <li>Environmentally friendly</li>
-                            </ul>
-                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Termite Prevention -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="service-card">
-                        <img data-src="Images/termite-prevention.jpg" 
-                             alt="Termite Prevention" 
-                             class="service-icon"
-                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
-                        <div class="service-content">
-                            <h3 class="service-title">Termite Prevention</h3>
-                            <p class="service-description">
-                                Proactive protection services including soil poisoning treatments for both pre-construction and post-construction properties. Create an impenetrable barrier against termite infestation.
-                            </p>
-                            <ul class="service-features">
-                                <li>Pre-construction treatment</li>
-                                <li>Post-construction protection</li>
-                                <li>Long-lasting barriers</li>
-                                <li>Annual inspections included</li>
-                            </ul>
-                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Soil Poisoning -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="service-card">
-                        <img data-src="Images/soil-poisoning.jpg" 
-                             alt="Soil Poisoning Treatment" 
-                             class="service-icon"
-                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
-                        <div class="service-content">
-                            <h3 class="service-title">Soil Poisoning</h3>
-                            <p class="service-description">
-                                Comprehensive soil treatment that creates a chemical barrier around your property's foundation. Ideal for both new construction and existing structures requiring maximum protection.
-                            </p>
-                            <ul class="service-features">
-                                <li>Foundation perimeter treatment</li>
-                                <li>EPA-approved termiticides</li>
-                                <li>Long-term protection</li>
-                                <li>Warranty included</li>
-                            </ul>
-                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Reticulation System -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="service-card">
-                        <img data-src="Images/reticulation.jpg" 
-                             alt="Reticulation System" 
-                             class="service-icon"
-                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
-                        <div class="service-content">
-                            <h3 class="service-title">Reticulation System</h3>
-                            <p class="service-description">
-                                Perforated pipe system installed beneath your property that allows for easy reapplication of termiticides without drilling. Perfect for long-term termite management with minimal disruption.
-                            </p>
-                            <ul class="service-features">
-                                <li>Perforated pipe installation</li>
-                                <li>Easy reapplication access</li>
-                                <li>No drilling required after installation</li>
-                                <li>Cost-effective maintenance</li>
-                            </ul>
-                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mound Demolition -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="service-card">
-                        <img data-src="Images/mound-demolition.jpg" 
-                             alt="Mound Demolition" 
-                             class="service-icon"
-                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
-                        <div class="service-content">
-                            <h3 class="service-title">Mound Demolition (Queen Finder)</h3>
-                            <p class="service-description">
-                                Specialized service to locate and eliminate termite queens within mounds. Our expert technicians use advanced techniques to ensure complete colony elimination at the source.
-                            </p>
-                            <ul class="service-features">
-                                <li>Queen termite location & elimination</li>
-                                <li>Complete mound treatment</li>
-                                <li>Colony eradication</li>
-                                <li>Follow-up inspection</li>
-                            </ul>
-                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- General Pest Control -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="service-card">
-                        <img data-src="Images/general-pest.jpg" 
-                             alt="General Pest Control" 
-                             class="service-icon"
-                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250'%3E%3Crect fill='%23f5f7fa' width='400' height='250'/%3E%3C/svg%3E">
-                        <div class="service-content">
-                            <h3 class="service-title">General Pest Control</h3>
-                            <p class="service-description">
-                                One-time comprehensive pest control service targeting cockroaches, ants, mosquitoes, flies, ticks, fleas, bedbugs, rats, and rodents. Keep your property pest-free and healthy.
-                            </p>
-                            <ul class="service-features">
-                                <li>Cockroach & ant elimination</li>
-                                <li>Flying insect control</li>
-                                <li>Bedbug treatment</li>
-                                <li>Rodent control & removal</li>
-                            </ul>
-                            <a href="Inquiry.aspx" class="btn-learn-more">Get Started →</a>
-                        </div>
-                    </div>
+<asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="page-content">
+        <!-- HERO SECTION -->
+        <section class="hero-section py-5 text-dark position-relative">
+            <div class="container py-md-5 text-center position-relative" style="z-index: 10;">
+                <div data-aos="fade-down" data-aos-duration="900">
+                    <h1 class="display-3 fw-bold text-blue-700 mb-3">
+                        Take Command and Control of Your Pest Problem
+                    </h1>
+                    <p class="fs-4 fw-medium mb-2">
+                        Your Partner in Safe and Reliable Pest Control
+                    </p>
+                    <p class="text-muted fst-italic">
+                        Please don't pet the pests.
+                    </p>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- CTA Section -->
-    <section class="cta-section lazy-section">
-        <div class="container">
-            <h2>Ready to Protect Your Property?</h2>
-            <p>Contact us today for a free consultation and inspection</p>
-            <a href="Inquiry.aspx" class="btn-cta">Schedule Free Inspection</a>
+        <div class="container my-5">
+            <!-- ABOUT SECTION -->
+            <section id="about" class="mb-5">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="row g-4 g-md-5 align-items-center">
+                            <div class="col-md-6" data-aos="fade-right" data-aos-duration="800">
+                                <h2 class="display-5 fw-bold mb-3 d-flex align-items-center gap-3">
+                                    <i class="fas fa-building text-blue-600"></i>
+                                    About RRC
+                                </h2>
+                                <h3 class="fs-4 fw-semibold text-blue-600 mb-3">Termite & Pest Control Services</h3>
+                                <p class="text-muted mb-3">
+                                    It all began with a small capital in 2008. Through hard work, skilled staff, and continuous improvement,
+                                    RRC grew into a quality-focused pest control service that balances world-class methods with affordability.
+                                </p>
+                                <p class="mb-3">
+                                    <strong class="text-blue-600">RRC — Recovery, Resource, and Control</strong> — helps clients retrieve assets from pest damage,
+                                    control infestations, and prevent recurrences.
+                                </p>
+                                <p class="text-muted">
+                                    We pride ourselves on having the talent, experience, and tools necessary to provide effective, safe, and timely
+                                    pest management solutions for homes and businesses.
+                                </p>
+                            </div>
+
+                            <div class="col-md-6" data-aos="fade-left" data-aos-duration="800">
+                                <div class="image-container shadow-lg">
+                                    <img src="/Images/rrcteam.png" alt="RRC Team" class="img-fluid">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MISSION / VISION / VALUES SECTION -->
+            <section id="mv" class="mb-5">
+                <h3 class="section-header text-center display-6 fw-bold" data-aos="fade-up">
+                    Mission • Vision • Values
+                </h3>
+                <div class="row g-4">
+                    <!-- Mission -->
+                    <div class="col-md-4" data-aos="zoom-in" data-aos-delay="50">
+                        <div class="card hover-card shadow-sm border-0 border-top-custom border-primary">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center gap-3 mb-3">
+                                    <div class="icon-box">
+                                        <i class="fas fa-bullseye fs-3 text-blue-600"></i>
+                                    </div>
+                                    <h4 class="fs-5 fw-bold mb-0">Our Mission</h4>
+                                </div>
+                                <p class="text-muted mb-0">
+                                    To satisfy our clients by giving safe and effective treatments, creating jobs, and providing quality service at reasonable prices.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vision -->
+                    <div class="col-md-4" data-aos="zoom-in" data-aos-delay="150">
+                        <div class="card hover-card shadow-sm border-0 border-top-custom border-primary">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center gap-3 mb-3">
+                                    <div class="icon-box">
+                                        <i class="fas fa-eye fs-3 text-blue-600"></i>
+                                    </div>
+                                    <h4 class="fs-5 fw-bold mb-0">Our Vision</h4>
+                                </div>
+                                <p class="text-muted mb-0">
+                                    To be the leading pest control service in the country that values clients' needs by providing safe and effective treatment for peace of mind.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Values -->
+                    <div class="col-md-4" data-aos="zoom-in" data-aos-delay="250">
+                        <div class="card hover-card shadow-sm border-0 border-top-custom border-primary">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center gap-3 mb-3">
+                                    <div class="icon-box">
+                                        <i class="fas fa-heart fs-3 text-blue-600"></i>
+                                    </div>
+                                    <h4 class="fs-5 fw-bold mb-0">Our Values</h4>
+                                </div>
+                                <ul class="values-list list-unstyled small mb-0">
+                                    <li class="mb-2"><strong>Integrity:</strong> We conduct business responsibly and ethically.</li>
+                                    <li class="mb-2"><strong>Accountability:</strong> We honor commitments and accept responsibility.</li>
+                                    <li class="mb-2"><strong>Transparency:</strong> We promote open communication and trust.</li>
+                                    <li class="mb-0"><strong>Teamwork:</strong> We collaborate to achieve great results.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PHILOSOPHY SECTION -->
+            <section id="philosophy" class="mb-5">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="row g-4 align-items-center">
+                            <div class="col-md-6" data-aos="fade-right">
+                                <h3 class="display-6 fw-bold mb-3 d-flex align-items-center gap-3">
+                                    <i class="fas fa-lightbulb text-blue-600"></i>
+                                    Our Philosophies
+                                </h3>
+                                <p class="text-muted mb-3">
+                                    Working in a team spirit towards a common vision, our commitment and dedication strive to satisfy client requirements in the most cost-effective manner.
+                                </p>
+                                <p class="mb-0">
+                                    We follow a <strong class="text-blue-600">"customer comes first"</strong> philosophy and foster quality excellence, continuous improvement, and long-term partnerships.
+                                </p>
+                            </div>
+                            <div class="col-md-6" data-aos="fade-left">
+                                <div class="image-container shadow-lg">
+                                    <img src="/Images/teamrrc.jpg" alt="Philosophy" class="img-fluid" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CLIENTS SECTION -->
+            <section id="clients" class="mb-5">
+                <h3 class="section-header text-center display-6 fw-bold" data-aos="fade-up">
+                    Our Trusted Clients
+                </h3>
+                <p class="text-center text-muted mb-4">
+                    Partnering with leading organizations across industries
+                </p>
+
+                <div class="row g-3">
+                    <!-- TESDA -->
+                    <div class="col-6 col-sm-4 col-lg-2" data-aos="zoom-in">
+                        <div class="client-card p-3 rounded shadow-sm">
+                            <div class="client-logo-container">
+                                <img src="/Images/tesda.png" alt="TESDA" class="client-logo">
+                            </div>
+                            <div class="client-name">
+                                <p class="small fw-semibold mb-0">TESDA</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Petron -->
+                    <div class="col-6 col-sm-4 col-lg-2" data-aos="zoom-in" data-aos-delay="80">
+                        <div class="client-card p-3 rounded shadow-sm">
+                            <div class="client-logo-container">
+                                <img src="/Images/petron.png" alt="Petron" class="client-logo">
+                            </div>
+                            <div class="client-name">
+                                <p class="small fw-semibold mb-0">Petron Corporation</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Brinks -->
+                    <div class="col-6 col-sm-4 col-lg-2" data-aos="zoom-in" data-aos-delay="160">
+                        <div class="client-card p-3 rounded shadow-sm">
+                            <div class="client-logo-container">
+                                <img src="/Images/brinks.png" alt="Brinks" class="client-logo">
+                            </div>
+                            <div class="client-name">
+                                <p class="small fw-semibold mb-0">Brinks Philippines Inc.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Biosolutions -->
+                    <div class="col-6 col-sm-4 col-lg-2" data-aos="zoom-in" data-aos-delay="240">
+                        <div class="client-card p-3 rounded shadow-sm">
+                            <div class="client-logo-container">
+                                <img src="/Images/biosolution.png" alt="Biosolutions" class="client-logo">
+                            </div>
+                            <div class="client-name">
+                                <p class="small fw-semibold mb-0">Biosolutions International</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VCMC -->
+                    <div class="col-6 col-sm-4 col-lg-2" data-aos="zoom-in" data-aos-delay="320">
+                        <div class="client-card p-3 rounded shadow-sm">
+                            <div class="client-logo-container">
+                                <img src="/Images/vcmc.png" alt="VCMC" class="client-logo">
+                            </div>
+                            <div class="client-name">
+                                <p class="small fw-semibold mb-0">Valenzuela Citicare Medical Center</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BOC -->
+                    <div class="col-6 col-sm-4 col-lg-2" data-aos="zoom-in" data-aos-delay="400">
+                        <div class="client-card p-3 rounded shadow-sm">
+                            <div class="client-logo-container">
+                                <img src="/Images/boc.png" alt="BOC" class="client-logo">
+                            </div>
+                            <div class="client-name">
+                                <p class="small fw-semibold mb-0">Bureau of Customs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TEAM SECTION -->
+            <section id="team" class="mb-5">
+                <h3 class="section-header text-center display-6 fw-bold" data-aos="fade-up">
+                    Our Dedicated Team
+                </h3>
+                <div class="row g-4">
+                    <div class="col-6 col-md-3" data-aos="zoom-in">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/Sprayer.png" alt="Team Member 1" />
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3" data-aos="zoom-in" data-aos-delay="100">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/team2.png" alt="Team Member 2" />
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3" data-aos="zoom-in" data-aos-delay="200">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/team3.png" alt="Team Member 3" />
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3" data-aos="zoom-in" data-aos-delay="300">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/teamapt.png" alt="Team Member 4" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COMPLETED PROJECTS SECTION -->
+            <section id="completed" class="mb-5">
+                <h3 class="section-header text-center display-6 fw-bold" data-aos="fade-up">
+                    Completed Projects
+                </h3>
+                <div class="row g-4">
+                    <div class="col-md-4" data-aos="zoom-in">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/completed1.jpg" alt="Completed Project 1">
+                        </div>
+                    </div>
+                    <div class="col-md-4" data-aos="zoom-in" data-aos-delay="100">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/completed2.png" alt="Completed Project 2">
+                        </div>
+                    </div>
+                    <div class="col-md-4" data-aos="zoom-in" data-aos-delay="200">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/completed3.png" alt="Completed Project 3">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ONGOING PROJECTS SECTION -->
+            <section id="ongoing" class="mb-5">
+                <h3 class="section-header text-center display-6 fw-bold" data-aos="fade-up">
+                    Ongoing Projects
+                </h3>
+                <div class="row g-4">
+                    <div class="col-md-4" data-aos="zoom-in">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/ongoing1.png" alt="Ongoing Project 1">
+                        </div>
+                    </div>
+                    <div class="col-md-4" data-aos="zoom-in" data-aos-delay="100">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/ongoing2.png" alt="Ongoing Project 2">
+                        </div>
+                    </div>
+                    <div class="col-md-4" data-aos="zoom-in" data-aos-delay="200">
+                        <div class="project-card shadow-lg">
+                            <img src="/Images/ongoing3.png" alt="Ongoing Project 3">
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
-    </section>
+
+        <!-- BACK TO HOME BUTTON -->
+        <section class="bg-gradient-custom py-5">
+            <div class="container text-center" data-aos="fade-up">
+                <h4 class="fs-3 fw-bold mb-3">Ready to Get Started?</h4>
+                <a href="Default.aspx" class="btn-back-home">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Home
+                </a>
+            </div>
+        </section>
+    </div>
+
+    <!-- Bootstrap Bundle JS (if not already in master page) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AOS JS -->
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script>
+        // Initialize AOS
+        document.addEventListener('DOMContentLoaded', function () {
+            AOS.init({
+                once: true,
+                offset: 80,
+                duration: 800,
+                easing: 'ease-in-out',
+                delay: 100
+            });
+        });
+    </script>
 </asp:Content>

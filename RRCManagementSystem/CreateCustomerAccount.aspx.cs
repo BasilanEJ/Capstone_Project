@@ -162,8 +162,8 @@ namespace RRCManagementSystem
             string token = Guid.NewGuid().ToString();
             DateTime expiry = DateTime.Now.AddHours(1);
 
-            // 8) Insert client + reset
-            int clientId = CreateClientWithReset(
+            // 8) Insert client + reset and get ClientNumber
+            var (clientId, clientNumber) = CreateClientWithReset(
                 lastName, firstName, middleName, email, contact,
                 street, brgy, city, region, country, landmark,
                 token, expiry
@@ -205,15 +205,16 @@ namespace RRCManagementSystem
             // 11) Send reset email
             bool sent = SendResetEmail(email, token);
 
+            // 12) Show success message with ClientNumber
             ShowSweetAlert(
                 sent ? "Success" : "Partial Success",
                 sent
-                    ? "Client added successfully. Email sent for password setup."
-                    : "Client added but failed to send email.",
+                    ? $"Client added successfully!<br/><strong>Client Number: {clientNumber}</strong><br/>Email sent for password setup."
+                    : $"Client added successfully!<br/><strong>Client Number: {clientNumber}</strong><br/>However, failed to send email.",
                 sent ? "success" : "warning"
             );
 
-            // 12) Clear form
+            // 13) Clear form
             ClearForm();
         }
 
@@ -442,10 +443,10 @@ Swal.fire({{
 
 
 
-        private int CreateClientWithReset(
-      string lastName, string firstName, string middleName, string email, string contact,
-      string street, string brgy, string city, string region, string country, string landmark,
-      string token, DateTime expiry)
+        private (int clientId, string clientNumber) CreateClientWithReset(
+     string lastName, string firstName, string middleName, string email, string contact,
+     string street, string brgy, string city, string region, string country, string landmark,
+     string token, DateTime expiry)
         {
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spClient_CreateWithReset", con))
@@ -478,8 +479,18 @@ Swal.fire({{
                 cmd.Parameters.Add("@ResetTokenExpiry", SqlDbType.DateTime).Value = expiry;
 
                 con.Open();
-                object id = cmd.ExecuteScalar();
-                return (id != null && int.TryParse(id.ToString(), out int clientId)) ? clientId : 0;
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        int clientId = reader.GetInt32(reader.GetOrdinal("ClientID"));
+                        string clientNumber = reader.GetString(reader.GetOrdinal("ClientNumber"));
+                        return (clientId, clientNumber);
+                    }
+                }
+
+                return (0, null);
             }
         }
 

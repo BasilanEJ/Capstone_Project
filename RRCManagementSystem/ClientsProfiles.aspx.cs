@@ -19,7 +19,8 @@ namespace RRCManagementSystem
             // 🔐 Require login
             if (Session["UserID"] == null || Session["Role"] == null)
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
@@ -29,7 +30,8 @@ namespace RRCManagementSystem
             if (role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
                 role.Equals("Inspector", StringComparison.OrdinalIgnoreCase))
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 

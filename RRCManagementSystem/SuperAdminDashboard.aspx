@@ -19,16 +19,6 @@
                     </div>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100 rounded-lg">
-                    <div class="card-body text-center py-4">
-                        <h3 class="display-5 fw-bold text-dark mb-2">
-                            <asp:Label ID="lblAuditLogs" runat="server" Text="0" />
-                        </h3>
-                        <p class="text-muted mb-0 small">Audit Logs</p>
-                    </div>
-                </div>
-            </div>
         </div>
     </ContentTemplate>
     <Triggers>
@@ -315,7 +305,8 @@
                                 ItemStyle-CssClass="align-middle small" />
 
                             <asp:TemplateField HeaderText="Email Hash"
-                                HeaderStyle-CssClass="text-muted small fw-normal border-0 bg-light">
+                                HeaderStyle-CssClass="text-muted small fw-normal border-0 bg-light"
+                                Visible ="false">
                                 <ItemTemplate>
                                     <div class="d-flex align-items-center">
                                         <span class="truncate-text me-2 font-monospace" data-full-text='<%# Eval("EmailHash") %>'>

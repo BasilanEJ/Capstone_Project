@@ -79,10 +79,7 @@ namespace RRCManagementSystem
             }
         }
 
-        /// <summary>
-        /// Handles toggle click event. 
-        /// Flips the maintenance mode state in the database and updates cache.
-        /// </summary>
+
         protected void btnToggle_Click(object sender, EventArgs e)
         {
             try

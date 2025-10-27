@@ -39,70 +39,72 @@
                 </div>
 
                 <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-                    <asp:GridView ID="gvClients" runat="server" AutoGenerateColumns="False"
-                        CssClass="min-w-full divide-y divide-gray-200 border-collapse"
-                        AllowPaging="True" PageSize="10"
-                        OnPageIndexChanging="gvClients_PageIndexChanging"
-                        OnRowCommand="gvClients_RowCommand"
-                        PagerStyle-CssClass="pagination-container"
-                        PagerSettings-Mode="NumericFirstLast"
-                        PagerSettings-Position="Bottom"
-                        PagerSettings-PageButtonCount="5"
-                        PagerSettings-FirstPageText="<i class='fas fa-angle-double-left'></i>"
-                        PagerSettings-LastPageText="<i class='fas fa-angle-double-right'></i>"
-                        PagerSettings-PreviousPageText="<i class='fas fa-angle-left'></i>"
-                        PagerSettings-NextPageText="<i class='fas fa-angle-right'></i>">
+                   <asp:GridView ID="gvClients" runat="server" AutoGenerateColumns="False"
+    CssClass="min-w-full divide-y divide-gray-200 border-collapse"
+    AllowPaging="True" PageSize="10"
+    OnPageIndexChanging="gvClients_PageIndexChanging"
+    OnRowCommand="gvClients_RowCommand"
+    PagerStyle-CssClass="pagination-container"
+    PagerSettings-Mode="NumericFirstLast"
+    PagerSettings-Position="Bottom"
+    PagerSettings-PageButtonCount="5"
+    PagerSettings-FirstPageText="<i class='fas fa-angle-double-left'></i>"
+    PagerSettings-LastPageText="<i class='fas fa-angle-double-right'></i>"
+    PagerSettings-PreviousPageText="<i class='fas fa-angle-left'></i>"
+    PagerSettings-NextPageText="<i class='fas fa-angle-right'></i>">
 
-                        <HeaderStyle CssClass="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />
-                        <RowStyle CssClass="bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors client-row" />
+    <HeaderStyle CssClass="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />
+    <RowStyle CssClass="bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors client-row" />
 
-                        <EmptyDataTemplate>
-                            <div class="py-4 px-6 text-center text-sm text-gray-500">
-                                No client profiles found.
-                            </div>
-                        </EmptyDataTemplate>
+    <EmptyDataTemplate>
+        <div class="py-4 px-6 text-center text-sm text-gray-500">
+            No client profiles found.
+        </div>
+    </EmptyDataTemplate>
 
-                        <Columns>
-                            <asp:BoundField DataField="ClientID" HeaderText="Client ID" ReadOnly="True" Visible="False" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200" />
+    <Columns>
+        <asp:BoundField DataField="ClientID" HeaderText="Client ID" ReadOnly="True" Visible="False" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200" />
 
-                            <asp:TemplateField HeaderText="Name" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200 client-name">
-                                <ItemTemplate>
-                                    <%# Eval("LastName") %>, <%# Eval("FirstName") %> <%# Eval("MiddleName") %>
-                                </ItemTemplate>
-                            </asp:TemplateField>
+        <asp:BoundField DataField="ClientNumber" HeaderText="Client Number" ReadOnly="True" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 border-r border-gray-200" />
 
-                            <asp:BoundField DataField="Email" HeaderText="Email" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200 client-email" />
-                            <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200" />
-                            <asp:BoundField DataField="City" HeaderText="City" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200" />
-                            <asp:BoundField DataField="Country" HeaderText="Country" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200" />
+        <asp:TemplateField HeaderText="Name" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200 client-name">
+            <ItemTemplate>
+                <%# Eval("LastName") %>, <%# Eval("FirstName") %> <%# Eval("MiddleName") %>
+            </ItemTemplate>
+        </asp:TemplateField>
 
-                            <asp:TemplateField HeaderText="Actions" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <ItemTemplate>
-                                    <div class="flex items-center space-x-2">
-                                        <asp:Button ID="btnResendEmail" runat="server"
-                                            CssClass="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition-colors"
-                                            Text="Resend Email"
-                                            CommandName="ResendEmail"
-                                            CommandArgument='<%# Eval("ClientID") %>' />
+        <asp:BoundField DataField="Email" HeaderText="Email" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200 client-email" />
+        <asp:BoundField DataField="ContactNumber" HeaderText="Contact Number" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200" />
+        <asp:BoundField DataField="City" HeaderText="City" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200" />
+        <asp:BoundField DataField="Country" HeaderText="Country" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200" />
 
-                                        <asp:Button ID="btnView" runat="server"
-                                            CssClass="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                                            Text="View Profile"
-                                            CommandName="ViewProfile"
-                                            CommandArgument='<%# Eval("ClientID") %>' />
+        <asp:TemplateField HeaderText="Actions" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <ItemTemplate>
+                <div class="flex items-center space-x-2">
+                    <asp:Button ID="btnResendEmail" runat="server"
+                        CssClass="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400 transition-colors"
+                        Text="Resend Email"
+                        CommandName="ResendEmail"
+                        CommandArgument='<%# Eval("ClientID") %>' />
 
-                                        <asp:Button ID="btnArchive" runat="server"
-                                            CssClass="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                                            Text="Archive"
-                                            CommandName="ArchiveClient"
-                                            CommandArgument='<%# Eval("ClientID") %>'
-                                            UseSubmitBehavior="false"
-                                            OnClientClick="return confirmArchive(this);" />
-                                    </div>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                        </Columns>
-                    </asp:GridView>
+                    <asp:Button ID="btnView" runat="server"
+                        CssClass="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                        Text="View Profile"
+                        CommandName="ViewProfile"
+                        CommandArgument='<%# Eval("ClientID") %>' />
+
+                    <asp:Button ID="btnArchive" runat="server"
+                        CssClass="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                        Text="Archive"
+                        CommandName="ArchiveClient"
+                        CommandArgument='<%# Eval("ClientID") %>'
+                        UseSubmitBehavior="false"
+                        OnClientClick="return confirmArchive(this);" />
+                </div>
+            </ItemTemplate>
+        </asp:TemplateField>
+    </Columns>
+</asp:GridView>
                 </div>
             </div>
         </div>

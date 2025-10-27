@@ -23,15 +23,26 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (!IsPostBack)
+            if (!IsPostBack) // This block only runs ONCE on the initial page load
             {
                 lblWelcome.Text = "Welcome back, " + (Session["AdminName"]?.ToString() ?? "Admin") + "!";
                 LoadTotalCounts();
                 LoadWeeklyBookingCalendar();
+                LoadCategoryFilter();
+
+                string defaultCategory = "Bottled Chemical";
+                if (ddlCategoryFilter.Items.FindByValue(defaultCategory) != null)
+                {
+                    ddlCategoryFilter.SelectedValue = defaultCategory;
+                }
+
+                LoadInventoryGrid();
             }
+
         }
 
-        // ==================== SALES CHART (AJAX) ====================
+
+
         [WebMethod]
         [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
         public static object GetSalesData(string type)
@@ -197,6 +208,96 @@ namespace RRCManagementSystem
                 }
             }
         }
+
+
+
+        private void LoadCategoryFilter()
+        {
+            DataTable dt = new DataTable();
+            using (SqlConnection conn = new SqlConnection(cs))
+            {
+
+                using (SqlCommand cmd = new SqlCommand("SELECT DISTINCT Type FROM dbo.Inventory ORDER BY Type", conn))
+                {
+                    conn.Open();
+                    SqlDataAdapter adapter = new SqlDataAdapter(cmd);
+                    adapter.Fill(dt);
+                }
+            }
+
+            ddlCategoryFilter.DataSource = dt;
+            ddlCategoryFilter.DataTextField = "Type";
+            ddlCategoryFilter.DataValueField = "Type";
+            ddlCategoryFilter.DataBind();
+
+
+
+            ListItem safetyGearItem = ddlCategoryFilter.Items.FindByText("Safety Gear");
+
+            if (safetyGearItem != null)
+            {
+                safetyGearItem.Text = "Gear"; 
+                                       
+            }
+        }
+
+        protected void ddlCategoryFilter_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            LoadInventoryGrid();
+        }
+
+        private void LoadInventoryGrid()
+        {
+            DateTime today = DateTime.Today;
+            DateTime yesterday = today.AddDays(-1); // Get yesterday's date
+
+            // This part is for saving the snapshot (it looks correct)
+            using (SqlConnection conn = new SqlConnection(cs))
+            {
+                // You have "EnsureForDateDS" here, I assume this is correct
+                using (SqlCommand cmd = new SqlCommand("dbo.spInventorySnapshot_EnsureForDateDS", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@SnapshotDate", SqlDbType.Date).Value = today;
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            // --- Step 2: Show the comparison in the grid ---
+            DataTable dt = new DataTable();
+            using (SqlConnection conn = new SqlConnection(cs))
+            {
+                using (SqlCommand cmd = new SqlCommand("dbo.spInventory_CompareWithSnapshot", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    // --- vvv THIS IS THE MISSING CODE vvv ---
+
+                    // 1. Get the selected category from the dropdown
+                    string categoryFilter = ddlCategoryFilter.SelectedValue;
+
+                    // 2. Handle the "All Categories" (value="") vs. a specific category
+                    object typeParam = string.IsNullOrEmpty(categoryFilter) ? DBNull.Value : (object)categoryFilter;
+
+                    // --- ^^^ END OF MISSING CODE ^^^ ---
+
+                    // Pass BOTH parameters to the stored procedure
+                    cmd.Parameters.Add("@SnapshotDate", SqlDbType.Date).Value = yesterday;
+                    cmd.Parameters.Add("@Type", SqlDbType.NVarChar, 50).Value = typeParam; // This line was missing
+
+                    conn.Open();
+                    SqlDataAdapter adapter = new SqlDataAdapter(cmd);
+                    adapter.Fill(dt);
+                }
+            }
+
+            // Bind the comparison data to the grid
+            gvInventory.DataSource = dt;
+            gvInventory.DataBind();
+        }
+
+
 
         // ==================== BLOCKCHAIN LOG LIST/FILTER ====================
 

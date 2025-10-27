@@ -20,7 +20,7 @@ namespace RRCManagementSystem
         {
             if (Session["UserID"] == null || Session["Role"] == null)
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false); // Pass false
                 return;
             }
 
@@ -28,7 +28,7 @@ namespace RRCManagementSystem
 
             if (role == "SuperAdmin" || role == "Inspector")
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false); // Pass false
                 return;
             }
 
@@ -36,7 +36,7 @@ namespace RRCManagementSystem
 
             if (!HasPermission(userId, "ManageItem", "CanView"))
             {
-                Response.Redirect("~/Unauthorized.aspx");
+                Response.Redirect("~/Unauthorized.aspx", false); // Pass false
                 return;
             }
 
@@ -168,7 +168,8 @@ namespace RRCManagementSystem
                 }
 
                 string encodedId = EncodeID(itemId.ToString());
-                Response.Redirect($"EditItem.aspx?ItemID={encodedId}");
+                Response.Redirect($"EditItem.aspx?ItemID={encodedId}", false);
+                return; 
             }
             else if (e.CommandName == "AddStocks")
             {

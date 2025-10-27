@@ -67,7 +67,7 @@ namespace RRCManagementSystem
             Page.Validate();
             if (!Page.IsValid)
             {
-                ShowError("⚠ Please fix the highlighted errors.");
+                ShowSweetAlert("Validation Error", "⚠ Please fix the highlighted errors.", "error", false);
                 return;
             }
 
@@ -75,7 +75,7 @@ namespace RRCManagementSystem
 
             if (string.IsNullOrEmpty(roleName))
             {
-                ShowError("⚠ Role name is required.");
+                ShowSweetAlert("Validation Error", "⚠ Role name is required.", "error", false);
                 return;
             }
 
@@ -99,7 +99,7 @@ namespace RRCManagementSystem
 
             if (!hasAnyPermission)
             {
-                ShowError("⚠ Please grant at least one permission for this role.");
+                ShowSweetAlert("No Permissions Selected", "⚠ Please grant at least one permission for this role.", "warning", false);
                 return;
             }
 
@@ -131,22 +131,25 @@ namespace RRCManagementSystem
                     // Step 2: Save permissions for this role
                     SaveRolePermissions(newRoleId);
 
-                    ShowSweetAlert("Success", $"✅ Role '{roleName}' added successfully with permissions!", "success", true);
-                    txtRoleName.Text = string.Empty;
-                    LoadDefaultPermissions(); // Reset checkboxes
+                    ShowSweetAlert(
+                        "Success!",
+                        $"Role '{roleName}' created successfully! Redirecting...",
+                        "success",
+                        true
+                    );
                 }
                 else
                 {
-                    ShowSweetAlert("Duplicate", "This role already exists.", "error", false);
+                    ShowSweetAlert("Duplicate Role", "A role with this name already exists. Please choose a different name.", "error", false);
                 }
             }
             catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
             {
-                ShowSweetAlert("Duplicate", "This role already exists.", "error", false);
+                ShowSweetAlert("Duplicate Role", "A role with this name already exists. Please choose a different name.", "error", false);
             }
             catch (Exception ex)
             {
-                ShowError("❌ Error: " + ex.Message);
+                ShowSweetAlert("Error", $"An error occurred: {ex.Message}", "error", false);
             }
         }
 
@@ -188,24 +191,43 @@ namespace RRCManagementSystem
 
         private void ShowSweetAlert(string title, string message, string icon, bool redirect)
         {
-            string script = $@"
-                Swal.fire({{
-                    title: '{title}',
-                    html: '{message}',
-                    icon: '{icon}',
-                    confirmButtonColor: '#1f2937'
-                }})";
+            // Escape single quotes to prevent JavaScript errors
+            message = message.Replace("'", "\\'");
+            title = title.Replace("'", "\\'");
 
             if (redirect)
             {
-                script += @".then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.href = 'ViewRoles.aspx';
-                    }
-                });";
-            }
+                string script = $@"
+                    Swal.fire({{
+                        title: '{title}',
+                        html: '{message}',
+                        icon: '{icon}',
+                        confirmButtonColor: '#4169E1',
+                        confirmButtonText: '<i class=""fas fa-arrow-right me-2""></i>Go to Roles',
+                        timer: 3000,
+                        timerProgressBar: true,
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: true
+                    }}).then((result) => {{
+                        window.location.href = 'ViewRole.aspx';
+                    }});";
 
-            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert", script, true);
+                ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlertSuccess", script, true);
+            }
+            else
+            {
+                string script = $@"
+                    Swal.fire({{
+                        title: '{title}',
+                        html: '{message}',
+                        icon: '{icon}',
+                        confirmButtonColor: '#4169E1',
+                        confirmButtonText: 'OK'
+                    }});";
+
+                ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlertError_" + Guid.NewGuid(), script, true);
+            }
         }
 
         private void ShowError(string message)

@@ -13,7 +13,7 @@ namespace RRCManagementSystem
     {
         private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
-        // Philippine Regions and Cities mapping (kept for context)
+        // Philippine Regions and Cities mapping
         private static readonly Dictionary<string, List<string>> RegionCities = new Dictionary<string, List<string>>
         {
             {
@@ -72,6 +72,7 @@ namespace RRCManagementSystem
             }
         };
 
+
         protected void Page_Load(object sender, EventArgs e)
         {
             if (!IsPostBack)
@@ -79,7 +80,8 @@ namespace RRCManagementSystem
                 // Check if user is SuperAdmin
                 if (Session["Role"] == null || Session["Role"].ToString() != "SuperAdmin")
                 {
-                    Response.Redirect("Login.aspx");
+                    Response.Redirect("Login.aspx", false);
+                    Context.ApplicationInstance.CompleteRequest();
                     return;
                 }
 
@@ -89,7 +91,7 @@ namespace RRCManagementSystem
         }
 
         /// <summary>
-        /// Load regions into both form and filter dropdowns
+        /// Load regions into all dropdowns
         /// </summary>
         private void LoadRegionDropdowns()
         {
@@ -108,28 +110,53 @@ namespace RRCManagementSystem
             {
                 ddlFilterRegion.Items.Add(new ListItem(region, region));
             }
+
+            // Load edit modal dropdown
+            ddlEditRegion.Items.Clear();
+            ddlEditRegion.Items.Add(new ListItem("-- Select Region --", ""));
+            foreach (var region in RegionCities.Keys.OrderBy(x => x))
+            {
+                ddlEditRegion.Items.Add(new ListItem(region, region));
+            }
         }
 
         /// <summary>
-        /// Populate cities when region is selected
+        /// Populate cities when region is selected (Add form)
         /// </summary>
         protected void ddlRegion_SelectedIndexChanged(object sender, EventArgs e)
         {
-            ddlCity.Items.Clear();
+            PopulateCities(ddlRegion, ddlCity);
+        }
 
-            if (string.IsNullOrEmpty(ddlRegion.SelectedValue))
+        /// <summary>
+        /// Populate cities when region is selected (Edit modal)
+        /// </summary>
+        protected void ddlEditRegion_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            PopulateCities(ddlEditRegion, ddlEditCity);
+            UpdatePanelMain.Update();
+        }
+
+        /// <summary>
+        /// Helper method to populate cities
+        /// </summary>
+        private void PopulateCities(DropDownList ddlRegionControl, DropDownList ddlCityControl)
+        {
+            ddlCityControl.Items.Clear();
+
+            if (string.IsNullOrEmpty(ddlRegionControl.SelectedValue))
             {
-                ddlCity.Items.Add(new ListItem("-- Select Region First --", ""));
+                ddlCityControl.Items.Add(new ListItem("-- Select Region First --", ""));
                 return;
             }
 
-            ddlCity.Items.Add(new ListItem("-- Select City --", ""));
+            ddlCityControl.Items.Add(new ListItem("-- Select City --", ""));
 
-            if (RegionCities.TryGetValue(ddlRegion.SelectedValue, out var cities))
+            if (RegionCities.TryGetValue(ddlRegionControl.SelectedValue, out var cities))
             {
                 foreach (var city in cities.OrderBy(x => x))
                 {
-                    ddlCity.Items.Add(new ListItem(city, city));
+                    ddlCityControl.Items.Add(new ListItem(city, city));
                 }
             }
         }
@@ -161,7 +188,7 @@ namespace RRCManagementSystem
         }
 
         /// <summary>
-        /// Save or update travel expense
+        /// Save new travel expense (Add form only)
         /// </summary>
         protected void btnSave_Click(object sender, EventArgs e)
         {
@@ -186,44 +213,31 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                int travelExpenseId = Convert.ToInt32(hfTravelExpenseID.Value);
                 int userId = Session["UserID"] != null ? Convert.ToInt32(Session["UserID"]) : 0;
-
-                // Determine IsActive value
-                bool isActive = true; // Default to Active when adding a new record
-
-                // If updating (ID > 0), use the value stored in the hidden field from the edit load
-                if (travelExpenseId > 0)
-                {
-                    isActive = Convert.ToBoolean(hfIsActive.Value);
-                }
-
 
                 using (var con = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand("sp_TravelExpenses_InsertOrUpdate", con))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.AddWithValue("@TravelExpenseID", travelExpenseId);
+                    cmd.Parameters.AddWithValue("@TravelExpenseID", 0); // Always 0 for new records
                     cmd.Parameters.AddWithValue("@Region", ddlRegion.SelectedValue);
                     cmd.Parameters.AddWithValue("@City", ddlCity.SelectedValue);
                     cmd.Parameters.AddWithValue("@TravelPrice", price);
-                    cmd.Parameters.AddWithValue("@IsActive", isActive); // Use the determined value
+                    cmd.Parameters.AddWithValue("@IsActive", true); // Always active for new records
                     cmd.Parameters.AddWithValue("@UpdatedBy", userId);
 
                     con.Open();
                     cmd.ExecuteNonQuery();
                 }
 
-                string message = travelExpenseId == 0 ? "Travel expense added successfully!" : "Travel expense updated successfully!";
-                ShowMessage(message, "success");
-
-                ClearForm();
+                ShowMessage("Travel expense added successfully!", "success");
+                ClearAddForm();
                 BindTravelExpenses();
                 UpdatePanelMain.Update();
             }
             catch (SqlException sqlEx)
             {
-                if (sqlEx.Number == 2627 || sqlEx.Number == 2601) // Duplicate key error
+                if (sqlEx.Number == 2627 || sqlEx.Number == 2601)
                 {
                     ShowMessage("This region and city combination already exists!", "danger");
                 }
@@ -239,7 +253,7 @@ namespace RRCManagementSystem
         }
 
         /// <summary>
-        /// Handle GridView row commands (Edit/Delete)
+        /// Handle GridView row commands (Edit only - Delete now handled by btnDeleteHidden_Click)
         /// </summary>
         protected void gvTravelExpenses_RowCommand(object sender, GridViewCommandEventArgs e)
         {
@@ -249,14 +263,11 @@ namespace RRCManagementSystem
             {
                 LoadTravelExpenseForEdit(travelExpenseId);
             }
-            else if (e.CommandName == "DeleteExpense")
-            {
-                DeleteTravelExpense(travelExpenseId);
-            }
+            // DeleteExpense is now handled by btnDeleteHidden_Click via SweetAlert
         }
 
         /// <summary>
-        /// Load travel expense data for editing
+        /// Load travel expense data for editing in modal
         /// </summary>
         private void LoadTravelExpenseForEdit(int travelExpenseId)
         {
@@ -271,64 +282,133 @@ namespace RRCManagementSystem
                 {
                     if (reader.Read())
                     {
-                        hfTravelExpenseID.Value = reader["TravelExpenseID"].ToString();
+                        hfEditTravelExpenseID.Value = reader["TravelExpenseID"].ToString();
 
                         string region = reader["Region"].ToString();
-                        ddlRegion.SelectedValue = region;
+                        ddlEditRegion.SelectedValue = region;
 
                         // Trigger city dropdown population
-                        ddlRegion_SelectedIndexChanged(null, null);
+                        PopulateCities(ddlEditRegion, ddlEditCity);
 
-                        ddlCity.SelectedValue = reader["City"].ToString();
-                        txtTravelPrice.Text = Convert.ToDecimal(reader["TravelPrice"]).ToString("F2");
+                        ddlEditCity.SelectedValue = reader["City"].ToString();
+                        txtEditTravelPrice.Text = Convert.ToDecimal(reader["TravelPrice"]).ToString("F2");
 
-                        // Store the current IsActive status in the new hidden field
-                        hfIsActive.Value = Convert.ToBoolean(reader["IsActive"]).ToString();
-
-                        lblFormTitle.Text = "Edit Travel Expense";
-                        btnCancel.Visible = true;
-                        btnSave.Text = "Update Travel Expense";
+                        // Store the current IsActive status
+                        hfEditIsActive.Value = Convert.ToBoolean(reader["IsActive"]).ToString();
                     }
                 }
             }
 
+            // JavaScript will open the modal
+            ScriptManager.RegisterStartupScript(this, GetType(), "OpenModal", "openEditModal();", true);
             UpdatePanelMain.Update();
         }
 
         /// <summary>
-        /// Delete travel expense
+        /// Update travel expense from modal
         /// </summary>
-        private void DeleteTravelExpense(int travelExpenseId)
+        protected void btnUpdateExpense_Click(object sender, EventArgs e)
         {
             try
             {
+                // Validation
+                if (string.IsNullOrEmpty(ddlEditRegion.SelectedValue))
+                {
+                    ShowMessage("Please select a region.", "warning");
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(ddlEditCity.SelectedValue))
+                {
+                    ShowMessage("Please select a city.", "warning");
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(txtEditTravelPrice.Text) || !decimal.TryParse(txtEditTravelPrice.Text, out decimal price) || price < 0)
+                {
+                    ShowMessage("Please enter a valid travel price.", "warning");
+                    return;
+                }
+
+                int travelExpenseId = Convert.ToInt32(hfEditTravelExpenseID.Value);
+                int userId = Session["UserID"] != null ? Convert.ToInt32(Session["UserID"]) : 0;
+                bool isActive = Convert.ToBoolean(hfEditIsActive.Value);
+
                 using (var con = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("sp_TravelExpenses_Delete", con))
+                using (var cmd = new SqlCommand("sp_TravelExpenses_InsertOrUpdate", con))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@TravelExpenseID", travelExpenseId);
+                    cmd.Parameters.AddWithValue("@Region", ddlEditRegion.SelectedValue);
+                    cmd.Parameters.AddWithValue("@City", ddlEditCity.SelectedValue);
+                    cmd.Parameters.AddWithValue("@TravelPrice", price);
+                    cmd.Parameters.AddWithValue("@IsActive", isActive);
+                    cmd.Parameters.AddWithValue("@UpdatedBy", userId);
 
                     con.Open();
                     cmd.ExecuteNonQuery();
                 }
 
-                ShowMessage("Travel expense deleted successfully!", "success");
+                ShowMessage("Travel expense updated successfully!", "success");
+
+                // Close modal
+                ScriptManager.RegisterStartupScript(this, GetType(), "CloseModal", "closeEditModal();", true);
+
+                ClearEditForm();
                 BindTravelExpenses();
                 UpdatePanelMain.Update();
+            }
+            catch (SqlException sqlEx)
+            {
+                if (sqlEx.Number == 2627 || sqlEx.Number == 2601)
+                {
+                    ShowMessage("This region and city combination already exists!", "danger");
+                }
+                else
+                {
+                    ShowMessage($"Database error: {sqlEx.Message}", "danger");
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowMessage($"Error: {ex.Message}", "danger");
+            }
+        }
+
+        /// <summary>
+        /// Handle delete from hidden button (triggered by SweetAlert)
+        /// </summary>
+        protected void btnDeleteHidden_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                int travelExpenseId = Convert.ToInt32(hfDeleteID.Value);
+
+                if (travelExpenseId > 0)
+                {
+                    using (var con = new SqlConnection(connectionString))
+                    using (var cmd = new SqlCommand("sp_TravelExpenses_Delete", con))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@TravelExpenseID", travelExpenseId);
+
+                        con.Open();
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    ShowMessage("Travel expense deleted successfully!", "success");
+
+                    // Clear the hidden field
+                    hfDeleteID.Value = "0";
+
+                    BindTravelExpenses();
+                    UpdatePanelMain.Update();
+                }
             }
             catch (Exception ex)
             {
                 ShowMessage($"Error deleting travel expense: {ex.Message}", "danger");
             }
-        }
-
-        /// <summary>
-        /// Cancel edit mode
-        /// </summary>
-        protected void btnCancel_Click(object sender, EventArgs e)
-        {
-            ClearForm();
-            UpdatePanelMain.Update();
         }
 
         /// <summary>
@@ -359,20 +439,30 @@ namespace RRCManagementSystem
         }
 
         /// <summary>
-        /// Clear form fields
+        /// Clear add form fields
         /// </summary>
-        private void ClearForm()
+        private void ClearAddForm()
         {
             hfTravelExpenseID.Value = "0";
-            hfIsActive.Value = "True"; // Ensure hidden status defaults to True
+            hfIsActive.Value = "True";
             ddlRegion.SelectedIndex = 0;
             ddlCity.Items.Clear();
             ddlCity.Items.Add(new ListItem("-- Select Region First --", ""));
             txtTravelPrice.Text = "";
-            lblFormTitle.Text = "Add Travel Expense";
-            btnCancel.Visible = false;
-            btnSave.Text = "Save Travel Expense";
             lblMessage.Visible = false;
+        }
+
+        /// <summary>
+        /// Clear edit modal fields
+        /// </summary>
+        private void ClearEditForm()
+        {
+            hfEditTravelExpenseID.Value = "0";
+            hfEditIsActive.Value = "True";
+            ddlEditRegion.SelectedIndex = 0;
+            ddlEditCity.Items.Clear();
+            ddlEditCity.Items.Add(new ListItem("-- Select Region First --", ""));
+            txtEditTravelPrice.Text = "";
         }
 
         /// <summary>
@@ -383,7 +473,6 @@ namespace RRCManagementSystem
             string icon;
             string title;
 
-            // Map the severity type to the correct SweetAlert icon (C# 7.3 compatible switch)
             switch (type)
             {
                 case "success":
@@ -395,7 +484,7 @@ namespace RRCManagementSystem
                     title = "Attention!";
                     break;
                 case "danger":
-                    icon = "error"; // SweetAlert uses 'error' for danger/red alerts
+                    icon = "error";
                     title = "Error! 🛑";
                     break;
                 case "info":
@@ -414,7 +503,6 @@ namespace RRCManagementSystem
                 this,
                 GetType(),
                 "ShowSwal",
-                // Passing three arguments: title, escapedMessage, and icon
                 $"showSwalMessage('{title}', '{escapedMessage}', '{icon}');",
                 true
             );

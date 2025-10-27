@@ -27,11 +27,12 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-
                 LoadCMSContent();
-
-
+                LoadServicesFromDatabase(); // Load dynamic services
                 ApplyLazyLoadingToImages();
+                LoadReviews();
+                //LoadBlogs();
+
 
                 fuPestPhoto.Attributes["accept"] = "image/png,image/jpeg,image/jpg";
 
@@ -39,7 +40,169 @@ namespace RRCManagementSystem
             }
         }
 
-        // Helper method to apply lazy loading to all images
+
+      /*  private void LoadBlogs()
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = @"
+                SELECT BlogID, BlogTitle, BlogDescription, BlogImagePath, BlogLink
+                FROM Blogs
+                WHERE IsActive = 1
+                ORDER BY DisplayOrder, BlogID";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        SqlDataAdapter da = new SqlDataAdapter(cmd);
+                        DataTable dt = new DataTable();
+                        da.Fill(dt);
+
+                        rptBlogs.DataSource = dt;
+                        rptBlogs.DataBind();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Blog Load Error: " + ex.Message);
+            }
+        } */ 
+
+
+        private void LoadReviews()
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = @"
+                SELECT ReviewID, CustomerName, ReviewText, Rating, Recommends
+                FROM Reviews
+                WHERE IsActive = 1
+                ORDER BY DisplayOrder, ReviewID";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        SqlDataAdapter da = new SqlDataAdapter(cmd);
+                        DataTable dt = new DataTable();
+                        da.Fill(dt);
+
+                        rptReviews.DataSource = dt;
+                        rptReviews.DataBind();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Review Load Error: " + ex.Message);
+            }
+        }
+
+        // 3. ADD THIS HELPER METHOD to display star ratings
+        protected string GetStarRatingForReview(int rating)
+        {
+            string stars = "";
+            for (int i = 0; i < rating; i++)
+            {
+                stars += "⭐";
+            }
+            return stars;
+        }
+
+
+        private void LoadServicesFromDatabase()
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = @"
+                        SELECT ServiceID, ServiceType, ServiceTitle, ServiceDescription, 
+                               BulletPoints, ImagePath, DisplayOrder
+                        FROM ServicesCMS
+                        WHERE IsActive = 1
+                        ORDER BY ServiceType, DisplayOrder";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        SqlDataAdapter da = new SqlDataAdapter(cmd);
+                        DataTable dt = new DataTable();
+                        da.Fill(dt);
+
+                        // Filter and bind Termite Control services
+                        DataView dvTermite = new DataView(dt);
+                        dvTermite.RowFilter = "ServiceType = 'Termite Control'";
+                        rptTermiteServices.DataSource = dvTermite;
+                        rptTermiteServices.DataBind();
+                        rptTermiteModals.DataSource = dvTermite;
+                        rptTermiteModals.DataBind();
+
+                        // Filter and bind General Pest Control services
+                        DataView dvPest = new DataView(dt);
+                        dvPest.RowFilter = "ServiceType = 'General Pest Control'";
+                        rptPestServices.DataSource = dvPest;
+                        rptPestServices.DataBind();
+                        rptPestModals.DataSource = dvPest;
+                        rptPestModals.DataBind();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Service Load Error: " + ex.Message);
+            }
+        }
+
+        protected string GetShortDescription(string description)
+        {
+            if (string.IsNullOrEmpty(description))
+                return "";
+
+            // Return first 80 characters or until first period
+            int maxLength = 80;
+            if (description.Length <= maxLength)
+                return description;
+
+            // Try to cut at a sentence
+            int periodIndex = description.IndexOf('.', 0, Math.Min(description.Length, maxLength));
+            if (periodIndex > 0)
+                return description.Substring(0, periodIndex + 1);
+
+            // Otherwise just cut at maxLength
+            return description.Substring(0, maxLength) + "...";
+        }
+
+        protected string FormatBulletPoints(string bulletPoints)
+        {
+            if (string.IsNullOrEmpty(bulletPoints))
+                return "";
+
+            var lines = bulletPoints.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var formatted = new System.Text.StringBuilder();
+
+            foreach (var line in lines)
+            {
+                string trimmed = line.Trim();
+                if (!string.IsNullOrEmpty(trimmed))
+                {
+                    // Remove leading dash or bullet if present
+                    if (trimmed.StartsWith("-") || trimmed.StartsWith("•"))
+                        trimmed = trimmed.Substring(1).Trim();
+
+                    formatted.AppendLine($"<li>{trimmed}</li>");
+                }
+            }
+
+            return formatted.ToString();
+        }
+
+
+
         private void ApplyLazyLoadingToImages()
         {
             // Hero and About images
@@ -47,42 +210,14 @@ namespace RRCManagementSystem
             SetLazyLoadImage(imgAbout);
             SetLazyLoadImage(imgVideoThumbnail);
 
-            // Service card images (Termite Control)
-            SetLazyLoadImage(imgBaiting);
-            SetLazyLoadImage(imgTermitePrevention);
-            SetLazyLoadImage(imgSoil);
-            SetLazyLoadImage(imgReticulation);
-            SetLazyLoadImage(imgMound);
-
-            // Service card images (General Pest Control)
-            SetLazyLoadImage(imgGeneralPest);
-            SetLazyLoadImage(imgTickFleas);
-            SetLazyLoadImage(imgBedbugs);
-            SetLazyLoadImage(imgRats);
-
-            // Modal images (Termite Control)
-            SetLazyLoadImage(imgModalBaiting);
-            SetLazyLoadImage(imgModalTermitePrevention);
-            SetLazyLoadImage(imgModalSoil);
-            SetLazyLoadImage(imgModalReticulation);
-            SetLazyLoadImage(imgModalMound);
-
-            // Modal images (General Pest Control)
-            SetLazyLoadImage(imgModalGeneralPest);
-            SetLazyLoadImage(imgModalTickFleas);
-            SetLazyLoadImage(imgModalBedbugs);
-            SetLazyLoadImage(imgModalRats);
-
-            // Blog images
             SetLazyLoadImage(imgBlog1);
             SetLazyLoadImage(imgBlog2);
             SetLazyLoadImage(imgBlog3);
-
-            // Certifications & Organizations
             SetLazyLoadImage(imgCO);
+
+
         }
 
-        // Simplified helper method - reads current ImageUrl value
         private void SetLazyLoadImage(System.Web.UI.WebControls.Image imgControl)
         {
             if (imgControl != null && !string.IsNullOrEmpty(imgControl.ImageUrl))
@@ -98,7 +233,6 @@ namespace RRCManagementSystem
             }
         }
 
-        // ADD THESE METHODS TO YOUR Default.aspx.cs
 
         private void LoadCMSContent()
         {
@@ -115,28 +249,6 @@ namespace RRCManagementSystem
                         // Hero Banner
                         imgHeroBanner.ImageUrl = GetImagePath(reader, "HeroBannerPath", "/images/rrc1.png");
 
-                        // Service Images (for cards)
-                        imgBaiting.ImageUrl = GetImagePath(reader, "BaitingImagePath", "/images/service-baiting.jpg");
-                        imgTermitePrevention.ImageUrl = GetImagePath(reader, "TermitePreventionImagePath", "/images/service-termite-prevention.jpg");
-                        imgSoil.ImageUrl = GetImagePath(reader, "SoilImagePath", "/images/service-soil.jpg");
-                        imgReticulation.ImageUrl = GetImagePath(reader, "ReticulationImagePath", "/images/services-reticulations.jpg");
-                        imgMound.ImageUrl = GetImagePath(reader, "MoundImagePath", "/images/service-mound.jpg");
-                        imgGeneralPest.ImageUrl = GetImagePath(reader, "GeneralPestImagePath", "/images/service-general-pest.jpg");
-                        imgTickFleas.ImageUrl = GetImagePath(reader, "TickFleasImagePath", "/images/service-tick-fleas.jpg");
-                        imgBedbugs.ImageUrl = GetImagePath(reader, "BedbugsImagePath", "/images/service-bedbugs.jpg");
-                        imgRats.ImageUrl = GetImagePath(reader, "RatsImagePath", "/images/service-rats.jpg");
-
-                        // Modal Images (same as card images)
-                        imgModalBaiting.ImageUrl = imgBaiting.ImageUrl;
-                        imgModalTermitePrevention.ImageUrl = imgTermitePrevention.ImageUrl;
-                        imgModalSoil.ImageUrl = imgSoil.ImageUrl;
-                        imgModalReticulation.ImageUrl = imgReticulation.ImageUrl;
-                        imgModalMound.ImageUrl = imgMound.ImageUrl;
-                        imgModalGeneralPest.ImageUrl = imgGeneralPest.ImageUrl;
-                        imgModalTickFleas.ImageUrl = imgTickFleas.ImageUrl;
-                        imgModalBedbugs.ImageUrl = imgBedbugs.ImageUrl;
-                        imgModalRats.ImageUrl = imgRats.ImageUrl;
-
                         // About Section
                         imgAbout.ImageUrl = GetImagePath(reader, "AboutImagePath", "/images/ppe.png");
 
@@ -148,16 +260,13 @@ namespace RRCManagementSystem
                         hfVimeoVideoId.Value = videoId;
                         hfVideoType.Value = videoType;
 
-                        // C&O Section
-                        imgCO.ImageUrl = GetImagePath(reader, "COImagePath", "/images/c&o.png");
-
-                        // Blog Images
                         imgBlog1.ImageUrl = GetImagePath(reader, "Blog1ImagePath", "/Images/DIY.jpg");
                         imgBlog2.ImageUrl = GetImagePath(reader, "Blog2ImagePath", "/Images/blog2.jpg");
                         imgBlog3.ImageUrl = GetImagePath(reader, "Blog3ImagePath", "/Images/blog3.jpg");
 
-                        // Load Service Modal Content
-                        LoadServiceModalContent(reader);
+                        // C&O Section
+                        imgCO.ImageUrl = GetImagePath(reader, "COImagePath", "/images/c&o.png");
+
                     }
                     else
                     {
@@ -172,89 +281,26 @@ namespace RRCManagementSystem
             }
         }
 
-        private void LoadServiceModalContent(SqlDataReader reader)
+        private string GetImagePath(SqlDataReader reader, string columnName, string defaultPath)
         {
-            // Baiting System
-            litBaitingTitle.Text = reader["BaitingTitle"]?.ToString() ?? "🛡️ Baiting System";
-            litBaitingDescription.Text = FormatDescription(reader["BaitingDescription"]?.ToString());
-            litBaitingBullets.Text = FormatBulletPoints(reader["BaitingBulletPoints"]?.ToString());
-
-            // Termite Prevention
-            litTermitePreventionTitle.Text = reader["TermitePreventionTitle"]?.ToString() ?? "🔰 Termite Prevention";
-            litTermitePreventionDescription.Text = FormatDescription(reader["TermitePreventionDescription"]?.ToString());
-            litTermitePreventionBullets.Text = FormatBulletPoints(reader["TermitePreventionBulletPoints"]?.ToString());
-
-            // Soil Poisoning
-            litSoilTitle.Text = reader["SoilTitle"]?.ToString() ?? "🏗️ Soil Poisoning Treatment";
-            litSoilDescription.Text = FormatDescription(reader["SoilDescription"]?.ToString());
-            litSoilBullets.Text = FormatBulletPoints(reader["SoilBulletPoints"]?.ToString());
-
-            // Reticulation
-            litReticulationTitle.Text = reader["ReticulationTitle"]?.ToString() ?? "⚙️ Reticulation System";
-            litReticulationDescription.Text = FormatDescription(reader["ReticulationDescription"]?.ToString());
-            litReticulationBullets.Text = FormatBulletPoints(reader["ReticulationBulletPoints"]?.ToString());
-
-            // Mound Demolition
-            litMoundTitle.Text = reader["MoundTitle"]?.ToString() ?? "🎯 Mound Demolition";
-            litMoundDescription.Text = FormatDescription(reader["MoundDescription"]?.ToString());
-            litMoundBullets.Text = FormatBulletPoints(reader["MoundBulletPoints"]?.ToString());
-
-            // General Pest Control
-            litGeneralPestTitle.Text = reader["GeneralPestTitle"]?.ToString() ?? "🐜 General Pest Control";
-            litGeneralPestDescription.Text = FormatDescription(reader["GeneralPestDescription"]?.ToString());
-            litGeneralPestBullets.Text = FormatBulletPoints(reader["GeneralPestBulletPoints"]?.ToString());
-
-            // Tick & Fleas
-            litTickFleasTitle.Text = reader["TickFleasTitle"]?.ToString() ?? "🐕 Tick & Fleas Control";
-            litTickFleasDescription.Text = FormatDescription(reader["TickFleasDescription"]?.ToString());
-            litTickFleasBullets.Text = FormatBulletPoints(reader["TickFleasBulletPoints"]?.ToString());
-
-            // Bedbugs
-            litBedbugsTitle.Text = reader["BedbugsTitle"]?.ToString() ?? "🛏️ Bedbugs Control";
-            litBedbugsDescription.Text = FormatDescription(reader["BedbugsDescription"]?.ToString());
-            litBedbugsBullets.Text = FormatBulletPoints(reader["BedbugsBulletPoints"]?.ToString());
-
-            // Rats & Rodents
-            litRatsTitle.Text = reader["RatsTitle"]?.ToString() ?? "🐀 Rat & Rodents Control";
-            litRatsDescription.Text = FormatDescription(reader["RatsDescription"]?.ToString());
-            litRatsBullets.Text = FormatBulletPoints(reader["RatsBulletPoints"]?.ToString());
+            try
+            {
+                string path = reader[columnName]?.ToString();
+                return string.IsNullOrEmpty(path) ? defaultPath : path;
+            }
+            catch
+            {
+                return defaultPath;
+            }
         }
 
-
-        private string FormatDescription(string text)
+        private void SetDefaultImages()
         {
-            if (string.IsNullOrWhiteSpace(text))
-                return "<p>No description available.</p>";
-
-            // Split by double line breaks (paragraph separators)
-            var paragraphs = text.Split(new[] { "\r\n\r\n", "\n\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            // Wrap each paragraph in <p> tags
-            var formattedParagraphs = paragraphs
-                .Select(p => $"<p>{Server.HtmlEncode(p.Trim())}</p>");
-
-            return string.Join("", formattedParagraphs);
+            imgHeroBanner.ImageUrl = "/images/rrc1.png";
+            imgAbout.ImageUrl = "/images/ppe.png";
+            imgVideoThumbnail.ImageUrl = "/images/banner tv.jpg";
+            imgCO.ImageUrl = "/images/c&o.png";
         }
-
-        /// <summary>
-        /// Formats bullet points separated by pipe character into list items
-        /// </summary>
-        private string FormatBulletPoints(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-                return "<li>No information available</li>";
-
-            // Split by pipe character
-            var bullets = text.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-
-            // Wrap each bullet in <li> tags
-            var formattedBullets = bullets
-                .Select(b => $"<li>{Server.HtmlEncode(b.Trim())}</li>");
-
-            return string.Join("", formattedBullets);
-        }
-
-        // Replace the ExtractVideoId method in Default.aspx.cs with this improved version:
 
         private string ExtractVideoId(string url, string videoType)
         {
@@ -264,8 +310,7 @@ namespace RRCManagementSystem
             {
                 if (videoType == "YouTube")
                 {
-                    // Handle various YouTube URL formats
-                    if (url.Contains("youtube.com/watch?v="))
+                    if (url.Contains("watch?v="))
                     {
                         var uri = new Uri(url);
                         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
@@ -273,81 +318,26 @@ namespace RRCManagementSystem
                     }
                     else if (url.Contains("youtu.be/"))
                     {
-                        var uri = new Uri(url);
-                        return uri.AbsolutePath.TrimStart('/').Split('?')[0];
+                        return url.Split('/').Last();
                     }
-                    else if (url.Contains("youtube.com/embed/"))
+                    else if (url.Contains("embed/"))
                     {
-                        var uri = new Uri(url);
-                        string[] segments = uri.AbsolutePath.Split('/');
-                        return segments.Length > 2 ? segments[2] : "";
+                        return url.Split('/').Last();
                     }
                 }
                 else if (videoType == "Vimeo")
                 {
-                    // Handle various Vimeo URL formats
-                    var uri = new Uri(url);
-
-                    // Handle player.vimeo.com/video/ID format
-                    if (url.Contains("player.vimeo.com/video/"))
-                    {
-                        string[] segments = uri.AbsolutePath.Split('/');
-                        // segments will be: ["", "video", "1009218555"]
-                        for (int i = 0; i < segments.Length; i++)
-                        {
-                            if (segments[i] == "video" && i + 1 < segments.Length)
-                            {
-                                return segments[i + 1].Split('?')[0]; // Remove query params if any
-                            }
-                        }
-                    }
-                    // Handle standard vimeo.com/ID format
-                    else if (url.Contains("vimeo.com/"))
-                    {
-                        return uri.AbsolutePath.TrimStart('/').Split('/')[0].Split('?')[0];
-                    }
+                    var parts = url.Split('/');
+                    return parts.Last();
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"Error extracting video ID: {ex.Message}");
                 return "";
             }
 
             return "";
         }
-
-        private string GetImagePath(SqlDataReader reader, string columnName, string defaultPath)
-        {
-            string path = reader[columnName]?.ToString();
-            return string.IsNullOrEmpty(path) ? defaultPath : path;
-        }
-
-
-        private void SetDefaultImages()
-        {
-            imgHeroBanner.ImageUrl = "/images/rrc1.png";
-            imgBaiting.ImageUrl = "/images/service-baiting.jpg";
-            imgTermitePrevention.ImageUrl = "/images/service-termite-prevention.jpg";
-            imgSoil.ImageUrl = "/images/service-soil.jpg";
-            imgReticulation.ImageUrl = "/images/services-reticulations.jpg";
-            imgMound.ImageUrl = "/images/service-mound.jpg";
-            imgGeneralPest.ImageUrl = "/images/service-general-pest.jpg";
-            imgTickFleas.ImageUrl = "/images/service-tick-fleas.jpg";
-            imgBedbugs.ImageUrl = "/images/service-bedbugs.jpg";
-            imgRats.ImageUrl = "/images/service-rats.jpg";
-            imgAbout.ImageUrl = "/images/ppe.png";
-            imgVideoThumbnail.ImageUrl = "/images/banner tv.jpg";
-            hfVimeoVideoId.Value = "dQw4w9WgXcQ";
-            hfVideoType.Value = "YouTube";
-            imgCO.ImageUrl = "/images/c&o.png";
-
-            // Blog Images - ADD THESE LINES
-            imgBlog1.ImageUrl = "/Images/DIY.jpg";
-            imgBlog2.ImageUrl = "/Images/blog2.jpg";
-            imgBlog3.ImageUrl = "/Images/blog3.jpg";
-        }
-
 
 
         protected void btnSubmitInquiry_Click(object sender, EventArgs e)
@@ -362,21 +352,21 @@ namespace RRCManagementSystem
                     GetType(),
                     "ShowSweetAlertAndModal",
                     @"
-            Swal.fire({
-                icon: 'warning',
-                title: 'Terms Required',
-                text: 'Please agree to the terms and conditions before submitting.',
-                showConfirmButton: false,
-                timer: 2000,
-                position: 'center',
-                backdrop: false
-            });
+        Swal.fire({
+            icon: 'warning',
+            title: 'Terms Required',
+            text: 'Please agree to the terms and conditions before submitting.',
+            showConfirmButton: false,
+            timer: 2000,
+            position: 'center',
+            backdrop: false
+        });
 
-            setTimeout(function() {
-                var termsModal = new bootstrap.Modal(document.getElementById('termsModal'));
-                termsModal.show();
-            }, 2100);
-            ",
+        setTimeout(function() {
+            var termsModal = new bootstrap.Modal(document.getElementById('termsModal'));
+            termsModal.show();
+        }, 2100);
+        ",
                     true
                 );
                 return;
@@ -401,13 +391,13 @@ namespace RRCManagementSystem
 
             string domain = email.Substring(atIndex + 1);
             var allowedDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "live.com", "icloud.com"
-            };
+        {
+            "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "live.com", "icloud.com"
+        };
 
             bool isValid = allowedDomains.Contains(domain) ||
-                           domain.EndsWith(".edu.ph", StringComparison.OrdinalIgnoreCase) ||
-                           domain.EndsWith(".gov.ph", StringComparison.OrdinalIgnoreCase);
+                             domain.EndsWith(".edu.ph", StringComparison.OrdinalIgnoreCase) ||
+                             domain.EndsWith(".gov.ph", StringComparison.OrdinalIgnoreCase);
 
             if (!isValid)
             {
@@ -415,16 +405,19 @@ namespace RRCManagementSystem
                 return;
             }
 
-
+            // ================================
+            // 4. Validate Contact Number
+            // ================================
             if (!System.Text.RegularExpressions.Regex.IsMatch(contact, @"^09\d{9}$"))
             {
                 ShowSweetAlert("Invalid Contact", "Contact number must be 11 digits starting with 09.", "warning");
                 return;
             }
 
-
+            // ================================
+            // 5. Handle File Upload
+            // ================================
             string photoPath = null;
-
             if (fuPestPhoto.HasFile)
             {
                 try
@@ -441,7 +434,6 @@ namespace RRCManagementSystem
                         return;
                     }
 
-
                     string folderPhysicalPath = Server.MapPath("~/Uploads/InquiryPhotos/");
                     if (!Directory.Exists(folderPhysicalPath))
                         Directory.CreateDirectory(folderPhysicalPath);
@@ -453,25 +445,27 @@ namespace RRCManagementSystem
                     // Save the file
                     fuPestPhoto.SaveAs(savePath);
 
-                    // ✅ Correct path for database with ~ prefix
+                    // Path for database
                     photoPath = "/Uploads/InquiryPhotos/" + filename;
                 }
                 catch (Exception ex)
                 {
-                    ShowSweetAlert("Upload Error", "Unable to save uploaded photo. " + ex.Message, "error");
+                    // Log the full error: Logger.LogError(ex, "File upload failed");
+                    ShowSweetAlert("Upload Error", "Unable to save uploaded photo.", "error");
                     return;
                 }
             }
 
-
+            // ================================
+            // 6. Database Operation
+            // ================================
             try
             {
-
                 string emailHash = AESHelper.ComputeSHA256WithPepper(email); // For search
                 string emailEnc = AESHelper.EncryptEmail(email);
                 string contactEnc = AESHelper.EncryptField(contact);
 
-
+                // Set empty values for fields not on this form
                 string streetEnc = AESHelper.EncryptField("");
                 string barangayEnc = AESHelper.EncryptField("");
                 string cityEnc = AESHelper.EncryptField("");
@@ -491,7 +485,6 @@ namespace RRCManagementSystem
                     cmd.Parameters.AddWithValue("@ContactEnc", contactEnc);
                     cmd.Parameters.AddWithValue("@Message", string.IsNullOrEmpty(message) ? "N/A" : message);
 
-                    // ✅ Ensure correct path is stored in DB
                     cmd.Parameters.AddWithValue("@PhotoPath", string.IsNullOrEmpty(photoPath) ? (object)DBNull.Value : photoPath);
 
                     cmd.Parameters.AddWithValue("@LastName", "");
@@ -523,37 +516,53 @@ namespace RRCManagementSystem
                     generatedCode = Convert.ToString(pCode.Value ?? "");
                 }
 
-                // Send confirmation email
-                SendConfirmationEmail(email, generatedCode);
+                SendConfirmationEmail(email, generatedCode); 
 
-                // Success alert
                 ShowSweetAlert("Submitted!", $"Your inquiry was submitted successfully.\\nReference Code: {generatedCode}", "success");
 
-                // Clear form fields
                 ClearForm();
-            }
+            } // End of try block
             catch (SqlException sqlEx)
             {
-                if (sqlEx.Message.Contains("Please wait 24 hours"))
+
+                if (sqlEx.Number == 50001)
                 {
                     ShowSweetAlert(
-                        "Wait Before Submitting",
+                        "Inquiry Already Received", // <-- User-friendly title
                         "You have already submitted an inquiry recently. Please wait 24 hours before submitting another one.",
-                        "warning"
+                        "info" // <-- Use "info" (blue) or "warning" (yellow)
+                    );
+                }
+                // Check for a "Unique Constraint" violation
+                else if (sqlEx.Number == 2627 || sqlEx.Number == 2601)
+                {
+                    ShowSweetAlert(
+                        "Inquiry Already Received",
+                        "We've already received your inquiry. A representative will contact you soon.",
+                        "info"
                     );
                 }
                 else
                 {
-                    // Any other SQL error
-                    ShowSweetAlert("Database Error", sqlEx.Message, "error");
+
+                    ShowSweetAlert(
+                        "Submission Failed", // <-- User-friendly title
+                        "Sorry, a system error occurred. Please try again later.", // <-- Generic, safe message
+                        "error"
+                    );
                 }
-            }
-            catch (Exception ex)
+            } 
+            catch (Exception ex) // <-- **FIX:** This is now its own separate catch block
             {
-                // Handle non-SQL exceptions (e.g., network issues, file save problems)
-                ShowSweetAlert("Error", "Something went wrong while saving: " + ex.Message, "error");
+            
+                ShowSweetAlert(
+                    "Submission Failed",
+                    "Sorry, something went wrong. Please try again.", // <-- Generic, safe message
+                    "error"
+                );
             }
         }
+
 
         private bool SendConfirmationEmail(string toEmail, string inquiryCode)
         {

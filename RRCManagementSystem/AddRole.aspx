@@ -718,65 +718,70 @@
         function showSaveConfirmation() {
             // Validate role name
             const roleNameField = document.getElementById('<%= txtRoleName.ClientID %>');
-            if (!roleNameField.value.trim()) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Validation Error',
-                    text: 'Please enter a role name.',
-                    confirmButtonColor: '#dc3545'
-                });
-                roleNameField.focus();
-                return false;
-            }
+    if (!roleNameField.value.trim()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please enter a role name.',
+            confirmButtonColor: '#dc3545'
+        });
+        roleNameField.focus();
+        return false;
+    }
 
-            // Count selected permissions
-            const checkedBoxes = document.querySelectorAll('.form-check-input:checked').length;
-            if (checkedBoxes === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No Permissions Selected',
-                    text: 'Please select at least one permission for this role.',
-                    confirmButtonColor: '#ffc107'
-                });
-                return false;
-            }
+    // Count selected permissions - FIX: Better selector that works with ASP.NET
+    const checkedBoxes = document.querySelectorAll('.permissions-table input[type="checkbox"]:checked').length;
+    
+    // Debug: Log the count (remove this after testing)
+    console.log('Checked boxes count:', checkedBoxes);
+    
+    if (checkedBoxes === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Permissions Selected',
+            text: 'Please select at least one permission for this role.',
+            confirmButtonColor: '#ffc107'
+        });
+        return false;
+    }
 
-            // Show confirmation dialog
+    // Show confirmation dialog
+    Swal.fire({
+        title: 'Create New Role?',
+        html: '<div style="text-align:center;"><i class="fas fa-user-tag" style="font-size:3rem;color:#4169E1;margin-bottom:15px;"></i><br/>This will create a new role:<br/><strong style="font-size:1.2rem;color:#4169E1;">' + roleNameField.value + '</strong><br/><small class="text-muted">With ' + checkedBoxes + ' permission(s) selected</small></div>',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#4169E1',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Create Role',
+        cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
+        customClass: {
+            popup: 'animated-popup',
+            confirmButton: 'btn-confirm-custom',
+            cancelButton: 'btn-cancel-custom'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading state
             Swal.fire({
-                title: 'Create New Role?',
-                html: '<div style="text-align:center;"><i class="fas fa-user-tag" style="font-size:3rem;color:#4169E1;margin-bottom:15px;"></i><br/>This will create a new role:<br/><strong style="font-size:1.2rem;color:#4169E1;">' + roleNameField.value + '</strong><br/><small class="text-muted">With ' + checkedBoxes + ' permission(s) selected</small></div>',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#4169E1',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Create Role',
-                cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
-                customClass: {
-                    popup: 'animated-popup',
-                    confirmButton: 'btn-confirm-custom',
-                    cancelButton: 'btn-cancel-custom'
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Show loading state
-                    Swal.fire({
-                        title: 'Creating Role...',
-                        html: 'Please wait while we create the new role.',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
-                    // Trigger server-side save
-                    setTimeout(function () {
-                        document.getElementById('<%= btnSaveHidden.ClientID %>').click();
-                    }, 100);
+                title: 'Creating Role...',
+                html: 'Please wait while we create the new role.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
                 }
             });
-            return false;
+
+            // Trigger server-side save
+            setTimeout(function () {
+                document.getElementById('<%= btnSaveHidden.ClientID %>').click();
+            }, 100);
         }
+    });
+
+    return false;
+}
 
         // Ensure View permission is checked when other permissions are checked
         function ensureView(cb) {

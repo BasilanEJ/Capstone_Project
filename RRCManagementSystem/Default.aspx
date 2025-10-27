@@ -69,11 +69,6 @@
         }
 
 
-/* Add this CSS to your Default.aspx <style> section to fix the spacing */
-
-/* ============ Fix Section Spacing ============ */
-
-/* Hero Banner (first section) - No padding */
 .hero:first-of-type {
     margin-top: 0;
     padding: 0;
@@ -112,10 +107,69 @@ section {
 }
 
 /* Services section already has padding, ensure it's consistent */
-.services {
-    padding: 80px 0;
+.services { 
+    padding: 80px 0; 
     background: linear-gradient(to bottom, #ffffff 0%, var(--light-bg) 100%);
-    margin-bottom: 0; /* Remove margin since it has padding */
+}
+
+.services .row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    margin: 0 auto;
+    max-width: 1200px;
+}
+
+@media (min-width: 1200px) {
+    .services .row {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 24px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .services .row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+.service-card {
+    background: var(--white);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100%;
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    min-height: 240px;
+}
+
+.service-image {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    transition: transform 0.4s ease;
+}
+
+.service-card h4 { 
+    font-size: 15px;
+    font-weight: 600;
+    margin: 8px 0;
+    color: var(--dark);
+}
+
+.service-card p {
+    font-size: 13px;
+    color: var(--gray);
+    line-height: 1.5;
 }
 
 /* Blog section spacing */
@@ -134,13 +188,184 @@ section {
     margin-bottom: 0;
 }
 
-/* Reviews section spacing */
-.reviews-section {
-    text-align: center;
-    padding: 80px 20px;
-    background: var(--white);
-    margin-bottom: 0;
-}
+    .reviews-section {
+        text-align: center;
+        padding: 80px 20px;
+        background: var(--white);
+        position: relative;
+    }
+    
+    .reviews-section h2 {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 48px;
+    }
+    
+    /* Static Grid (for 4 or fewer reviews) */
+    .reviews-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+        margin: 0 auto;
+        max-width: 1200px;
+        padding: 0 20px;
+    }
+    
+    /* Carousel Container (for 5+ reviews) */
+    .reviews-carousel-container {
+        position: relative;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 60px;
+    }
+    
+    .reviews-carousel {
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .reviews-carousel-track {
+        display: flex;
+        gap: 24px;
+        transition: transform 0.5s ease;
+    }
+    
+    .reviews-carousel .review-card {
+        flex: 0 0 calc(25% - 18px);
+        min-width: calc(25% - 18px);
+    }
+    
+    /* Navigation Buttons */
+    .carousel-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .carousel-btn:hover {
+        background: #f8f9fa;
+        border-color: #cbd5e0;
+    }
+    
+    .carousel-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+    
+    .carousel-btn.prev {
+        left: 0;
+    }
+    
+    .carousel-btn.next {
+        right: 0;
+    }
+    
+    /* Review Card Styles */
+    .review-card {
+        width: 100%;
+        padding: 24px;
+        background: var(--white);
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        text-align: left;
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        min-height: 180px;
+    }
+    
+    .review-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .review-card strong {
+        color: var(--dark);
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 4px;
+    }
+    
+    .review-card .recommends {
+        font-size: 13px;
+        color: #ef4444;
+        margin: 4px 0 12px;
+    }
+    
+    .review-card p {
+        font-size: 14px;
+        color: var(--gray);
+        line-height: 1.6;
+        margin: 0 0 12px 0;
+        flex-grow: 1;
+    }
+    
+    .review-rating {
+        color: #fbbf24;
+        font-size: 18px;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+        .reviews-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .reviews-carousel .review-card {
+            flex: 0 0 calc(33.333% - 16px);
+            min-width: calc(33.333% - 16px);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .reviews-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .reviews-carousel .review-card {
+            flex: 0 0 calc(50% - 12px);
+            min-width: calc(50% - 12px);
+        }
+        
+        .reviews-carousel-container {
+            padding: 0 50px;
+        }
+        
+        .carousel-btn {
+            width: 40px;
+            height: 40px;
+        }
+    }
+    
+    @media (max-width: 575px) {
+        .reviews-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        
+        .reviews-carousel .review-card {
+            flex: 0 0 100%;
+            min-width: 100%;
+        }
+        
+        .reviews-carousel-container {
+            padding: 0 40px;
+        }
+    }
 
 /* Inquiry form spacing */
 .inquiry-wrap {
@@ -172,7 +397,13 @@ section {
     }
 }
         
-        .hero-banner { 
+     .blog-description {
+        font-size: 14px;
+        color: #64748b;
+        margin-top: 8px;
+        line-height: 1.5;
+    }
+    .hero-banner { 
             width: 100%; 
             height: auto; 
             object-fit: cover;
@@ -848,62 +1079,7 @@ section {
         }
 
         /* ============ Modern Reviews Section ============ */
-        .reviews-section {
-            text-align: center;
-            padding: 80px 20px;
-            background: var(--white);
-        }
-
-        .reviews-section h2 {
-            font-size: 32px;
-            font-weight: 700;
-            color: var(--dark);
-            margin-bottom: 48px;
-        }
-
-        .reviews-grid {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 24px;
-            margin-top: 32px;
-        }
-
-        .review-card {
-            width: 280px;
-            max-width: 90vw;
-            padding: 24px;
-            background: var(--white);
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-sm);
-            text-align: left;
-            transition: all 0.3s ease;
-            border: 1px solid #e2e8f0;
-        }
-
-        .review-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .review-card strong {
-            color: var(--dark);
-            font-weight: 600;
-            font-size: 16px;
-        }
-
-        .review-card .recommends {
-            font-size: 13px;
-            color: #ef4444;
-            margin: 4px 0 12px;
-        }
-
-        .review-card p {
-            font-size: 14px;
-            color: var(--gray);
-            line-height: 1.6;
-            margin: 0;
-        }
+    
 
         /* ============ Modern Cookie Banner ============ */
         #cookieConsentBanner {
@@ -1008,302 +1184,135 @@ section {
         </div>
     </section>
 
-    <section class="services py-5 lazy-section">
-        <div class="container">
-            <div class="text-center mb-4">
-                <h2 style="color: gray;">WE PROVIDE THE BEST</h2>
-                <h1 style="color: blue;">Termite and Pest Control Services</h1>
-            </div>
-            <div id="servicesCarousel" class="carousel slide">
-                <div class="carousel-inner">
+<section class="services py-5 lazy-section">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 style="color: gray;">WE PROVIDE THE BEST</h2>
+            <h1 style="color: blue;">Termite and Pest Control Services</h1>
+        </div>
+        <div id="servicesCarousel" class="carousel slide">
+            <div class="carousel-inner">
 
-                    <!-- ====== TERMITE CONTROL SERVICES ====== -->
-                    <div class="carousel-item active">
-                        <h3 class="text-dark mb-3 text-center">Termite Control Services</h3>
-                        <div class="row justify-content-center g-3">
+                <!-- ====== TERMITE CONTROL SERVICES ====== -->
+                <div class="carousel-item active">
+                    <h3 class="text-dark mb-3 text-center">Termite Control Services</h3>
+                    <div class="row justify-content-center g-3">
+                        
+                        <!-- Dynamic Termite Services -->
+                     <asp:Repeater ID="rptTermiteServices" runat="server">
+    <ItemTemplate>
+        <div class="service-card text-center h-100" 
+             data-bs-toggle="modal" 
+             data-bs-target='#modalService<%# Eval("ServiceID") %>'>
+            <asp:Image ID="imgService" runat="server" 
+                ImageUrl='<%# Eval("ImagePath") %>' 
+                AlternateText='<%# Eval("ServiceTitle") %>' 
+                CssClass="service-image" />
+            <h4><%# Eval("ServiceTitle") %></h4>
+            <p class="small"><%# GetShortDescription(Eval("ServiceDescription").ToString()) %></p>
+        </div>
+    </ItemTemplate>
+</asp:Repeater>
 
-                            <!-- Baiting System -->
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalBaiting">
-                                    <asp:Image ID="imgBaiting" runat="server" alt="Baiting System" CssClass="service-image" />
-                                    <h4>Baiting System</h4>
-                                    <p class="small">Above Ground and In Ground for Colony Elimination</p>
-                                </div>
-                            </div>
-
-                            <!-- Termite Prevention -->
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalTermitePrevention">
-                                    <asp:Image ID="imgTermitePrevention" runat="server" alt="Termite Prevention" CssClass="service-image" />
-                                    <h4>Termite Prevention</h4>
-                                    <p class="small">Stops infestations before they begin with long-term barrier protection</p>
-                                </div>
-                            </div>
-
-                            <!-- Soil Poisoning -->
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalSoilPoisoning">
-                                    <asp:Image ID="imgSoil" runat="server" alt="Soil Poisoning" CssClass="service-image" />
-                                    <h4>Soil Poisoning</h4>
-                                    <p class="small">Build a strong foundation with termite-proof protection for new & existing homes.</p>
-                                </div>
-                            </div>
-
-                            <!-- Reticulation -->
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalReticulation">
-                                    <asp:Image ID="imgReticulation" runat="server" alt="Reticulation" CssClass="service-image" />
-                                    <h4>Reticulation</h4>
-                                    <p class="small">Smart termite defense with a hidden pipe system for hassle-free treatments.</p>
-                                </div>
-                            </div>
-
-                            <!-- Mound Demolition -->
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalMoundDemolition">
-                                    <asp:Image ID="imgMound" runat="server" alt="Mound Demolition" CssClass="service-image" />
-                                    <h4>Mound Demolition</h4>
-                                    <p class="small">Directly eliminate termite colonies by targeting the queen at the source.</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
-
-                    <!-- ====== GENERAL PEST CONTROL SERVICES ====== -->
-                    <div class="carousel-item">
-                        <h3 class="text-dark mb-3 text-center">General Pest Control Services</h3>
-                        <div class="row justify-content-center g-3">
-                            
-                            <!-- General Pest Control -->
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalGeneralPest">
-                                    <asp:Image ID="imgGeneralPest" runat="server" alt="General Pest Control" CssClass="service-image" />
-                                    <h4>General Pest Control</h4>
-                                    <p class="small">Cockroaches, Ants, Mosquitoes, Flies</p>
-                                </div>
-                            </div>
-
-                            <!-- Tick & Fleas Control -->
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalTickFleas">
-                                    <asp:Image ID="imgTickFleas" runat="server" alt="Tick & Fleas Control" CssClass="service-image" />
-                                    <h4>Tick & Fleas Control</h4>
-                                    <p class="small">Breaks the breeding cycle and protects your pets & family</p>
-                                </div>
-                            </div>
-
-                            <!-- Bedbugs Control -->
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalBedbugs">
-                                    <asp:Image ID="imgBedbugs" runat="server" alt="Bedbugs Control" CssClass="service-image" />
-                                    <h4>Bedbugs Control</h4>
-                                    <p class="small">Thorough inspection and treatment for lasting relief</p>
-                                </div>
-                            </div>
-
-                            <!-- Rat / Rodents Control -->
-                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                                <div class="service-card text-center h-100" data-bs-toggle="modal" data-bs-target="#modalRatControl">
-                                    <asp:Image ID="imgRats" runat="server" alt="Rat Control" CssClass="service-image" />
-                                    <h4>Rat / Rodents Control</h4>
-                                    <p class="small">Safe and effective removal to prevent health risks</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
 
-                <!-- Carousel Controls -->
-                <button class="carousel-control-prev" type="button" data-bs-target="#servicesCarousel" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon bg-dark rounded-circle p-3" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#servicesCarousel" data-bs-slide="next">
-                    <span class="carousel-control-next-icon bg-dark rounded-circle p-3" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-            </div>
+                <!-- ====== GENERAL PEST CONTROL SERVICES ====== -->
+                <div class="carousel-item">
+                    <h3 class="text-dark mb-3 text-center">General Pest Control Services</h3>
+                    <div class="row justify-content-center g-3">
+                        
+                        <!-- Dynamic Pest Control Services -->
+                       <asp:Repeater ID="rptPestServices" runat="server">
+    <ItemTemplate>
+        <div class="service-card text-center h-100" 
+             data-bs-toggle="modal" 
+             data-bs-target='#modalService<%# Eval("ServiceID") %>'>
+            <asp:Image ID="imgService" runat="server" 
+                ImageUrl='<%# Eval("ImagePath") %>' 
+                AlternateText='<%# Eval("ServiceTitle") %>' 
+                CssClass="service-image" />
+            <h4><%# Eval("ServiceTitle") %></h4>
+            <p class="small"><%# GetShortDescription(Eval("ServiceDescription").ToString()) %></p>
         </div>
-    </section>
+    </ItemTemplate>
+</asp:Repeater>
 
-    <!-- ======================================
-         TERMITE CONTROL SERVICES MODALS
-    ====================================== -->
+                    </div>
+                </div>
 
-    
-<!-- REPLACE ALL EXISTING SERVICE MODALS WITH THESE DYNAMIC VERSIONS -->
+            </div>
 
-<!-- Baiting System Modal -->
-<div class="modal fade" id="modalBaiting" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><asp:Literal ID="litBaitingTitle" runat="server" /></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <asp:Image ID="imgModalBaiting" runat="server" alt="Baiting System" loading="lazy" />
-                <asp:Literal ID="litBaitingDescription" runat="server" Mode="PassThrough" />
-                <ul>
-                    <asp:Literal ID="litBaitingBullets" runat="server" Mode="PassThrough" />
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Termite Prevention Modal -->
-<div class="modal fade" id="modalTermitePrevention" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><asp:Literal ID="litTermitePreventionTitle" runat="server" /></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <asp:Image ID="imgModalTermitePrevention" runat="server" alt="Termite Prevention" loading="lazy" />
-                <asp:Literal ID="litTermitePreventionDescription" runat="server" Mode="PassThrough" />
-                <ul>
-                    <asp:Literal ID="litTermitePreventionBullets" runat="server" Mode="PassThrough" />
-                </ul>
-            </div>
+            <!-- Carousel Controls -->
+            <button class="carousel-control-prev" type="button" data-bs-target="#servicesCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon bg-dark rounded-circle p-3" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#servicesCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon bg-dark rounded-circle p-3" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
         </div>
     </div>
-</div>
+</section>
 
-<!-- Soil Poisoning Modal -->
-<div class="modal fade" id="modalSoilPoisoning" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><asp:Literal ID="litSoilTitle" runat="server" /></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <asp:Image ID="imgModalSoil" runat="server" alt="Soil Poisoning" loading="lazy" />
-                <asp:Literal ID="litSoilDescription" runat="server" Mode="PassThrough" />
-                <ul>
-                    <asp:Literal ID="litSoilBullets" runat="server" Mode="PassThrough" />
-                </ul>
+
+<asp:Repeater ID="rptTermiteModals" runat="server">
+    <ItemTemplate>
+        <div class="modal fade" id='modalService<%# Eval("ServiceID") %>' tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><%# Eval("ServiceTitle") %></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <asp:Image ID="imgModalService" runat="server" 
+                            ImageUrl='<%# Eval("ImagePath") %>' 
+                            AlternateText='<%# Eval("ServiceTitle") %>' 
+                            loading="lazy" 
+                            CssClass="img-fluid rounded mb-3" />
+                        
+                        <p><%# Eval("ServiceDescription") %></p>
+                        
+                        <!-- Display Bullet Points if available -->
+                        <%# !string.IsNullOrEmpty(Eval("BulletPoints").ToString()) ? 
+                            "<ul>" + FormatBulletPoints(Eval("BulletPoints").ToString()) + "</ul>" : "" %>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
+    </ItemTemplate>
+</asp:Repeater>
 
-<!-- Reticulation Modal -->
-<div class="modal fade" id="modalReticulation" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><asp:Literal ID="litReticulationTitle" runat="server" /></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <asp:Image ID="imgModalReticulation" runat="server" alt="Reticulation" loading="lazy" />
-                <asp:Literal ID="litReticulationDescription" runat="server" Mode="PassThrough" />
-                <ul>
-                    <asp:Literal ID="litReticulationBullets" runat="server" Mode="PassThrough" />
-                </ul>
+<!-- General Pest Control Service Modals -->
+<asp:Repeater ID="rptPestModals" runat="server">
+    <ItemTemplate>
+        <div class="modal fade" id='modalService<%# Eval("ServiceID") %>' tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><%# Eval("ServiceTitle") %></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <asp:Image ID="imgModalService" runat="server" 
+                            ImageUrl='<%# Eval("ImagePath") %>' 
+                            AlternateText='<%# Eval("ServiceTitle") %>' 
+                            loading="lazy" 
+                            CssClass="img-fluid rounded mb-3" />
+                        
+                        <p><%# Eval("ServiceDescription") %></p>
+                        
+                        <!-- Display Bullet Points if available -->
+                        <%# !string.IsNullOrEmpty(Eval("BulletPoints").ToString()) ? 
+                            "<ul>" + FormatBulletPoints(Eval("BulletPoints").ToString()) + "</ul>" : "" %>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- Mound Demolition Modal -->
-<div class="modal fade" id="modalMoundDemolition" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><asp:Literal ID="litMoundTitle" runat="server" /></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <asp:Image ID="imgModalMound" runat="server" alt="Mound Demolition" loading="lazy" />
-                <asp:Literal ID="litMoundDescription" runat="server" Mode="PassThrough" />
-                <ul>
-                    <asp:Literal ID="litMoundBullets" runat="server" Mode="PassThrough" />
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- General Pest Control Modal -->
-<div class="modal fade" id="modalGeneralPest" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><asp:Literal ID="litGeneralPestTitle" runat="server" /></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <asp:Image ID="imgModalGeneralPest" runat="server" alt="General Pest Control" loading="lazy" />
-                <asp:Literal ID="litGeneralPestDescription" runat="server" Mode="PassThrough" />
-                <ul>
-                    <asp:Literal ID="litGeneralPestBullets" runat="server" Mode="PassThrough" />
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Tick & Fleas Control Modal -->
-<div class="modal fade" id="modalTickFleas" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><asp:Literal ID="litTickFleasTitle" runat="server" /></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <asp:Image ID="imgModalTickFleas" runat="server" alt="Tick & Fleas Control" loading="lazy" />
-                <asp:Literal ID="litTickFleasDescription" runat="server" Mode="PassThrough" />
-                <ul>
-                    <asp:Literal ID="litTickFleasBullets" runat="server" Mode="PassThrough" />
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Bedbugs Control Modal -->
-<div class="modal fade" id="modalBedbugs" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><asp:Literal ID="litBedbugsTitle" runat="server" /></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <asp:Image ID="imgModalBedbugs" runat="server" alt="Bedbugs Control" loading="lazy" />
-                <asp:Literal ID="litBedbugsDescription" runat="server" Mode="PassThrough" />
-                <ul>
-                    <asp:Literal ID="litBedbugsBullets" runat="server" Mode="PassThrough" />
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Rat & Rodents Control Modal -->
-<div class="modal fade" id="modalRatControl" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><asp:Literal ID="litRatsTitle" runat="server" /></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <asp:Image ID="imgModalRats" runat="server" alt="Rat & Rodents Control" loading="lazy" />
-                <asp:Literal ID="litRatsDescription" runat="server" Mode="PassThrough" />
-                <ul>
-                    <asp:Literal ID="litRatsBullets" runat="server" Mode="PassThrough" />
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
+    </ItemTemplate>
+</asp:Repeater>
 
     <!-- ====== ABOUT SPLIT ====== -->
       <section class="hero lazy-section">
@@ -1349,7 +1358,7 @@ section {
     <asp:HiddenField ID="hfVimeoVideoId" runat="server" />
     <asp:HiddenField ID="hfVideoType" runat="server" />
 
-  <section class="blog-section lazy-section">
+    <section class="blog-section lazy-section">
     <h2>Read our Blogs</h2>
     <div class="blog-cards">
         
@@ -1379,7 +1388,9 @@ section {
 
     </div>
 </section>
-    <!-- ====== C&O ====== -->
+
+
+
    <section class="co-section lazy-section">
         <h2>Certifications & Organizations</h2>
         <div style="display:flex; justify-content:center; align-items:center; margin-top:20px;">
@@ -1387,36 +1398,27 @@ section {
         </div>
     </section>
 
-    <!-- ====== REVIEWS ====== -->
-    <section class="reviews-section lazy-section">
-        <h2>What our customers are saying</h2>
 
-        <div class="reviews-grid">
-            <div class="review-card">
-                <strong>Czarina Joy T. Chang</strong>
-                <p class="recommends">❤️ recommends</p>
-                <p>They were on time, very professional and mababait mga staff ni RRC team. Mabusisi sila sa bawat sulok ng bahay at maayos silang magtrabaho. Very polite and courteous pa yun technicians and staff na nag execute ng baiting system. Highly recommended! Good job!</p>
-            </div>
+<<section class="reviews-section lazy-section">
+    <h2>What our customers are saying</h2>
+    <div class="reviews-grid">
 
-            <div class="review-card">
-                <strong>Mel Lareza</strong>
-                <p class="recommends">❤️ recommends</p>
-                <p>Excellent Service!!! ⭐️⭐️⭐️⭐️⭐️</p>
-            </div>
+        <asp:Repeater ID="rptReviews" runat="server">
+            <ItemTemplate>
+                <div class="review-card">
+                    <strong><%# Eval("CustomerName") %></strong>
+                    <%# Convert.ToBoolean(Eval("Recommends")) ? "<p class='recommends'>❤️ recommends</p>" : "" %>
+                    <p><%# Eval("ReviewText") %></p>
+                    <div class="review-rating">
+                        <%# GetStarRatingForReview(Convert.ToInt32(Eval("Rating"))) %>
+                    </div>
+                </div>
+            </ItemTemplate>
+        </asp:Repeater>
+    </div>
+</section>
 
-            <div class="review-card">
-                <strong>Dannica Manaluz.</strong>
-                <p class="recommends">❤️ recommends</p>
-                <p>Very satisfied client here 5/5 stars ⭐️⭐️⭐️⭐️⭐️</p>
-            </div>
 
-            <div class="review-card">
-                <strong>Chelsea Erese Ong</strong>
-                <p class="recommends">❤️ recommends</p>
-                <p>RRC/Sir Victor and staff of technicians were very accommodating and understanding despite us having to change schedule of termite treatment...</p>
-            </div>
-        </div>
-    </section>
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1950,5 +1952,6 @@ section {
             });
         });
     </script>
+
 
 </asp:Content>
