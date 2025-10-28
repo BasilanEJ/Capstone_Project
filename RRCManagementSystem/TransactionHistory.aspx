@@ -2,6 +2,9 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
+<!-- Add SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <style>
     body { font-family: 'Segoe UI', sans-serif; }
     .page-title { text-align:center; color:#1e293b; font-size:26px; font-weight:600; margin:30px 0 20px; }
@@ -30,6 +33,7 @@
         font-weight:600;
         text-decoration:none;
         transition:all 0.2s ease;
+        cursor:pointer;
     }
 
     /* View Receipt = Blue */
@@ -59,6 +63,150 @@
         color:#6b7280;
         border:1px solid #d1fae5;
         cursor:not-allowed;
+    }
+
+    /* Custom styles for SweetAlert receipt modal - Responsive */
+    .swal2-popup.receipt-modal {
+        width: 95% !important;
+        max-width: 1200px !important;
+        padding: 1.5rem !important;
+    }
+    
+    .receipt-container {
+        width: 100%;
+        max-height: 75vh;
+        overflow: auto;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        background: #f3f4f6;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    
+    .receipt-container img {
+        max-width: 100%;
+        width: auto;
+        height: auto;
+        max-height: 70vh;
+        object-fit: contain;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+    }
+    
+    .receipt-container embed {
+        width: 100%;
+        height: 70vh;
+        min-height: 500px;
+        border: none;
+        border-radius: 4px;
+    }
+
+    /* Tablet styles */
+    @media (max-width: 1024px) {
+        .swal2-popup.receipt-modal {
+            width: 96% !important;
+            padding: 1.2rem !important;
+        }
+        
+        .receipt-container {
+            max-height: 70vh;
+            padding: 12px;
+        }
+        
+        .receipt-container img {
+            max-height: 65vh;
+        }
+        
+        .receipt-container embed {
+            height: 65vh;
+            min-height: 400px;
+        }
+    }
+
+    /* Mobile styles */
+    @media (max-width: 768px) {
+        .swal2-popup.receipt-modal {
+            width: 98% !important;
+            padding: 1rem !important;
+            margin: 0.5rem !important;
+        }
+        
+        .swal2-title {
+            font-size: 1.3rem !important;
+            padding: 0.5rem !important;
+        }
+        
+        .receipt-container {
+            max-height: 65vh;
+            padding: 10px;
+        }
+        
+        .receipt-container img {
+            max-height: 60vh;
+        }
+        
+        .receipt-container embed {
+            height: 60vh;
+            min-height: 350px;
+        }
+        
+        .swal2-confirm {
+            font-size: 0.9rem !important;
+            padding: 0.6rem 1.5rem !important;
+        }
+    }
+
+    /* Small mobile devices */
+    @media (max-width: 480px) {
+        .swal2-popup.receipt-modal {
+            width: 98% !important;
+            padding: 0.8rem !important;
+            margin: 0.3rem !important;
+        }
+        
+        .swal2-title {
+            font-size: 1.1rem !important;
+            padding: 0.4rem !important;
+        }
+        
+        .receipt-container {
+            max-height: 60vh;
+            padding: 8px;
+        }
+        
+        .receipt-container img {
+            max-height: 55vh;
+        }
+        
+        .receipt-container embed {
+            height: 55vh;
+            min-height: 300px;
+        }
+        
+        .swal2-confirm {
+            font-size: 0.85rem !important;
+            padding: 0.5rem 1.2rem !important;
+        }
+        
+        .swal2-close {
+            font-size: 1.5rem !important;
+        }
+    }
+
+    /* Landscape orientation on mobile */
+    @media (max-width: 768px) and (orientation: landscape) {
+        .receipt-container {
+            max-height: 80vh;
+        }
+        
+        .receipt-container img {
+            max-height: 75vh;
+        }
+        
+        .receipt-container embed {
+            height: 75vh;
+        }
     }
 
 </style>
@@ -104,5 +252,65 @@
         </Columns>
     </asp:GridView>
 </div>
+
+<script>
+    function viewReceipt(url, fileName) {
+        // Determine file type
+        const ext = fileName.toLowerCase().split('.').pop();
+        const isPdf = ext === 'pdf';
+
+        // Check if mobile device
+        const isMobile = window.innerWidth <= 768;
+
+        let htmlContent = '';
+
+        if (isPdf) {
+            htmlContent = `
+                <div class="receipt-container">
+                    <embed src="${url}" type="application/pdf" />
+                </div>
+            `;
+        } else {
+            htmlContent = `
+                <div class="receipt-container">
+                    <img src="${url}" alt="Receipt" loading="lazy" />
+                </div>
+            `;
+        }
+
+        Swal.fire({
+            title: '📄 Receipt',
+            html: htmlContent,
+            width: isMobile ? '98%' : '90%',
+            showCloseButton: true,
+            showConfirmButton: true,
+            confirmButtonText: isMobile ? 'Close' : 'Close Receipt',
+            confirmButtonColor: '#2563eb',
+            customClass: {
+                popup: 'receipt-modal',
+                confirmButton: 'swal2-confirm'
+            },
+            didOpen: () => {
+                // Add pinch-to-zoom for mobile images
+                if (!isPdf && isMobile) {
+                    const img = document.querySelector('.receipt-container img');
+                    if (img) {
+                        img.style.touchAction = 'pinch-zoom';
+                    }
+                }
+            }
+        });
+
+        return false;
+    }
+
+    // Handle orientation change
+    window.addEventListener('orientationchange', function () {
+        // Close modal on orientation change to prevent layout issues
+        if (Swal.isVisible()) {
+            Swal.close();
+        }
+    });
+</script>
 
 </asp:Content>

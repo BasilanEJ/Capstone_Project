@@ -174,10 +174,18 @@
             background: #f8fafc;
         }
 
-        /* ============ Service Image ============ */
+        /* ============ Service/Blog Image ============ */
         .service-image {
             width: 80px;
             height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .blog-image {
+            width: 120px;
+            height: 90px;
             object-fit: cover;
             border-radius: 8px;
             border: 2px solid #e2e8f0;
@@ -215,6 +223,20 @@
             color: #475569;
             font-size: 13px;
             line-height: 1.6;
+        }
+
+        /* ============ Blog Title ============ */
+        .blog-title {
+            color: #1e293b;
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 5px;
+        }
+
+        .blog-description {
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.5;
         }
 
         /* ============ Action Buttons ============ */
@@ -335,15 +357,18 @@
                 <i class="fas fa-archive"></i>
                 Archived Management
             </h1>
-            <p>Manage and restore archived services and FAQs or permanently remove them</p>
+            <p>Manage and restore archived services, blogs, and FAQs or permanently remove them</p>
         </div>
 
         <%-- Tab Navigation --%>
         <div class="tab-navigation">
-            <asp:Button ID="btnTabServices" runat="server" Text="Archived Services" 
+            <asp:Button ID="btnTabServices" runat="server" Text="📦 Archived Services" 
                 CssClass="tab-btn active" OnClick="btnTabServices_Click" 
                 OnClientClick="setActiveTab(this); return true;" />
-            <asp:Button ID="btnTabFaqs" runat="server" Text="Archived FAQs" 
+            <asp:Button ID="btnTabBlogs" runat="server" Text="📝 Archived Blogs" 
+                CssClass="tab-btn" OnClick="btnTabBlogs_Click" 
+                OnClientClick="setActiveTab(this); return true;" />
+            <asp:Button ID="btnTabFaqs" runat="server" Text="❓ Archived FAQs" 
                 CssClass="tab-btn" OnClick="btnTabFaqs_Click" 
                 OnClientClick="setActiveTab(this); return true;" />
         </div>
@@ -354,7 +379,7 @@
             <div class="info-banner-content">
                 <h4>About Archived Items</h4>
                 <p>
-                    Items listed here have been soft-deleted and are no longer visible on the main pages. 
+                    Items listed here have been archived and are no longer visible on the main pages. 
                     You can <strong>restore</strong> them to make them active again, or <strong>permanently delete</strong> them to remove them from the database completely.
                 </p>
             </div>
@@ -392,7 +417,6 @@
                             GridLines="None"
                             EmptyDataText="No archived services found.">
                             <Columns>
-                                <%-- Image Column --%>
                                 <asp:TemplateField HeaderText="Image">
                                     <ItemTemplate>
                                         <asp:Image 
@@ -404,7 +428,6 @@
                                     </ItemTemplate>
                                 </asp:TemplateField>
 
-                                <%-- Service Type Column --%>
                                 <asp:TemplateField HeaderText="Type">
                                     <ItemTemplate>
                                         <span class='<%# Eval("ServiceType").ToString() == "Termite Control" ? "service-type-badge badge-termite" : "service-type-badge badge-pest" %>'>
@@ -413,10 +436,8 @@
                                     </ItemTemplate>
                                 </asp:TemplateField>
 
-                                <%-- Title Column --%>
                                 <asp:BoundField DataField="ServiceTitle" HeaderText="Title" />
 
-                                <%-- Description Column --%>
                                 <asp:TemplateField HeaderText="Description">
                                     <ItemTemplate>
                                         <%# Eval("ServiceDescription").ToString().Length > 80 
@@ -425,7 +446,6 @@
                                     </ItemTemplate>
                                 </asp:TemplateField>
 
-                                <%-- Deleted Date Column --%>
                                 <asp:TemplateField HeaderText="Archived Date">
                                     <ItemTemplate>
                                         <div class="deleted-date">
@@ -437,7 +457,6 @@
                                     </ItemTemplate>
                                 </asp:TemplateField>
 
-                                <%-- Actions Column --%>
                                 <asp:TemplateField HeaderText="Actions">
                                     <ItemTemplate>
                                         <button type="button" class="btn-action btn-restore" 
@@ -447,6 +466,98 @@
                                         
                                         <button type="button" class="btn-action btn-delete-permanent" 
                                                 onclick="confirmDelete('<%# Eval("ServiceID") %>', 'service')">
+                                            <i class="fas fa-trash"></i> Delete 
+                                        </button>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                            </Columns>
+                        </asp:GridView>
+                    </div>
+                </asp:Panel>
+
+                <%-- ============================================= --%>
+                <%-- ARCHIVED BLOGS SECTION --%>
+                <%-- ============================================= --%>
+                <asp:Panel ID="pnlBlogs" runat="server" Visible="false">
+                    <div class="archived-list-card">
+                        <div class="archived-list-title">
+                            <i class="fas fa-list"></i>
+                            Archived Blogs List
+                        </div>
+
+                        <asp:Panel ID="pnlEmptyStateBlogs" runat="server" CssClass="empty-state" Visible="false">
+                            <i class="fas fa-check-circle"></i>
+                            <h3>No Archived Blogs</h3>
+                            <p>All blogs are active. There are no archived blogs to display.</p>
+                        </asp:Panel>
+
+                        <asp:GridView 
+                            ID="gvDeletedBlogs" 
+                            runat="server" 
+                            AutoGenerateColumns="False"
+                            DataKeyNames="BlogID"
+                            CssClass="archived-grid"
+                            GridLines="None"
+                            EmptyDataText="No archived blogs found.">
+                            <Columns>
+                                <asp:TemplateField HeaderText="Image">
+                                    <ItemTemplate>
+                                        <asp:Image 
+                                            ID="imgBlog" 
+                                            runat="server" 
+                                            ImageUrl='<%# Eval("ImagePath") %>' 
+                                            CssClass="blog-image"
+                                            AlternateText="Blog Image" />
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Blog Title">
+                                    <ItemTemplate>
+                                        <div class="blog-title">
+                                            <%# Eval("BlogTitle") %>
+                                        </div>
+                                        <div class="blog-description">
+                                            <%# !string.IsNullOrEmpty(Eval("BlogDescription").ToString()) 
+                                                ? (Eval("BlogDescription").ToString().Length > 60 
+                                                    ? Eval("BlogDescription").ToString().Substring(0, 60) + "..." 
+                                                    : Eval("BlogDescription").ToString())
+                                                : (Eval("BlogContent").ToString().Length > 60 
+                                                    ? Eval("BlogContent").ToString().Substring(0, 60) + "..." 
+                                                    : Eval("BlogContent").ToString()) %>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Display Order">
+                                    <ItemTemplate>
+                                        <span style="color: #64748b; font-size: 14px;">
+                                            <%# Eval("DisplayOrder") %>
+                                        </span>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Archived Date">
+                                    <ItemTemplate>
+                                        <div class="deleted-date">
+                                            <i class="far fa-clock"></i>
+                                            <%# Eval("ModifiedDate") != DBNull.Value 
+                                                ? Convert.ToDateTime(Eval("ModifiedDate")).ToString("MMM dd, yyyy") 
+                                                : (Eval("CreatedDate") != DBNull.Value 
+                                                    ? Convert.ToDateTime(Eval("CreatedDate")).ToString("MMM dd, yyyy") 
+                                                    : "N/A") %>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Actions">
+                                    <ItemTemplate>
+                                        <button type="button" class="btn-action btn-restore" 
+                                                onclick="confirmRestore('<%# Eval("BlogID") %>', 'blog')">
+                                            <i class="fas fa-undo"></i> Restore
+                                        </button>
+                                        
+                                        <button type="button" class="btn-action btn-delete-permanent" 
+                                                onclick="confirmDelete('<%# Eval("BlogID") %>', 'blog')">
                                             <i class="fas fa-trash"></i> Delete 
                                         </button>
                                     </ItemTemplate>
@@ -481,7 +592,6 @@
                             GridLines="None"
                             EmptyDataText="No archived FAQs found.">
                             <Columns>
-                                <%-- Question Column --%>
                                 <asp:TemplateField HeaderText="Question">
                                     <ItemTemplate>
                                         <strong class="faq-question">
@@ -490,7 +600,6 @@
                                     </ItemTemplate>
                                 </asp:TemplateField>
 
-                                <%-- Answer Column --%>
                                 <asp:TemplateField HeaderText="Answer">
                                     <ItemTemplate>
                                         <div class="faq-answer">
@@ -501,7 +610,6 @@
                                     </ItemTemplate>
                                 </asp:TemplateField>
 
-                                <%-- Archived Date Column --%>
                                 <asp:TemplateField HeaderText="Archived Date">
                                     <ItemTemplate>
                                         <div class="deleted-date">
@@ -513,7 +621,6 @@
                                     </ItemTemplate>
                                 </asp:TemplateField>
 
-                                <%-- Actions Column --%>
                                 <asp:TemplateField HeaderText="Actions">
                                     <ItemTemplate>
                                         <button type="button" class="btn-action btn-restore" 
@@ -550,9 +657,11 @@
 
         // Confirm Restore
         function confirmRestore(itemId, type) {
+            let itemName = type === 'service' ? 'service' : (type === 'blog' ? 'blog' : 'FAQ');
+            
             Swal.fire({
                 title: 'Restore Item?',
-                text: type === 'service' ? 'This service will be restored and become active again.' : 'This FAQ will be restored and become active again.',
+                text: 'This ' + itemName + ' will be restored and become active again.',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#10b981',
@@ -562,7 +671,8 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     // Set hidden field values
-                    document.getElementById('<%= hdnAction.ClientID %>').value = type === 'service' ? 'RestoreService' : 'RestoreFaq';
+                    let action = type === 'service' ? 'RestoreService' : (type === 'blog' ? 'RestoreBlog' : 'RestoreFaq');
+                    document.getElementById('<%= hdnAction.ClientID %>').value = action;
                     document.getElementById('<%= hdnItemId.ClientID %>').value = itemId;
                     
                     // Trigger postback
@@ -573,9 +683,11 @@
 
         // Confirm Delete
         function confirmDelete(itemId, type) {
+            let itemName = type === 'service' ? 'service' : (type === 'blog' ? 'blog' : 'FAQ');
+            
             Swal.fire({
                 title: 'Are you absolutely sure?',
-                html: '<div style="text-align: left;"><p><strong>⚠️ WARNING:</strong> This action cannot be undone!</p><p>This will permanently delete this ' + (type === 'service' ? 'service' : 'FAQ') + ' from the database.</p></div>',
+                html: '<div style="text-align: left;"><p><strong>⚠️ WARNING:</strong> This action cannot be undone!</p><p>This will permanently delete this ' + itemName + ' from the database.</p></div>',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
@@ -586,7 +698,8 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     // Set hidden field values
-                    document.getElementById('<%= hdnAction.ClientID %>').value = type === 'service' ? 'DeletePermanent' : 'DeletePermanentFaq';
+                    let action = type === 'service' ? 'DeletePermanent' : (type === 'blog' ? 'DeletePermanentBlog' : 'DeletePermanentFaq');
+                    document.getElementById('<%= hdnAction.ClientID %>').value = action;
                     document.getElementById('<%= hdnItemId.ClientID %>').value = itemId;
                     
                     // Trigger postback

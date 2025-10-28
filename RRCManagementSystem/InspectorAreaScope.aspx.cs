@@ -37,7 +37,8 @@ namespace RRCManagementSystem
         {
             if (Session["UserID"] == null || Session["Role"] == null || Session["Role"].ToString() != "SuperAdmin")
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
@@ -46,7 +47,6 @@ namespace RRCManagementSystem
             {
                 string eventTarget = Request.Form["__EVENTTARGET"];
                 string eventArgument = Request.Form["__EVENTARGUMENT"];
-
                 if (eventTarget == "DeleteAreaScope" && !string.IsNullOrEmpty(eventArgument))
                 {
                     int areaScopeId;
@@ -56,7 +56,6 @@ namespace RRCManagementSystem
                         return;
                     }
                 }
-
                 // IMPORTANT: Recreate checkboxes on EVERY postback if a region is selected
                 if (!string.IsNullOrEmpty(ddlRegion.SelectedValue))
                 {

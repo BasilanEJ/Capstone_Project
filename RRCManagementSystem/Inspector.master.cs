@@ -124,17 +124,20 @@ namespace RRCManagementSystem
             try
             {
                 using (var conn = new SqlConnection(Cs))
-                using (var cmd = new SqlCommand("SELECT Name FROM Users WHERE UserID=@UserID AND Status='Active'", conn))
+                using (var cmd = new SqlCommand(
+                    "SELECT Name FROM Users WHERE UserID=@UserID AND (Status='Active' OR Status='Available')", conn))
                 {
                     cmd.Parameters.AddWithValue("@UserID", inspectorId);
                     conn.Open();
                     string name = cmd.ExecuteScalar() as string;
-                    lblInspectorName.Text = "👷 " + (!string.IsNullOrWhiteSpace(name) ? name.Trim() : "Inspector");
+
+                    // Remove emoji since we now have an avatar icon
+                    lblInspectorName.Text = !string.IsNullOrWhiteSpace(name) ? name.Trim() : "Inspector";
                 }
             }
             catch
             {
-                lblInspectorName.Text = "👷 Inspector";
+                lblInspectorName.Text = "Inspector";
             }
         }
 
@@ -182,6 +185,9 @@ namespace RRCManagementSystem
         /// </summary>
         private void ForceLogout(string message)
         {
+            // Clear database session
+            ClearDatabaseSession();
+
             // Clear session
             Session.Clear();
             Session.RemoveAll();
@@ -206,6 +212,31 @@ namespace RRCManagementSystem
             Session["LogoutMessage"] = message;
 
             SafeRedirect("~/Login.aspx");
+        }
+
+        /// <summary>
+        /// Clears CurrentSessionID in the database
+        /// </summary>
+        private void ClearDatabaseSession()
+        {
+            try
+            {
+                if (Session["UserID"] != null)
+                {
+                    using (var conn = new SqlConnection(Cs))
+                    using (var cmd = new SqlCommand(
+                        "UPDATE Users SET CurrentSessionID = NULL, CurrentSessionAt = NULL WHERE UserID = @UserID", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@UserID", Convert.ToInt32(Session["UserID"]));
+                        conn.Open();
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch
+            {
+                // Fail silently to avoid blocking logout
+            }
         }
 
         /// <summary>

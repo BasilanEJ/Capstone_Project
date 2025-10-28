@@ -11,97 +11,88 @@ namespace RRCManagementSystem
 {
 
 
-    public partial class BlogPost
+    public partial class ClientVerifyOTP
     {
 
         /// <summary>
-        /// pnlBlogPost control.
+        /// form1 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlBlogPost;
+        protected global::System.Web.UI.HtmlControls.HtmlForm form1;
 
         /// <summary>
-        /// litBlogTitle control.
+        /// ScriptManager1 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal litBlogTitle;
+        protected global::System.Web.UI.ScriptManager ScriptManager1;
 
         /// <summary>
-        /// litBlogDescription control.
+        /// upVerify control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal litBlogDescription;
+        protected global::System.Web.UI.UpdatePanel upVerify;
 
         /// <summary>
-        /// litAuthor control.
+        /// pnlVerify control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal litAuthor;
+        protected global::System.Web.UI.WebControls.Panel pnlVerify;
 
         /// <summary>
-        /// litReadTime control.
+        /// txtOTPCode control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal litReadTime;
+        protected global::System.Web.UI.WebControls.TextBox txtOTPCode;
 
         /// <summary>
-        /// imgFeatured control.
+        /// btnVerify control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Image imgFeatured;
+        protected global::System.Web.UI.WebControls.Button btnVerify;
 
         /// <summary>
-        /// litBlogContent control.
+        /// btnResend control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal litBlogContent;
+        protected global::System.Web.UI.WebControls.Button btnResend;
 
         /// <summary>
-        /// pnlNotFound control.
+        /// lblMessage control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlNotFound;
+        protected global::System.Web.UI.WebControls.Label lblMessage;
 
         /// <summary>
-        /// pnlMoreBlogs control.
+        /// hiddenExpiresAt control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlMoreBlogs;
-
-        /// <summary>
-        /// rptMoreBlogs control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Repeater rptMoreBlogs;
+        protected global::System.Web.UI.WebControls.HiddenField hiddenExpiresAt;
     }
 }

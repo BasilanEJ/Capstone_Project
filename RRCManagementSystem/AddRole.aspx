@@ -700,10 +700,11 @@
                         Create Role
                     </button>
 
-                    <a href="ViewRole.aspx" class="btn-cancel">
-                        <i class="fas fa-times"></i>
-                        Cancel
-                    </a>
+                    <a href="javascript:void(0);" class="btn-cancel" onclick="cancelAction()">
+    <i class="fas fa-times"></i>
+    Cancel
+</a>
+
                 </div>
 
                 <!-- Hidden Save Button -->
@@ -712,163 +713,174 @@
         </div>
     </div>
 
-    <!-- JavaScript -->
-    <script type="text/javascript">
-        // Show save confirmation dialog
-        function showSaveConfirmation() {
-            // Validate role name
-            const roleNameField = document.getElementById('<%= txtRoleName.ClientID %>');
-    if (!roleNameField.value.trim()) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
-            text: 'Please enter a role name.',
-            confirmButtonColor: '#dc3545'
-        });
-        roleNameField.focus();
-        return false;
-    }
-
-    // Count selected permissions - FIX: Better selector that works with ASP.NET
-    const checkedBoxes = document.querySelectorAll('.permissions-table input[type="checkbox"]:checked').length;
-    
-    // Debug: Log the count (remove this after testing)
-    console.log('Checked boxes count:', checkedBoxes);
-    
-    if (checkedBoxes === 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'No Permissions Selected',
-            text: 'Please select at least one permission for this role.',
-            confirmButtonColor: '#ffc107'
-        });
-        return false;
-    }
-
-    // Show confirmation dialog
-    Swal.fire({
-        title: 'Create New Role?',
-        html: '<div style="text-align:center;"><i class="fas fa-user-tag" style="font-size:3rem;color:#4169E1;margin-bottom:15px;"></i><br/>This will create a new role:<br/><strong style="font-size:1.2rem;color:#4169E1;">' + roleNameField.value + '</strong><br/><small class="text-muted">With ' + checkedBoxes + ' permission(s) selected</small></div>',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#4169E1',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Create Role',
-        cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
-        customClass: {
-            popup: 'animated-popup',
-            confirmButton: 'btn-confirm-custom',
-            cancelButton: 'btn-cancel-custom'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Show loading state
+<script type="text/javascript">
+    // Show save confirmation dialog
+    function showSaveConfirmation() {
+        const roleNameField = document.getElementById('<%= txtRoleName.ClientID %>');
+        if (!roleNameField.value.trim()) {
             Swal.fire({
-                title: 'Creating Role...',
-                html: 'Please wait while we create the new role.',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                icon: 'error',
+                title: 'Validation Error',
+                text: 'Please enter a role name.',
+                confirmButtonColor: '#dc3545'
             });
-
-            // Trigger server-side save
-            setTimeout(function () {
-                document.getElementById('<%= btnSaveHidden.ClientID %>').click();
-            }, 100);
+            roleNameField.focus();
+            return false;
         }
+
+        // Count selected permissions (zero allowed)
+        const checkedBoxes = document.querySelectorAll('.permissions-table input[type="checkbox"]:checked').length;
+
+        Swal.fire({
+            title: 'Create New Role?',
+            html:
+                '<div style="text-align:center;">' +
+                '<i class="fas fa-user-tag" style="font-size:3rem;color:#4169E1;margin-bottom:15px;"></i><br/>' +
+                'This will create a new role:<br/>' +
+                '<strong style="font-size:1.2rem;color:#4169E1;">' + roleNameField.value + '</strong><br/>' +
+                '<small class="text-muted">With ' + checkedBoxes + ' permission(s) selected</small></div>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4169E1',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Create Role',
+            cancelButtonText: '<i class="fas fa-times me-2"></i>No, Keep Editing',
+            customClass: {
+                // Animations removed as requested
+                confirmButton: 'btn-confirm-custom',
+                cancelButton: 'btn-cancel-custom'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+
+                // --- This fix is still needed for the *post-confirm* freeze ---
+                const cancelBtn = document.querySelector('.btn-cancel');
+                const createBtn = document.querySelector('.btn-create');
+
+                if (cancelBtn) {
+                    cancelBtn.style.pointerEvents = 'none';
+                    cancelBtn.style.opacity = '0.6';
+                    cancelBtn.href = 'javascript:void(0);';
+                }
+                if (createBtn) {
+                    createBtn.style.pointerEvents = 'none';
+                    createBtn.style.opacity = '0.6';
+                }
+                // --- End of fix ---
+
+                // Show loading state
+                Swal.fire({
+                    title: 'Creating Role...',
+                    html: 'Please wait while we create the new role.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Trigger hidden save button
+                setTimeout(function () {
+                    document.getElementById('<%= btnSaveHidden.ClientID %>').click();
+                }, 100);
+            }
+        });
+
+        return false;
+    }
+
+    // --- 🟢 NEW BULLETPROOF CANCEL FUNCTION ---
+    function cancelAction() {
+        // 1. CHECK: Is a SweetAlert modal already visible?
+        if (Swal.isVisible()) {
+            // 2. If YES, do nothing. This stops the conflict.
+            return;
+        }
+
+        // 3. If NO modal is open, proceed with a new confirmation.
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Any unsaved changes will be lost.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-trash-alt me-2"></i>Yes, Cancel', // Renamed as requested
+            cancelButtonText: '<i class="fas fa-edit me-2"></i>No, Keep Editing'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Navigate only if this modal is confirmed
+                window.location.href = 'ViewRole.aspx';
+            }
+        });
+    }
+
+
+    // Ensure View permission is checked when other permissions are checked
+    function ensureView(cb) {
+        const row = cb.closest('tr');
+        if (!row) return;
+        
+        const viewCheckbox = row.querySelector('.chkView');
+        if (cb.checked && viewCheckbox && !viewCheckbox.checked) {
+            viewCheckbox.checked = true;
+            
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: 'View permission automatically enabled',
+                showConfirmButton: false,
+                timer: 2000
+            });
+        }
+    }
+
+    // Toggle all permissions in row based on View checkbox
+    function toggleAllInRow(checkbox, permission) {
+        const row = checkbox.closest('tr');
+        if (!row) return;
+
+        if (permission === 'view') {
+            if (!checkbox.checked) {
+                row.querySelectorAll('.chkAdd, .chkEdit, .chkDelete').forEach(cb => {
+                    cb.checked = false;
+                });
+            }
+        }
+    }
+
+    // Page load setup
+    document.addEventListener('DOMContentLoaded', function() {
+        const lblMessage = document.getElementById('<%= lblMessage.ClientID %>');
+        if (lblMessage && lblMessage.textContent.trim() !== '') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            setTimeout(function () {
+                lblMessage.style.transition = 'opacity 0.5s ease';
+                lblMessage.style.opacity = '0';
+                setTimeout(function () {
+                    lblMessage.style.display = 'none';
+                }, 500);
+            }, 5000);
+        }
+
+        const tableRows = document.querySelectorAll('.permissions-table tbody tr');
+        tableRows.forEach(row => {
+            row.addEventListener('mouseenter', function () {
+                this.style.transition = 'all 0.3s ease';
+            });
+        });
     });
 
-    return false;
-}
+    // Prevent form resubmission on page refresh
+    if (window.history.replaceState) {
+        window.history.replaceState(null, null, window.location.href);
+    }
+</script>
 
-        // Ensure View permission is checked when other permissions are checked
-        function ensureView(cb) {
-            const row = cb.closest('tr');
-            if (!row) return;
-            
-            const viewCheckbox = row.querySelector('.chkView');
-            if (cb.checked && viewCheckbox && !viewCheckbox.checked) {
-                viewCheckbox.checked = true;
-                
-                // Show tooltip
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'info',
-                    title: 'View permission automatically enabled',
-                    showConfirmButton: false,
-                    timer: 2000
-                });
-            }
-        }
-
-        // Toggle all permissions in row based on View checkbox
-        function toggleAllInRow(checkbox, permission) {
-            const row = checkbox.closest('tr');
-            if (!row) return;
-
-            if (permission === 'view') {
-                // If unchecking View, uncheck all others
-                if (!checkbox.checked) {
-                    row.querySelectorAll('.chkAdd, .chkEdit, .chkDelete').forEach(cb => {
-                        cb.checked = false;
-                    });
-                }
-            }
-        }
-
-   
-
-        // Page load setup
-        document.addEventListener('DOMContentLoaded', function() {
-            // Auto-hide success/error messages after 5 seconds
-            const lblMessage = document.getElementById('<%= lblMessage.ClientID %>');
-            if (lblMessage && lblMessage.textContent.trim() !== '') {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-
-                setTimeout(function () {
-                    lblMessage.style.transition = 'opacity 0.5s ease';
-                    lblMessage.style.opacity = '0';
-                    setTimeout(function () {
-                        lblMessage.style.display = 'none';
-                    }, 500);
-                }, 5000);
-            }
-
-            // Add hover effect to table rows
-            const tableRows = document.querySelectorAll('.permissions-table tbody tr');
-            tableRows.forEach(row => {
-                row.addEventListener('mouseenter', function () {
-                    this.style.transition = 'all 0.3s ease';
-                });
-            });
-        });
-
-        // Prevent form resubmission on page refresh
-        if (window.history.replaceState) {
-            window.history.replaceState(null, null, window.location.href);
-        }
-    </script>
 
     <style>
-        /* SweetAlert Custom Styling */
-        .animated-popup {
-            animation: slideInDown 0.3s ease;
-        }
-
-        @keyframes slideInDown {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
         .btn-confirm-custom,
         .btn-cancel-custom {
             padding: 10px 24px !important;

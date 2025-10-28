@@ -99,6 +99,133 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(4px);
     }
+
+        @media (max-width: 640px) {
+        #receiptModal .bg-white {
+            margin: 0.5rem;
+        }
+        
+        #receiptFrame {
+            min-height: 300px !important;
+        }
+        
+        /* Prevent body scroll when modal is open on mobile */
+        body.modal-open {
+            overflow: hidden;
+        }
+    }
+    
+    /* Ensure modal is always above other content */
+    #receiptModal {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Better image handling on mobile */
+    #receiptImage {
+        -webkit-touch-callout: none;
+        user-select: none;
+    }
+
+    /* PayPal Container Responsive Styles */
+#paypal-button-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+/* Ensure PayPal iframe doesn't break layout */
+#paypal-button-container iframe {
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* PayPal buttons container */
+.paypal-buttons {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* Fix PayPal card form modal on mobile */
+@media (max-width: 640px) {
+    /* Ensure PayPal modal doesn't overflow */
+    #paypal-button-container {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    
+    /* Force PayPal buttons to stack vertically on mobile */
+    #paypal-button-container .paypal-buttons {
+        flex-direction: column !important;
+    }
+    
+    /* Fix PayPal card form container */
+    .paypal-card-form,
+    .paypal-checkout-sandbox,
+    [data-funding-source] {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    /* Prevent horizontal scroll in PayPal modal */
+    body .zoid-outlet {
+        max-width: 100vw !important;
+    }
+    
+    /* Fix PayPal overlay */
+    .paypal-checkout-overlay {
+        overflow-x: hidden !important;
+    }
+}
+
+/* PayPal card payment card styling */
+.payment-card {
+    overflow: hidden;
+}
+
+/* Ensure parent container doesn't break */
+.bg-gradient-to-r.from-blue-50.to-indigo-50 {
+    overflow: hidden;
+}
+
+/* Fix for PayPal smart buttons responsive height */
+@media (max-width: 480px) {
+    #paypal-button-container {
+        min-height: auto !important;
+    }
+    
+    #paypal-button-container > div {
+        width: 100% !important;
+    }
+}
+
+/* Additional mobile fixes */
+@media (max-width: 768px) {
+    /* Ensure buttons don't overflow on tablets */
+    #paypal-button-container {
+        padding: 0;
+    }
+    
+    /* Fix button spacing */
+    #paypal-button-container > div {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}
+
+/* Prevent layout shift when PayPal loads */
+#paypal-button-container:empty {
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#paypal-button-container:empty::after {
+    content: 'Loading PayPal...';
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
 </style>
 
 <script>
@@ -162,67 +289,92 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
 
         var amount = amt.toFixed(2);
 
+        // Determine button style based on screen size
+        var isMobile = window.innerWidth <= 640;
+        var buttonHeight = isMobile ? 40 : 45;
+
         window.__ppButtons = paypal.Buttons({
-            style: { layout: 'vertical', label: 'paypal', height: 45 },
+            style: {
+                layout: 'vertical',
+                label: 'paypal',
+                height: buttonHeight,
+                shape: 'rect',
+                color: 'blue',
+                tagline: false // Remove tagline on mobile for cleaner look
+            },
 
             createOrder: function (data, actions) {
                 var minRequired = parseFloat(document.getElementById('<%= hfMinRequired.ClientID %>').value) || 0;
-                var customValue = document.getElementById('<%= txtCustomAmount.ClientID %>').value.trim();
-                var customAmount = customValue === "" ? amt : parseFloat(customValue);
+            var customValue = document.getElementById('<%= txtCustomAmount.ClientID %>').value.trim();
+            var customAmount = customValue === "" ? amt : parseFloat(customValue);
 
-                if (isNaN(customAmount) || customAmount <= 0) {
-                    Swal.fire('Invalid Amount', 'Please enter a valid payment amount.', 'error');
-                    return false;
-                }
-
-                if (customAmount < minRequired) {
-                    Swal.fire('Invalid Amount', 'Entered amount must be at least ₱' + minRequired.toFixed(2), 'error');
-                    return false;
-                }
-
-                window.__ppFinalAmount = customAmount;
-
-                return actions.order.create({
-                    purchase_units: [{
-                        amount: { value: customAmount.toFixed(2) },
-                        custom_id: document.getElementById('<%= hfPayPalBookingID.ClientID %>').value
-                    }]
-                });
-            },
-
-            onApprove: function (data, actions) {
-                return actions.order.capture().then(function (details) {
-                    var bookingId = document.getElementById('<%= hfPayPalBookingID.ClientID %>').value;
-                    var clientId = document.getElementById('<%= hfPayPalClientID.ClientID %>').value;
-
-                    fetch('/PayPalWebhook.ashx?custom=' + encodeURIComponent(bookingId) +
-                        '&amount=' + encodeURIComponent(window.__ppFinalAmount) +
-                        '&client=' + encodeURIComponent(clientId))
-                        .then(r => r.text())
-                        .then(msg => Swal.fire({
-                            icon: 'success',
-                            title: 'Payment completed!',
-                            html: 'Transaction by ' + (details?.payer?.name?.given_name || 'payer') +
-                                '<br/><small>' + msg + '</small>'
-                        }).then(() => location.reload()))
-                        .catch(err => Swal.fire('✅ Paid, but DB not updated.', err.message, 'warning'));
-                });
-            },
-
-            onCancel: function () {
-                Swal.fire('Payment canceled', '', 'info');
-            },
-
-            onError: function (err) {
-                console.error("PayPal Error:", err);
-                Swal.fire('Payment error', err.message, 'error');
+            if (isNaN(customAmount) || customAmount <= 0) {
+                Swal.fire('Invalid Amount', 'Please enter a valid payment amount.', 'error');
+                return false;
             }
-        });
 
-        window.__ppButtons.render('#paypal-button-container').finally(function () {
+            if (customAmount < minRequired) {
+                Swal.fire('Invalid Amount', 'Entered amount must be at least ₱' + minRequired.toFixed(2), 'error');
+                return false;
+            }
+
+            window.__ppFinalAmount = customAmount;
+
+            return actions.order.create({
+                purchase_units: [{
+                    amount: { value: customAmount.toFixed(2) },
+                    custom_id: document.getElementById('<%= hfPayPalBookingID.ClientID %>').value
+                }]
+            });
+        },
+
+        onApprove: function (data, actions) {
+            return actions.order.capture().then(function (details) {
+                var bookingId = document.getElementById('<%= hfPayPalBookingID.ClientID %>').value;
+                var clientId = document.getElementById('<%= hfPayPalClientID.ClientID %>').value;
+
+                fetch('/PayPalWebhook.ashx?custom=' + encodeURIComponent(bookingId) +
+                    '&amount=' + encodeURIComponent(window.__ppFinalAmount) +
+                    '&client=' + encodeURIComponent(clientId))
+                    .then(r => r.text())
+                    .then(msg => Swal.fire({
+                        icon: 'success',
+                        title: 'Payment completed!',
+                        html: 'Transaction by ' + (details?.payer?.name?.given_name || 'payer') +
+                            '<br/><small>' + msg + '</small>'
+                    }).then(() => location.reload()))
+                    .catch(err => Swal.fire('✅ Paid, but DB not updated.', err.message, 'warning'));
+            });
+        },
+
+        onCancel: function () {
+            Swal.fire('Payment canceled', '', 'info');
+        },
+
+        onError: function (err) {
+            console.error("PayPal Error:", err);
+            Swal.fire('Payment error', err.message || 'An error occurred during payment.', 'error');
+        }
+    });
+
+        window.__ppButtons.render('#paypal-button-container').then(function () {
             container.classList.remove('opacity-40');
+        }).catch(function (err) {
+            console.error('PayPal render error:', err);
+            container.innerHTML = "<p class='text-red-600 font-semibold mt-3'>Failed to load PayPal buttons. Please refresh the page.</p>";
         });
     }
+
+    // Re-render PayPal buttons on window resize (debounced)
+    var resizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            if (window.__ppButtons) {
+                renderPayPalButtons();
+            }
+        }, 500);
+    });
 
     // ------- Hook for UpdatePanel Refresh -------
     function hookUpdatePanelVisuals() {
@@ -244,19 +396,6 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
             renderPayPalButtons();
         });
     }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        hookUpdatePanelVisuals();
-        updatePayMongoButton();
-        renderPayPalButtons();
-        
-        // Update minimum amount display
-        var minReq = document.getElementById('<%= hfMinRequired.ClientID %>').value || '0';
-        var minDisplay = document.getElementById('minRequiredAmount');
-        if (minDisplay) {
-            minDisplay.textContent = '₱' + parseFloat(minReq).toFixed(2);
-        }
-    });
 
     var customAmountDebounceTimer = null;
 
@@ -288,11 +427,11 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
             }
 
             renderPayPalButtons();
-            
-            customAmountDebounceTimer = setTimeout(function() {
+
+            customAmountDebounceTimer = setTimeout(function () {
                 triggerCustomAmountUpdate();
             }, 1000);
-            
+
             return true;
         }
 
@@ -309,6 +448,7 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
                 paypalContainer.classList.add("pointer-events-none", "opacity-50");
             }
 
+            // ✅ DON'T trigger postback when validation fails
             return false;
         }
 
@@ -325,7 +465,8 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
 
         renderPayPalButtons();
 
-        customAmountDebounceTimer = setTimeout(function() {
+        // ✅ Only trigger postback when validation passes
+        customAmountDebounceTimer = setTimeout(function () {
             triggerCustomAmountUpdate();
         }, 1000);
 
@@ -342,7 +483,123 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
             __doPostBack('<%= txtCustomAmount.UniqueID %>', '');
         }
     }
+
+    var currentReceiptUrl = '';
+
+    // ------- Receipt Modal Functions -------
+    function openReceiptModal(file) {
+        if (!file || file === 'No Receipt') {
+            Swal.fire('No Receipt', 'No receipt available for this transaction.', 'info');
+            return false;
+        }
+
+        var modal = document.getElementById('receiptModal');
+        var loader = document.getElementById('receiptLoader');
+        var frame = document.getElementById('receiptFrame');
+        var img = document.getElementById('receiptImage');
+
+        // Lock body scroll on mobile
+        document.body.classList.add('modal-open');
+
+        // Show modal and loader
+        modal.classList.remove('hidden');
+        loader.classList.remove('hidden');
+        frame.classList.add('hidden');
+        img.classList.add('hidden');
+
+        // Build URL
+        currentReceiptUrl = 'DecryptReceipt.aspx?file=' + encodeURIComponent(file);
+
+        // Detect file type
+        var ext = file.toLowerCase().split('.').pop();
+
+        if (ext === 'pdf') {
+            // Load PDF in iframe
+            frame.src = currentReceiptUrl;
+            frame.onload = function () {
+                loader.classList.add('hidden');
+                frame.classList.remove('hidden');
+            };
+            // Fallback timeout for PDFs that might not trigger onload
+            setTimeout(function () {
+                if (!frame.classList.contains('hidden')) return;
+                loader.classList.add('hidden');
+                frame.classList.remove('hidden');
+            }, 3000);
+        } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) > -1) {
+            // Load image
+            img.src = currentReceiptUrl;
+            img.onload = function () {
+                loader.classList.add('hidden');
+                img.classList.remove('hidden');
+            };
+            img.onerror = function () {
+                loader.classList.add('hidden');
+                Swal.fire('Error', 'Failed to load receipt image.', 'error');
+                closeReceiptModal();
+            };
+        } else {
+            // Unsupported format - open in new tab
+            loader.classList.add('hidden');
+            window.open(currentReceiptUrl, '_blank');
+            closeReceiptModal();
+        }
+
+        return false;
+    }
+
+    function closeReceiptModal() {
+        var modal = document.getElementById('receiptModal');
+        modal.classList.add('hidden');
+
+        // Unlock body scroll
+        document.body.classList.remove('modal-open');
+
+        // Clear sources
+        document.getElementById('receiptFrame').src = '';
+        document.getElementById('receiptImage').src = '';
+        currentReceiptUrl = '';
+    }
+
+    function downloadReceipt() {
+        if (currentReceiptUrl) {
+            window.open(currentReceiptUrl, '_blank');
+        } else {
+            Swal.fire('Error', 'No receipt available to download.', 'error');
+        }
+    }
+
+    // ✅ CONSOLIDATED DOMContentLoaded - Only ONE listener
+    document.addEventListener('DOMContentLoaded', function () {
+        hookUpdatePanelVisuals();
+        updatePayMongoButton();
+        renderPayPalButtons();
+
+        // Update minimum amount display
+        var minReq = document.getElementById('<%= hfMinRequired.ClientID %>').value || '0';
+        var minDisplay = document.getElementById('minRequiredAmount');
+        if (minDisplay) {
+            minDisplay.textContent = '₱' + parseFloat(minReq).toFixed(2);
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function (e) {
+            var modal = document.getElementById('receiptModal');
+            if (modal && e.target === modal) {
+                closeReceiptModal();
+            }
+        });
+
+        // Close modal on ESC key press
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !document.getElementById('receiptModal').classList.contains('hidden')) {
+                closeReceiptModal();
+            }
+        });
+    });
 </script>
+
+
 </asp:Content>
 
 <asp:Content ID="MainContentBlock" ContentPlaceHolderID="MainContent" runat="server">
@@ -562,20 +819,20 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
             </div>
 
             <!-- PayPal Card -->
-            <asp:UpdatePanel ID="updPayPal" runat="server" UpdateMode="Conditional">
-                <ContentTemplate>
-                    <div class="payment-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-5">
-                        <h4 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                            <i class="fab fa-paypal text-blue-600 text-xl"></i>
-                            PayPal
-                        </h4>
-                        <div id="paypal-warning" class="hidden text-green-600 font-semibold p-3 bg-green-50 rounded-lg">
-                            <i class="fas fa-check-circle mr-2"></i>You have no remaining balance to pay.
-                        </div>
-                        <div id="paypal-button-container" class="mt-2 max-w-sm"></div>
-                    </div>
-                </ContentTemplate>
-            </asp:UpdatePanel>
+         <asp:UpdatePanel ID="updPayPal" runat="server" UpdateMode="Conditional">
+    <ContentTemplate>
+        <div class="payment-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-5 overflow-hidden">
+            <h4 class="font-semibold text-gray-800 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                <i class="fab fa-paypal text-blue-600 text-lg sm:text-xl"></i>
+                PayPal
+            </h4>
+            <div id="paypal-warning" class="hidden text-green-600 font-semibold p-3 bg-green-50 rounded-lg text-xs sm:text-sm">
+                <i class="fas fa-check-circle mr-2"></i>You have no remaining balance to pay.
+            </div>
+            <div id="paypal-button-container" class="mt-2 w-full"></div>
+        </div>
+    </ContentTemplate>
+</asp:UpdatePanel>
         </div>
     </div>
 
@@ -628,6 +885,55 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
                     </div>
                 </EmptyDataTemplate>
             </asp:GridView>
+        </div>
+    </div>
+</div>
+
+    <!-- Receipt Modal -->
+<div id="receiptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-white rounded-lg sm:rounded-xl shadow-2xl w-full max-w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+
+        <!-- Header - Responsive padding and text size -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0">
+            <h3 class="text-base sm:text-xl font-semibold text-white flex items-center gap-2">
+                <i class="fas fa-receipt text-sm sm:text-base"></i>
+                <span class="truncate">Payment Receipt</span>
+            </h3>
+            <button onclick="closeReceiptModal()" class="text-white hover:text-gray-200 p-1">
+                <i class="fas fa-times text-xl sm:text-2xl"></i>
+            </button>
+        </div>
+        
+        <!-- Content Area - Scrollable with responsive height -->
+        <div class="flex-1 overflow-y-auto p-3 sm:p-6">
+
+            <div id="receiptLoader" class="text-center py-8 sm:py-12">
+                <i class="fas fa-spinner fa-spin text-3xl sm:text-4xl text-blue-600 mb-2 sm:mb-3"></i>
+                <p class="text-sm sm:text-base text-gray-600">Loading receipt...</p>
+            </div>
+
+            <iframe id="receiptFrame" 
+                    class="hidden w-full border-0 rounded" 
+                    style="min-height: 400px; height: calc(95vh - 180px);">
+            </iframe>
+
+            <img id="receiptImage" 
+                 class="hidden w-full h-auto rounded-lg shadow-md max-w-full object-contain" 
+                 style="max-height: calc(95vh - 180px);"
+                 alt="Receipt" />
+        </div>
+        
+
+        <div class="bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 border-t flex-shrink-0">
+            <button onclick="downloadReceipt()" 
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 sm:py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 text-sm sm:text-base order-1 sm:order-1 w-full sm:w-auto">
+                <i class="fas fa-download"></i>
+                <span>Download</span>
+            </button>
+            <button onclick="closeReceiptModal()" 
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 sm:py-2.5 rounded-lg font-semibold text-sm sm:text-base order-2 sm:order-2 w-full sm:w-auto">
+                Close
+            </button>
         </div>
     </div>
 </div>

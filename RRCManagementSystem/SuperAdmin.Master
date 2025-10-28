@@ -589,6 +589,12 @@
         </li>
 
         <li>
+            <a class='nav-link <%= GetActiveClass("BlogManagement.aspx") %>' href="BlogManagement.aspx">
+                <i class="fas fa-blog"></i> Blog CMS
+            </a>
+        </li>
+
+        <li>
             <a class='nav-link <%= GetActiveClass("FAQ.aspx") %>' href="FAQ.aspx">
                 <i class="fas fa-question-circle"></i> FAQs CMS
             </a>
@@ -601,6 +607,7 @@
         </li>
     </ul>
 </li>
+
 
 
                     <li class="nav-item">

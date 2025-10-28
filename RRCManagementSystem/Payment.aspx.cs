@@ -672,10 +672,17 @@ namespace RRCManagementSystem
         protected string GetReceiptLink(object receiptObj)
         {
             var v = (receiptObj == null || receiptObj == DBNull.Value) ? "" : receiptObj.ToString();
-            if (string.IsNullOrWhiteSpace(v)) return "No Receipt";
+            if (string.IsNullOrWhiteSpace(v))
+                return "<span class='text-gray-400 text-sm'>No Receipt</span>";
+
             var file = System.IO.Path.GetFileName(v);
-            var url = "DecryptReceipt.aspx?file=" + HttpUtility.UrlEncode(file);
-            return $"<a href='{url}' target='_blank' rel='noopener'>View</a>";
+            var encodedFile = HttpUtility.HtmlAttributeEncode(file);
+
+            return $@"<button onclick=""return openReceiptModal('{encodedFile}');"" 
+              class='bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2'>
+                <i class='fas fa-eye'></i>
+                View
+              </button>";
         }
 
         protected void gvPaymentHistory_RowDataBound(object sender, GridViewRowEventArgs e)
@@ -879,21 +886,23 @@ namespace RRCManagementSystem
             if (hasValue && !decimal.TryParse(rawInput, out enteredAmount))
             {
                 lblCustomAmountError.Text = "Please enter a valid number.";
+                // ✅ Don't reload - just show error and keep current values
                 return;
             }
 
             if (hasValue && enteredAmount < minRequired)
             {
                 lblCustomAmountError.Text = $"Amount cannot be less than ₱{minRequired:N2}";
+                // ✅ Don't reload - just show error and keep current values
                 return;
             }
 
+            // ✅ Clear error only when validation passes
             lblCustomAmountError.Text = "";
 
             decimal finalAmount = hasValue ? enteredAmount : minRequired;
 
-            // ✅ ONLY generate new checkout URL, DO NOT reload client info (prevents KPI reset)
-            // Get necessary values from database without full reload
+            // Get necessary values from database
             decimal fullPrice = 0m;
             decimal totalPaid = 0m;
             bool isContract = false;
@@ -922,10 +931,14 @@ namespace RRCManagementSystem
                 }
             }
 
-            // ✅ Generate PayMongo checkout link with custom amount
+            // ✅ Only reload when validation passes
+            LoadClientInfo(clientId, hfSelectedPlan.Value);
+            LoadPaymentHistory(clientId);
+
+            // Generate PayMongo checkout link with custom amount
             GenerateCheckoutURL(clientId, bookingId, isContract, fullPrice, totalPaid, paymentPlan, finalAmount);
 
-            // ✅ Update PayPal buttons with custom amount
+            // Update PayPal buttons with custom amount
             ScriptManager.RegisterStartupScript(this, GetType(), "refreshPayPal",
                 "renderPayPalButtons();", true);
         }

@@ -83,7 +83,7 @@ namespace RRCManagementSystem
             TextInfo ti = new CultureInfo("en-US", false).TextInfo;
             roleName = ti.ToTitleCase(roleName.ToLower());
 
-            // Validate at least one permission is granted
+            // Check if any permission is granted
             bool hasAnyPermission = false;
             foreach (RepeaterItem item in rptPermissions.Items)
             {
@@ -97,10 +97,10 @@ namespace RRCManagementSystem
                 }
             }
 
+            // 🟡 Optional warning (no more return)
             if (!hasAnyPermission)
             {
-                ShowSweetAlert("No Permissions Selected", "⚠ Please grant at least one permission for this role.", "warning", false);
-                return;
+                ShowSweetAlert("No Permissions Selected", "⚠ This role will be created without any permissions. You can assign them later.", "info", false);
             }
 
             try
@@ -128,7 +128,7 @@ namespace RRCManagementSystem
 
                 if (newRoleId > 0)
                 {
-                    // Step 2: Save permissions for this role
+                    // Step 2: Save permissions for this role (all unchecked will still be inserted)
                     SaveRolePermissions(newRoleId);
 
                     ShowSweetAlert(
@@ -152,6 +152,7 @@ namespace RRCManagementSystem
                 ShowSweetAlert("Error", $"An error occurred: {ex.Message}", "error", false);
             }
         }
+
 
         private void SaveRolePermissions(int roleId)
         {

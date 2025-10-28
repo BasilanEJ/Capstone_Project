@@ -202,19 +202,47 @@ namespace RRCManagementSystem
             {
                 int quantity = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "Quantity"));
                 int itemId = Convert.ToInt32(DataBinder.Eval(e.Row.DataItem, "ItemID"));
+                string itemType = Convert.ToString(DataBinder.Eval(e.Row.DataItem, "Type"));
 
                 Label lblQuantity = (Label)e.Row.FindControl("lblQuantity");
 
                 if (lblQuantity != null)
                 {
-                    if (quantity > 10)
-                        lblQuantity.ForeColor = System.Drawing.Color.Black;
-                    else if (quantity > 5 && quantity <= 10)
-                        lblQuantity.ForeColor = System.Drawing.Color.Goldenrod;
-                    else
+                    // Dynamic thresholds based on item type
+                    bool isLowStock = false;
+
+                    if (itemType == "Bottled Chemical" && quantity <= 3)
+                    {
+                        isLowStock = true;
+                    }
+                    else if (itemType == "Sachet Pack Chemical" && quantity <= 10)
+                    {
+                        isLowStock = true;
+                    }
+                    else if (itemType == "Safety Gear" && quantity <= 5)
+                    {
+                        isLowStock = true;
+                    }
+
+                    if (isLowStock)
+                    {
                         lblQuantity.ForeColor = System.Drawing.Color.Red;
+                        lblQuantity.Font.Bold = true;
+                        // Add a pulsing animation class for critical items
+                        e.Row.CssClass += " bg-red-50";
+                    }
+                    else if (quantity > 5 && quantity <= 10)
+                    {
+                        lblQuantity.ForeColor = System.Drawing.Color.Orange;
+                        lblQuantity.Font.Bold = true;
+                    }
+                    else
+                    {
+                        lblQuantity.ForeColor = System.Drawing.Color.Green;
+                    }
                 }
 
+                // Permission-based button styling
                 var btnEditWrapper = e.Row.FindControl("btnEditWrapper") as System.Web.UI.HtmlControls.HtmlGenericControl;
                 var btnAddWrapper = e.Row.FindControl("btnAddWrapper") as System.Web.UI.HtmlControls.HtmlGenericControl;
                 var btnDeleteWrapper = e.Row.FindControl("btnDeleteWrapper") as System.Web.UI.HtmlControls.HtmlGenericControl;
@@ -244,8 +272,6 @@ namespace RRCManagementSystem
                 LinkButton btnDelete = (LinkButton)e.Row.FindControl("btnDelete");
                 if (btnDelete != null)
                 {
-                    // Set the client-side click event to call your JavaScript function.
-                    // This prevents the default postback and handles the SweetAlert.
                     btnDelete.OnClientClick = $"confirmDelete('{hiddenItemId.ClientID}', '{itemId}'); return false;";
                 }
             }
@@ -322,30 +348,39 @@ namespace RRCManagementSystem
 
 
 
-        private void DeleteItem(int itemId)
+        private string DeleteItem(int itemId)
         {
-            using (var con = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("dbo.spInventory_Delete", con))
+            try
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@ItemID", itemId);
-                con.Open();
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        // ================== Register dynamic postback for SweetAlert ==================
-        protected override void Render(HtmlTextWriter writer)
-        {
-            foreach (GridViewRow row in gvItems.Rows)
-            {
-                if (row.RowType == DataControlRowType.DataRow)
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spInventory_Delete", con))
                 {
-                    string itemId = gvItems.DataKeys[row.RowIndex].Value.ToString();
-                    ClientScript.RegisterForEventValidation(btnConfirmDelete.UniqueID, itemId);
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@ItemID", itemId);
+                    con.Open();
+                    cmd.ExecuteNonQuery();
                 }
+
+
+                return null;
             }
-            base.Render(writer);
+            catch (SqlException ex)
+            {
+
+                if (ex.Number == 547)
+                {
+
+                    return "This item cannot be deleted because it is already assigned to a booking.";
+                }
+
+
+                return "A database error occurred. Could not delete the item.";
+            }
+            catch (Exception ex)
+            {
+
+                return "A general error occurred: " + ex.Message;
+            }
         }
 
 

@@ -2,7 +2,6 @@
 <%@ Register Assembly="AjaxControlToolkit" Namespace="AjaxControlToolkit" TagPrefix="ajaxToolkit" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePageMethods="true" />
 
     <asp:HiddenField ID="hfInquiryVisible" runat="server" Value="false" />
     <asp:HiddenField ID="hfInquiryData" runat="server" Value="" />

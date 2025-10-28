@@ -73,6 +73,21 @@
             color: white;
             transform: scale(1.05);
         }
+
+        @keyframes pulse-warning {
+    0%, 100% {
+        background-color: #fef2f2;
+    }
+    50% {
+        background-color: #fee2e2;
+    }
+}
+
+.bg-red-50 {
+    animation: pulse-warning 2s ease-in-out infinite;
+}
+
+
     </style>
 </asp:Content>
 
@@ -84,18 +99,20 @@
             <div class="text-center mb-8">
                 <h2 class="text-4xl font-extrabold text-blue-800">View Items</h2>
             </div>
-
-            <div id="divRestockNotice" runat="server" class="mb-6">
-                <asp:Label ID="lblRestockNotice" runat="server"
-                    CssClass="bg-yellow-50 text-yellow-700 font-medium px-6 py-4 rounded-lg border-l-4 border-yellow-400 flex items-center shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span>
-                        <strong class="font-bold">⚠️ Warning:</strong> Some items are below restock threshold.
-                    </span>
-                </asp:Label>
+<div id="divRestockNotice" runat="server" class="mb-6">
+    <asp:Label ID="lblRestockNotice" runat="server"
+        CssClass="block bg-gradient-to-r from-red-50 to-orange-50 text-red-800 font-medium px-6 py-5 rounded-xl border-l-4 border-red-500 shadow-lg">
+        <div class="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-3 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+                <span class="text-lg font-bold block mb-2">⚠️ Low Stock Alert</span>
+                <div class="text-sm leading-relaxed"></div>
             </div>
+        </div>
+    </asp:Label>
+</div>
 
             <div class="mb-6 max-w-sm mx-auto">
                 <label for="ddlType" class="block text-sm font-semibold text-gray-700 mb-2">Filter by Item Type:</label>

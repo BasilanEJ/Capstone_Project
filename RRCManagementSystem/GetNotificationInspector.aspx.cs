@@ -18,7 +18,7 @@ namespace RRCManagementSystem
             if (Session["UserID"] == null)
             {
                 Response.Write("{\"unread\":0,\"notifications\":[]}");
-                Response.End();
+                HttpContext.Current.ApplicationInstance.CompleteRequest();
                 return;
             }
 
@@ -29,7 +29,7 @@ namespace RRCManagementSystem
             {
                 MarkAllAsRead(userId);
                 Response.Write("{\"success\":true}");
-                Response.End();
+                HttpContext.Current.ApplicationInstance.CompleteRequest();
                 return;
             }
 
@@ -42,9 +42,8 @@ namespace RRCManagementSystem
 
             string json = new JavaScriptSerializer().Serialize(result);
             Response.Write(json);
-            Response.End();
+            HttpContext.Current.ApplicationInstance.CompleteRequest();
         }
-
         private int GetUnreadCount(int userId)
         {
             try

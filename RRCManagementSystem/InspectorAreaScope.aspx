@@ -700,22 +700,6 @@
     </script>
 
     <style>
-        /* SweetAlert Custom Styling */
-        .animated-popup {
-            animation: slideInDown 0.3s ease;
-        }
-
-        @keyframes slideInDown {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
         .btn-confirm-custom,
         .btn-cancel-custom {
             padding: 10px 24px !important;

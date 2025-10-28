@@ -4,149 +4,915 @@
 <html lang="en">
 <head runat="server">
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
     <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
-    <title>Inspector Panel</title>
+    <title>Inspector Panel | RRC Termite & Pest Control</title>
 
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
 
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 
     <style>
-        :root { 
-            --sidebar-w: 280px; 
-            --header-h: 60px; 
+        /* ===== Variables ===== */
+        :root {
+            --header-height: 64px;
+            --sidebar-collapsed: 80px;
+            --sidebar-expanded: 280px;
+            --primary-blue: #2563eb;
+            --primary-blue-dark: #1e40af;
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
         }
 
+        @media (max-width: 640px) {
+            :root {
+                --header-height: 56px;
+            }
+        }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--primary-blue), var(--primary-blue-dark));
+            border-radius: 4px;
+        }
+
+        /* ===== Body ===== */
         body {
-            @apply bg-gray-100;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
         }
 
-        #mainContent {
+        /* ===== Header ===== */
+        #mainHeader {
+            height: var(--header-height);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+        }
+
+        @media (max-width: 640px) {
+            #mainHeader {
+                padding: 0 0.75rem;
+            }
+        }
+
+        @media (max-width: 380px) {
+            #mainHeader {
+                padding: 0 0.5rem;
+            }
+        }
+
+        /* ===== Burger Menu ===== */
+        #burgerMenu {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            color: white;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #burgerMenu:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        #burgerMenu:active {
+            transform: scale(0.95);
+        }
+
+        #burgerMenu i {
+            font-size: 1.25rem;
+        }
+
+        @media (max-width: 640px) {
+            #burgerMenu {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+            }
+        }
+
+        /* ===== Logo ===== */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-left: 0.75rem;
+        }
+
+        .logo-img {
+            height: 40px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+        }
+
+        @media (max-width: 640px) {
+            .logo-container {
+                margin-left: 0.5rem;
+            }
+            
+            .logo-img {
+                height: 32px;
+                max-width: 120px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .logo-container {
+                margin-left: 0.25rem;
+            }
+
+            .logo-img {
+                height: 28px;
+                max-width: 100px;
+            }
+        }
+
+        /* ===== User Profile with Notification ===== */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.875rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        @media (max-width: 640px) {
+            .user-profile {
+                gap: 0.5rem;
+                padding: 0.375rem 0.625rem;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .user-profile {
+                gap: 0.375rem;
+                padding: 0.25rem 0.5rem;
+            }
+        }
+
+        .notification-bell {
+            position: relative;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notification-bell:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .notification-bell:active {
+            transform: scale(0.95);
+        }
+
+        .notification-bell i {
+            font-size: 1.25rem;
+        }
+
+        @media (max-width: 640px) {
+            .notification-bell {
+                padding: 0.375rem;
+                min-width: 40px;
+                min-height: 40px;
+            }
+
+            .notification-bell i {
+                font-size: 1.125rem;
+            }
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #ef4444;
+            color: white;
+            border-radius: 9999px;
+            padding: 0.125rem 0.375rem;
+            font-size: 0.625rem;
+            font-weight: 700;
+            min-width: 18px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: calc(100% + 0.75rem);
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            width: 320px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .notification-dropdown.active {
+            display: block;
+        }
+
+        @media (max-width: 640px) {
+            .notification-dropdown {
+                width: 90vw;
+                max-width: 320px;
+                right: -0.5rem;
+                max-height: 70vh;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .notification-dropdown {
+                width: 95vw;
+                right: -0.25rem;
+            }
+        }
+
+        .notification-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 700;
+            color: #1f2937;
+            font-size: 1rem;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 1;
+        }
+
+        @media (max-width: 640px) {
+            .notification-header {
+                padding: 0.875rem;
+                font-size: 0.9375rem;
+            }
+        }
+
+        .notification-item {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.2s ease;
+            min-height: 44px;
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .notification-item:hover {
+            background: #f9fafb;
+        }
+
+        .notification-item:active {
+            background: #f3f4f6;
+        }
+
+        .notification-item.unread {
+            background: #eff6ff;
+        }
+
+        @media (max-width: 640px) {
+            .notification-item {
+                padding: 0.75rem 0.875rem;
+            }
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .user-info {
+                gap: 0.375rem;
+            }
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            min-height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .user-avatar i {
+            font-size: 1rem;
+        }
+
+        @media (max-width: 640px) {
+            .user-avatar {
+                width: 32px;
+                height: 32px;
+                min-width: 32px;
+                min-height: 32px;
+            }
+
+            .user-avatar i {
+                font-size: 0.875rem;
+            }
+        }
+
+        .user-name {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 768px) {
+            .user-name {
+                max-width: 120px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .user-name {
+                font-size: 0.875rem;
+                max-width: 100px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .user-name {
+                max-width: 80px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .user-name {
+                display: none;
+            }
+        }
+
+        /* ===== Sidebar ===== */
+        #sidebar {
+            position: fixed;
+            left: 0;
+            top: var(--header-height);
+            height: calc(100vh - var(--header-height));
+            width: var(--sidebar-collapsed);
+            background: var(--sidebar-bg);
+            z-index: 40;
+            transition: width 0.3s ease, transform 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
+        }
+
+        #sidebar.expanded {
+            width: var(--sidebar-expanded);
+        }
+
+        /* ===== Sidebar Menu ===== */
+        .sidebar-menu {
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1rem 0;
+            list-style: none;
+            margin: 0;
+        }
+
+        .sidebar-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-thumb {
+            background-color: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.875rem 1rem;
+            margin: 0.25rem 0.5rem;
+            border-radius: 8px;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            min-height: 48px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .sidebar-link:hover {
+            background: var(--sidebar-hover);
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+
+        .sidebar-link:active {
+            transform: translateX(2px);
+        }
+
+        .sidebar-link.active {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .sidebar-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-text {
+            margin-left: 1rem;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-size: 0.9375rem;
+        }
+
+        #sidebar.expanded .sidebar-text {
+            opacity: 1;
+        }
+
+        /* ===== Logout Section ===== */
+        .logout-section {
+            padding: 1rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            margin-top: auto;
+            padding-top: 1rem;
+        }
+        
+        .logout-button {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            margin-left: auto;
+            margin-right: auto;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #sidebar.expanded .logout-button {
+            width: 100%;
+            height: auto;
+            margin: 0;
+            padding: 0.875rem;
+            justify-content: flex-start;
+            padding-left: 1.25rem;
+        }
+
+        .logout-button:hover {
+            background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+            transform: translateY(-2px);
+        }
+
+        .logout-button:active {
+            transform: translateY(0);
+        }
+
+        .logout-button i {
+            font-size: 1.25rem;
+            margin: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #sidebar.expanded .logout-button i {
+            margin-right: 0.5rem;
+        }
+
+        .logout-text {
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-weight: 600;
+            display: none;
+        }
+
+        #sidebar.expanded .logout-text {
+            opacity: 1;
+            display: inline;
+        }
+
+        /* ===== Main Content ===== */
+        #content {
+            margin-left: var(--sidebar-collapsed);
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-left: 2rem;
+            padding-right: 2rem;
+            padding-bottom: 2rem;
+            min-height: calc(100vh - var(--header-height));
             transition: margin-left 0.3s ease;
         }
 
-        @media (min-width: 1024px) {
-            #mainContent {
-                margin-left: var(--sidebar-w);
-                margin-top: var(--header-h);
-                padding: 30px;
-                min-height: calc(100vh - var(--header-h) - 56px);
+        #sidebar.expanded ~ form #content {
+            margin-left: var(--sidebar-expanded);
+        }
+
+        @media (max-width: 1024px) {
+            #content {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
             }
-            #footerDesktop {
-                left: var(--sidebar-w);
-                width: calc(100% - var(--sidebar-w));
+        }
+
+        @media (max-width: 640px) {
+            #content {
+                padding: calc(var(--header-height) + 1.25rem) 1rem 1.25rem;
+            }
+        }
+
+        @media (max-width: 380px) {
+            #content {
+                padding: calc(var(--header-height) + 1rem) 0.75rem 1rem;
+            }
+        }
+
+        /* ===== Overlay ===== */
+        #sidebarOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 35;
+            display: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #sidebarOverlay.active {
+            display: block;
+        }
+
+        /* ===== Mobile Adjustments ===== */
+        @media (max-width: 768px) {
+            #sidebar {
+                transform: translateX(-100%);
+            }
+
+            #sidebar.expanded {
+                transform: translateX(0);
+            }
+
+            #content {
+                margin-left: 0 !important;
+            }
+
+            body.sidebar-open {
+                overflow: hidden;
+            }
+        }
+
+        /* ===== Accessibility & Touch Improvements ===== */
+        @media (hover: none) and (pointer: coarse) {
+            /* Touch devices - larger tap targets */
+            .sidebar-link {
+                min-height: 52px;
+                padding: 1rem;
+            }
+
+            .notification-bell,
+            #burgerMenu {
+                min-width: 48px;
+                min-height: 48px;
+            }
+        }
+
+        /* ===== Focus States for Accessibility ===== */
+        #burgerMenu:focus,
+        .sidebar-link:focus,
+        .logout-button:focus,
+        .notification-bell:focus {
+            outline: 2px solid #60a5fa;
+            outline-offset: 2px;
+        }
+
+        /* ===== Smooth Animations ===== */
+        * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
             }
         }
     </style>
 </head>
-<body class="flex flex-col min-h-screen">
+
+<body>
     <form id="form1" runat="server">
-        <!-- ✅ HEADER -->
-        <header class="fixed top-0 left-0 w-full h-[var(--header-h)] bg-gray-900 text-white flex items-center justify-between px-4 lg:px-6 z-50 shadow-md">
-            <div class="flex items-center gap-2">
-                <button class="lg:hidden text-white hover:text-gray-300 focus:outline-none" type="button"
-                        onclick="document.getElementById('mobileMenu').classList.toggle('hidden');">
-                    <i class="fas fa-bars text-xl"></i>
+        <asp:ScriptManager ID="ScriptManager1" runat="server" 
+            EnablePartialRendering="true" 
+            EnablePageMethods="true"
+            ScriptMode="Release" />
+
+        <header id="mainHeader">
+            <div style="display: flex; align-items: center;">
+                <button id="burgerMenu" type="button" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
                 </button>
-                <h2 class="text-xl font-semibold">Inspector Panel</h2>
+                <div class="logo-container">
+                    <img src="/images/logorrc.png" class="logo-img" alt="RRC Management Logo" />
+                </div>
             </div>
 
-            <div class="flex items-center relative">
-                <asp:Label ID="lblInspectorName" runat="server" CssClass="mr-4 lg:mr-6 font-bold text-sm lg:text-base" />
+            <div class="user-profile">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <asp:Label ID="lblInspectorName" runat="server" CssClass="user-name" />
+                </div>
 
-                <div id="notificationBell" class="relative cursor-pointer text-gray-300 hover:text-white transition-colors" onclick="toggleNotificationList(); markNotificationsAsRead();">
-                    <i class="fas fa-bell text-xl"></i>
-                    <span id="notificationCount" runat="server" class="absolute -top-1 -right-1.5 transform translate-x-1/2 -translate-y-1/2 bg-red-600 text-white rounded-full px-1 py-0.5 text-xs" style="display:none;">0</span>
-
-                    <div id="notificationList" class="absolute top-full right-0 mt-4 bg-white text-gray-800 rounded-lg shadow-xl p-4 w-80 max-h-96 overflow-y-auto" style="display: none; z-index: 1000;">
-                        <h6 class="font-bold text-lg mb-2">Notifications</h6>
+                <div class="notification-bell" id="notificationBell" onclick="toggleNotificationList(); markNotificationsAsRead();" role="button" aria-label="Notifications" tabindex="0">
+                    <i class="fas fa-bell"></i>
+                    <span id="notificationCount" runat="server" class="notification-badge" style="display:none;" aria-label="Unread notifications">0</span>
+                    
+                    <div id="notificationList" class="notification-dropdown" role="menu" aria-label="Notification list">
+                        <div class="notification-header">Notifications</div>
                         <div id="notificationItems"></div>
                     </div>
                 </div>
             </div>
         </header>
 
-        <!-- ✅ SIDEBAR (Desktop) -->
-        <aside id="sidebarDesktop" class="hidden lg:flex flex-col w-[var(--sidebar-w)] h-[calc(100vh-var(--header-h))] fixed top-[var(--header-h)] left-0 bg-gray-900 text-white shadow-xl overflow-y-auto">
-            <ul class="flex flex-col mt-2">
-                <li class="border-b border-gray-800">
-                    <a class="block px-6 py-4 hover:bg-gray-800 transition-colors" href="InspectorDashboard.aspx">
-                        <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
-                    </a>
-                </li>
-                <li class="border-b border-gray-800">
-                    <a class="block px-6 py-4 hover:bg-gray-800 transition-colors" href="MyInspections.aspx">
-                        <i class="fas fa-search mr-2"></i> Inspections
-                    </a>
-                </li>
-                <li class="border-b border-gray-800">
-                    <a class="block px-6 py-4 hover:bg-gray-800 transition-colors" href="CreateBooking.aspx">
-                        <i class="fas fa-tasks mr-2"></i> Assign Booking
-                    </a>
-                </li>
+        <div id="sidebarOverlay"></div>
 
-                <!-- ✅ Logout right below Assign Booking -->
-                <li class="border-t border-gray-800 mt-2">
-                    <asp:LinkButton ID="btnLogout" runat="server"
-                        CssClass="block w-[85%] mx-auto my-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg text-center hover:bg-red-700 transition-colors"
-                        OnClick="btnLogout_Click">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                    </asp:LinkButton>
+        <nav id="sidebar" role="navigation" aria-label="Main navigation">
+            <ul class="sidebar-menu">
+                <li>
+                    <a class="sidebar-link" href="InspectorDashboard.aspx" aria-label="Dashboard">
+                        <span class="sidebar-icon"><i class="fas fa-tachometer-alt"></i></span>
+                        <span class="sidebar-text">Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" href="MyInspections.aspx" aria-label="Inspections">
+                        <span class="sidebar-icon"><i class="fas fa-search"></i></span>
+                        <span class="sidebar-text">Inspections</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" href="CreateBooking.aspx" aria-label="Assign Booking">
+                        <span class="sidebar-icon"><i class="fas fa-tasks"></i></span>
+                        <span class="sidebar-text">Assign Booking</span>
+                    </a>
                 </li>
             </ul>
-        </aside>
 
-        <!-- ✅ MOBILE MENU -->
-        <div id="mobileMenu" class="hidden fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-40 transition-opacity duration-300" onclick="this.classList.add('hidden')">
-            <div class="fixed top-0 left-0 w-[var(--sidebar-w)] h-full bg-gray-900 text-white p-4 shadow-xl flex flex-col justify-start" onclick="event.stopPropagation();">
-                <div class="flex items-center justify-between mb-4">
-                    <h5 class="text-xl font-bold">Menu</h5>
-                    <button type="button" class="text-white hover:text-gray-400 focus:outline-none" onclick="document.getElementById('mobileMenu').classList.add('hidden');">
-                        <i class="fas fa-times text-2xl"></i>
-                    </button>
-                </div>
-
-                <ul class="flex flex-col">
-                    <li class="border-b border-gray-800">
-                        <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="InspectorDashboard.aspx">
-                            <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="border-b border-gray-800">
-                        <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="MyInspections.aspx">
-                            <i class="fas fa-search mr-2"></i> Inspections
-                        </a>
-                    </li>
-                    <li class="border-b border-gray-800">
-                        <a class="block px-2 py-3 hover:bg-gray-800 transition-colors" href="CreateBooking.aspx">
-                            <i class="fas fa-tasks mr-2"></i> Assign Booking
-                        </a>
-                    </li>
-                </ul>
-
-                <!-- ✅ Logout below Assign Booking -->
-                <asp:LinkButton ID="btnLogoutMobile" runat="server"
-                    CssClass="w-full mt-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition-colors"
-                    OnClick="btnLogout_Click">
-                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            <div class="logout-section">
+                <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="logout-button" aria-label="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="logout-text">Logout</span>
                 </asp:LinkButton>
             </div>
-        </div>
+        </nav>
 
-        <!-- ✅ MAIN CONTENT -->
-        <main id="mainContent" class="flex-grow p-4 lg:p-8 mt-[var(--header-h)] lg:mt-0">
+        <main id="content" role="main">
             <asp:ContentPlaceHolder ID="MainContent" runat="server" />
         </main>
-
-        <!-- ✅ FOOTER -->
-        <footer id="footerDesktop" class="w-full bg-gray-900 text-gray-300 text-center py-4 text-sm fixed bottom-0 z-40">
-            &copy; 2025 RRC Management System - Inspector
-        </footer>
     </form>
 
-    <!-- ✅ NOTIFICATION SCRIPT -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const burgerMenu = document.getElementById("burgerMenu");
+            const sidebar = document.getElementById("sidebar");
+            const overlay = document.getElementById("sidebarOverlay");
+            const body = document.body;
+
+            let hoverTimer;
+            let isHoverEnabled = true;
+            let isPinned = false;
+
+            function isMobileView() {
+                return window.innerWidth <= 768;
+            }
+
+            function openSidebar() {
+                sidebar.classList.add("expanded");
+
+                if (isMobileView()) {
+                    overlay.classList.add("active");
+                    body.classList.add("sidebar-open");
+                }
+
+                const icon = burgerMenu.querySelector("i");
+                icon.classList.remove("fa-bars");
+                icon.classList.add("fa-times");
+                burgerMenu.setAttribute("aria-expanded", "true");
+            }
+
+            function closeSidebar() {
+                if (isPinned) return;
+
+                sidebar.classList.remove("expanded");
+                overlay.classList.remove("active");
+                body.classList.remove("sidebar-open");
+
+                const icon = burgerMenu.querySelector("i");
+                icon.classList.remove("fa-times");
+                icon.classList.add("fa-bars");
+                burgerMenu.setAttribute("aria-expanded", "false");
+            }
+
+            function toggleSidebar() {
+                const wasExpanded = sidebar.classList.contains("expanded");
+
+                if (wasExpanded) {
+                    isPinned = false;
+                    closeSidebar();
+                } else {
+                    isPinned = true;
+                    openSidebar();
+                }
+            }
+
+            burgerMenu.addEventListener("click", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleSidebar();
+            });
+
+            // Keyboard accessibility for burger menu
+            burgerMenu.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleSidebar();
+                }
+            });
+
+            overlay.addEventListener("click", function () {
+                isPinned = false;
+                closeSidebar();
+            });
+
+            // Touch swipe to open/close sidebar on mobile
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            document.addEventListener('touchstart', function (e) {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            document.addEventListener('touchend', function (e) {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, { passive: true });
+
+            function handleSwipe() {
+                if (!isMobileView()) return;
+
+                const swipeThreshold = 50;
+                const swipeDistance = touchEndX - touchStartX;
+
+                // Swipe right from left edge to open
+                if (touchStartX < 50 && swipeDistance > swipeThreshold) {
+                    isPinned = true;
+                    openSidebar();
+                }
+                // Swipe left to close
+                else if (sidebar.classList.contains("expanded") && swipeDistance < -swipeThreshold) {
+                    isPinned = false;
+                    closeSidebar();
+                }
+            }
+
+            sidebar.addEventListener("mouseenter", function () {
+                if (!isMobileView() && !isPinned && isHoverEnabled) {
+                    clearTimeout(hoverTimer);
+                    openSidebar();
+                }
+            });
+
+            sidebar.addEventListener("mouseleave", function () {
+                if (!isMobileView() && !isPinned && isHoverEnabled) {
+                    hoverTimer = setTimeout(function () {
+                        closeSidebar();
+                    }, 300);
+                }
+            });
+
+            if (isMobileView()) {
+                const links = sidebar.querySelectorAll(".sidebar-link");
+                links.forEach(link => {
+                    link.addEventListener("click", function () {
+                        isPinned = false;
+                        closeSidebar();
+                    });
+                });
+            }
+
+            let resizeTimer;
+            window.addEventListener("resize", function () {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function () {
+                    if (window.innerWidth > 768) {
+                        overlay.classList.remove("active");
+                        body.classList.remove("sidebar-open");
+
+                        if (isPinned) {
+                            isPinned = false;
+                            closeSidebar();
+                        }
+                    } else {
+                        isPinned = false;
+                        closeSidebar();
+                    }
+                }, 250);
+            });
+
+            document.addEventListener("keydown", function (e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                    e.preventDefault();
+                    toggleSidebar();
+                }
+                // ESC to close sidebar on mobile
+                if (e.key === 'Escape' && isMobileView() && sidebar.classList.contains("expanded")) {
+                    isPinned = false;
+                    closeSidebar();
+                }
+            });
+
+            // Set initial aria-expanded state
+            burgerMenu.setAttribute("aria-expanded", "false");
+        });
+    </script>
+
     <script>
         async function loadNotifications() {
             try {
@@ -159,17 +925,15 @@
                 badge.style.display = (data.unread && data.unread > 0) ? 'inline-block' : 'none';
 
                 if (!data.notifications || data.notifications.length === 0) {
-                    list.innerHTML = "<div class='text-center text-gray-400 text-sm p-2'>No notifications.</div>";
+                    list.innerHTML = "<div class='notification-item' style='text-align: center; color: #9ca3af; padding: 2rem 1rem;'>No notifications.</div>";
                     return;
                 }
 
                 list.innerHTML = data.notifications.map(item => `
-                    <a href="${item.url || '#'}" class="text-decoration-none block" onclick="event.stopPropagation();">
-                        <div class="border-b border-gray-200 pb-2 mb-2 ${item.isRead ? 'text-gray-500 font-normal' : 'font-semibold bg-gray-50'} p-2 rounded-md">
-                            <div>${item.title}</div>
-                            ${item.body ? `<div class="text-sm mt-1 text-gray-500">${item.body}</div>` : ''}
-                            <div class="text-xs text-gray-400">${item.date}</div>
-                        </div>
+                    <a href="${item.url || '#'}" class="notification-item ${item.isRead ? '' : 'unread'}" onclick="event.stopPropagation();" role="menuitem">
+                        <div style="font-weight: ${item.isRead ? 'normal' : '600'}; color: #1f2937; margin-bottom: 0.25rem;">${item.title}</div>
+                        ${item.body ? `<div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.25rem; line-height: 1.4;">${item.body}</div>` : ''}
+                        <div style="font-size: 0.75rem; color: #9ca3af;">${item.date}</div>
                     </a>
                 `).join('');
             } catch (err) {
@@ -187,13 +951,40 @@
 
         function toggleNotificationList() {
             var list = document.getElementById("notificationList");
-            list.style.display = (list.style.display === "block") ? "none" : "block";
+            var isActive = list.classList.contains("active");
+            list.classList.toggle("active");
+
+            // Update aria attributes
+            var bell = document.getElementById("notificationBell");
+            bell.setAttribute("aria-expanded", !isActive);
         }
+
+        // Keyboard accessibility for notification bell
+        document.getElementById("notificationBell").addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                toggleNotificationList();
+                markNotificationsAsRead();
+            }
+        });
 
         document.addEventListener("click", function (event) {
             var bell = document.getElementById("notificationBell");
+            var list = document.getElementById("notificationList");
             if (!bell.contains(event.target)) {
-                document.getElementById("notificationList").style.display = "none";
+                list.classList.remove("active");
+                bell.setAttribute("aria-expanded", "false");
+            }
+        });
+
+        // Close notification on ESC key
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") {
+                var list = document.getElementById("notificationList");
+                if (list.classList.contains("active")) {
+                    list.classList.remove("active");
+                    document.getElementById("notificationBell").setAttribute("aria-expanded", "false");
+                }
             }
         });
 

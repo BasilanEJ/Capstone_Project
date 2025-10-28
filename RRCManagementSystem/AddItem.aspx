@@ -254,8 +254,8 @@
                 text: 'Are you sure you want to cancel? Unsaved data will be lost.',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#6c757d',
-                cancelButtonColor: '#d33',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Yes, cancel'
             }).then((result) => {
                 if (result.isConfirmed) {

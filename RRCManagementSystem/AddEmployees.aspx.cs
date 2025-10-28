@@ -152,20 +152,20 @@ namespace RRCManagementSystem
                                       + (string.IsNullOrWhiteSpace(txtMiddleName.Text) ? "" : $" {txtMiddleName.Text.Trim()}");
                     AddAuditLog(adminId, $"Added a new employee: {fullName} (Employee #: {result.employeeNumber})");
 
-                    // Show success message with employee number
+                    // Show success message and redirect to AllEmployee.aspx
                     string script = $@"
                         Swal.fire({{
                             icon: 'success',
                             title: 'Employee Added Successfully!',
                             html: '<strong>Employee Number:</strong> {result.employeeNumber}<br><strong>Name:</strong> {fullName}',
-                            confirmButtonColor: '#2563eb'
+                            confirmButtonColor: '#2563eb',
+                            timer: 3000,
+                            showConfirmButton: true
+                        }}).then((result) => {{
+                            window.location.href = 'AllEmployee.aspx';
                         }});
                     ";
                     ScriptManager.RegisterStartupScript(this, GetType(), "showSuccess", script, true);
-
-                    // Reset form
-                    txtLastName.Text = txtFirstName.Text = txtMiddleName.Text = txtEmail.Text = txtPhone.Text = "";
-                    ddlPosition.SelectedIndex = 0;
                 }
                 else
                 {

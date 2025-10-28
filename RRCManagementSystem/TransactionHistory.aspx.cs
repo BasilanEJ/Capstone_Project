@@ -131,7 +131,9 @@ namespace RRCManagementSystem
 
             var file = System.IO.Path.GetFileName(v);
             var url = "DecryptReceipt.aspx?file=" + Server.UrlEncode(file);
-            return $"<a class='pill pill-view' href='{url}' target='_blank' rel='noopener'>View Receipt</a>";
+
+            // Instead of opening in new tab, call JavaScript function to show modal
+            return $"<a class='pill pill-view' href='#' onclick=\"viewReceipt('{url}', '{file}'); return false;\">View Receipt</a>";
         }
 
         #region Permissions

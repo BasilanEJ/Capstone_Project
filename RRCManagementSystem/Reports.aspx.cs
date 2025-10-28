@@ -231,11 +231,39 @@ namespace RRCManagementSystem
                     document.Add(dateInfo);
                 }
 
-                // Create PDF Table
+                // Create PDF Table with custom column widths
                 PdfPTable pdfTable = new PdfPTable(dt.Columns.Count);
                 pdfTable.WidthPercentage = 100;
                 pdfTable.SpacingBefore = 10f;
                 pdfTable.DefaultCell.Padding = 5;
+
+                // Set custom column widths based on the report type
+                if (module == "AuditLogs")
+                {
+                    // For AuditLogs: LogID, User Name, Action, Timestamp
+                    // Allocate: 8% for LogID, 22% for User Name, 50% for Action, 20% for Timestamp
+                    float[] columnWidths = new float[] { 8f, 22f, 50f, 20f };
+                    pdfTable.SetWidths(columnWidths);
+                }
+                else if (module == "SystemChanges")
+                {
+                    // Adjust based on SystemChanges columns
+                    // Example: ChangeID, User, Change Details, Timestamp
+                    float[] columnWidths = new float[] { 8f, 20f, 52f, 20f };
+                    pdfTable.SetWidths(columnWidths);
+                }
+                else if (module == "Admins" || module == "ArchivedAdmins")
+                {
+                    // Adjust for Admins reports - typically has more columns
+                    // You may need to adjust these based on actual column count
+                    // Example if columns are: ID, Name, Email, Role, Status, CreatedDate
+                    if (dt.Columns.Count == 6)
+                    {
+                        float[] columnWidths = new float[] { 6f, 18f, 24f, 15f, 12f, 25f };
+                        pdfTable.SetWidths(columnWidths);
+                    }
+                }
+                // For other reports (like Roles), distribute evenly (no SetWidths call needed)
 
                 // Add Headers
                 Font headerFont = FontFactory.GetFont("Arial", 10, Font.BOLD, BaseColor.WHITE);
@@ -248,16 +276,29 @@ namespace RRCManagementSystem
                     pdfTable.AddCell(cell);
                 }
 
-                // Add Data Rows
+                // Add Data Rows with improved alignment
                 Font cellFont = FontFactory.GetFont("Arial", 9, Font.NORMAL);
                 foreach (DataRow row in dt.Rows)
                 {
+                    int colIndex = 0;
                     foreach (var item in row.ItemArray)
                     {
                         PdfPCell cell = new PdfPCell(new Phrase(item?.ToString() ?? "", cellFont));
-                        cell.HorizontalAlignment = Element.ALIGN_CENTER;
+
+                        // Align first column (ID) and last column (Timestamp) to center
+                        // Align other columns to left for better readability
+                        if (colIndex == 0 || colIndex == dt.Columns.Count - 1)
+                        {
+                            cell.HorizontalAlignment = Element.ALIGN_CENTER;
+                        }
+                        else
+                        {
+                            cell.HorizontalAlignment = Element.ALIGN_LEFT;
+                        }
+
                         cell.Padding = 5;
                         pdfTable.AddCell(cell);
+                        colIndex++;
                     }
                 }
 

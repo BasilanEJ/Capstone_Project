@@ -272,7 +272,258 @@ section {
     .carousel-btn.next {
         right: 0;
     }
+    /* Blog Modal Specific Styles - Enhanced */
+.modal-xl {
+    max-width: 1140px;
+}
+
+.modal-content {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+    padding: 24px 30px;
+    border: none;
+}
+
+.modal-header .modal-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin: 0;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.modal-header .btn-close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 40px 50px;
+    background-color: #fafafa;
+}
+
+.modal-body .img-fluid {
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    margin-bottom: 32px;
+    transition: transform 0.3s ease;
+}
+
+.modal-body .img-fluid:hover {
+    transform: scale(1.02);
+}
+
+.blog-content {
+    font-size: 17px;
+    color: #374151;
+    line-height: 1.9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.blog-content h2 {
+    color: #1e293b;
+    font-size: 26px;
+    margin-top: 40px;
+    margin-bottom: 18px;
+    font-weight: 700;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #667eea;
+    display: inline-block;
+    position: relative;
+}
+
+.blog-content h2::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 50%;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.blog-content h3 {
+    color: #475569;
+    font-size: 22px;
+    margin-top: 32px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    padding-left: 16px;
+    border-left: 4px solid #667eea;
+}
+
+.blog-content p {
+    margin-bottom: 20px;
+    text-align: justify;
+    color: #4b5563;
+}
+
+.blog-content p:first-of-type::first-letter {
+    font-size: 3.5em;
+    line-height: 0.9;
+    font-weight: 700;
+    color: #667eea;
+    float: left;
+    margin: 8px 12px 0 0;
+}
+
+.blog-content ul {
+    margin-left: 0;
+    margin-bottom: 24px;
+    list-style: none;
+    padding-left: 0;
+}
+
+.blog-content ul li {
+    margin-bottom: 14px;
+    line-height: 1.8;
+    padding-left: 32px;
+    position: relative;
+}
+
+.blog-content ul li::before {
+    content: '✦';
+    position: absolute;
+    left: 8px;
+    color: #667eea;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.blog-content strong {
+    color: #1e293b;
+    font-weight: 700;
+    background: linear-gradient(120deg, #fef3c7 0%, #fef3c7 100%);
+    background-repeat: no-repeat;
+    background-size: 100% 40%;
+    background-position: 0 85%;
+    padding: 0 4px;
+}
+
+.blog-content a {
+    color: #667eea;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.3s ease;
+}
+
+.blog-content a:hover {
+    border-bottom-color: #667eea;
+}
+
+.modal-footer {
+    background-color: #f9fafb;
+    border-radius: 0 0 16px 16px;
+    padding: 20px 30px;
+    border: none;
+}
+
+.modal-footer .btn-secondary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 12px 32px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.modal-footer .btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+}
+
+/* Responsive blog modal */
+@media (max-width: 991.98px) {
+    .modal-xl {
+        max-width: 90%;
+    }
     
+    .modal-body {
+        padding: 30px 35px;
+    }
+    
+    .blog-content {
+        font-size: 16px;
+    }
+    
+    .blog-content h2 {
+        font-size: 24px;
+        margin-top: 32px;
+    }
+    
+    .blog-content h3 {
+        font-size: 20px;
+        margin-top: 28px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .modal-xl {
+        max-width: 95%;
+        margin: 10px;
+    }
+    
+    .modal-header {
+        padding: 20px;
+    }
+    
+    .modal-header .modal-title {
+        font-size: 22px;
+    }
+    
+    .modal-body {
+        padding: 24px 20px;
+    }
+    
+    .blog-content {
+        font-size: 15px;
+    }
+    
+    .blog-content h2 {
+        font-size: 22px;
+        margin-top: 28px;
+    }
+    
+    .blog-content h3 {
+        font-size: 18px;
+        margin-top: 24px;
+        padding-left: 12px;
+    }
+    
+    .blog-content p:first-of-type::first-letter {
+        font-size: 2.5em;
+    }
+    
+    .blog-content ul li {
+        padding-left: 28px;
+    }
+    
+    .modal-footer {
+        padding: 16px 20px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .modal-body .img-fluid {
+        margin-bottom: 24px;
+    }
+    
+    .blog-content p {
+        text-align: left;
+    }
+}
+
     /* Review Card Styles */
     .review-card {
         width: 100%;
@@ -1358,36 +1609,63 @@ section {
     <asp:HiddenField ID="hfVimeoVideoId" runat="server" />
     <asp:HiddenField ID="hfVideoType" runat="server" />
 
-    <section class="blog-section lazy-section">
+   <!-- Replace the existing blog section -->
+<section class="blog-section lazy-section">
     <h2>Read our Blogs</h2>
     <div class="blog-cards">
         
-        <!-- Blog Card 1 -->
-        <a href="DIY.aspx" class="blog-card">
-            <asp:Image ID="imgBlog1" runat="server" alt="DIY vs Professional Pest Control" />
-            <div class="blog-card-content">
-                <h3>DIY pest control vs. hiring a pest control company: What's the difference?</h3>
-            </div>
-        </a>
-
-        <!-- Blog Card 2 -->
-        <a href="Eskwela.aspx" class="blog-card">
-            <asp:Image ID="imgBlog2" runat="server" alt="Brigada Eskwela Anti-Dengue" />
-            <div class="blog-card-content">
-                <h3>Brigada Eskwela Anti-Dengue Campaign: Ensuring a Safe and Healthy Learning Environment</h3>
-            </div>
-        </a>
-
-        <!-- Blog Card 3 -->
-        <a href="Termite.aspx" class="blog-card">
-            <asp:Image ID="imgBlog3" runat="server" alt="Termite Swarms" />
-            <div class="blog-card-content">
-                <h3>Don't Let Termite Swarms Take Over Your Home!</h3>
-            </div>
-        </a>
+        <!-- Dynamic Blog Cards -->
+        <asp:Repeater ID="rptBlogs" runat="server">
+            <ItemTemplate>
+                <a href="#" class="blog-card" 
+                   data-bs-toggle="modal" 
+                   data-bs-target='#modalBlog<%# Eval("BlogID") %>'>
+                    <asp:Image ID="imgBlog" runat="server" 
+                        ImageUrl='<%# Eval("ImagePath") %>' 
+                        AlternateText='<%# Eval("BlogTitle") %>' />
+                    <div class="blog-card-content">
+                        <h3><%# Eval("BlogTitle") %></h3>
+                        <%# !string.IsNullOrEmpty(Eval("BlogDescription").ToString()) ? 
+                            "<p class='blog-description'>" + Eval("BlogDescription") + "</p>" : "" %>
+                    </div>
+                </a>
+            </ItemTemplate>
+        </asp:Repeater>
 
     </div>
 </section>
+
+<!-- Blog Modals -->
+<asp:Repeater ID="rptBlogModals" runat="server">
+    <ItemTemplate>
+        <div class="modal fade" id='modalBlog<%# Eval("BlogID") %>' tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><%# Eval("BlogTitle") %></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <asp:Image ID="imgModalBlog" runat="server" 
+                            ImageUrl='<%# Eval("ImagePath") %>' 
+                            AlternateText='<%# Eval("BlogTitle") %>' 
+                            loading="lazy" 
+                            CssClass="img-fluid rounded mb-4" 
+                            style="max-height: 400px; width: 100%; object-fit: cover;" />
+                        
+                        <!-- Blog Content -->
+                        <div class="blog-content" style="text-align: left; line-height: 1.8;">
+                            <%# FormatBlogContent(Eval("BlogContent").ToString()) %>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ItemTemplate>
+</asp:Repeater>
 
 
 

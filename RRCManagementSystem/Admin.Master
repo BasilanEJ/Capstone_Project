@@ -646,41 +646,39 @@
         </main>
     </form>
 
-    <script>
-        // Update time and date
-        function updateDateTime() {
-            const now = new Date();
+ <script>
+     // Update time and date
+     function updateDateTime() {
+         const now = new Date();
 
-            // Format date: "Fri, Oct 17, 2025"
-            const dateOptions = {
-                weekday: 'short',
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            };
-            const dateString = now.toLocaleDateString('en-US', dateOptions);
+         // Format date: "Fri, Oct 17, 2025"
+         const dateOptions = {
+             weekday: 'short',
+             year: 'numeric',
+             month: 'short',
+             day: 'numeric'
+         };
+         const dateString = now.toLocaleDateString('en-US', dateOptions);
 
-            // Format time: "2:30:45 PM"
-            const timeOptions = {
-                hour: 'numeric',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            };
-            const timeString = now.toLocaleTimeString('en-US', timeOptions);
+         // Format time: "2:30:45 PM"
+         const timeOptions = {
+             hour: 'numeric',
+             minute: '2-digit',
+             second: '2-digit',
+             hour12: true
+         };
+         const timeString = now.toLocaleTimeString('en-US', timeOptions);
 
-            document.getElementById('currentDate').textContent = dateString;
-            document.getElementById('currentTime').textContent = timeString;
-        }
+         document.getElementById('currentDate').textContent = dateString;
+         document.getElementById('currentTime').textContent = timeString;
+     }
 
-        // Update immediately and then every second
-        document.addEventListener("DOMContentLoaded", function () {
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-
-            // ... rest of your existing JavaScript code for sidebar toggle ...
-        });
-    </script>
+     // Update immediately and then every second
+     document.addEventListener("DOMContentLoaded", function () {
+         updateDateTime();
+         setInterval(updateDateTime, 1000);
+     });
+ </script>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -688,29 +686,33 @@
             const sidebar = document.getElementById("sidebar");
             const overlay = document.getElementById("sidebarOverlay");
             const body = document.body;
-            // Use 768px for isMobile check to match your CSS media query
-            const isMobile = window.innerWidth <= 768;
 
-            function toggleSidebar() {
-                sidebar.classList.toggle("expanded");
+            let hoverTimer;
+            let isHoverEnabled = true;
+            let isPinned = false; // Track if sidebar is manually pinned
 
-                if (window.innerWidth <= 768) { // Re-check isMobile inside function for responsiveness
-                    overlay.classList.toggle("active");
-                    body.classList.toggle("sidebar-open");
+            function isMobileView() {
+                return window.innerWidth <= 768;
+            }
+
+            function openSidebar() {
+                sidebar.classList.add("expanded");
+
+                if (isMobileView()) {
+                    overlay.classList.add("active");
+                    body.classList.add("sidebar-open");
                 }
 
                 // Toggle icon
                 const icon = burgerMenu.querySelector("i");
-                if (sidebar.classList.contains("expanded")) {
-                    icon.classList.remove("fa-bars");
-                    icon.classList.add("fa-times");
-                } else {
-                    icon.classList.remove("fa-times");
-                    icon.classList.add("fa-bars");
-                }
+                icon.classList.remove("fa-bars");
+                icon.classList.add("fa-times");
             }
 
             function closeSidebar() {
+                // Don't close if it's pinned
+                if (isPinned) return;
+
                 sidebar.classList.remove("expanded");
                 overlay.classList.remove("active");
                 body.classList.remove("sidebar-open");
@@ -720,20 +722,57 @@
                 icon.classList.add("fa-bars");
             }
 
+            function toggleSidebar() {
+                const wasExpanded = sidebar.classList.contains("expanded");
+
+                if (wasExpanded) {
+                    // If expanded, close it and unpin
+                    isPinned = false;
+                    closeSidebar();
+                } else {
+                    // If collapsed, open it and pin
+                    isPinned = true;
+                    openSidebar();
+                }
+            }
+
+            // Burger menu click - toggle and pin/unpin
             burgerMenu.addEventListener("click", function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 toggleSidebar();
             });
 
-            overlay.addEventListener("click", closeSidebar);
+            // Overlay click - close and unpin
+            overlay.addEventListener("click", function () {
+                isPinned = false;
+                closeSidebar();
+            });
+
+            // Hover functionality (only on desktop and when not pinned)
+            sidebar.addEventListener("mouseenter", function () {
+                if (!isMobileView() && !isPinned && isHoverEnabled) {
+                    clearTimeout(hoverTimer);
+                    openSidebar();
+                }
+            });
+
+            sidebar.addEventListener("mouseleave", function () {
+                if (!isMobileView() && !isPinned && isHoverEnabled) {
+                    hoverTimer = setTimeout(function () {
+                        closeSidebar();
+                    }, 300); // 300ms delay before closing
+                }
+            });
 
             // Close on mobile when clicking links
-            // Re-evalute isMobile on DOMContentLoaded
-            if (window.innerWidth <= 768) {
+            if (isMobileView()) {
                 const links = sidebar.querySelectorAll(".sidebar-link");
                 links.forEach(link => {
-                    link.addEventListener("click", closeSidebar);
+                    link.addEventListener("click", function () {
+                        isPinned = false;
+                        closeSidebar();
+                    });
                 });
             }
 
@@ -746,8 +785,26 @@
                     if (window.innerWidth > 768) {
                         overlay.classList.remove("active");
                         body.classList.remove("sidebar-open");
+
+                        // Unpin on resize to prevent unexpected behavior
+                        if (isPinned) {
+                            isPinned = false;
+                            closeSidebar();
+                        }
+                    } else {
+                        // On mobile, always close sidebar on resize
+                        isPinned = false;
+                        closeSidebar();
                     }
                 }, 250);
+            });
+
+            // Optional: Add keyboard shortcut (Ctrl/Cmd + B) to toggle pin
+            document.addEventListener("keydown", function (e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                    e.preventDefault();
+                    toggleSidebar();
+                }
             });
         });
     </script>

@@ -31,7 +31,8 @@ namespace RRCManagementSystem
                 LoadServicesFromDatabase(); // Load dynamic services
                 ApplyLazyLoadingToImages();
                 LoadReviews();
-                //LoadBlogs();
+                LoadBlogs();
+
 
 
                 fuPestPhoto.Attributes["accept"] = "image/png,image/jpeg,image/jpg";
@@ -41,17 +42,19 @@ namespace RRCManagementSystem
         }
 
 
-      /*  private void LoadBlogs()
+        // Add this method in your Page_Load (inside if (!IsPostBack))
+        private void LoadBlogs()
         {
             try
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
-                SELECT BlogID, BlogTitle, BlogDescription, BlogImagePath, BlogLink
-                FROM Blogs
+                SELECT BlogID, BlogTitle, BlogDescription, BlogContent, 
+                       ImagePath, DisplayOrder
+                FROM BlogsCMS
                 WHERE IsActive = 1
-                ORDER BY DisplayOrder, BlogID";
+                ORDER BY DisplayOrder, BlogID DESC";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
@@ -62,6 +65,9 @@ namespace RRCManagementSystem
 
                         rptBlogs.DataSource = dt;
                         rptBlogs.DataBind();
+
+                        rptBlogModals.DataSource = dt;
+                        rptBlogModals.DataBind();
                     }
                 }
             }
@@ -69,7 +75,39 @@ namespace RRCManagementSystem
             {
                 System.Diagnostics.Debug.WriteLine("Blog Load Error: " + ex.Message);
             }
-        } */ 
+        }
+
+        // Add this helper method to format blog content
+        protected string FormatBlogContent(string content)
+        {
+            if (string.IsNullOrEmpty(content))
+                return "";
+
+            // Convert line breaks to HTML
+            content = content.Replace("\r\n", "<br>");
+            content = content.Replace("\n", "<br>");
+
+            // Convert bullet points
+            content = System.Text.RegularExpressions.Regex.Replace(
+                content,
+                @"^\s*[-•]\s*(.+)$",
+                "<li>$1</li>",
+                System.Text.RegularExpressions.RegexOptions.Multiline
+            );
+
+            // Wrap lists in <ul> tags
+            if (content.Contains("<li>"))
+            {
+                content = System.Text.RegularExpressions.Regex.Replace(
+                    content,
+                    @"(<li>.*?</li>(\s*<br>)*)+",
+                    match => "<ul style='margin-left:20px; margin-bottom:20px;'>" +
+                             match.Value.Replace("<br>", "") + "</ul>"
+                );
+            }
+
+            return content;
+        }
 
 
         private void LoadReviews()
@@ -209,10 +247,6 @@ namespace RRCManagementSystem
             SetLazyLoadImage(imgHeroBanner);
             SetLazyLoadImage(imgAbout);
             SetLazyLoadImage(imgVideoThumbnail);
-
-            SetLazyLoadImage(imgBlog1);
-            SetLazyLoadImage(imgBlog2);
-            SetLazyLoadImage(imgBlog3);
             SetLazyLoadImage(imgCO);
 
 
@@ -259,11 +293,6 @@ namespace RRCManagementSystem
                         string videoId = ExtractVideoId(videoUrl, videoType);
                         hfVimeoVideoId.Value = videoId;
                         hfVideoType.Value = videoType;
-
-                        imgBlog1.ImageUrl = GetImagePath(reader, "Blog1ImagePath", "/Images/DIY.jpg");
-                        imgBlog2.ImageUrl = GetImagePath(reader, "Blog2ImagePath", "/Images/blog2.jpg");
-                        imgBlog3.ImageUrl = GetImagePath(reader, "Blog3ImagePath", "/Images/blog3.jpg");
-
                         // C&O Section
                         imgCO.ImageUrl = GetImagePath(reader, "COImagePath", "/images/c&o.png");
 
@@ -516,9 +545,9 @@ namespace RRCManagementSystem
                     generatedCode = Convert.ToString(pCode.Value ?? "");
                 }
 
-                SendConfirmationEmail(email, generatedCode); 
+                SendConfirmationEmail(email, generatedCode);
 
-                ShowSweetAlert("Submitted!", $"Your inquiry was submitted successfully.\\nReference Code: {generatedCode}", "success");
+                ShowSweetAlert("Submitted!", $"Your inquiry was submitted successfully.<br>Reference Code: {generatedCode}", "success");
 
                 ClearForm();
             } // End of try block

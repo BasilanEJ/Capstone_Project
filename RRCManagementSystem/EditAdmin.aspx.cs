@@ -19,12 +19,14 @@ namespace RRCManagementSystem
             if (Session["UserID"] == null || Session["Role"] == null ||
                 !Session["Role"].ToString().Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
             {
-                Response.Redirect("~/Login.aspx");
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
             if (!IsPostBack)
             {
+                LoadRoles(); // Load roles into dropdown
                 if (int.TryParse(Request.QueryString["UserID"], out userID))
                 {
                     LoadAdminDetails(userID);
@@ -34,9 +36,38 @@ namespace RRCManagementSystem
                 {
                     lblMessage.Text = "⚠ No Admin selected.";
                 }
-
                 // Register ItemDataBound after binding
                 rptPermissions.ItemDataBound += rptPermissions_ItemDataBound;
+            }
+        }
+
+        /* =========================
+           LOAD: Roles into dropdown
+           ========================= */
+        private void LoadRoles()
+        {
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spRoles_ListAll", conn))
+            using (var da = new SqlDataAdapter(cmd))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                var dt = new DataTable();
+                try
+                {
+                    da.Fill(dt);
+                    ddlRole.DataSource = dt;
+                    ddlRole.DataTextField = "RoleName";
+                    ddlRole.DataValueField = "RoleName"; // Use RoleName as value
+                    ddlRole.DataBind();
+
+                    // Add a default "Select Role" option
+                    ddlRole.Items.Insert(0, new ListItem("-- Select Role --", ""));
+                }
+                catch (Exception ex)
+                {
+                    lblMessage.Text = "❌ Error loading roles: " + ex.Message;
+                }
             }
         }
 
@@ -73,6 +104,17 @@ namespace RRCManagementSystem
                         else
                         {
                             txtEmail.Text = "";
+                        }
+
+                        // 🔹 Set the role dropdown
+                        string currentRole = reader["Role"]?.ToString() ?? "";
+                        if (!string.IsNullOrEmpty(currentRole))
+                        {
+                            var item = ddlRole.Items.FindByValue(currentRole);
+                            if (item != null)
+                            {
+                                ddlRole.SelectedValue = currentRole;
+                            }
                         }
                     }
                     else
@@ -187,6 +229,23 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // 🔹 Validate role selection
+            if (string.IsNullOrEmpty(ddlRole.SelectedValue))
+            {
+                string validationScript = @"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
+<script>
+Swal.close();
+Swal.fire({
+    icon: 'error',
+    title: 'Validation Error',
+    text: 'Please select a role for the user.',
+    confirmButtonColor: '#dc3545'
+});
+</script>";
+                ClientScript.RegisterStartupScript(this.GetType(), "ValidationAlert", validationScript);
+                return;
+            }
+
             // Build TVP for permissions
             var tvp = new DataTable();
             tvp.Columns.Add("ModuleName", typeof(string));
@@ -217,7 +276,7 @@ namespace RRCManagementSystem
                 {
                     try
                     {
-                        // 1) Update basic info
+                        // 1) Update basic info (including role)
                         using (var cmdUpdate = new SqlCommand("dbo.spUser_UpdateBasic", conn, tx))
                         {
                             cmdUpdate.CommandType = CommandType.StoredProcedure;
@@ -225,6 +284,7 @@ namespace RRCManagementSystem
                             cmdUpdate.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = (txtName.Text ?? "").Trim();
                             cmdUpdate.Parameters.Add("@Email", SqlDbType.NVarChar, -1).Value = encryptedEmail;
                             cmdUpdate.Parameters.Add("@EmailHash", SqlDbType.Char, 64).Value = emailHash;
+                            cmdUpdate.Parameters.Add("@Role", SqlDbType.NVarChar, 50).Value = ddlRole.SelectedValue; // 🔹 Add role
                             cmdUpdate.ExecuteNonQuery();
                         }
 
@@ -246,11 +306,12 @@ namespace RRCManagementSystem
                         // ✅ Show success alert with redirect after 2 seconds
                         string successScript = @"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
 <script>
+Swal.close();
 Swal.fire({
     icon: 'success',
     title: 'Changes Saved',
-    text: 'The admin permissions were updated successfully!',
-    confirmButtonColor: '#007bff',
+    text: 'The user account and role were updated successfully!',
+    confirmButtonColor: '#198754',
     timer: 2000,
     timerProgressBar: true,
     showConfirmButton: false
@@ -267,6 +328,7 @@ Swal.fire({
 
                         string duplicateScript = @"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
 <script>
+Swal.close();
 Swal.fire({
     icon: 'warning',
     title: 'Duplicate Email',
@@ -283,6 +345,7 @@ Swal.fire({
 
                         string errorScript = $@"<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
 <script>
+Swal.close();
 Swal.fire({{
     icon: 'error',
     title: 'Error Saving',

@@ -169,18 +169,20 @@
     <Content Include="ArchivedInquiries.aspx" />
     <Content Include="ArchivedServiceManagement.aspx" />
     <Content Include="ArchivedSuperUser.aspx" />
+    <Content Include="ArchivedSuppliers.aspx" />
     <Content Include="ArchiveEmployee.aspx" />
     <Content Include="AssignBooking.aspx" />
     <Content Include="AuditLogs.aspx" />
     <Content Include="Baiting.aspx" />
     <Content Include="BlogManagement.aspx" />
-    <Content Include="BlogPost.aspx" />
+    <Content Include="BookingDetails.aspx" />
     <Content Include="BookingHistory.aspx" />
     <Content Include="BookService.aspx" />
     <Content Include="ChatWithAdmin.aspx" />
     <Content Include="ChatWithClient.aspx" />
     <Content Include="ClientAboutUs.aspx" />
     <Content Include="ClientsProfiles.aspx" />
+    <Content Include="ClientVerifyOTP.aspx" />
     <Content Include="CMS.aspx" />
     <Content Include="CreateBooking.aspx" />
     <Content Include="CreateCustomerAccount.aspx" />
@@ -548,6 +550,13 @@
     <Compile Include="ArchivedSuperUser.aspx.designer.cs">
       <DependentUpon>ArchivedSuperUser.aspx</DependentUpon>
     </Compile>
+    <Compile Include="ArchivedSuppliers.aspx.cs">
+      <DependentUpon>ArchivedSuppliers.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ArchivedSuppliers.aspx.designer.cs">
+      <DependentUpon>ArchivedSuppliers.aspx</DependentUpon>
+    </Compile>
     <Compile Include="ArchiveEmployee.aspx.cs">
       <DependentUpon>ArchiveEmployee.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -583,12 +592,12 @@
     <Compile Include="BlogManagement.aspx.designer.cs">
       <DependentUpon>BlogManagement.aspx</DependentUpon>
     </Compile>
-    <Compile Include="BlogPost.aspx.cs">
-      <DependentUpon>BlogPost.aspx</DependentUpon>
+    <Compile Include="BookingDetails.aspx.cs">
+      <DependentUpon>BookingDetails.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
-    <Compile Include="BlogPost.aspx.designer.cs">
-      <DependentUpon>BlogPost.aspx</DependentUpon>
+    <Compile Include="BookingDetails.aspx.designer.cs">
+      <DependentUpon>BookingDetails.aspx</DependentUpon>
     </Compile>
     <Compile Include="BookingHistory.aspx.cs">
       <DependentUpon>BookingHistory.aspx</DependentUpon>
@@ -638,6 +647,13 @@
     </Compile>
     <Compile Include="ClientsProfiles.aspx.designer.cs">
       <DependentUpon>ClientsProfiles.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ClientVerifyOTP.aspx.cs">
+      <DependentUpon>ClientVerifyOTP.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ClientVerifyOTP.aspx.designer.cs">
+      <DependentUpon>ClientVerifyOTP.aspx</DependentUpon>
     </Compile>
     <Compile Include="CMS.aspx.cs">
       <DependentUpon>CMS.aspx</DependentUpon>

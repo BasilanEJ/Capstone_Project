@@ -48,29 +48,56 @@
 </div>
 
 
+<div class="mt-8">
+    <h3 class="text-xl font-bold text-blue-800 mb-4 flex items-center">
+        <i class="fas fa-tools mr-3"></i> Assign Equipment
+    </h3>
+    
 
-                <div class="mt-8">
-                    <h3 class="text-xl font-bold text-blue-800 mb-4 flex items-center">
-                        <i class="fas fa-tools mr-3"></i> Assign Equipment
-                    </h3>
-                    <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-                        <asp:GridView ID="gvEquipments" runat="server" AutoGenerateColumns="False" DataKeyNames="EquipmentID"
-                            CssClass="min-w-full divide-y divide-gray-200">
-                            <HeaderStyle CssClass="bg-gray-50" />
-                            <RowStyle CssClass="bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors" />
-                            <Columns>
-                                <asp:BoundField DataField="EquipmentID" HeaderText="ID" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900" HeaderStyle-CssClass="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />
-                                <asp:BoundField DataField="Name" HeaderText="Name" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900" HeaderStyle-CssClass="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />
-                                <asp:BoundField DataField="Status" HeaderText="Status" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900" HeaderStyle-CssClass="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />
-                                <asp:TemplateField HeaderText="Assign?" ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500" HeaderStyle-CssClass="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <ItemTemplate>
-                                        <asp:CheckBox ID="chkAssignEquip" runat="server" CssClass="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                            </Columns>
-                        </asp:GridView>
-                    </div>
-                </div>
+    <asp:Panel ID="pnlNoEquipment" runat="server" Visible="false" 
+        CssClass="p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mr-3"></i>
+            <div>
+                <h4 class="text-yellow-800 font-semibold">No Equipment Available</h4>
+                <p class="text-yellow-700 text-sm">
+                    All equipment is fully booked for the scheduled date. 
+                    Please select a different date or contact the administrator.
+                </p>
+            </div>
+        </div>
+    </asp:Panel>
+    
+
+    <asp:Panel ID="pnlEquipmentGrid" runat="server" Visible="true">
+        <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+            <asp:GridView ID="gvEquipments" runat="server" AutoGenerateColumns="False" DataKeyNames="EquipmentID"
+                CssClass="min-w-full divide-y divide-gray-200">
+                <HeaderStyle CssClass="bg-gray-50" />
+                <RowStyle CssClass="bg-white even:bg-gray-50 hover:bg-gray-100 transition-colors" />
+                <Columns>
+                    <asp:BoundField DataField="EquipmentID" HeaderText="ID" 
+                        ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900" 
+                        HeaderStyle-CssClass="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />
+                    <asp:BoundField DataField="Name" HeaderText="Name" 
+                        ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900" 
+                        HeaderStyle-CssClass="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />
+                    <asp:BoundField DataField="Status" HeaderText="Status" 
+                        ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-900" 
+                        HeaderStyle-CssClass="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />
+                    <asp:TemplateField HeaderText="Assign?" 
+                        ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-sm text-gray-500" 
+                        HeaderStyle-CssClass="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <ItemTemplate>
+                            <asp:CheckBox ID="chkAssignEquip" runat="server" 
+                                CssClass="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        </ItemTemplate>
+                    </asp:TemplateField>
+                </Columns>
+            </asp:GridView>
+        </div>
+    </asp:Panel>
+</div>
 
                 <div class="mt-8">
                     <h3 class="text-xl font-bold text-blue-800 mb-4 flex items-center">

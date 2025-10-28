@@ -922,7 +922,7 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .modern-dropdown:focus {
-    border-color: #3b82f6; /* blue-500 */
+    border-color: #3b82f6; 
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
     outline: none;
 }
@@ -1071,7 +1071,7 @@
                                 ItemStyle-HorizontalAlign="Center" HeaderStyle-HorizontalAlign="Center" />
                             <asp:BoundField DataField="SnapshotQuantity" HeaderText="Starting Snapshot" 
                                 ItemStyle-HorizontalAlign="Center" HeaderStyle-HorizontalAlign="Center" 
-                                NullDisplayText="N/A" />
+                                NullDisplayText="N/A" Visible="false" />
                             <asp:TemplateField HeaderText="Status" HeaderStyle-HorizontalAlign="Center" 
                                 ItemStyle-HorizontalAlign="Center" ItemStyle-Width="200px">
                                 <ItemTemplate>

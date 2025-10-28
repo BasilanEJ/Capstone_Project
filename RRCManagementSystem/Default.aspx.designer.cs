@@ -105,31 +105,22 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.HiddenField hfVideoType;
 
         /// <summary>
-        /// imgBlog1 control.
+        /// rptBlogs control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Image imgBlog1;
+        protected global::System.Web.UI.WebControls.Repeater rptBlogs;
 
         /// <summary>
-        /// imgBlog2 control.
+        /// rptBlogModals control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Image imgBlog2;
-
-        /// <summary>
-        /// imgBlog3 control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Image imgBlog3;
+        protected global::System.Web.UI.WebControls.Repeater rptBlogModals;
 
         /// <summary>
         /// imgCO control.

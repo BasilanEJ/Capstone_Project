@@ -67,12 +67,10 @@ namespace RRCManagementSystem
                     string existing = r["Receipt"] as string;
                     if (!string.IsNullOrWhiteSpace(existing))
                     {
-                        // show a pill to view (this URL should hit a decrypting endpoint/handler if files are encrypted)
                         var link = new HyperLink
                         {
                             Text = "View Receipt",
                             CssClass = "pill pill-view",
-                            // For encrypted files, point to a decrypting handler (e.g., ReceiptHandler.ashx?tx=...)
                             NavigateUrl = "ReceiptViewer.aspx?tx=" + txId,
                             Target = "_blank"
                         };
@@ -94,6 +92,12 @@ namespace RRCManagementSystem
 
         protected void btnSave_Click(object sender, EventArgs e)
         {
+            // Check if user confirmed via SweetAlert
+            if (hfConfirmed.Value != "true")
+            {
+                return; // User hasn't confirmed yet
+            }
+
             if (string.IsNullOrEmpty(hfTransactionID.Value))
             {
                 ShowError("Missing transaction ID.");
@@ -143,9 +147,19 @@ namespace RRCManagementSystem
                     cmd.ExecuteNonQuery();
                 }
 
-                ShowOk("Receipt uploaded successfully. Redirecting…");
-                // back to history after 2s
-                Response.AddHeader("REFRESH", "2;URL=TransactionHistory.aspx");
+                // Register success script with SweetAlert
+                string script = @"
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Receipt uploaded successfully. Redirecting...',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = 'TransactionHistory.aspx';
+                    });
+                ";
+                ScriptManager.RegisterStartupScript(this, GetType(), "successAlert", script, true);
             }
             catch (Exception ex)
             {

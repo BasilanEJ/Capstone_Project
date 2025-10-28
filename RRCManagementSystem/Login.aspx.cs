@@ -719,6 +719,7 @@ namespace RRCManagementSystem
                                 catch { decryptedClientEmail = "[Decryption Error]"; }
                             }
 
+                            // Account status checks
                             if (status.Equals("Deleted", StringComparison.OrdinalIgnoreCase))
                             {
                                 lblMessage.Text = "**Login Failed.** Invalid email address or password. Please try again.";
@@ -731,20 +732,20 @@ namespace RRCManagementSystem
                                 goto ClientFailureCleanup;
                             }
 
-                            // Check if lockout has expired before blocking
+                            // Check if lockout has expired
                             if (lockoutObj != null && lockoutObj != DBNull.Value)
                             {
                                 DateTime lockoutTime = Convert.ToDateTime(lockoutObj);
 
                                 if (lockoutTime > DateTime.Now)
                                 {
-                                    // Still locked
                                     pnlCaptcha.Visible = true;
                                     lblMessage.Text = $"**Account Locked.** This client account is temporarily locked. Please try again after {lockoutTime:hh:mm tt}.";
                                     goto ClientFailureCleanup;
                                 }
                             }
 
+                            // CAPTCHA check for multiple failures
                             if (failedAttempts >= 3)
                             {
                                 pnlCaptcha.Visible = true;
@@ -756,49 +757,98 @@ namespace RRCManagementSystem
                                 }
                             }
 
+                            // ✅ PASSWORD VERIFICATION
                             if (!string.IsNullOrEmpty(hash) && PasswordHelper.VerifyPassword(hash, password))
                             {
-                                // Successful login
-                                loginSuccessful = true;
-                                ResetClientFailedLogin(clientId);
-                                ResetAllLockoutLayers(
-                                    deviceInfo.DeviceFingerprint,
-                                    deviceInfo.CanvasFingerprint,
-                                    clientEmailHash,
-                                    ipSubnet,
-                                    deviceInfo.HardwareID
-                                );
+                                // ✅ Password is correct - now check device trust
+                                reader.Close();
 
-                                LogIPAttempt(ip, true);
+                                // ⭐ NEW: Check if device is trusted
+                                bool isDeviceTrusted = IsClientDeviceTrusted(clientId, deviceInfo);
 
-                                Guid newSessionID = Guid.NewGuid();
-                                using (var updateConn = new SqlConnection(connectionString))
-                                using (var updateCmd = new SqlCommand(@"
-                                        UPDATE dbo.Clients
-                                        SET CurrentSessionID = @SessionID,
-                                            CurrentSessionAt = GETDATE()
-                                        WHERE ClientID = @ClientID", updateConn))
+                                if (isDeviceTrusted)
                                 {
-                                    updateCmd.Parameters.AddWithValue("@SessionID", newSessionID);
-                                    updateCmd.Parameters.AddWithValue("@ClientID", clientId);
-                                    updateConn.Open();
-                                    updateCmd.ExecuteNonQuery();
+                                    // ✅ TRUSTED DEVICE - Allow direct login
+                                    loginSuccessful = true;
+                                    ResetClientFailedLogin(clientId);
+                                    ResetAllLockoutLayers(
+                                        deviceInfo.DeviceFingerprint,
+                                        deviceInfo.CanvasFingerprint,
+                                        clientEmailHash,
+                                        ipSubnet,
+                                        deviceInfo.HardwareID
+                                    );
+
+                                    LogIPAttempt(ip, true);
+
+                                    // Update last used timestamp for trusted device
+                                    UpdateTrustedDeviceLastUsed(clientId, deviceInfo.DeviceFingerprint);
+
+                                    // Create session
+                                    Guid newSessionID = Guid.NewGuid();
+                                    using (var updateConn = new SqlConnection(connectionString))
+                                    using (var updateCmd = new SqlCommand(@"
+                                UPDATE dbo.Clients
+                                SET CurrentSessionID = @SessionID,
+                                    CurrentSessionAt = GETDATE()
+                                WHERE ClientID = @ClientID", updateConn))
+                                    {
+                                        updateCmd.Parameters.AddWithValue("@SessionID", newSessionID);
+                                        updateCmd.Parameters.AddWithValue("@ClientID", clientId);
+                                        updateConn.Open();
+                                        updateCmd.ExecuteNonQuery();
+                                    }
+
+                                    Session["ClientID"] = clientId;
+                                    Session["ClientName"] = name;
+                                    Session["Email"] = decryptedClientEmail;
+                                    Session["Role"] = "Client";
+                                    Session["SessionID"] = newSessionID;
+                                    Response.Redirect("Home.aspx", false);
+                                    Context.ApplicationInstance.CompleteRequest();
+                                    return;
                                 }
+                                else
+                                {
+                                    // ⭐ NEW DEVICE - Require OTP verification
+                                    ResetClientFailedLogin(clientId);
+                                    ResetAllLockoutLayers(
+                                        deviceInfo.DeviceFingerprint,
+                                        deviceInfo.CanvasFingerprint,
+                                        clientEmailHash,
+                                        ipSubnet,
+                                        deviceInfo.HardwareID
+                                    );
 
-                                Session["ClientID"] = clientId;
-                                Session["ClientName"] = name;
-                                Session["Email"] = decryptedClientEmail;
-                                Session["Role"] = "Client";
-                                Session["SessionID"] = newSessionID;
+                                    LogIPAttempt(ip, true);
 
-                                AddAuditLog(clientId, $"Client {name} logged in (single session started).");
+                                    // Generate and send OTP
+                                    string otpCode = GenerateAndSendClientOTP(clientId, decryptedClientEmail, deviceInfo, ip, userAgent);
 
-                                Response.Redirect("Home.aspx", false);
-                                Context.ApplicationInstance.CompleteRequest();
-                                return;
+                                    if (!string.IsNullOrEmpty(otpCode))
+                                    {
+                                        // Store pending verification info in session
+                                        Session["PendingClientOTP_ClientID"] = clientId;
+                                        Session["PendingClientOTP_Email"] = decryptedClientEmail;
+                                        Session["PendingClientOTP_Name"] = name;
+                                        Session["PendingClientOTP_DeviceFingerprint"] = deviceInfo.DeviceFingerprint;
+                                        Session["PendingClientOTP_CanvasFingerprint"] = deviceInfo.CanvasFingerprint;
+                                        Session["PendingClientOTP_HardwareID"] = deviceInfo.HardwareID;
+                                        // Redirect to OTP verification page
+                                        Response.Redirect("ClientVerifyOTP.aspx", false);
+                                        Context.ApplicationInstance.CompleteRequest();
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        lblMessage.Text = "**System Error.** Unable to send verification code. Please try again.";
+                                        return;
+                                    }
+                                }
                             }
                             else
                             {
+                                // ❌ WRONG PASSWORD
                                 HandleClientFailedLogin(clientId);
 
                                 int newFailedAttempts = failedAttempts + 1;
@@ -848,6 +898,201 @@ namespace RRCManagementSystem
             LogIPAttempt(ip, false);
             RecordFailedAttemptAllLayers(deviceInfo, emailHash, ipSubnet, ip, userAgent);
             return;
+        }
+
+
+        private bool IsClientDeviceTrusted(int clientId, EnhancedDeviceInfo deviceInfo)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spClientTrustedDevice_Check", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                    cmd.Parameters.Add("@DeviceFingerprint", SqlDbType.NVarChar, 500).Value = deviceInfo.DeviceFingerprint;
+                    cmd.Parameters.Add("@CanvasFingerprint", SqlDbType.NVarChar, 500).Value = (object)deviceInfo.CanvasFingerprint ?? DBNull.Value;
+                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)deviceInfo.HardwareID ?? DBNull.Value;
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            bool isTrusted = reader["IsTrusted"] != DBNull.Value && Convert.ToBoolean(reader["IsTrusted"]);
+                            return isTrusted;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"IsClientDeviceTrusted Error: {ex.Message}");
+            }
+
+            return false; // Default to not trusted
+        }
+
+        private void UpdateTrustedDeviceLastUsed(int clientId, string deviceFingerprint)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spClientTrustedDevice_UpdateLastUsed", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                    cmd.Parameters.Add("@DeviceFingerprint", SqlDbType.NVarChar, 500).Value = deviceFingerprint;
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateTrustedDeviceLastUsed Error: {ex.Message}");
+            }
+        }
+
+        private string GenerateAndSendClientOTP(int clientId, string email, EnhancedDeviceInfo deviceInfo, string ip, string userAgent)
+        {
+            try
+            {
+                string otpCode = null;
+                DateTime expiresAt = DateTime.Now;
+
+                // Generate OTP code
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spClientOTP_Generate", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
+                    cmd.Parameters.Add("@DeviceFingerprint", SqlDbType.NVarChar, 500).Value = deviceInfo.DeviceFingerprint;
+                    cmd.Parameters.Add("@CanvasFingerprint", SqlDbType.NVarChar, 500).Value = (object)deviceInfo.CanvasFingerprint ?? DBNull.Value;
+                    cmd.Parameters.Add("@HardwareID", SqlDbType.NVarChar, 64).Value = (object)deviceInfo.HardwareID ?? DBNull.Value;
+                    cmd.Parameters.Add("@IPAddress", SqlDbType.NVarChar, 50).Value = ip;
+                    cmd.Parameters.Add("@UserAgent", SqlDbType.NVarChar, 500).Value = userAgent;
+                    cmd.Parameters.Add("@ValidityMinutes", SqlDbType.Int).Value = 10;
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            otpCode = reader["OTPCode"]?.ToString();
+                            expiresAt = Convert.ToDateTime(reader["ExpiresAt"]);
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(otpCode))
+                {
+                    // Send OTP email
+                    SendClientOTPEmail(email, otpCode, expiresAt, deviceInfo);
+                    return otpCode;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GenerateAndSendClientOTP Error: {ex.Message}");
+            }
+
+            return null;
+        }
+
+
+        private void SendClientOTPEmail(string email, string otpCode, DateTime expiresAt, EnhancedDeviceInfo deviceInfo)
+        {
+            try
+            {
+                string subject = "Device Verification Code - RRC Management System";
+
+                string body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: 'Poppins', Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 30px; text-align: center; }}
+        .header h1 {{ margin: 0; font-size: 24px; font-weight: 600; }}
+        .content {{ padding: 40px 30px; }}
+        .otp-box {{ background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px solid #007bff; border-radius: 10px; padding: 30px; text-align: center; margin: 25px 0; }}
+        .otp-code {{ font-size: 36px; font-weight: 700; color: #007bff; letter-spacing: 8px; margin: 10px 0; font-family: 'Courier New', monospace; }}
+        .validity {{ color: #666; font-size: 14px; margin-top: 10px; }}
+        .info-box {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }}
+        .device-info {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+        .device-info table {{ width: 100%; }}
+        .device-info td {{ padding: 8px 5px; font-size: 14px; }}
+        .device-info td:first-child {{ font-weight: 600; color: #666; width: 40%; }}
+        .footer {{ background: #f1f1f1; padding: 20px; text-align: center; font-size: 12px; color: #666; }}
+        .warning {{ color: #d32f2f; font-weight: 600; }}
+        ul {{ padding-left: 20px; }}
+        li {{ margin: 8px 0; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>🔐 Device Verification Required</h1>
+        </div>
+        <div class='content'>
+            <p>Hello,</p>
+            <p>You're signing in to your RRC account from a new device. Please use the verification code below to complete your login:</p>
+            
+            <div class='otp-box'>
+                <div style='font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;'>Your Verification Code</div>
+                <div class='otp-code'>{otpCode}</div>
+                <div class='validity'>⏱️ Valid for 10 minutes (until {expiresAt:hh:mm tt})</div>
+            </div>
+
+            <div class='info-box'>
+                <strong>⚠️ Important:</strong><br/>
+                • This code expires in 10 minutes<br/>
+                • Never share this code with anyone<br/>
+                • If you didn't attempt to log in, please ignore this email and consider changing your password
+            </div>
+
+            <div class='device-info'>
+                <h3 style='margin-top: 0; color: #333; font-size: 16px;'>📱 Device Information:</h3>
+                <table>
+                    <tr>
+                        <td>Browser:</td>
+                        <td>{deviceInfo.BrowserName}</td>
+                    </tr>
+                    <tr>
+                        <td>Operating System:</td>
+                        <td>{deviceInfo.OSInfo}</td>
+                    </tr>
+                    <tr>
+                        <td>Platform:</td>
+                        <td>{deviceInfo.Platform}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <p><strong>What happens next?</strong></p>
+            <ul>
+                <li>Enter the code on the verification page</li>
+                <li>This device will be remembered for 30 days</li>
+                <li>You won't need to verify again on this device during that time</li>
+            </ul>
+        </div>
+        <div class='footer'>
+            <p>This is an automated security message from <strong>RRC Management System</strong></p>
+            <p>If you have questions or concerns, please contact our support team.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+                SendEmail(email, subject, body, true, MailPriority.High);
+                System.Diagnostics.Debug.WriteLine($"✅ OTP email sent to: {email}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SendClientOTPEmail Error: {ex.Message}");
+            }
         }
 
         private void SendSecurityAlertToUser(string email, int attemptCount, string ip, EnhancedDeviceInfo deviceInfo, DateTime attemptTime)

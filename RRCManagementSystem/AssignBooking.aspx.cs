@@ -356,8 +356,22 @@ namespace RRCManagementSystem
                 {
                     var dt = new DataTable();
                     da.Fill(dt);
-                    gvEquipments.DataSource = dt;
-                    gvEquipments.DataBind();
+
+                    if (dt.Rows.Count == 0)
+                    {
+                        // No equipment available - show warning panel
+                        pnlNoEquipment.Visible = true;
+                        pnlEquipmentGrid.Visible = false;
+                        btnAssignAll.Enabled = false; // Disable assign button
+                    }
+                    else
+                    {
+                        // Equipment available - show grid
+                        pnlNoEquipment.Visible = false;
+                        pnlEquipmentGrid.Visible = true;
+                        gvEquipments.DataSource = dt;
+                        gvEquipments.DataBind();
+                    }
                 }
             }
         }

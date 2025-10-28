@@ -556,6 +556,21 @@
                     </small>
                 </div>
 
+                <div class="form-group">
+    <label for="ddlRole">
+        <i class="fas fa-user-tag"></i>Role
+    </label>
+    <asp:DropDownList 
+        ID="ddlRole" 
+        runat="server" 
+        CssClass="form-control"
+        ToolTip="Select user role">
+    </asp:DropDownList>
+    <small class="text-muted">
+        <i class="fas fa-info-circle me-1"></i>Select the role that defines the user's access level
+    </small>
+</div>
+
                 <!-- Module Permissions Section -->
                 <div class="section-header">
                     <i class="fas fa-shield-alt"></i>
@@ -688,54 +703,47 @@
 
     // Confirm save action
     function confirmSave() {
-        // Validate name field
+        Swal.close(); // Prevents leftover modal
         const nameField = document.getElementById('<%= txtName.ClientID %>');
-        if (!nameField.value.trim()) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Validation Error',
-                text: 'Please enter the user\'s full name.',
-                confirmButtonColor: '#dc3545'
-            });
-            nameField.focus();
-            return;
-        }
-
-        // Show confirmation dialog
+    if (!nameField.value.trim()) {
         Swal.fire({
-            title: 'Save Changes?',
-            html: '<div style="text-align:center;"><i class="fas fa-save" style="font-size:3rem;color:#198754;margin-bottom:15px;"></i><br/>This will update the user account and permissions.<br/><small class="text-muted">The changes will take effect immediately.</small></div>',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#198754',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Save Changes',
-            cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
-            customClass: {
-                popup: 'animated-popup',
-                confirmButton: 'btn-confirm-custom',
-                cancelButton: 'btn-cancel-custom'
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Show loading state
-                Swal.fire({
-                    title: 'Saving...',
-                    html: 'Please wait while we update the user account.',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                // Trigger server-side save
-                setTimeout(function () {
-                    document.getElementById('<%= btnSave.ClientID %>').click();
-                }, 100);
-            }
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please enter the user\'s full name.',
+            confirmButtonColor: '#dc3545'
         });
+        nameField.focus();
+        return;
     }
+
+    Swal.fire({
+        title: 'Save Changes?',
+        html: '<div style="text-align:center;"><i class="fas fa-save" style="font-size:3rem;color:#198754;margin-bottom:15px;"></i><br/>This will update the user account and permissions.<br/><small class="text-muted">The changes will take effect immediately.</small></div>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-check me-2"></i>Yes, Save Changes',
+        cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Saving...',
+                html: 'Please wait while we update the user account.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            setTimeout(function () {
+                document.getElementById('<%= btnSave.ClientID %>').click();
+            }, 100);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+            Swal.close(); // ✅ Ensures overlay removed
+        }
+    });
+    }
+
 
     // Page load animations
     document.addEventListener('DOMContentLoaded', function() {

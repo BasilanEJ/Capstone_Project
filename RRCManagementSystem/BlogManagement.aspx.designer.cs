@@ -15,15 +15,6 @@ namespace RRCManagementSystem
     {
 
         /// <summary>
-        /// UpdatePanelForm control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.UpdatePanel UpdatePanelForm;
-
-        /// <summary>
         /// lblFormTitle control.
         /// </summary>
         /// <remarks>
@@ -42,13 +33,13 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.HiddenField hfBlogID;
 
         /// <summary>
-        /// hfCurrentImagePath control.
+        /// hfArchiveBlogID control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfCurrentImagePath;
+        protected global::System.Web.UI.WebControls.HiddenField hfArchiveBlogID;
 
         /// <summary>
         /// txtBlogTitle control.
@@ -58,33 +49,6 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.TextBox txtBlogTitle;
-
-        /// <summary>
-        /// rfvBlogTitle control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.RequiredFieldValidator rfvBlogTitle;
-
-        /// <summary>
-        /// txtDisplayOrder control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtDisplayOrder;
-
-        /// <summary>
-        /// rvDisplayOrder control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.RangeValidator rvDisplayOrder;
 
         /// <summary>
         /// txtBlogDescription control.
@@ -105,15 +69,6 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.TextBox txtBlogContent;
 
         /// <summary>
-        /// rfvBlogContent control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.RequiredFieldValidator rfvBlogContent;
-
-        /// <summary>
         /// fuBlogImage control.
         /// </summary>
         /// <remarks>
@@ -123,67 +78,31 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.FileUpload fuBlogImage;
 
         /// <summary>
-        /// lblCurrentImage control.
+        /// pnlImagePreview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblCurrentImage;
+        protected global::System.Web.UI.WebControls.Panel pnlImagePreview;
 
         /// <summary>
-        /// imgPreview control.
+        /// imgCurrentBlog control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Image imgPreview;
+        protected global::System.Web.UI.WebControls.Image imgCurrentBlog;
 
         /// <summary>
-        /// txtBlogLink control.
+        /// txtDisplayOrder control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtBlogLink;
-
-        /// <summary>
-        /// revBlogLink control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.RegularExpressionValidator revBlogLink;
-
-        /// <summary>
-        /// txtAuthor control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtAuthor;
-
-        /// <summary>
-        /// txtReadTime control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtReadTime;
-
-        /// <summary>
-        /// rvReadTime control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.RangeValidator rvReadTime;
+        protected global::System.Web.UI.WebControls.TextBox txtDisplayOrder;
 
         /// <summary>
         /// chkIsActive control.
@@ -195,22 +114,13 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.CheckBox chkIsActive;
 
         /// <summary>
-        /// btnAddBlog control.
+        /// btnSaveBlog control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnAddBlog;
-
-        /// <summary>
-        /// btnUpdateBlog control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnUpdateBlog;
+        protected global::System.Web.UI.WebControls.Button btnSaveBlog;
 
         /// <summary>
         /// btnCancelEdit control.
@@ -222,21 +132,39 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Button btnCancelEdit;
 
         /// <summary>
-        /// UpdatePanelGrid control.
+        /// lblBlogCount control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.UpdatePanel UpdatePanelGrid;
+        protected global::System.Web.UI.WebControls.Label lblBlogCount;
 
         /// <summary>
-        /// gvBlogs control.
+        /// rptBlogList control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvBlogs;
+        protected global::System.Web.UI.WebControls.Repeater rptBlogList;
+
+        /// <summary>
+        /// lblNoBlogsMessage control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblNoBlogsMessage;
+
+        /// <summary>
+        /// btnHiddenArchive control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnHiddenArchive;
     }
 }

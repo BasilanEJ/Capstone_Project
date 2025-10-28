@@ -59,30 +59,37 @@ namespace RRCManagementSystem
             try
             {
                 int resultCode = -99;
+                string roleName = string.Empty;
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
 
-                    // ✅ Step 1: Check if the role exists
-                    string checkRole = "SELECT COUNT(*) FROM Roles WHERE RoleID = @RoleID";
+                    // ✅ Step 1: Check if the role exists AND get the role name
+                    string checkRole = "SELECT RoleName FROM Roles WHERE RoleID = @RoleID";
                     using (SqlCommand cmd = new SqlCommand(checkRole, conn))
                     {
                         cmd.Parameters.AddWithValue("@RoleID", roleId);
-                        int count = Convert.ToInt32(cmd.ExecuteScalar());
-                        if (count == 0)
+                        object result = cmd.ExecuteScalar();
+
+                        if (result == null)
                         {
                             resultCode = -1; // Role not found
+                        }
+                        else
+                        {
+                            roleName = result.ToString();
                         }
                     }
 
                     // ✅ Step 2: Check if users are assigned to this role
                     if (resultCode != -1)
                     {
-                        string checkUsers = "SELECT COUNT(*) FROM Users WHERE RoleID = @RoleID";
+                        // FIXED: Compare by role name (string), not RoleID (int)
+                        string checkUsers = "SELECT COUNT(*) FROM Users WHERE Role = @RoleName";
                         using (SqlCommand cmd = new SqlCommand(checkUsers, conn))
                         {
-                            cmd.Parameters.AddWithValue("@RoleID", roleId);
+                            cmd.Parameters.AddWithValue("@RoleName", roleName);
                             int userCount = Convert.ToInt32(cmd.ExecuteScalar());
                             if (userCount > 0)
                             {
@@ -94,55 +101,84 @@ namespace RRCManagementSystem
                     // ✅ Step 3: If safe to delete, remove permissions and role
                     if (resultCode != 0 && resultCode != -1)
                     {
-                        // Delete RolePermissions first
-                        string deletePermissions = "DELETE FROM RolePermissions WHERE RoleID = @RoleID";
-                        using (SqlCommand cmd = new SqlCommand(deletePermissions, conn))
+                        try
                         {
-                            cmd.Parameters.AddWithValue("@RoleID", roleId);
-                            cmd.ExecuteNonQuery();
-                        }
+                            // Delete RolePermissions first
+                            string deletePermissions = "DELETE FROM RolePermissions WHERE RoleID = @RoleID";
+                            using (SqlCommand cmd = new SqlCommand(deletePermissions, conn))
+                            {
+                                cmd.Parameters.AddWithValue("@RoleID", roleId);
+                                cmd.ExecuteNonQuery();
+                            }
 
-                        // Then delete the Role
-                        string deleteRole = "DELETE FROM Roles WHERE RoleID = @RoleID";
-                        using (SqlCommand cmd = new SqlCommand(deleteRole, conn))
+                            // Then delete the Role
+                            string deleteRole = "DELETE FROM Roles WHERE RoleID = @RoleID";
+                            using (SqlCommand cmd = new SqlCommand(deleteRole, conn))
+                            {
+                                cmd.Parameters.AddWithValue("@RoleID", roleId);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            resultCode = 1; // Success
+                        }
+                        catch (SqlException sqlEx)
                         {
-                            cmd.Parameters.AddWithValue("@RoleID", roleId);
-                            cmd.ExecuteNonQuery();
+                            // ✅ Catch FK constraint violation specifically
+                            if (sqlEx.Number == 547) // FK constraint violation error number
+                            {
+                                resultCode = 0; // Users are assigned
+                            }
+                            else
+                            {
+                                throw; // Re-throw other SQL exceptions
+                            }
                         }
-
-                        resultCode = 1; // Success
                     }
                 }
 
-                // ✅ Step 4: Handle result messages
+                // ✅ Step 4: Handle result messages - CLOSE LOADING FIRST
                 switch (resultCode)
                 {
                     case 1:
                         LoadRoles();
                         ScriptManager.RegisterStartupScript(this, GetType(), "deleteSuccess",
-                            "Swal.fire('Deleted!', 'The role and its permissions have been successfully deleted.', 'success');", true);
+                            "Swal.close(); Swal.fire('Deleted!', 'The role and its permissions have been successfully deleted.', 'success');", true);
                         break;
 
                     case 0:
                         ScriptManager.RegisterStartupScript(this, GetType(), "cannotDelete",
-                            "Swal.fire('Cannot Delete', 'Users are still assigned to this role.', 'warning');", true);
+                            "Swal.close(); Swal.fire('Cannot Delete', 'Users are still assigned to this role. Please reassign or remove them first.', 'warning');", true);
                         break;
 
                     case -1:
                         ScriptManager.RegisterStartupScript(this, GetType(), "notFound",
-                            "Swal.fire('Not Found', 'The specified role does not exist.', 'info');", true);
+                            "Swal.close(); Swal.fire('Not Found', 'The specified role does not exist.', 'info');", true);
                         break;
 
                     default:
                         ScriptManager.RegisterStartupScript(this, GetType(), "unknownError",
-                            "Swal.fire('Error', 'An unknown error occurred while deleting the role.', 'error');", true);
+                            "Swal.close(); Swal.fire('Error', 'An unknown error occurred while deleting the role.', 'error');", true);
                         break;
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+                // ✅ Catch FK constraint violations at the outer level too
+                if (sqlEx.Number == 547)
+                {
+                    ScriptManager.RegisterStartupScript(this, GetType(), "cannotDelete",
+                        "Swal.close(); Swal.fire('Cannot Delete', 'Users are still assigned to this role. Please reassign or remove them first.', 'warning');", true);
+                }
+                else
+                {
+                    ScriptManager.RegisterStartupScript(this, GetType(), "deleteError",
+                        $"Swal.close(); Swal.fire('Error', 'Database error: {sqlEx.Message.Replace("'", "\\'")}', 'error');", true);
                 }
             }
             catch (Exception ex)
             {
                 ScriptManager.RegisterStartupScript(this, GetType(), "deleteError",
-                    $"Swal.fire('Error', 'An error occurred: {ex.Message.Replace("'", "\\'")}', 'error');", true);
+                    $"Swal.close(); Swal.fire('Error', 'An error occurred: {ex.Message.Replace("'", "\\'")}', 'error');", true);
             }
         }
 

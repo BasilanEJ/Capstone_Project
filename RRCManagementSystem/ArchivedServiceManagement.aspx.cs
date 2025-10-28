@@ -28,6 +28,11 @@ namespace RRCManagementSystem
             ShowServicesTab();
         }
 
+        protected void btnTabBlogs_Click(object sender, EventArgs e)
+        {
+            ShowBlogsTab();
+        }
+
         protected void btnTabFaqs_Click(object sender, EventArgs e)
         {
             ShowFaqsTab();
@@ -37,22 +42,41 @@ namespace RRCManagementSystem
         private void ShowServicesTab()
         {
             pnlServices.Visible = true;
+            pnlBlogs.Visible = false;
             pnlFaqs.Visible = false;
 
             btnTabServices.CssClass = "tab-btn active";
+            btnTabBlogs.CssClass = "tab-btn";
             btnTabFaqs.CssClass = "tab-btn";
 
             ViewState["CurrentTab"] = "Services";
             LoadDeletedServices();
         }
 
+        // ============ Show Blogs Tab ============
+        private void ShowBlogsTab()
+        {
+            pnlServices.Visible = false;
+            pnlBlogs.Visible = true;
+            pnlFaqs.Visible = false;
+
+            btnTabServices.CssClass = "tab-btn";
+            btnTabBlogs.CssClass = "tab-btn active";
+            btnTabFaqs.CssClass = "tab-btn";
+
+            ViewState["CurrentTab"] = "Blogs";
+            LoadDeletedBlogs();
+        }
+
         // ============ Show FAQs Tab ============
         private void ShowFaqsTab()
         {
             pnlServices.Visible = false;
+            pnlBlogs.Visible = false;
             pnlFaqs.Visible = true;
 
             btnTabServices.CssClass = "tab-btn";
+            btnTabBlogs.CssClass = "tab-btn";
             btnTabFaqs.CssClass = "tab-btn active";
 
             ViewState["CurrentTab"] = "Faqs";
@@ -89,6 +113,14 @@ namespace RRCManagementSystem
 
                 case "DeletePermanent":
                     DeleteServicePermanently(itemId);
+                    break;
+
+                case "RestoreBlog":
+                    RestoreBlog(itemId);
+                    break;
+
+                case "DeletePermanentBlog":
+                    DeleteBlogPermanently(itemId);
                     break;
 
                 case "RestoreFaq":
@@ -226,6 +258,126 @@ namespace RRCManagementSystem
             catch (Exception ex)
             {
                 ShowAlert("Error", "Failed to delete service permanently: " + ex.Message, "error");
+            }
+        }
+
+        // ============================================= 
+        // BLOGS SECTION
+        // ============================================= 
+
+        // ============ Load Deleted Blogs ============
+        private void LoadDeletedBlogs()
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = @"
+                        SELECT BlogID, BlogTitle, BlogDescription, BlogContent, 
+                               ImagePath, DisplayOrder, IsActive, 
+                               CreatedDate, ModifiedDate
+                        FROM BlogsCMS
+                        WHERE IsActive = 0
+                        ORDER BY ModifiedDate DESC, DisplayOrder, BlogID DESC";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        conn.Open();
+                        SqlDataAdapter da = new SqlDataAdapter(cmd);
+                        DataTable dt = new DataTable();
+                        da.Fill(dt);
+
+                        if (dt.Rows.Count == 0)
+                        {
+                            // Show empty state
+                            pnlEmptyStateBlogs.Visible = true;
+                            gvDeletedBlogs.Visible = false;
+                        }
+                        else
+                        {
+                            // Show grid
+                            pnlEmptyStateBlogs.Visible = false;
+                            gvDeletedBlogs.Visible = true;
+                            gvDeletedBlogs.DataSource = dt;
+                            gvDeletedBlogs.DataBind();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowAlert("Error", "Failed to load archived blogs: " + ex.Message, "error");
+            }
+        }
+
+        // ============ Restore Blog (Soft Delete Undo) ============
+        private void RestoreBlog(int blogId)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = @"
+                        UPDATE BlogsCMS 
+                        SET IsActive = 1, ModifiedDate = GETDATE() 
+                        WHERE BlogID = @BlogID";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@BlogID", blogId);
+
+                        conn.Open();
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            ShowAlert("Success!", "Blog restored successfully! It is now active again.", "success");
+                            LoadDeletedBlogs();
+                        }
+                        else
+                        {
+                            ShowAlert("Error", "Blog not found or could not be restored.", "error");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowAlert("Error", "Failed to restore blog: " + ex.Message, "error");
+            }
+        }
+
+        // ============ Delete Blog Permanently (Hard Delete) ============
+        private void DeleteBlogPermanently(int blogId)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = "DELETE FROM BlogsCMS WHERE BlogID = @BlogID";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@BlogID", blogId);
+
+                        conn.Open();
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            ShowAlert("Deleted!", "Blog has been permanently deleted from the database.", "success");
+                            LoadDeletedBlogs();
+                        }
+                        else
+                        {
+                            ShowAlert("Error", "Blog not found or could not be deleted.", "error");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowAlert("Error", "Failed to delete blog permanently: " + ex.Message, "error");
             }
         }
 

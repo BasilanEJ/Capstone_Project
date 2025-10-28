@@ -818,7 +818,7 @@
                                     <asp:LinkButton ID="btnEdit" runat="server" 
                                         CommandName="Edit"
                                         CssClass="btn-grid-action btn-edit"
-                                        ToolTip="Edit Service"
+                                        ToolTip="Edit"
                                         CausesValidation="false">
                                         <i class="fas fa-edit"></i>
                                     </asp:LinkButton>
@@ -827,7 +827,7 @@
                                         CommandArgument='<%# Eval("ServiceID") %>'
                                         CssClass="btn-grid-action btn-delete"
                                         OnClientClick="return confirmDelete(this);"
-                                        ToolTip="Delete Service"
+                                        ToolTip="Remove"
                                         CausesValidation="false">
                                         <i class="fas fa-trash"></i>
                                     </asp:LinkButton>

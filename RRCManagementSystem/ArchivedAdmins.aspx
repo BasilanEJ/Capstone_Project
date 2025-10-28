@@ -547,13 +547,22 @@
                             OnRowCommand="gvArchivedAdmins_RowCommand"
                             DataKeyNames="UserID">
                             <Columns>
-                                <asp:TemplateField HeaderText="User ID">
+                                <asp:TemplateField HeaderText="User ID" Visible="false">
                                     <ItemTemplate>
                                         <span class="user-id-badge">
                                             #<%# Eval("UserID") %>
                                         </span>
                                     </ItemTemplate>
                                 </asp:TemplateField>
+
+                                  <asp:TemplateField HeaderText="Employee ID">
+      <ItemTemplate>
+          <span class="admin-empid fw-bold text-primary">
+              <%# Eval("EmployeeID") %>
+          </span>
+      </ItemTemplate>
+  </asp:TemplateField>
+
 
                                 <asp:TemplateField HeaderText="Name">
                                     <ItemTemplate>
