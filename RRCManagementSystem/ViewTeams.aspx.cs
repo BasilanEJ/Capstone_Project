@@ -47,7 +47,8 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 txtDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
-                LoadTeamsAndMembers(DateTime.Today);
+                LoadTeamLeaders(); // Load team leaders for edit modal
+                LoadTeamsAndMembers(DateTime.Today, "");
             }
         }
 
@@ -74,15 +75,120 @@ namespace RRCManagementSystem
             }
         }
 
+        private void LoadTeamLeaders()
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("SELECT UserID, Name FROM dbo.Users WHERE Role = 'Headtechnician' AND Status = 'Active' ORDER BY Name", con))
+            using (var da = new SqlDataAdapter(cmd))
+            {
+                var dt = new DataTable();
+                da.Fill(dt);
+
+                ddlEditTeamLeader.DataSource = dt;
+                ddlEditTeamLeader.DataValueField = "UserID";
+                ddlEditTeamLeader.DataTextField = "Name";
+                ddlEditTeamLeader.DataBind();
+                ddlEditTeamLeader.Items.Insert(0, new ListItem("-- Select a Head Technician --", ""));
+            }
+        }
+
         protected void btnFilterDate_Click(object sender, EventArgs e)
         {
             if (DateTime.TryParse(txtDate.Text, out DateTime selectedDate))
             {
-                LoadTeamsAndMembers(selectedDate.Date);
+                string shiftFilter = ddlShiftFilter.SelectedValue;
+                LoadTeamsAndMembers(selectedDate.Date, shiftFilter);
             }
             else
             {
                 ShowSweetAlert("Please select a valid date!", "warning");
+            }
+        }
+
+        protected void btnEditTeam_Click(object sender, EventArgs e)
+        {
+            var button = (Button)sender;
+            string[] args = button.CommandArgument.Split(',');
+
+            if (args.Length >= 4)
+            {
+                hdnEditTeamID.Value = args[0]; // TeamID
+                txtEditTeamName.Text = args[1]; // GroupName
+                string shiftType = args[2]; // ShiftType
+                string teamLeaderID = args[3]; // TeamLeaderID
+
+                // Set shift type radio buttons
+                if (shiftType == "MorningShift")
+                {
+                    rbEditMorning.Checked = true;
+                    rbEditNight.Checked = false;
+                }
+                else
+                {
+                    rbEditMorning.Checked = false;
+                    rbEditNight.Checked = true;
+                }
+
+                // Set team leader dropdown
+                LoadTeamLeaders(); // Reload to ensure data is fresh
+                if (ddlEditTeamLeader.Items.FindByValue(teamLeaderID) != null)
+                {
+                    ddlEditTeamLeader.SelectedValue = teamLeaderID;
+                }
+
+                // ✅ BEST FIX: Show modal after page loads
+                string script = @"
+                    window.addEventListener('load', function() {
+                        var modalEl = document.getElementById('editTeamModal');
+                        if (modalEl) {
+                            var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                            modal.show();
+                        }
+                    });";
+
+                ClientScript.RegisterStartupScript(this.GetType(), "ShowEditModal", script, true);
+            }
+        }
+
+        protected void btnSaveEdit_Click(object sender, EventArgs e)
+        {
+            int teamId = Convert.ToInt32(hdnEditTeamID.Value);
+            string teamName = txtEditTeamName.Text.Trim();
+            string shiftType = rbEditMorning.Checked ? "MorningShift" : "NightShift";
+            int teamLeaderId = Convert.ToInt32(ddlEditTeamLeader.SelectedValue);
+            int adminId = Convert.ToInt32(Session["UserID"]);
+
+            try
+            {
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spTeam_Update", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@TeamID", SqlDbType.Int).Value = teamId;
+                    cmd.Parameters.Add("@GroupName", SqlDbType.NVarChar, 50).Value = teamName;
+                    cmd.Parameters.Add("@ShiftType", SqlDbType.NVarChar, 20).Value = shiftType;
+                    cmd.Parameters.Add("@TeamLeaderID", SqlDbType.Int).Value = teamLeaderId;
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                // Add audit log
+                string teamLeaderName = ddlEditTeamLeader.SelectedItem.Text;
+                AddAudit(adminId, $"Updated team '{teamName}' (ID: {teamId}) - Shift: {shiftType}, Leader: {teamLeaderName} (ID: {teamLeaderId})");
+
+                // Reload the page
+                if (DateTime.TryParse(txtDate.Text, out DateTime selectedDate))
+                {
+                    LoadTeamsAndMembers(selectedDate.Date, ddlShiftFilter.SelectedValue);
+                }
+
+                // Show success message
+                ShowSweetAlert("Team updated successfully!", "success");
+            }
+            catch (Exception ex)
+            {
+                ShowSweetAlert($"Error updating team: {ex.Message}", "error");
             }
         }
 
@@ -124,18 +230,20 @@ namespace RRCManagementSystem
 
                     if (returnValue > 0)
                     {
-                        ShowSweetAlert($"Team ID {teamId} has been successfully deleted!", "success");
+                        int adminId = Convert.ToInt32(Session["UserID"]);
+                        AddAudit(adminId, $"Deleted empty team (ID: {teamId})");
+                        ShowSweetAlert($"Team has been successfully deleted!", "success");
                     }
                     else
                     {
-                        ShowSweetAlert($"Could not delete Team ID {teamId}. It might have members or active bookings.", "warning");
+                        ShowSweetAlert($"Could not delete team. It might have members or active bookings.", "warning");
                     }
                 }
 
                 // Reload the list
                 if (DateTime.TryParse(txtDate.Text, out DateTime selectedDate))
                 {
-                    LoadTeamsAndMembers(selectedDate.Date);
+                    LoadTeamsAndMembers(selectedDate.Date, ddlShiftFilter.SelectedValue);
                 }
             }
             catch (SqlException ex)
@@ -148,7 +256,7 @@ namespace RRCManagementSystem
             }
         }
 
-        private void LoadTeamsAndMembers(DateTime targetDate)
+        private void LoadTeamsAndMembers(DateTime targetDate, string shiftFilter)
         {
             try
             {
@@ -162,6 +270,7 @@ namespace RRCManagementSystem
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.Add("@ScheduledDate", SqlDbType.Date).Value = targetDate.Date;
+                        cmd.Parameters.Add("@ShiftType", SqlDbType.NVarChar, 20).Value = string.IsNullOrEmpty(shiftFilter) ? (object)DBNull.Value : shiftFilter;
 
                         using (var adapter = new SqlDataAdapter(cmd))
                         {
@@ -186,7 +295,7 @@ namespace RRCManagementSystem
                 {
                     rptTeams.DataSource = null;
                     rptTeams.DataBind();
-                    ShowSweetAlert("No teams found for the selected date.", "info");
+                    ShowSweetAlert("No teams found for the selected date and filter.", "info");
                     return;
                 }
 
@@ -211,6 +320,9 @@ namespace RRCManagementSystem
                         {
                             TeamID = teamId,
                             GroupName = team.Field<string>("GroupName"),
+                            ShiftType = team.Field<string>("ShiftType") ?? "MorningShift",
+                            TeamLeaderID = team.Field<int?>("TeamLeaderID") ?? 0,
+                            TeamLeaderName = team.Field<string>("TeamLeaderName") ?? "Not Assigned",
                             Status = assignmentCount >= 2 ? "Unavailable" : "Available",
                             Employees = teamEmployees.Any() ? teamEmployees.CopyToDataTable() : new DataTable()
                         };
@@ -254,6 +366,20 @@ namespace RRCManagementSystem
             }
         }
 
+        private void AddAudit(int adminId, string action)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("dbo.spAudit_Insert", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = adminId;
+                cmd.Parameters.Add("@Action", SqlDbType.NVarChar, 255).Value = action;
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
         /// <summary>
         /// Shows a SweetAlert message to the user
         /// </summary>
@@ -282,7 +408,7 @@ namespace RRCManagementSystem
                     break;
             }
 
-            ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert", script, true);
+            ClientScript.RegisterStartupScript(this.GetType(), "SweetAlert", script, true);
         }
 
         /// <summary>

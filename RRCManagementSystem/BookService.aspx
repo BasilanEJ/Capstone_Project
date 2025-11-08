@@ -1,7 +1,128 @@
 ﻿<%@ Page Title="Book Service" Language="C#" MasterPageFile="~/Client.master" AutoEventWireup="true" CodeBehind="BookService.aspx.cs" Inherits="RRCManagementSystem.BookService" %>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .service-item {
+            padding: 8px 12px;
+            background: #f0fdf4;
+            border-left: 3px solid #10b981;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .service-name {
+            font-weight: 500;
+            color: #065f46;
+        }
+        
+        .service-sqm {
+            font-weight: 600;
+            color: #059669;
+            background: #d1fae5;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+        }
+
+        /* Time Slot Styling */
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .radio-option {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .radio-option input[type="radio"] {
+            display: none;
+        }
+
+        .radio-label {
+            display: block;
+            padding: 14px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 500;
+            background: #f9fafb;
+        }
+
+        .radio-option input[type="radio"]:checked + .radio-label {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            color: #1e40af;
+        }
+
+        .radio-label:hover:not(.disabled) {
+            border-color: #3b82f6;
+            background: white;
+        }
+
+        .radio-label.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #fee2e2;
+            border-color: #fca5a5;
+        }
+
+        /* Availability Badge */
+        .availability-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .availability-badge.available {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .availability-badge.limited {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .availability-badge.unavailable {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .availability-badge.checking {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
@@ -17,6 +138,8 @@
         <asp:Label ID="lblMessage" runat="server" CssClass="hidden" />
         <asp:HiddenField ID="hfIsContract" runat="server" />
         <asp:HiddenField ID="hfQuotationID" runat="server" />
+        <asp:HiddenField ID="hfSelectedDate" runat="server" />
+        <asp:HiddenField ID="hfSQM" runat="server" />
 
         <!-- Main Card -->
         <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
@@ -44,76 +167,80 @@
 
                 <div class="border-t border-gray-100"></div>
 
-                <!-- Services -->
+                <!-- Services with Individual SQM -->
                 <div class="flex items-start">
                     <div class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
                         <i class="fas fa-tools text-green-600"></i>
                     </div>
                     <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Service(s) to be Provided</label>
-                        <asp:Label ID="lblServices" runat="server"
-                            CssClass="text-gray-800 leading-relaxed" />
+                        <label class="block text-sm font-medium text-gray-600 mb-3">Service(s) to be Provided</label>
+                        <div class="space-y-2">
+                            <asp:Literal ID="lblServices" runat="server" />
+                        </div>
                     </div>
                 </div>
 
-                <!-- SQM -->
+                <!-- Total SQM -->
                 <div class="flex items-start">
                     <div class="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
                         <i class="fas fa-ruler-combined text-purple-600"></i>
                     </div>
                     <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Square Meters (SQM)</label>
-                        <asp:Label ID="lblSQM" runat="server"
-                            CssClass="text-gray-800 font-medium" />
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Total Coverage Area</label>
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 inline-block">
+                            <asp:Label ID="lblSQM" runat="server"
+                                CssClass="text-xl font-bold text-purple-700" />
+                        </div>
                     </div>
                 </div>
 
                 <div class="border-t border-gray-100"></div>
 
-               <!-- Replace the existing Miscellaneous section in the Pricing Breakdown -->
-<div class="bg-gray-50 rounded-xl p-5 space-y-4">
-    <h3 class="font-semibold text-gray-800 flex items-center mb-3">
-        <i class="fas fa-calculator mr-2 text-blue-600"></i>
-        Pricing Breakdown
-    </h3>
+                <!-- Pricing Breakdown -->
+                <div class="bg-gray-50 rounded-xl p-5 space-y-4">
+                    <h3 class="font-semibold text-gray-800 flex items-center mb-3">
+                        <i class="fas fa-calculator mr-2 text-blue-600"></i>
+                        Pricing Breakdown
+                    </h3>
 
-    <!-- Base Price -->
-    <div class="flex justify-between items-center">
-        <span class="text-gray-600">Base Service Price</span>
-        <asp:Label ID="lblBasePrice" runat="server"
-            CssClass="font-semibold text-gray-800" />
-    </div>
+                    <!-- Base Price -->
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Base Service Price</span>
+                        <asp:Label ID="lblBasePrice" runat="server"
+                            CssClass="font-semibold text-gray-800" />
+                    </div>
 
-    <!-- Travel Expense -->
-    <div class="flex justify-between items-center">
-        <span class="text-gray-600">Travel Expense</span>
-        <asp:Label ID="lblTravelExpense" runat="server"
-            CssClass="font-semibold text-gray-800" />
-    </div>
+                    <!-- Travel Expense -->
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Travel Expense</span>
+                        <asp:Label ID="lblTravelExpense" runat="server"
+                            CssClass="font-semibold text-gray-800" />
+                    </div>
 
-    <!-- Miscellaneous with Details -->
-    <div class="space-y-2">
-        <div class="flex justify-between items-center">
-            <span class="text-gray-600">Miscellaneous</span>
-            <asp:Label ID="lblMiscellaneous" runat="server"
-                CssClass="font-semibold text-gray-800" />
-        </div>
-        
-        <!-- Miscellaneous Details Breakdown -->
-        <asp:Panel ID="pnlMiscDetails" runat="server" Visible="false" 
-            CssClass="ml-4 pl-4 border-l-2 border-blue-200 space-y-1">
-            <asp:Literal ID="litMiscDetails" runat="server" />
-        </asp:Panel>
-    </div>
+                    <!-- Miscellaneous with Details -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Miscellaneous</span>
+                            <asp:Label ID="lblMiscellaneous" runat="server"
+                                CssClass="font-semibold text-gray-800" />
+                        </div>
+                        
+                        <!-- Miscellaneous Details Breakdown -->
+                        <asp:Panel ID="pnlMiscDetails" runat="server" Visible="false" 
+                            CssClass="ml-4 pl-4 border-l-2 border-blue-200 space-y-1">
+                            <asp:Literal ID="litMiscDetails" runat="server" />
+                        </asp:Panel>
+                    </div>
 
-    <div class="border-t border-gray-200 pt-3 mt-3">
-        <div class="flex justify-between items-center">
-            <span class="text-lg font-bold text-gray-800">Total Price</span>
-            <asp:Label ID="lblTotalPrice" runat="server"
-                CssClass="text-2xl font-bold text-blue-600" />
-        </div>
-    </div>
-</div>
+                    <div class="border-t border-gray-200 pt-3 mt-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-bold text-gray-800">Total Price</span>
+                            <asp:Label ID="lblTotalPrice" runat="server"
+                                CssClass="text-2xl font-bold text-blue-600" />
+                        </div>
+                    </div>
+                </div>
+
                 <div class="border-t border-gray-100"></div>
 
                 <!-- Preferred Schedule -->
@@ -129,11 +256,11 @@
                         <button type="button" onclick="showDateTimeModal()"
                             class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg transition shadow-md hover:shadow-lg">
                             <i class="fas fa-clock mr-2"></i>
-                            Select Date &amp; Time
+                            Select Date &amp; Time Slot
                         </button>
 
-                        <asp:TextBox ID="txtDate" runat="server" CssClass="hidden" />
-                        <asp:TextBox ID="txtTime" runat="server" CssClass="hidden" />
+                        <asp:HiddenField ID="txtDate" runat="server" />
+                        <asp:HiddenField ID="txtTimeSlot" runat="server" />
                     </div>
                 </div>
 
@@ -164,8 +291,8 @@
 
                 <div class="border-t border-gray-100 pt-6">
                     <asp:Button ID="btnBook" runat="server" Text="Confirm Booking"
-                        CssClass="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5 flex items-center justify-center"
-                        OnClick="btnBook_Click" />
+                        CssClass="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5"
+                        OnClick="btnBook_Click" OnClientClick="return validateBooking();" />
                 </div>
             </div>
         </div>
@@ -181,7 +308,7 @@
 
     <!-- Date/Time Modal -->
     <div class="hidden fixed inset-0 z-50 items-center justify-center bg-black/50 backdrop-blur-sm" id="dateTimeModal">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
             <!-- Modal Header -->
             <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
                 <h3 class="text-xl font-semibold text-white flex items-center">
@@ -192,28 +319,70 @@
 
             <!-- Modal Body -->
             <div class="p-6 space-y-5">
+                <!-- Date Picker -->
                 <div>
                     <label class="block text-gray-700 font-medium mb-2 flex items-center">
                         <i class="fas fa-calendar text-blue-600 mr-2"></i>
-                        Preferred Service Date
+                        Preferred Service Date <span class="text-red-500 ml-1">*</span>
                     </label>
-                    <asp:TextBox ID="TextBox1" runat="server" TextMode="Date"
-                        CssClass="w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition" />
+                    <asp:TextBox ID="TextBox1" runat="server" 
+                        CssClass="w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                        placeholder="Click to select date" 
+                        AutoComplete="off" />
                 </div>
 
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2 flex items-center">
+                <!-- Availability Indicator -->
+                <div id="availabilityIndicator" style="display: none;">
+                    <div class="availability-badge checking">
+                        <span class="spinner"></span>
+                        <span>Checking team availability...</span>
+                    </div>
+                </div>
+                <asp:Label ID="lblAvailability" runat="server" CssClass="availability-badge" 
+                    Style="display: none;"></asp:Label>
+
+                <!-- Time Slot Selection -->
+                <div id="timeSlotSection" style="display: none;">
+                    <label class="block text-gray-700 font-medium mb-3 flex items-center">
                         <i class="fas fa-clock text-blue-600 mr-2"></i>
-                        Preferred Service Time
+                        Select Time Slot <span class="text-red-500 ml-1">*</span>
                     </label>
-                    <asp:TextBox ID="TextBox2" runat="server" TextMode="Time"
-                        CssClass="w-full rounded-lg border-2 border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition" />
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <asp:RadioButton ID="rb8AM12PM" runat="server" GroupName="TimeSlot" />
+                            <label for="<%= rb8AM12PM.ClientID %>" class="radio-label">
+                                ☀️ 8:00 AM - 12:00 PM<br/>
+                                <small class="slot-info">Morning Shift</small>
+                            </label>
+                        </div>
+                        <div class="radio-option">
+                            <asp:RadioButton ID="rb12PM4PM" runat="server" GroupName="TimeSlot" />
+                            <label for="<%= rb12PM4PM.ClientID %>" class="radio-label">
+                                🌤️ 12:00 PM - 4:00 PM<br/>
+                                <small class="slot-info">Afternoon Shift</small>
+                            </label>
+                        </div>
+                        <div class="radio-option">
+                            <asp:RadioButton ID="rb4PM8PM" runat="server" GroupName="TimeSlot" />
+                            <label for="<%= rb4PM8PM.ClientID %>" class="radio-label">
+                                🌆 4:00 PM - 8:00 PM<br/>
+                                <small class="slot-info">Evening Shift</small>
+                            </label>
+                        </div>
+                        <div class="radio-option">
+                            <asp:RadioButton ID="rb8PM12AM" runat="server" GroupName="TimeSlot" />
+                            <label for="<%= rb8PM12AM.ClientID %>" class="radio-label">
+                                🌃 8:00 PM - 12:00 AM<br/>
+                                <small class="slot-info">Night Shift</small>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p class="text-sm text-blue-800 flex items-start">
                         <i class="fas fa-info-circle mt-0.5 mr-2"></i>
-                        <span>Please select a date and time at least 1 hour from now to ensure proper scheduling.</span>
+                        <span>Service available 7 days a week. Time slots showing team availability in real-time.</span>
                     </p>
                 </div>
             </div>
@@ -226,7 +395,7 @@
                 </button>
                 <button type="button" onclick="confirmDateTimeSave()"
                     class="px-5 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition font-medium">
-                    <i class="fas fa-check mr-2"></i>Save
+                    <i class="fas fa-check mr-2"></i>Save Schedule
                 </button>
             </div>
         </div>
@@ -234,15 +403,35 @@
 
     <script>
         const modalEl = document.getElementById('dateTimeModal');
+        let currentDate = null;
+        let currentSQM = 0;
 
-        // Set minimum date and time
+        // ===== Initialize Date Picker =====
         window.addEventListener('load', function () {
-            const dateInput = document.getElementById('<%= TextBox1.ClientID %>');
-            const timeInput = document.getElementById('<%= TextBox2.ClientID %>');
+            // Get SQM from hidden field
+            const sqmField = document.getElementById('<%= hfSQM.ClientID %>');
+            if (sqmField && sqmField.value) {
+                currentSQM = parseInt(sqmField.value) || 0;
+            }
 
-            // Set minimum date to today
-            const today = new Date().toISOString().split('T')[0];
-            dateInput.setAttribute('min', today);
+            const dateInput = document.getElementById('<%= TextBox1.ClientID %>');
+
+            flatpickr(dateInput, {
+                minDate: 'today',
+                maxDate: new Date().fp_incr(90), // 90 days from now
+                dateFormat: 'Y-m-d',
+                onChange: function (selectedDates, dateStr, instance) {
+                    if (selectedDates.length > 0) {
+                        document.getElementById('<%= hfSelectedDate.ClientID %>').value = dateStr;
+                        currentDate = dateStr;
+                        checkDateAvailability(dateStr);
+                        disablePastTimeSlots(dateStr);
+                    }
+                }
+            });
+
+            // Attach listeners to time slot radio buttons
+            attachTimeSlotListeners();
         });
 
         function showDateTimeModal() {
@@ -257,72 +446,250 @@
             document.body.style.overflow = '';
         }
 
-        function applyDateTime() {
-            const date = document.getElementById('<%= TextBox1.ClientID %>').value;
-            const time = document.getElementById('<%= TextBox2.ClientID %>').value;
-            const label = document.getElementById('<%= lblSelectedDateTime.ClientID %>');
-            const hiddenDate = document.getElementById('<%= txtDate.ClientID %>');
-            const hiddenTime = document.getElementById('<%= txtTime.ClientID %>');
-
-            if (!date || !time) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Incomplete',
-                    text: 'Please select both a date and a time.',
-                    confirmButtonColor: '#2563eb'
-                });
-                return;
-            }
-
-            // Validate: must be at least 1 hour from now
-            const selectedDateTime = new Date(date + 'T' + time);
+        // ===== Disable past time slots for today =====
+        function disablePastTimeSlots(selectedDate) {
             const now = new Date();
-            const oneHourFromNow = new Date(now.getTime() + (60 * 60 * 1000));
+            const selected = new Date(selectedDate);
+            const isToday =
+                now.getFullYear() === selected.getFullYear() &&
+                now.getMonth() === selected.getMonth() &&
+                now.getDate() === selected.getDate();
 
-            if (selectedDateTime < oneHourFromNow) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Invalid Schedule',
-                    text: 'Please select a date and time at least 1 hour from now.',
-                    confirmButtonColor: '#dc2626'
-                });
-                return;
-            }
+            if (!isToday) return; // Only process for today's date
 
-            // Format for display
-            const formattedDate = selectedDateTime.toLocaleDateString('en-US', { 
-                month: 'long', day: 'numeric', year: 'numeric' 
+            const currentHour = now.getHours();
+
+            const slotRules = [
+                { id: '<%= rb8AM12PM.ClientID %>', start: 8, end: 12, label: '☀️ 8:00 AM - 12:00 PM<br/><small class="slot-info">Morning Shift</small>' },
+                { id: '<%= rb12PM4PM.ClientID %>', start: 12, end: 16, label: '🌤️ 12:00 PM - 4:00 PM<br/><small class="slot-info">Afternoon Shift</small>' },
+                { id: '<%= rb4PM8PM.ClientID %>', start: 16, end: 20, label: '🌆 4:00 PM - 8:00 PM<br/><small class="slot-info">Evening Shift</small>' },
+                { id: '<%= rb8PM12AM.ClientID %>', start: 20, end: 24, label: '🌃 8:00 PM - 12:00 AM<br/><small class="slot-info">Night Shift</small>' }
+            ];
+
+            slotRules.forEach(slot => {
+                const radio = document.getElementById(slot.id);
+                const label = document.querySelector(`label[for="${slot.id}"]`);
+                if (!radio || !label) return;
+
+                if (currentHour >= slot.end) {
+                    // Time has passed
+                    radio.disabled = true;
+                    radio.checked = false;
+                    label.classList.add('disabled');
+                    const originalText = slot.label.split('<br/>')[0];
+                    label.innerHTML = originalText + '<br/><small style="color:#dc2626;">⏰ Time Passed</small>';
+                }
             });
-            const formattedTime = selectedDateTime.toLocaleTimeString('en-US', {
-                hour: '2-digit', minute: '2-digit', hour12: true
-            });
-
-            label.innerText = `${formattedDate} at ${formattedTime}`;
-            label.classList.remove('text-gray-500', 'italic');
-            label.classList.add('text-green-600', 'font-semibold');
-            
-            hiddenDate.value = date;
-            hiddenTime.value = time;
-            hideDateTimeModal();
         }
 
+        // ===== Check date availability for all time slots =====
+        function checkDateAvailability(dateStr) {
+            const indicator = document.getElementById('availabilityIndicator');
+            const lblAvailability = document.getElementById('<%= lblAvailability.ClientID %>');
+            const timeSlotSection = document.getElementById('timeSlotSection');
+
+            indicator.style.display = 'block';
+            lblAvailability.style.display = 'none';
+            timeSlotSection.style.display = 'none';
+
+            fetch('BookService.aspx/CheckDateAvailability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: dateStr,
+                    sqm: currentSQM
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    indicator.style.display = 'none';
+
+                    if (data.d && data.d.Success) {
+                        updateTimeSlotAvailability(data.d.TimeSlots);
+                        disablePastTimeSlots(dateStr);
+
+                        const hasAvailable = data.d.TimeSlots.some(ts => ts.IsAvailable);
+                        lblAvailability.style.display = 'inline-flex';
+
+                        if (hasAvailable) {
+                            lblAvailability.className = 'availability-badge available';
+                            lblAvailability.innerHTML = '<i class="fas fa-check-circle"></i> Time slots available';
+                            timeSlotSection.style.display = 'block';
+                        } else {
+                            lblAvailability.className = 'availability-badge unavailable';
+                            lblAvailability.innerHTML = '<i class="fas fa-times-circle"></i> All time slots fully booked';
+                        }
+                    } else {
+                        lblAvailability.style.display = 'inline-flex';
+                        lblAvailability.className = 'availability-badge unavailable';
+                        lblAvailability.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error checking availability';
+                    }
+                })
+                .catch(error => {
+                    console.error('Date availability check error:', error);
+                    indicator.style.display = 'none';
+                });
+        }
+
+        // ===== Update time slot radio buttons with availability =====
+        function updateTimeSlotAvailability(timeSlots) {
+            const slotMapping = [
+                { id: 1, radioId: '<%= rb8AM12PM.ClientID %>' },
+                { id: 2, radioId: '<%= rb12PM4PM.ClientID %>' },
+                { id: 3, radioId: '<%= rb4PM8PM.ClientID %>' },
+                { id: 4, radioId: '<%= rb8PM12AM.ClientID %>' }
+            ];
+
+            slotMapping.forEach(mapping => {
+                const timeSlot = timeSlots.find(ts => ts.TimeSlotID === mapping.id);
+                const radio = document.getElementById(mapping.radioId);
+                const label = radio ? document.querySelector(`label[for="${mapping.radioId}"]`) : null;
+
+                if (radio && label && timeSlot) {
+                    const baseDisabled = !timeSlot.IsAvailable || timeSlot.TotalTeams === 0;
+
+                    // Only disable if not already disabled by time passing
+                    if (!radio.disabled) {
+                        radio.disabled = baseDisabled;
+                    }
+
+                    if (baseDisabled && !label.classList.contains('disabled')) {
+                        label.classList.add('disabled');
+
+                        const displayText = timeSlot.TotalTeams === 0
+                            ? '❌ No Teams Available'
+                            : '❌ Fully Booked';
+
+                        label.innerHTML = label.innerHTML.split('<br/>')[0] +
+                            `<br/><small style="color: #dc2626;">${displayText}</small>`;
+                    } else if (!baseDisabled && !label.classList.contains('disabled')) {
+                        label.classList.remove('disabled');
+
+                        const originalText = label.innerHTML.split('<small>')[0];
+                        const shiftText = getShiftText(mapping.id);
+                        label.innerHTML = originalText +
+                            `<small class="slot-info">${shiftText} (${timeSlot.AvailableTeams}/${timeSlot.TotalTeams} teams)</small>`;
+                    }
+                }
+            });
+        }
+
+        function getShiftText(slotId) {
+            switch (slotId) {
+                case 1: return 'Morning Shift';
+                case 2: return 'Afternoon Shift';
+                case 3: return 'Evening Shift';
+                case 4: return 'Night Shift';
+                default: return 'Shift';
+            }
+        }
+
+        // ===== Attach listeners to time slot radio buttons =====
+        function attachTimeSlotListeners() {
+            const timeSlots = [
+                { radio: '<%= rb8AM12PM.ClientID %>', id: 1 },
+                { radio: '<%= rb12PM4PM.ClientID %>', id: 2 },
+                { radio: '<%= rb4PM8PM.ClientID %>', id: 3 },
+                { radio: '<%= rb8PM12AM.ClientID %>', id: 4 }
+            ];
+
+            timeSlots.forEach(slot => {
+                const radio = document.getElementById(slot.radio);
+                if (radio) {
+                    radio.addEventListener('change', function () {
+                        if (this.checked && currentDate) {
+                            checkTimeSlotAvailability(currentDate, slot.id);
+                        }
+                    });
+                }
+            });
+        }
+
+        // ===== Check specific time slot availability =====
+        function checkTimeSlotAvailability(dateStr, timeSlotId) {
+            const lblAvailability = document.getElementById('<%= lblAvailability.ClientID %>');
+
+            fetch('BookService.aspx/CheckTimeSlotAvailability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: dateStr,
+                    timeSlotId: timeSlotId,
+                    sqm: currentSQM
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    lblAvailability.style.display = 'inline-flex';
+
+                    const result = data.d;
+
+                    if (result.TotalTeams === 0) {
+                        lblAvailability.className = 'availability-badge unavailable';
+                        lblAvailability.innerHTML = `<i class="fas fa-times-circle"></i> No teams available for this slot`;
+                    } else if (result.IsAvailable) {
+                        if (result.AvailableTeams > 1) {
+                            lblAvailability.className = 'availability-badge available';
+                            lblAvailability.innerHTML = `<i class="fas fa-check-circle"></i> ${result.AvailableTeams} team(s) available`;
+                        } else {
+                            lblAvailability.className = 'availability-badge limited';
+                            lblAvailability.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Only 1 team available`;
+                        }
+                    } else {
+                        lblAvailability.className = 'availability-badge unavailable';
+                        lblAvailability.innerHTML = `<i class="fas fa-times-circle"></i> This slot is fully booked`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Time slot availability check error:', error);
+                });
+        }
+
+        // ===== Save date and time slot =====
         function confirmDateTimeSave() {
             const date = document.getElementById('<%= TextBox1.ClientID %>').value;
-            const time = document.getElementById('<%= TextBox2.ClientID %>').value;
 
-            if (!date || !time) {
+            const timeSlotChecked =
+                document.getElementById('<%= rb8AM12PM.ClientID %>').checked ||
+                document.getElementById('<%= rb12PM4PM.ClientID %>').checked ||
+                document.getElementById('<%= rb4PM8PM.ClientID %>').checked ||
+                document.getElementById('<%= rb8PM12AM.ClientID %>').checked;
+
+            if (!date) {
                 Swal.fire({
                     icon: 'warning',
-                    title: 'Incomplete',
-                    text: 'Please select both a date and a time.',
+                    title: 'Missing Date',
+                    text: 'Please select a service date.',
                     confirmButtonColor: '#2563eb'
+                });
+                return;
+            }
+
+            if (!timeSlotChecked) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Missing Time Slot',
+                    text: 'Please select a time slot.',
+                    confirmButtonColor: '#2563eb'
+                });
+                return;
+            }
+
+            // Check if selected slot is disabled
+            const selectedSlotRadio = document.querySelector('input[name$="TimeSlot"]:checked');
+            if (selectedSlotRadio && selectedSlotRadio.disabled) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Unavailable Time Slot',
+                    text: 'This time slot is not available. Please choose another.',
+                    confirmButtonColor: '#dc2626'
                 });
                 return;
             }
 
             Swal.fire({
                 title: 'Confirm Schedule?',
-                text: 'Are you sure you want to save this date and time?',
+                text: 'Are you sure you want to save this schedule?',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#16a34a',
@@ -334,6 +701,62 @@
                     applyDateTime();
                 }
             });
+        }
+
+        function applyDateTime() {
+            const date = document.getElementById('<%= TextBox1.ClientID %>').value;
+            let timeSlotText = '';
+            let timeSlotId = 0;
+
+            if (document.getElementById('<%= rb8AM12PM.ClientID %>').checked) {
+                timeSlotText = '8:00 AM - 12:00 PM (Morning)';
+                timeSlotId = 1;
+            } else if (document.getElementById('<%= rb12PM4PM.ClientID %>').checked) {
+                timeSlotText = '12:00 PM - 4:00 PM (Afternoon)';
+                timeSlotId = 2;
+            } else if (document.getElementById('<%= rb4PM8PM.ClientID %>').checked) {
+                timeSlotText = '4:00 PM - 8:00 PM (Evening)';
+                timeSlotId = 3;
+            } else if (document.getElementById('<%= rb8PM12AM.ClientID %>').checked) {
+                timeSlotText = '8:00 PM - 12:00 AM (Night)';
+                timeSlotId = 4;
+            }
+
+            const label = document.getElementById('<%= lblSelectedDateTime.ClientID %>');
+            const hiddenDate = document.getElementById('<%= txtDate.ClientID %>');
+            const hiddenTimeSlot = document.getElementById('<%= txtTimeSlot.ClientID %>');
+
+            const selectedDate = new Date(date);
+            const formattedDate = selectedDate.toLocaleDateString('en-US', {
+                month: 'long', day: 'numeric', year: 'numeric', weekday: 'long'
+            });
+
+            label.innerText = `${formattedDate} at ${timeSlotText}`;
+            label.classList.remove('text-gray-500', 'italic');
+            label.classList.add('text-green-600', 'font-semibold');
+
+            hiddenDate.value = date;
+            hiddenTimeSlot.value = timeSlotId;
+
+            hideDateTimeModal();
+        }
+
+        // ===== Validate booking before submit =====
+        function validateBooking() {
+            const date = document.getElementById('<%= txtDate.ClientID %>').value;
+            const timeSlot = document.getElementById('<%= txtTimeSlot.ClientID %>').value;
+
+            if (!date || !timeSlot) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Missing Schedule',
+                    text: 'Please select a date and time slot for your service.',
+                    confirmButtonColor: '#2563eb'
+                });
+                return false;
+            }
+
+            return true;
         }
 
         // Close modal on backdrop click

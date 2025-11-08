@@ -33,6 +33,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblOperationNumber;
 
         /// <summary>
+        /// lblServiceName control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblServiceName;
+
+        /// <summary>
         /// ddlTeams control.
         /// </summary>
         /// <remarks>
@@ -112,6 +121,15 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.GridView gvSafetyGears;
+
+        /// <summary>
+        /// btnCancel control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnCancel;
 
         /// <summary>
         /// btnAssignAll control.

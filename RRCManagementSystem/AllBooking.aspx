@@ -31,7 +31,7 @@
         </div>
 
         <div class="overflow-x-auto">
-          <asp:GridView ID="gvBookings" runat="server" AutoGenerateColumns="False"
+            <asp:GridView ID="gvBookings" runat="server" AutoGenerateColumns="False"
                 CssClass="min-w-full bg-white rounded-lg shadow-md"
                 DataKeyNames="BookingID"
                 AllowPaging="True" PageSize="10"
@@ -58,32 +58,17 @@
                     <asp:BoundField DataField="Price" HeaderText="Price" DataFormatString="₱ {0:N2}" HtmlEncode="false" HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
                     <asp:BoundField DataField="Status" HeaderText="Status" HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" ItemStyle-CssClass="py-3 px-6 text-center font-semibold border-r border-gray-200" />
                     <asp:BoundField DataField="CreatedAt" HeaderText="Date Booked" DataFormatString="{0:yyyy-MM-dd}" HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" />
-                    <asp:TemplateField HeaderText="Op1 Status" HeaderStyle-CssClass="py-3 px-6 text-center border-r border-gray-200" ItemStyle-CssClass="py-3 px-6 text-center border-r border-gray-200">
-                        <ItemTemplate>
-                            <asp:Label ID="lblOp1Status" runat="server"
-                                Text='<%# Eval("Op1Status") == null ? "—" : Eval("Op1Status").ToString() %>' CssClass="font-semibold" />
-                        </ItemTemplate>
-                    </asp:TemplateField>
                     <asp:TemplateField HeaderText="Actions" HeaderStyle-CssClass="py-3 px-6 text-center" ItemStyle-CssClass="py-3 px-6 text-center space-x-2 whitespace-nowrap">
                         <ItemTemplate>
                             <asp:Button ID="btnEdit" runat="server" Text="Edit"
                                 CommandName="EditBooking"
                                 CommandArgument='<%# Eval("BookingID") %>'
                                 CssClass="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition-colors duration-200 text-sm" />
-                            <asp:Button ID="btnTriggerCompleteOp1" runat="server"
-                                Text="Mark Op1 Complete"
-                                CssClass="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition-colors duration-200 text-sm"
-                                OnClientClick='<%# "return confirmCompleteOp1(" + Eval("BookingID") + ");" %>'
-                                UseSubmitBehavior="false" />
                         </ItemTemplate>
                     </asp:TemplateField>
                 </Columns>
             </asp:GridView>
         </div>
-
-
-        <asp:HiddenField ID="hfBookingIDToComplete" runat="server" />
-        <asp:Button ID="btnHiddenCompleteOp1" runat="server" Style="display:none;" OnClick="btnHiddenCompleteOp1_Click" UseSubmitBehavior="false" />
 
         <asp:Label ID="lblMessage" runat="server" CssClass="mt-4 text-red-500 font-semibold" />
     </div>
@@ -183,26 +168,6 @@
         }
     </style>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script type="text/javascript">
-        function confirmCompleteOp1(bookingId) {
-            Swal.fire({
-                title: 'Mark Operation 1 as Complete?',
-                text: 'This action cannot be undone.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, mark it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    document.getElementById('<%= hfBookingIDToComplete.ClientID %>').value = bookingId;
-                    document.getElementById('<%= btnHiddenCompleteOp1.ClientID %>').click();
-                }
-            });
-            return false;
-        }
-    </script>
-
     <script>
         function applyStatusStyles(label, status) {
             label.className = "font-semibold";
@@ -235,13 +200,6 @@
                         const statusLabel = statusCell.querySelector("span");
                         if (statusLabel) {
                             applyStatusStyles(statusLabel, statusLabel.innerText.trim());
-                        }
-                    }
-                    const op1StatusCell = row.querySelector("td:nth-child(10)");
-                    if (op1StatusCell) {
-                        const op1StatusLabel = op1StatusCell.querySelector("span");
-                        if (op1StatusLabel) {
-                            applyStatusStyles(op1StatusLabel, op1StatusLabel.innerText.trim());
                         }
                     }
                 });

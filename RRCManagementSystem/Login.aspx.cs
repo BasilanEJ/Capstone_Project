@@ -317,13 +317,15 @@ namespace RRCManagementSystem
             {
                 string role = Session["Role"].ToString();
                 Response.Redirect(
-                    role == "RootAdmin" ? "~/RootDashboard.aspx" :
-                    role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx" :
-                    role == "Inspector" ? "~/InspectorDashboard.aspx" :
-                    "~/Dashboard.aspx",
-                    false
-                );
+        role == "RootAdmin" ? "~/RootDashboard.aspx" :
+        role == "SuperAdmin" ? "~/SuperAdminDashboard.aspx" :
+        role == "Inspector" ? "~/InspectorDashboard.aspx" :
+        role == "Headtechnician" ? "~/TechDashboard.aspx" :
+        "~/Dashboard.aspx",
+        false
+    );
                 Context.ApplicationInstance.CompleteRequest();
+
                 return;
             }
 

@@ -2,6 +2,7 @@
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -9,7 +10,7 @@ namespace RRCManagementSystem
 {
     public partial class MyBookings : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private static readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -152,11 +153,16 @@ namespace RRCManagementSystem
             if (e.CommandName == "SetSchedule")
             {
                 string[] args = e.CommandArgument.ToString().Split('|');
-                if (args.Length == 2)
+                if (args.Length == 3)
                 {
                     string scheduleId = args[0];
                     string scheduledDateTime = args[1];
-                    string script = $"showModal('{scheduleId}', '{scheduledDateTime}');";
+                    string bookingId = args[2];
+
+                    // Load SQM for this booking
+                    LoadBookingSQMForReschedule(Convert.ToInt32(bookingId));
+
+                    string script = $"showModal('{scheduleId}', '{scheduledDateTime}', '{bookingId}');";
                     ScriptManager.RegisterStartupScript(this, GetType(), "ShowSetScheduleModal", script, true);
                 }
             }
@@ -167,11 +173,16 @@ namespace RRCManagementSystem
             if (e.CommandName == "Reschedule")
             {
                 string[] args = e.CommandArgument.ToString().Split('|');
-                if (args.Length == 2)
+                if (args.Length == 3)
                 {
                     string scheduleId = args[0];
                     string scheduledDateTime = args[1];
-                    string script = $"showModal('{scheduleId}', '{scheduledDateTime}');";
+                    string bookingId = args[2];
+
+                    // Load SQM for this booking
+                    LoadBookingSQMForReschedule(Convert.ToInt32(bookingId));
+
+                    string script = $"showModal('{scheduleId}', '{scheduledDateTime}', '{bookingId}');";
                     ScriptManager.RegisterStartupScript(this, GetType(), "ShowRescheduleModal", script, true);
                 }
             }
@@ -195,6 +206,157 @@ namespace RRCManagementSystem
 
         #endregion
 
+        #region Helper Methods
+
+        private void LoadBookingSQMForReschedule(int bookingId)
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("SELECT SQM FROM Bookings WHERE BookingID = @BookingID", con))
+            {
+                cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
+
+                con.Open();
+                var result = cmd.ExecuteScalar();
+
+                if (result != null && result != DBNull.Value)
+                {
+                    int sqm = Convert.ToInt32(result);
+                    hfSQM.Value = sqm.ToString();
+                }
+                else
+                {
+                    hfSQM.Value = "100"; // Default fallback
+                }
+            }
+        }
+
+        #endregion
+
+        #region WebMethods
+
+        [WebMethod]
+        public static int GetBookingSQM(int bookingId)
+        {
+            try
+            {
+                using (var con = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("SELECT SQM FROM Bookings WHERE BookingID = @BookingID", con))
+                {
+                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
+
+                    con.Open();
+                    var result = cmd.ExecuteScalar();
+
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return Convert.ToInt32(result);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetBookingSQM Error: {ex.Message}");
+            }
+
+            return 100; // Default fallback
+        }
+
+        [WebMethod]
+        public static object CheckDateAvailability(string date, int sqm)
+        {
+            try
+            {
+                if (!DateTime.TryParse(date, out DateTime serviceDate))
+                {
+                    return new { Success = false, Message = "Invalid date format" };
+                }
+
+                var timeSlots = new System.Collections.Generic.List<object>();
+
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spTeam_CheckDateAvailabilityBySlot", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ServiceDate", SqlDbType.Date).Value = serviceDate;
+                    cmd.Parameters.Add("@SQM", SqlDbType.Int).Value = sqm;
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            timeSlots.Add(new
+                            {
+                                TimeSlotID = Convert.ToInt32(reader["TimeSlotID"]),
+                                TimeSlotName = reader["TimeSlotName"].ToString(),
+                                TotalTeams = Convert.ToInt32(reader["TotalTeams"]),
+                                BookedCount = Convert.ToInt32(reader["BookedCount"]),
+                                AvailableTeams = Convert.ToInt32(reader["AvailableTeams"]),
+                                IsAvailable = Convert.ToBoolean(reader["IsAvailable"])
+                            });
+                        }
+                    }
+                }
+
+                return new { Success = true, TimeSlots = timeSlots };
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CheckDateAvailability Error: {ex.Message}");
+                return new { Success = false, Message = "Error checking availability" };
+            }
+        }
+
+        [WebMethod]
+        public static object CheckTimeSlotAvailability(string date, int timeSlotId, int sqm)
+        {
+            try
+            {
+                if (!DateTime.TryParse(date, out DateTime serviceDate))
+                {
+                    return new { IsAvailable = false, Message = "Invalid date format" };
+                }
+
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spTeam_CheckTimeSlotAvailability", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@ServiceDate", SqlDbType.Date).Value = serviceDate;
+                    cmd.Parameters.Add("@TimeSlotID", SqlDbType.Int).Value = timeSlotId;
+                    cmd.Parameters.Add("@SQM", SqlDbType.Int).Value = sqm;
+
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            int availableTeams = Convert.ToInt32(reader["AvailableTeams"]);
+                            int totalTeams = Convert.ToInt32(reader["TotalTeams"]);
+
+                            return new
+                            {
+                                IsAvailable = Convert.ToBoolean(reader["IsAvailable"]),
+                                TotalTeams = totalTeams,
+                                BookedCount = Convert.ToInt32(reader["BookedCount"]),
+                                AvailableTeams = availableTeams,
+                                Message = availableTeams > 0
+                                    ? $"{availableTeams} team(s) available"
+                                    : "This time slot is fully booked"
+                            };
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CheckTimeSlotAvailability Error: {ex.Message}");
+            }
+
+            return new { IsAvailable = false, Message = "Error checking availability" };
+        }
+
+        #endregion
+
         #region Actions
 
         protected void btnConfirmSchedule_Click(object sender, EventArgs e)
@@ -214,31 +376,56 @@ namespace RRCManagementSystem
             int scheduleId = Convert.ToInt32(hfSelectedScheduleID.Value);
             int clientId = Convert.ToInt32(Session["ClientID"]);
 
-            if (string.IsNullOrWhiteSpace(txtNewScheduleDate.Text) || string.IsNullOrWhiteSpace(txtNewScheduleTime.Text))
+            if (string.IsNullOrWhiteSpace(txtNewScheduleDate.Text))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "MissingDT",
+                ScriptManager.RegisterStartupScript(this, GetType(), "MissingDate",
                     @"Swal.fire({
                         icon: 'warning',
                         title: 'Missing Information',
-                        text: 'Please select both date and time.',
+                        text: 'Please select a date.',
                         confirmButtonColor: '#2563eb'
                     });", true);
                 return;
             }
 
-            if (!DateTime.TryParse(txtNewScheduleDate.Text, out DateTime newDate) ||
-                !TimeSpan.TryParse(txtNewScheduleTime.Text, out TimeSpan newTime))
+            if (string.IsNullOrWhiteSpace(hfSelectedTimeSlotID.Value))
             {
-                ScriptManager.RegisterStartupScript(this, GetType(), "BadDT",
+                ScriptManager.RegisterStartupScript(this, GetType(), "MissingTimeSlot",
+                    @"Swal.fire({
+                        icon: 'warning',
+                        title: 'Missing Time Slot',
+                        text: 'Please select a time slot.',
+                        confirmButtonColor: '#2563eb'
+                    });", true);
+                return;
+            }
+
+            if (!DateTime.TryParse(txtNewScheduleDate.Text, out DateTime newDate))
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "BadDate",
                     @"Swal.fire({
                         icon: 'error',
                         title: 'Invalid Input',
-                        text: 'Invalid date or time format.',
+                        text: 'Invalid date format.',
                         confirmButtonColor: '#dc2626'
                     });", true);
                 return;
             }
 
+            if (!int.TryParse(hfSelectedTimeSlotID.Value, out int timeSlotId) || timeSlotId < 1 || timeSlotId > 4)
+            {
+                ScriptManager.RegisterStartupScript(this, GetType(), "BadTimeSlot",
+                    @"Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Time Slot',
+                        text: 'Please select a valid time slot.',
+                        confirmButtonColor: '#dc2626'
+                    });", true);
+                return;
+            }
+
+            // Convert time slot ID to StartTime
+            TimeSpan newTime = GetStartTimeFromSlot(timeSlotId);
             DateTime newScheduledDate = newDate.Date.Add(newTime);
 
             // Validate: must be at least 1 hour from now
@@ -269,6 +456,16 @@ namespace RRCManagementSystem
                     con.Open();
                     cmd.ExecuteNonQuery();
 
+                    // ✅ CLEAR THE HIDDEN FIELDS FIRST - BEFORE showing popup
+                    hfSelectedScheduleID.Value = "";
+                    hfSelectedTimeSlotID.Value = "";
+                    txtNewScheduleDate.Text = "";
+
+                    // ✅ Reload the grids to show updated data
+                    LoadUpcomingOperations(clientId);
+                    LoadAllOperations(clientId);
+
+                    // ✅ Show success message WITHOUT window.location.reload()
                     ScriptManager.RegisterStartupScript(this, GetType(), "ReqSent",
                         @"Swal.fire({
                             icon: 'success',
@@ -296,10 +493,18 @@ namespace RRCManagementSystem
                         }});", true);
                 }
             }
+        }
 
-            hfSelectedScheduleID.Value = "";
-            LoadUpcomingOperations(clientId);
-            LoadAllOperations(clientId);
+        private TimeSpan GetStartTimeFromSlot(int timeSlotId)
+        {
+            switch (timeSlotId)
+            {
+                case 1: return new TimeSpan(8, 0, 0);   // 8:00 AM
+                case 2: return new TimeSpan(12, 0, 0);  // 12:00 PM
+                case 3: return new TimeSpan(16, 0, 0);  // 4:00 PM
+                case 4: return new TimeSpan(20, 0, 0);  // 8:00 PM
+                default: return new TimeSpan(8, 0, 0);  // Default to 8 AM
+            }
         }
 
         private void CancelBooking(int bookingId)

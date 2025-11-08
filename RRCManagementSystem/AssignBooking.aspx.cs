@@ -1,8 +1,11 @@
-﻿using RRCManagementSystem.Helpers;
+﻿using Newtonsoft.Json.Linq;
+using RRCManagementSystem.Helpers;
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -163,9 +166,10 @@ namespace RRCManagementSystem
                 {
                     if (reader.Read())
                     {
+                        // Display Booking Code
                         lblBookingCode.Text = reader["BookingCode"].ToString();
 
-                        // Show operation number only if it's a reschedule
+                        // Display Operation Number (if reschedule)
                         if (scheduleID > 0 && reader["OperationNumber"] != DBNull.Value)
                         {
                             lblOperationNumber.Visible = true;
@@ -175,10 +179,113 @@ namespace RRCManagementSystem
                         {
                             lblOperationNumber.Visible = false;
                         }
+
+                        // ✅ NEW: Format and display service details with individual SQM
+                        string serviceDetails = reader["ServiceDetails"]?.ToString();
+                        string serviceName = reader["ServiceName"]?.ToString();
+                        int totalSQM = reader["SQM"] != DBNull.Value ? Convert.ToInt32(reader["SQM"]) : 0;
+
+                        // 🟦 If this is a reschedule (ScheduleID > 0), filter out non-contractual services
+                        if (scheduleID > 0 && !string.IsNullOrWhiteSpace(serviceDetails) && serviceDetails.TrimStart().StartsWith("["))
+                        {
+                            try
+                            {
+                                var allServices = JArray.Parse(serviceDetails);
+                                var contractOnly = new JArray();
+
+                                foreach (var s in allServices)
+                                {
+                                    // keep only services where IsContract = 1
+                                    bool isContract = s["IsContract"] != null && s["IsContract"].ToObject<int>() == 1;
+                                    if (isContract)
+                                        contractOnly.Add(s);
+                                }
+
+                                // Replace serviceDetails with filtered version
+                                serviceDetails = contractOnly.ToString();
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine("Service filter error: " + ex.Message);
+                            }
+                        }
+
+                        // ✅ Display filtered or unfiltered service list
+                        lblServiceName.Text = FormatServiceDetailsForHeader(serviceDetails, serviceName, totalSQM);
+
+                        // ✅ Store the same (possibly filtered) service details for later usage
+                        Session["ServiceDetails"] = serviceDetails;
                     }
                 }
             }
         }
+
+
+        /// <summary>
+        /// Format service details for the header display with individual SQM values
+        /// </summary>
+        private string FormatServiceDetailsForHeader(string serviceDetailsJson, string serviceNames, int totalSQM)
+        {
+            var html = new System.Text.StringBuilder();
+
+            // Try to parse JSON first (for new bookings with multiple services)
+            if (!string.IsNullOrWhiteSpace(serviceDetailsJson) && serviceDetailsJson.TrimStart().StartsWith("["))
+            {
+                try
+                {
+                    var services = JArray.Parse(serviceDetailsJson);
+
+                    foreach (var service in services)
+                    {
+                        string name = service["ServiceName"]?.ToString();
+                        int sqm = Convert.ToInt32(service["SQM"] ?? 0);
+
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            html.Append("<div class='inline-flex items-center gap-2 mr-4 mb-1'>");
+                            html.Append("<i class='fas fa-check-circle text-yellow-300' style='font-size: 0.875rem;'></i>");
+                            html.Append($"<span class='text-white text-sm'>{System.Web.HttpUtility.HtmlEncode(name)}</span>");
+                            html.Append($"<span class='bg-yellow-200 text-blue-900 px-2 py-0.5 rounded text-xs font-semibold'>{sqm} m²</span>");
+                            html.Append("</div>");
+                        }
+                    }
+
+                    // Add total if multiple services
+                    if (services.Count > 1)
+                    {
+                        html.Append("<div class='block mt-2 pt-2 border-t border-blue-600 text-xs text-gray-300'>");
+                        html.Append($"<strong>Total Coverage:</strong> {totalSQM} m²");
+                        html.Append("</div>");
+                    }
+
+                    return html.ToString();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"FormatServiceDetailsForHeader JSON parse error: {ex.Message}");
+                    // Fall through to simple display
+                }
+            }
+
+            // Fallback: Simple display (for old bookings or when JSON is not available)
+            if (!string.IsNullOrWhiteSpace(serviceNames))
+            {
+                html.Append("<div class='inline-flex items-center gap-2'>");
+                html.Append("<i class='fas fa-tools text-yellow-300' style='font-size: 0.875rem;'></i>");
+                html.Append($"<span class='text-white text-sm'>{System.Web.HttpUtility.HtmlEncode(serviceNames)}</span>");
+
+                if (totalSQM > 0)
+                {
+                    html.Append($"<span class='bg-yellow-200 text-blue-900 px-2 py-0.5 rounded text-xs font-semibold'>{totalSQM} m²</span>");
+                }
+
+                html.Append("</div>");
+                return html.ToString();
+            }
+
+            return "<span class='text-gray-400 text-sm italic'>N/A</span>";
+        }
+
 
 
         private DateTime GetNewScheduledDate(int scheduleID)
@@ -204,15 +311,17 @@ namespace RRCManagementSystem
         }
 
 
-
-
         private void LoadTeams(DateTime scheduledDate)
         {
+            // ✅ Get the StartTime from the booking
+            TimeSpan startTime = GetBookingStartTime(bookingID);
+
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("dbo.spTeams_ListAvailable", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@Date", SqlDbType.Date).Value = scheduledDate;
+                cmd.Parameters.Add("@StartTime", SqlDbType.Time).Value = startTime; // ✅ Pass start time
 
                 con.Open();
                 ddlTeams.DataSource = cmd.ExecuteReader();
@@ -225,6 +334,32 @@ namespace RRCManagementSystem
             }
         }
 
+        // ✅ NEW: Get StartTime from booking
+        private TimeSpan GetBookingStartTime(int bookingID)
+        {
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("SELECT StartTime FROM dbo.Bookings WHERE BookingID = @BookingID", con))
+                {
+                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                    con.Open();
+                    object result = cmd.ExecuteScalar();
+
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return (TimeSpan)result;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetBookingStartTime error: {ex.Message}");
+            }
+
+            // Default to 8 AM if not found
+            return new TimeSpan(8, 0, 0);
+        }
 
 
         private DateTime GetScheduledDate(int bookingID)
@@ -378,11 +513,14 @@ namespace RRCManagementSystem
 
         private void LoadAvailableChemicals()
         {
+            // ✅ Get service names from session
+            string serviceNames = Session["ServiceName"]?.ToString() ?? "";
+
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("dbo.spInventory_ListByType", con))
+            using (var cmd = new SqlCommand("dbo.spInventory_ListChemicalsByService", con)) // ✅ NEW SP
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Type", SqlDbType.NVarChar, 50).Value = "Bottled Chemical";
+                cmd.Parameters.Add("@ServiceNames", SqlDbType.NVarChar, -1).Value = serviceNames;
 
                 using (var da = new SqlDataAdapter(cmd))
                 {
@@ -470,15 +608,12 @@ namespace RRCManagementSystem
 
                     if (scheduleID > 0)
                     {
-                        // FOR RESCHEDULES: Get NEW date from ServiceSchedules
                         scheduledDate = GetNewScheduledDate(scheduleID);
-
                         if (scheduledDate == DateTime.MinValue)
                         {
                             throw new Exception("⚠️ Could not retrieve new scheduled date for this reschedule.");
                         }
 
-                        // Get start time from original booking
                         using (var cmd = new SqlCommand("dbo.spBooking_GetSchedule", con, tx))
                         {
                             cmd.CommandType = CommandType.StoredProcedure;
@@ -492,7 +627,6 @@ namespace RRCManagementSystem
                     }
                     else
                     {
-                        // FOR INITIAL BOOKINGS: Get from Bookings table
                         using (var cmd = new SqlCommand("dbo.spBooking_GetSchedule", con, tx))
                         {
                             cmd.CommandType = CommandType.StoredProcedure;
@@ -533,13 +667,11 @@ namespace RRCManagementSystem
                         cmd.ExecuteNonQuery();
                     }
 
-                    // 4) Determine chemical usage based on SQM (via setting)
-                    int sqm = Session["SQM"] != null ? Convert.ToInt32(Session["SQM"]) : 0;
-                    decimal usage = GetChemicalUsageBasedOnSQMProc(con, tx, sqm);
+                    // ✅ 4) REMOVE THIS LINE - It's causing the error and serves no purpose
+                    // decimal totalUsage = CalculateChemicalUsageForService(con, tx);
 
                     // ✅ NEW: Validate Equipment Selection
                     int selectedEquipCount = 0;
-                    var seen = new System.Collections.Generic.HashSet<int>();
                     foreach (GridViewRow row in gvEquipments.Rows)
                     {
                         var chk = row.FindControl("chkAssignEquip") as CheckBox;
@@ -610,17 +742,16 @@ namespace RRCManagementSystem
                         return;
                     }
 
-                    // 5) Equipments (each selected = quantity 1)
-                    seen.Clear(); // Reset the HashSet
+                    // 5) Equipments
+                    var seenEquip = new HashSet<int>();
                     foreach (GridViewRow row in gvEquipments.Rows)
                     {
                         var chk = row.FindControl("chkAssignEquip") as CheckBox;
                         if (chk != null && chk.Checked)
                         {
                             int equipmentId = Convert.ToInt32(gvEquipments.DataKeys[row.RowIndex].Value);
-                            if (!seen.Add(equipmentId)) continue;
+                            if (!seenEquip.Add(equipmentId)) continue;
 
-                            // enforce daily cap for this equipment (< 2)
                             using (var cnt = new SqlCommand("dbo.spBooking_EquipmentDailyCount", con, tx))
                             {
                                 cnt.CommandType = CommandType.StoredProcedure;
@@ -647,7 +778,7 @@ namespace RRCManagementSystem
                         }
                     }
 
-                    // 6) Bottled chemicals
+                    // 6) Bottled chemicals - FIXED VERSION
                     foreach (GridViewRow row in gvChemicals.Rows)
                     {
                         var chk = row.FindControl("chkUseChemical") as CheckBox;
@@ -655,37 +786,63 @@ namespace RRCManagementSystem
 
                         int itemId = Convert.ToInt32(gvChemicals.DataKeys[row.RowIndex].Value);
 
-                        int quantity = int.Parse(((Label)row.FindControl("lblQuantity"))?.Text ?? "0");
-                        decimal excess = decimal.Parse(((Label)row.FindControl("lblExcessML"))?.Text ?? "0");
-                        int buffer = 0; int.TryParse(((TextBox)row.FindControl("txtBottleBuffer"))?.Text ?? "0", out buffer);
+                        // ✅ FIX: Get chemical name from the correct cell (DataField="Name" creates a read-only cell)
+                        string chemicalName = row.Cells[1].Text; // Index 1 is the "Name" column
 
-                        if (quantity < 5)
+                        if (string.IsNullOrWhiteSpace(chemicalName))
                         {
-                            lblMessage.Text = $"⚠️ Cannot assign bottled chemical (Item {itemId}) — quantity below 5.";
+                            lblMessage.Text = $"⚠️ Could not determine chemical name for Item {itemId}.";
                             lblMessage.ForeColor = System.Drawing.Color.Red;
                             tx.Rollback();
                             return;
                         }
 
-                        // deduct usage from excess/quantity
-                        if (excess >= usage) excess -= usage;
+                        // ✅ Calculate usage ONLY for services that match this chemical
+                        decimal usage = CalculateChemicalUsageForService(con, tx, chemicalName);
+
+                        // ⚠️ If no matching services, skip this chemical
+                        if (usage == 0)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"⚠️ Chemical '{chemicalName}' (Item {itemId}) has no matching services. Skipping.");
+                            continue;
+                        }
+
+                        int quantity = int.Parse(((Label)row.FindControl("lblQuantity"))?.Text ?? "0");
+                        decimal excess = decimal.Parse(((Label)row.FindControl("lblExcessML"))?.Text ?? "0");
+                        int buffer = 0;
+                        int.TryParse(((TextBox)row.FindControl("txtBottleBuffer"))?.Text ?? "0", out buffer);
+
+                        if (quantity < 5)
+                        {
+                            lblMessage.Text = $"⚠️ Cannot assign bottled chemical '{chemicalName}' (Item {itemId}) — quantity below 5.";
+                            lblMessage.ForeColor = System.Drawing.Color.Red;
+                            tx.Rollback();
+                            return;
+                        }
+
+                        // ✅ Deduct the calculated usage
+                        if (excess >= usage)
+                        {
+                            excess -= usage;
+                        }
                         else
                         {
                             if (quantity <= 0)
                             {
-                                lblMessage.Text = $"⚠️ Not enough bottled chemical for Item {itemId}.";
+                                lblMessage.Text = $"⚠️ Not enough bottled chemical '{chemicalName}' for Item {itemId}.";
                                 lblMessage.ForeColor = System.Drawing.Color.Red;
                                 tx.Rollback();
                                 return;
                             }
-                            quantity--; // open a new bottle (1000 ml)
+                            quantity--;
                             excess = 1000 + excess - usage;
                         }
+
                         if (buffer > 0)
                         {
                             if (buffer > quantity)
                             {
-                                lblMessage.Text = $"⚠️ Buffer exceeds stock for Item {itemId}.";
+                                lblMessage.Text = $"⚠️ Buffer exceeds stock for '{chemicalName}' (Item {itemId}).";
                                 lblMessage.ForeColor = System.Drawing.Color.Red;
                                 tx.Rollback();
                                 return;
@@ -693,7 +850,7 @@ namespace RRCManagementSystem
                             quantity -= buffer;
                         }
 
-                        // update inventory
+                        // Update inventory
                         using (var u = new SqlCommand("dbo.spInventory_Bottled_Update", con, tx))
                         {
                             u.CommandType = CommandType.StoredProcedure;
@@ -703,7 +860,7 @@ namespace RRCManagementSystem
                             u.ExecuteNonQuery();
                         }
 
-                        // record assignment: 1 bottle + optional buffer bottles
+                        // Record assignment
                         using (var ins = new SqlCommand("dbo.spBookingChemical_Insert", con, tx))
                         {
                             ins.CommandType = CommandType.StoredProcedure;
@@ -712,6 +869,7 @@ namespace RRCManagementSystem
                             ins.Parameters.Add("@QuantityAssigned", SqlDbType.Int).Value = 1;
                             ins.ExecuteNonQuery();
                         }
+
                         if (buffer > 0)
                         {
                             using (var ins2 = new SqlCommand("dbo.spBookingChemical_Insert", con, tx))
@@ -819,6 +977,22 @@ namespace RRCManagementSystem
                         cmd.ExecuteNonQuery();
                     }
 
+                    using (var cmd = new SqlCommand("dbo.spBooking_ApproveAndInsertBalance", con, tx))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                        cmd.Parameters.Add("@AdminID", SqlDbType.Int).Value = adminId;
+
+                        object result = cmd.ExecuteScalar();
+                        int insertResult = (result != null && result != DBNull.Value) ? Convert.ToInt32(result) : 0;
+
+                        if (insertResult == 0)
+                        {
+                            throw new Exception("Failed to create payment installments. Please check booking details.");
+                        }
+                    }
+
+
                     // ✅ 10) If this is a reschedule, update ServiceSchedule assignment
                     if (scheduleID > 0)
                     {
@@ -838,8 +1012,10 @@ namespace RRCManagementSystem
                         {
                             cmd.CommandType = CommandType.StoredProcedure;
                             cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingID;
+                            cmd.Parameters.Add("@TeamID", SqlDbType.Int).Value = teamId; // ✅ Pass assigned team
                             cmd.ExecuteNonQuery();
                         }
+
                     }
 
                     tx.Commit();
@@ -872,7 +1048,6 @@ Swal.fire({
         private decimal GetChemicalUsageBasedOnSQMProc(SqlConnection con, SqlTransaction tx, int sqm)
         {
             string settingKey;
-
             if (sqm <= 100) settingKey = "Usage_0_100";
             else if (sqm <= 250) settingKey = "Usage_101_250";
             else if (sqm <= 400) settingKey = "Usage_251_400";
@@ -880,16 +1055,180 @@ Swal.fire({
             else if (sqm <= 800) settingKey = "Usage_601_800";
             else if (sqm <= 1000) settingKey = "Usage_801_1000";
             else settingKey = "Usage_1000plus";
-
             using (var cmd = new SqlCommand("dbo.spSystemSettings_GetValueDecimal", con, tx))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@SettingName", SqlDbType.NVarChar, 100).Value = settingKey;
-
                 object v = cmd.ExecuteScalar();
                 return (v != null && v != DBNull.Value && decimal.TryParse(v.ToString(), out var d)) ? d : 333m;
             }
         }
+
+
+        #region Chemical Matching Configuration (Dynamic)
+
+        private static List<string> _broadSpectrumKeywords = null;
+        private static List<string> _excludedWords = null;
+        private static int _minWordLength = 3;
+        private static DateTime _configLastLoaded = DateTime.MinValue;
+
+        private void LoadChemicalMatchConfig(SqlConnection con, SqlTransaction tx = null)
+        {
+            // ✅ Cache for 1 hour to avoid excessive DB calls
+            if (_broadSpectrumKeywords != null &&
+                _excludedWords != null &&
+                (DateTime.Now - _configLastLoaded).TotalHours < 1)
+            {
+                return; // Use cached values
+            }
+
+            using (var cmd = new SqlCommand("dbo.spSystemSettings_GetChemicalMatchConfig", con, tx))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string settingName = reader["SettingName"].ToString();
+                        string settingValue = reader["SettingValue"].ToString();
+
+                        switch (settingName)
+                        {
+                            case "ChemicalMatch_BroadSpectrumKeywords":
+                                _broadSpectrumKeywords = settingValue
+                                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(s => s.Trim().ToLower())
+                                    .ToList();
+                                break;
+
+                            case "ChemicalMatch_ExcludedWords":
+                                _excludedWords = settingValue
+                                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(s => s.Trim().ToLower())
+                                    .ToList();
+                                break;
+
+                            case "ChemicalMatch_MinWordLength":
+                                int.TryParse(settingValue, out _minWordLength);
+                                break;
+                        }
+                    }
+                }
+            }
+
+            _configLastLoaded = DateTime.Now;
+
+            // ✅ Fallback defaults if settings are missing
+            if (_broadSpectrumKeywords == null || _broadSpectrumKeywords.Count == 0)
+            {
+                _broadSpectrumKeywords = new List<string> { "broad spectrum", "multi-purpose", "general", "universal" };
+            }
+
+            if (_excludedWords == null || _excludedWords.Count == 0)
+            {
+                _excludedWords = new List<string> { "control", "service", "treatment", "system", "pest" };
+            }
+
+            System.Diagnostics.Debug.WriteLine($"✅ Chemical matching config loaded: {_broadSpectrumKeywords.Count} broad keywords, {_excludedWords.Count} excluded words, min length {_minWordLength}");
+        }
+
+        private bool DoesChemicalMatchService(string chemicalName, string serviceName, SqlConnection con, SqlTransaction tx = null)
+        {
+            if (string.IsNullOrWhiteSpace(chemicalName) || string.IsNullOrWhiteSpace(serviceName))
+                return false;
+
+            // ✅ Load configuration (uses cache if available)
+            LoadChemicalMatchConfig(con, tx);
+
+            chemicalName = chemicalName.ToLower();
+            serviceName = serviceName.ToLower();
+
+            // ✅ Check if chemical is broad spectrum (matches ALL services)
+            foreach (var keyword in _broadSpectrumKeywords)
+            {
+                if (chemicalName.Contains(keyword))
+                {
+                    System.Diagnostics.Debug.WriteLine($"✅ '{chemicalName}' is broad spectrum (keyword: '{keyword}')");
+                    return true;
+                }
+            }
+
+            // ✅ Extract meaningful words from service name using DYNAMIC rules
+            var serviceWords = serviceName
+                .Split(new[] { ' ', ',', '-', '/', '&' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(word => word.Trim().ToLower())
+                .Where(word => word.Length > _minWordLength)  // ✅ Dynamic minimum length
+                .Where(word => !_excludedWords.Contains(word))  // ✅ Dynamic exclusion list
+                .ToList();
+
+            System.Diagnostics.Debug.WriteLine($"🔍 Service '{serviceName}' → Extracted words: {string.Join(", ", serviceWords)}");
+
+            // ✅ Check if chemical name contains any meaningful service word
+            foreach (var word in serviceWords)
+            {
+                if (chemicalName.Contains(word))
+                {
+                    System.Diagnostics.Debug.WriteLine($"✅ '{chemicalName}' matches '{serviceName}' (keyword: '{word}')");
+                    return true;
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"❌ '{chemicalName}' does NOT match '{serviceName}'");
+            return false;
+        }
+
+        private decimal CalculateChemicalUsageForService(SqlConnection con, SqlTransaction tx, string chemicalName)
+        {
+            decimal totalUsage = 0;
+            string serviceDetailsJson = Session["ServiceDetails"]?.ToString();
+
+            if (!string.IsNullOrWhiteSpace(serviceDetailsJson) && serviceDetailsJson.TrimStart().StartsWith("["))
+            {
+                try
+                {
+                    var services = JArray.Parse(serviceDetailsJson);
+
+                    foreach (var service in services)
+                    {
+                        string serviceName = service["ServiceName"]?.ToString() ?? "";
+                        int sqm = Convert.ToInt32(service["SQM"] ?? 0);
+
+                        // ✅ Only calculate usage if this chemical matches this service
+                        if (DoesChemicalMatchService(chemicalName, serviceName, con, tx))
+                        {
+                            decimal usage = GetChemicalUsageBasedOnSQMProc(con, tx, sqm);
+                            totalUsage += usage;
+
+                            System.Diagnostics.Debug.WriteLine($"✅ Chemical '{chemicalName}' matches Service '{serviceName}' ({sqm} SQM) → {usage} mL");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"❌ Chemical '{chemicalName}' does NOT match Service '{serviceName}'");
+                        }
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"📊 Total Usage for '{chemicalName}': {totalUsage} mL");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"CalculateChemicalUsageForService error: {ex.Message}");
+                    // Fallback: use total SQM if JSON parsing fails
+                    int totalSQM = Session["SQM"] != null ? Convert.ToInt32(Session["SQM"]) : 0;
+                    totalUsage = GetChemicalUsageBasedOnSQMProc(con, tx, totalSQM);
+                }
+            }
+            else
+            {
+                // OLD bookings: use combined total
+                int totalSQM = Session["SQM"] != null ? Convert.ToInt32(Session["SQM"]) : 0;
+                totalUsage = GetChemicalUsageBasedOnSQMProc(con, tx, totalSQM);
+            }
+
+            return totalUsage;
+        }
+
+        #endregion
 
 
 

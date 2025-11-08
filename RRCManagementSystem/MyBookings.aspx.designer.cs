@@ -15,15 +15,6 @@ namespace RRCManagementSystem
     {
 
         /// <summary>
-        /// sm1 control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.ScriptManager sm1;
-
-        /// <summary>
         /// lblMessage control.
         /// </summary>
         /// <remarks>
@@ -49,6 +40,24 @@ namespace RRCManagementSystem
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Label lblContractStatus;
+
+        /// <summary>
+        /// hfSQM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfSQM;
+
+        /// <summary>
+        /// hfSelectedDate control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfSelectedDate;
 
         /// <summary>
         /// gvMyBookings control.
@@ -114,6 +123,15 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.HiddenField hfSelectedScheduleID;
 
         /// <summary>
+        /// hfSelectedTimeSlotID control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfSelectedTimeSlotID;
+
+        /// <summary>
         /// txtNewScheduleDate control.
         /// </summary>
         /// <remarks>
@@ -123,13 +141,49 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.TextBox txtNewScheduleDate;
 
         /// <summary>
-        /// txtNewScheduleTime control.
+        /// lblAvailability control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtNewScheduleTime;
+        protected global::System.Web.UI.WebControls.Label lblAvailability;
+
+        /// <summary>
+        /// rb8AM12PM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton rb8AM12PM;
+
+        /// <summary>
+        /// rb12PM4PM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton rb12PM4PM;
+
+        /// <summary>
+        /// rb4PM8PM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton rb4PM8PM;
+
+        /// <summary>
+        /// rb8PM12AM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton rb8PM12AM;
 
         /// <summary>
         /// btnConfirmSchedule control.

@@ -42,6 +42,24 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.HiddenField hfQuotationID;
 
         /// <summary>
+        /// hfSelectedDate control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfSelectedDate;
+
+        /// <summary>
+        /// hfSQM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hfSQM;
+
+        /// <summary>
         /// lblQuotationCode control.
         /// </summary>
         /// <remarks>
@@ -57,7 +75,7 @@ namespace RRCManagementSystem
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblServices;
+        protected global::System.Web.UI.WebControls.Literal lblServices;
 
         /// <summary>
         /// lblSQM control.
@@ -138,16 +156,16 @@ namespace RRCManagementSystem
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtDate;
+        protected global::System.Web.UI.WebControls.HiddenField txtDate;
 
         /// <summary>
-        /// txtTime control.
+        /// txtTimeSlot control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtTime;
+        protected global::System.Web.UI.WebControls.HiddenField txtTimeSlot;
 
         /// <summary>
         /// txtNotes control.
@@ -186,12 +204,48 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.TextBox TextBox1;
 
         /// <summary>
-        /// TextBox2 control.
+        /// lblAvailability control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox TextBox2;
+        protected global::System.Web.UI.WebControls.Label lblAvailability;
+
+        /// <summary>
+        /// rb8AM12PM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton rb8AM12PM;
+
+        /// <summary>
+        /// rb12PM4PM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton rb12PM4PM;
+
+        /// <summary>
+        /// rb4PM8PM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton rb4PM8PM;
+
+        /// <summary>
+        /// rb8PM12AM control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton rb8PM12AM;
     }
 }

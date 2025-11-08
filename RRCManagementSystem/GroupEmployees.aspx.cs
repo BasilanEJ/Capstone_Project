@@ -31,10 +31,11 @@ namespace RRCManagementSystem
             if (!HasEditPermission(userId, "ManageEmployees"))
             {
                 lblMessage.Text = "❌ You do not have permission to manage team assignments.";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                lblMessage.CssClass = "alert alert-danger alert-message auto-fade";
                 btnSaveChanges.Enabled = false;
                 gvTechnicians.Enabled = false;
                 ddlExistingTeams.Enabled = false;
+                btnOpenModal.Enabled = false;
                 return;
             }
 
@@ -42,6 +43,10 @@ namespace RRCManagementSystem
             {
                 LoadExistingTeams();
                 LoadTechnicians();
+                LoadTeamLeaders(); // Load Head Technicians
+
+                // Set default to Morning Shift
+                rbMorningShift.Checked = true;
             }
         }
 
@@ -76,7 +81,7 @@ namespace RRCManagementSystem
                 ddlExistingTeams.DataValueField = "TeamID";
                 ddlExistingTeams.DataTextField = "GroupName";
                 ddlExistingTeams.DataBind();
-                ddlExistingTeams.Items.Insert(0, new ListItem("Select an existing team", ""));
+                ddlExistingTeams.Items.Insert(0, new ListItem("-- Select a team to assign selected technicians --", ""));
             }
         }
 
@@ -96,6 +101,23 @@ namespace RRCManagementSystem
             }
         }
 
+        private void LoadTeamLeaders()
+        {
+            using (var con = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("SELECT UserID, Name FROM dbo.Users WHERE Role = 'Headtechnician' AND Status = 'Active' ORDER BY Name", con))
+            using (var da = new SqlDataAdapter(cmd))
+            {
+                var dt = new DataTable();
+                da.Fill(dt);
+
+                ddlTeamLeader.DataSource = dt;
+                ddlTeamLeader.DataValueField = "UserID";
+                ddlTeamLeader.DataTextField = "Name";
+                ddlTeamLeader.DataBind();
+                ddlTeamLeader.Items.Insert(0, new ListItem("-- Select a Head Technician --", ""));
+            }
+        }
+
         protected void gvTechnicians_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
@@ -112,21 +134,42 @@ namespace RRCManagementSystem
                 var dt = new DataTable();
                 da.Fill(dt);
 
-                ddlAction.DataSource = dt;
-                ddlAction.DataValueField = "TeamID";
-                ddlAction.DataTextField = "GroupName";
-                ddlAction.DataBind();
-                ddlAction.Items.Insert(0, new ListItem("No Action", ""));
-                ddlAction.Items.Add(new ListItem("Remove from team", "REMOVE"));
+                // Add teams to dropdown
+                foreach (DataRow row in dt.Rows)
+                {
+                    ddlAction.Items.Add(new ListItem(row["GroupName"].ToString(), row["TeamID"].ToString()));
+                }
+
+                // Insert default options
+                ddlAction.Items.Insert(0, new ListItem("-- No Action --", ""));
+                ddlAction.Items.Add(new ListItem("❌ Remove from team", "REMOVE"));
             }
         }
 
         protected void btnSaveChanges_Click(object sender, EventArgs e)
         {
-            // Use UserID, not AdminID (to match your other pages)
             int adminId = Convert.ToInt32(Session["UserID"]);
             int changesCount = 0;
             var feedback = new StringBuilder();
+
+            // Validate that at least one technician is selected
+            bool anySelected = false;
+            foreach (GridViewRow row in gvTechnicians.Rows)
+            {
+                var cbSelect = (CheckBox)row.FindControl("chkSelect");
+                if (cbSelect?.Checked == true)
+                {
+                    anySelected = true;
+                    break;
+                }
+            }
+
+            if (!anySelected)
+            {
+                lblMessage.Text = "⚠️ Please select at least one technician.";
+                lblMessage.CssClass = "alert alert-warning alert-message auto-fade";
+                return;
+            }
 
             foreach (GridViewRow row in gvTechnicians.Rows)
             {
@@ -144,7 +187,7 @@ namespace RRCManagementSystem
                 {
                     if (RemoveEmployeeFromTeam(employeeId))
                     {
-                        feedback.AppendLine($"✅ Removed {employeeName} from their team.<br/>");
+                        feedback.AppendLine($"✅ Removed <strong>{employeeName}</strong> from their team.<br/>");
                         AddAudit(adminId, $"Removed technician '{employeeName}' (ID: {employeeId}) from their team.");
                         changesCount++;
                     }
@@ -154,29 +197,36 @@ namespace RRCManagementSystem
                     int newTeamId = int.Parse(selected);
                     if (UpsertEmployeeTeam(employeeId, newTeamId))
                     {
-                        feedback.AppendLine($"✅ {employeeName} reassigned to selected team.<br/>");
-                        AddAudit(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to TeamID: {newTeamId}.");
+                        string teamName = ddlAction.SelectedItem.Text;
+                        feedback.AppendLine($"✅ <strong>{employeeName}</strong> assigned to <strong>{teamName}</strong>.<br/>");
+                        AddAudit(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to team '{teamName}' (TeamID: {newTeamId}).");
                         changesCount++;
                     }
                 }
                 else if (!string.IsNullOrEmpty(ddlExistingTeams.SelectedValue))
                 {
                     int fallbackTeamId = int.Parse(ddlExistingTeams.SelectedValue);
+                    string fallbackTeamName = ddlExistingTeams.SelectedItem.Text;
                     if (UpsertEmployeeTeam(employeeId, fallbackTeamId))
                     {
-                        feedback.AppendLine($"✅ {employeeName} assigned to team from top dropdown.<br/>");
-                        AddAudit(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to TeamID: {fallbackTeamId}.");
+                        feedback.AppendLine($"✅ <strong>{employeeName}</strong> assigned to <strong>{fallbackTeamName}</strong>.<br/>");
+                        AddAudit(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to team '{fallbackTeamName}' (TeamID: {fallbackTeamId}).");
                         changesCount++;
                     }
                 }
             }
 
-            lblMessage.Text = changesCount > 0
-                ? $"✅ {changesCount} changes successfully saved!<br/>{feedback}"
-                : "⚠️ No changes made.";
-            lblMessage.ForeColor = changesCount > 0 ? System.Drawing.Color.Green : System.Drawing.Color.OrangeRed;
-
-            LoadTechnicians();
+            if (changesCount > 0)
+            {
+                lblMessage.Text = $"<i class='fas fa-check-circle'></i> <strong>{changesCount} changes successfully saved!</strong><br/>{feedback}";
+                lblMessage.CssClass = "alert alert-success alert-message auto-fade";
+                LoadTechnicians();
+            }
+            else
+            {
+                lblMessage.Text = "<i class='fas fa-exclamation-triangle'></i> No changes made.";
+                lblMessage.CssClass = "alert alert-warning alert-message auto-fade";
+            }
         }
 
         private bool UpsertEmployeeTeam(int employeeId, int teamId)
@@ -211,46 +261,82 @@ namespace RRCManagementSystem
         protected void btnCreateTeamModal_Click(object sender, EventArgs e)
         {
             string teamName = txtModalTeamName.Text.Trim();
+            string shiftType = rbMorningShift.Checked ? "MorningShift" : (rbNightShift.Checked ? "NightShift" : "");
+            string teamLeaderIdStr = ddlTeamLeader.SelectedValue;
             int adminId = Convert.ToInt32(Session["UserID"]);
 
+            // Validation
             if (string.IsNullOrEmpty(teamName))
             {
-                lblMessage.Text = "⚠️ Please enter a team name.";
-                lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
+                lblMessage.Text = "<i class='fas fa-exclamation-triangle'></i> Please enter a team name.";
+                lblMessage.CssClass = "alert alert-warning alert-message auto-fade";
                 return;
             }
 
+            if (string.IsNullOrEmpty(shiftType))
+            {
+                lblMessage.Text = "<i class='fas fa-exclamation-triangle'></i> Please select a shift type.";
+                lblMessage.CssClass = "alert alert-warning alert-message auto-fade";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(teamLeaderIdStr))
+            {
+                lblMessage.Text = "<i class='fas fa-exclamation-triangle'></i> Please select a team leader.";
+                lblMessage.CssClass = "alert alert-warning alert-message auto-fade";
+                return;
+            }
+
+            int teamLeaderId = int.Parse(teamLeaderIdStr);
+
             try
             {
-                int teamId = CreateTeam(teamName);
+                int teamId = CreateTeam(teamName, shiftType, teamLeaderId);
                 if (teamId == 0)
                 {
-                    lblMessage.Text = $"⚠️ Team '{teamName}' already exists.";
-                    lblMessage.ForeColor = System.Drawing.Color.OrangeRed;
+                    lblMessage.Text = $"<i class='fas fa-exclamation-circle'></i> Team '<strong>{teamName}</strong>' already exists.";
+                    lblMessage.CssClass = "alert alert-warning alert-message auto-fade";
                 }
                 else
                 {
-                    lblMessage.Text = $"✅ Team '{teamName}' created successfully.";
-                    lblMessage.ForeColor = System.Drawing.Color.Green;
+                    string teamLeaderName = ddlTeamLeader.SelectedItem.Text;
+                    lblMessage.Text = $"<i class='fas fa-check-circle'></i> Team '<strong>{teamName}</strong>' created successfully with <strong>{teamLeaderName}</strong> as team leader!";
+                    lblMessage.CssClass = "alert alert-success alert-message auto-fade";
+
+                    // Clear form
                     txtModalTeamName.Text = "";
-                    LoadExistingTeams();
-                    AddAudit(adminId, $"Created team '{teamName}' (ID: {teamId}).");
+                    rbMorningShift.Checked = true;
+                    rbNightShift.Checked = false;
+                    ddlTeamLeader.SelectedIndex = 0;
+
+                    // ✅ RELOAD BOTH DROPDOWNS AND GRIDVIEW
+                    LoadExistingTeams();      // Reload top dropdown
+                    LoadTechnicians();        // Rebinds GridView which triggers RowDataBound
+
+                    // Add audit
+                    AddAudit(adminId, $"Created team '{teamName}' (ID: {teamId}) with shift type '{shiftType}' and team leader '{teamLeaderName}' (UserID: {teamLeaderId}).");
+
+                    // Close modal via JavaScript
+                    System.Web.UI.ScriptManager.RegisterStartupScript(this, GetType(), "CloseModal",
+                        "if(createTeamModal) createTeamModal.hide(); Swal.fire({ icon: 'success', title: 'Team Created!', text: 'Team " + teamName + " has been created successfully.', confirmButtonColor: '#2563eb' });", true);
                 }
             }
             catch (Exception ex)
             {
-                lblMessage.Text = $"❌ Error creating team: {ex.Message}";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
+                lblMessage.Text = $"<i class='fas fa-times-circle'></i> Error creating team: {ex.Message}";
+                lblMessage.CssClass = "alert alert-danger alert-message auto-fade";
             }
         }
 
-        private int CreateTeam(string name)
+        private int CreateTeam(string name, string shiftType, int teamLeaderId)
         {
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand("dbo.spTeam_Create", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@GroupName", SqlDbType.NVarChar, 50).Value = name;
+                cmd.Parameters.Add("@ShiftType", SqlDbType.NVarChar, 20).Value = shiftType;
+                cmd.Parameters.Add("@TeamLeaderID", SqlDbType.Int).Value = teamLeaderId;
 
                 con.Open();
                 object result = cmd.ExecuteScalar();

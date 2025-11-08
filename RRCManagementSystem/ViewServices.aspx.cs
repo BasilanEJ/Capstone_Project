@@ -88,9 +88,11 @@ namespace RRCManagementSystem
             // ✅ Handle View Price
             if (e.CommandName == "ViewPrice")
             {
-                Response.Redirect("ViewServicePricing.aspx?ServiceID=" + serviceId);
+                // Redirect to SetServicePricing and pass ServiceID via query string
+                Response.Redirect("SetServicePricing.aspx?ServiceID=" + serviceId);
                 return;
             }
+
 
             // Existing EditService logic
             if (e.CommandName == "EditService" && Convert.ToBoolean(ViewState["CanEdit"]))

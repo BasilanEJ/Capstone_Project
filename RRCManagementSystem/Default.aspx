@@ -1425,6 +1425,196 @@ section {
             font-size: 36px;
             font-weight: 700;
         }
+
+        /* ============ Call to Action Section ============ */
+.cta-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 80px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: moveBackground 20s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes moveBackground {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(50px, 50px); }
+}
+
+.cta-container {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+.cta-content {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    padding: 60px 40px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: fadeInUp 0.8s ease;
+}
+
+.cta-icon {
+    font-size: 64px;
+    color: #667eea;
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.cta-content h2 {
+    font-size: clamp(28px, 5vw, 36px);
+    color: #1a1a1a;
+    margin-bottom: 15px;
+    font-weight: 700;
+    background: none;
+    -webkit-text-fill-color: #1a1a1a;
+}
+
+.cta-content p {
+    font-size: clamp(16px, 4vw, 18px);
+    color: #666;
+    margin-bottom: 40px;
+    line-height: 1.6;
+}
+
+.cta-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+}
+
+.btn-cta {
+    padding: 16px 32px;
+    font-size: clamp(15px, 4vw, 17px);
+    font-weight: 600;
+    border-radius: 12px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    min-width: 180px;
+    justify-content: center;
+}
+
+.btn-cta i {
+    font-size: 18px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004494 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+}
+
+.btn-secondary {
+    background: white;
+    color: #007bff;
+    border: 2px solid #007bff;
+}
+
+.btn-secondary:hover {
+    background: #007bff;
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+}
+
+.cta-features {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    padding-top: 30px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    color: #555;
+    font-weight: 500;
+}
+
+.feature-item i {
+    color: #28a745;
+    font-size: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .cta-section {
+        padding: 60px 20px;
+    }
+
+    .cta-content {
+        padding: 40px 30px;
+    }
+
+    .cta-icon {
+        font-size: 48px;
+    }
+
+    .cta-buttons {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .btn-cta {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .cta-features {
+        flex-direction: column;
+        gap: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .cta-content {
+        padding: 30px 20px;
+    }
+
+    .cta-icon {
+        font-size: 40px;
+    }
+
+    .feature-item {
+        font-size: 14px;
+    }
+}
+
     </style>
 
 
@@ -1677,7 +1867,7 @@ section {
     </section>
 
 
-<<section class="reviews-section lazy-section">
+    <section class="reviews-section lazy-section">
     <h2>What our customers are saying</h2>
     <div class="reviews-grid">
 
@@ -1701,342 +1891,40 @@ section {
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- ====== INQUIRY FORM (Responsive with UpdatePanel) ====== -->
-    <asp:UpdatePanel ID="upInquiryForm" runat="server" UpdateMode="Conditional">
-        <ContentTemplate>
-            <section id="inquiryForm" class="inquiry-wrap">
-                <div class="inquiry-card">
-          
-                    <div class="inquiry-left">
-                        <h3>Schedule Your</h3>
-                        <h1>Free Inspection</h1>
-                        <p>
-                            Schedule today! Please fill-in this form and RRC Pest and Termite Control Representative will contact you soon.
-                        </p>
 
-                        <div style="margin-bottom: 15px;">
-                            <asp:Label runat="server" AssociatedControlID="txtEmail" Text="Your email *" />
-                            <asp:TextBox ID="txtEmail" runat="server"
-                                CssClass="form-control form-underline"
-                                TextMode="Email"
-                                placeholder="email@gmail.com"
-                                required />
-                            <asp:RegularExpressionValidator ID="revEmail" runat="server"
-                                ControlToValidate="txtEmail"
-                                ErrorMessage="Please enter a valid Gmail, Yahoo, Outlook, iCloud, or school/government email address."
-                                ForeColor="Red"
-                                Display="Dynamic"
-                                ValidationExpression="^[A-Za-z0-9._%+\-]+@(?:(?:gmail|yahoo|outlook|hotmail|live|icloud)\.com|(?:[A-Za-z0-9-]+\.)*edu\.ph|(?:[A-Za-z0-9-]+\.)*gov\.ph)$" />
-                        </div>
+<section class="cta-section">
+    <div class="cta-container">
+        <div class="cta-content">
+            <i class="fas fa-user-plus cta-icon"></i>
+            <h2>Ready to Protect Your Property?</h2>
+            <p>Create your account today and get started with professional pest control services</p>
+            
+            <div class="cta-buttons">
+                <a href="ClientSignup.aspx" class="btn-cta btn-primary">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </a>
+                <a href="Login.aspx" class="btn-cta btn-secondary">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </a>
+            </div>
 
-                        <div style="margin-bottom: 15px;">
-                            <asp:TextBox ID="txtContactNumber" runat="server"
-                                placeholder="09xxxxxxxxx" required MaxLength="11"
-                                onkeypress="return isDigit(event)"
-                                onkeydown="return blockNonDigits(event)"
-                                oninput="validateContactNumber(this)"
-                                onpaste="handlePaste(event)"
-                                CssClass="form-underline" />
-                        </div>
-
-                        <div style="margin-bottom: 15px;">
-                            <asp:Label runat="server" AssociatedControlID="fuPestPhoto" Text="Photo of Pest (optional)" />
-                            <asp:FileUpload ID="fuPestPhoto" runat="server"
-                                style="width: 100%; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; color: white;"
-                                accept=".png,.jpg,.jpeg,image/png,image/jpeg" />
-                            <small style="color: rgba(255,255,255,0.8);">Upload a photo if available.</small>
-                        </div>
-
-                        <div style="margin-bottom: 15px;">
-                            <asp:Label runat="server" AssociatedControlID="txtMessage" Text="Describe what you observed (optional)" />
-                            <asp:TextBox ID="txtMessage" runat="server" TextMode="MultiLine" Rows="4"
-                                placeholder="Describe what you observed..." CssClass="textarea-box" />
-                        </div>
-
-                        <div style="margin-bottom: 10px;">
-                            <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal" style="font-size: 14px; color: rgba(255,255,255,0.9); text-decoration: underline;">
-                                View Terms and Conditions
-                            </a>
-                        </div>
-
-                        <!-- Terms Modal -->
-                        <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
-                            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                                <div class="modal-content">
-
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="termsModalLabel">Terms & Conditions / Privacy Policy</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-
-                                    <div class="modal-body" style="color:#1a202c; line-height:1.45;">
-                                    
-                                        <h6 class="mb-2">1. Agreement to Terms</h6>
-                                        <p>
-                                            Welcome to RRC Termite &amp; Pest Control Inquiry! By accessing and using our inquiry page,
-                                            you agree to comply with and be bound by these Terms and Conditions.
-                                            Your use of RRC Inquiry is subject to the Philippine Data Privacy Act of 2012 (DPA 2012) and other relevant laws.
-                                            These Terms govern your use of the inquiry form, the accuracy of information you provide,
-                                            and how we may process your submitted data. You agree to:
-                                        </p>
-                                        <ul>
-                                            <li>Use the inquiry page only for lawful purposes.</li>
-                                            <li>Provide truthful, accurate, and current information.</li>
-                                            <li>Refrain from submitting harmful, offensive, or unsolicited content.</li>
-                                        </ul>
-                                        <p>
-                                            If you do not agree to these Terms, you must not submit any inquiries or otherwise use the inquiry page.
-                                            By proceeding, you acknowledge that you have read, understood, and accepted these Terms.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">2. Definitions</h6>
-                                        <ul>
-                                            <li><strong>"RRC Inquiry"</strong> – The official online platform of RRC Termite &amp; Pest Control,
-                                                provided for submitting inquiries, viewing bookings, bills, and booking schedules.</li>
-                                            <li><strong>"User"</strong> – Any individual accessing RRC Inquiry, including customers, inspectors, and administrators.</li>
-                                            <li><strong>"Personal Data"</strong> – Information that identifies or can identify a person, as defined under the DPA 2012.</li>
-                                            <li><strong>"Services"</strong> – The inquiry-related functions including submission of inquiries, viewing of bookings, bills, and schedules.</li>
-                                        </ul>
-
-                                        <h6 class="mt-3 mb-2">3. Purpose of the Inquiry Page</h6>
-                                        <p>
-                                            This page is provided solely for users to submit inquiries, view their bookings, bills, and schedules.
-                                            It is not intended for placing orders, entering into contracts, or seeking emergency assistance unless explicitly stated otherwise.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">4. Information Accuracy</h6>
-                                        <p>
-                                            You agree that all information submitted is accurate, current, and complete.
-                                            You are responsible for maintaining the confidentiality of any account or contact information
-                                            and notifying us immediately of any unauthorized use.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">5. Use Restrictions</h6>
-                                        <ul>
-                                            <li>Submitting offensive, discriminatory, defamatory, or harassing content.</li>
-                                            <li>Uploading or sharing harmful, dangerous, or spam content.</li>
-                                            <li>Using automated systems or bots to send inquiries.</li>
-                                        </ul>
-                                        <p>
-                                            We reserve the right to decline inquiries that violate these guidelines or block repeat offenders.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">6. Privacy &amp; Data Use</h6>
-                                        <p>
-                                            Any personal data you submit will be processed in accordance with our Privacy Policy.
-                                            We keep data only as long as necessary to respond to inquiries and for legitimate business purposes.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">7. Intellectual Property</h6>
-                                        <p>
-                                            All content of the inquiry form and related materials is our property or licensed to us.
-                                            You may not reproduce, distribute, modify, or create derivative works from it without written permission.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">8. Disclaimer of Warranty</h6>
-                                        <p>
-                                            The inquiry form is provided "as-is" and "as-available."
-                                            We make no warranties—express or implied—regarding its accuracy, reliability, or availability.
-                                            All inquiries submitted are at your own risk.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">9. Limitation of Liability</h6>
-                                        <p>
-                                            To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special,
-                                            or consequential damages arising from the use of the inquiry page, even if we have been advised of the possibility of such damages.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">10. Modification and Interruptions</h6>
-                                        <p>
-                                            We reserve the right to modify, suspend, or discontinue the inquiry page at any time, with or without notice.
-                                            We are not liable for any interruptions or errors and may revise these Terms at our discretion.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">11. Governing Law</h6>
-                                        <p>
-                                            These Terms are governed by the laws of the Republic of the Philippines.
-                                            Any disputes will be subject to the jurisdiction of Philippine courts.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">12. Changes to Terms</h6>
-                                        <p>
-                                            We may update these Terms periodically. Continued use after changes constitutes agreement to those revisions.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">13. Severability</h6>
-                                        <p>
-                                            If any provision is found unenforceable, the remainder will remain in effect to the fullest extent permitted by law.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">14. Contact Information</h6>
-                                        <p>
-                                            Email: <a href="mailto:rrctermiteandpestcontrol@gmail.com">rrctermiteandpestcontrol@gmail.com</a><br />
-                                            Address: #33 Kaligatasan Street, Brgy. Holy Spirit, Quezon City, Philippines
-                                        </p>
-
-                                        <hr class="my-3" />
-
-                                        <h6 class="mb-2">Privacy Policy — Inquiry Page</h6>
-                                        <p><em>Last Updated: August 19, 2025</em></p>
-
-                                        <p>
-                                            RRC Termite &amp; Pest Control respects your privacy and is committed to protecting your personal data
-                                            in compliance with the Data Privacy Act of 2012 (Republic Act No. 10173) of the Philippines.
-                                            This Privacy Policy explains how we collect, use, store, and protect your information when you use our inquiry page.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">1. Collection of Personal Data</h6>
-                                        <p>When you use the RRC Inquiry page, we may collect personal data such as:</p>
-                                        <ul>
-                                            <li>Name</li>
-                                            <li>Contact number</li>
-                                            <li>Email address</li>
-                                            <li>Details of your inquiry, bookings, bills, and schedules</li>
-                                        </ul>
-
-                                        <h6 class="mt-3 mb-2">2. Purpose of Data Collection</h6>
-                                        <ul>
-                                            <li>To respond to your inquiries</li>
-                                            <li>To allow you to view your bookings, bills, and schedules</li>
-                                            <li>To improve our services and customer experience</li>
-                                            <li>To comply with legal and regulatory requirements</li>
-                                        </ul>
-
-                                        <h6 class="mt-3 mb-2">3. Data Sharing and Disclosure</h6>
-                                        <p>
-                                            We do not sell, trade, or otherwise transfer your personal data to third parties without your consent,
-                                            except when required by law, regulation, or competent authority.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">4. Data Retention</h6>
-                                        <p>
-                                            We will retain your personal data only for as long as necessary to fulfill the purposes stated above,
-                                            and as required by applicable laws and regulations.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">5. Data Security</h6>
-                                        <p>
-                                            We implement appropriate organizational, physical, and technical measures to protect your personal data
-                                            from unauthorized access, alteration, disclosure, or destruction.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">6. User Rights Under the DPA 2012</h6>
-                                        <ul>
-                                            <li>The right to be informed</li>
-                                            <li>The right to access</li>
-                                            <li>The right to rectification</li>
-                                            <li>The right to object (in certain cases)</li>
-                                            <li>The right to erasure/blocking when no longer necessary</li>
-                                            <li>The right to data portability</li>
-                                            <li>The right to lodge a complaint with the NPC</li>
-                                        </ul>
-
-                                        <h6 class="mt-3 mb-2">7. Updates to this Privacy Policy</h6>
-                                        <p>
-                                            We may update this Privacy Policy from time to time to reflect changes in laws, technology, or business practices.
-                                            Any updates will be posted on this page with a new effective date.
-                                        </p>
-
-                                        <h6 class="mt-3 mb-2">8. Contact Information</h6>
-                                        <p>
-                                            Email: <a href="mailto:rrctermiteandpestcontrol@gmail.com">rrctermiteandpestcontrol@gmail.com</a><br />
-                                            Address: #33 Kaligatasan Street, Brgy. Holy Spirit, Quezon City, Philippines
-                                        </p>
-
-                                        <div class="mt-3 form-check">
-                                            <asp:CheckBox ID="chkTerms" runat="server" CssClass="form-check-input" />
-                                            <label class="form-check-label" for="<%= chkTerms.ClientID %>" style="color: #000000 !important; font-weight: 500;">
-                                                    I agree to the Terms &amp; Conditions and Privacy Policy.
-                                                </label>
-                                            
-                                            <span id="termsError" style="display:none; color:red; font-size:13px; margin-top:5px;">
-                                                Please agree to the terms and conditions before submitting.
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                  <div class="modal-footer">
-    <button type="button" class="btn btn-primary" id="btnTermsOk" data-bs-dismiss="modal" style="display: none;">
-        OK
-    </button>
-    <span id="termsHint" style="color: #6c757d; font-size: 14px; font-style: italic;">
-        ✓ Please agree to the terms to continue
-    </span>
-</div>
-
-                                </div>
-                            </div>
-                        </div>
-
-                        <asp:Button 
-                            ID="btnSubmitInquiry" 
-                            runat="server" 
-                            Text="Submit Inquiry" 
-                            CssClass="btn-submit"
-                            OnClick="btnSubmitInquiry_Click" />
-
-                    </div>
-
-                    <div class="inquiry-right" aria-hidden="true"></div>
+            <div class="cta-features">
+                <div class="feature-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Free Inspection</span>
                 </div>
-            </section>
-        </ContentTemplate>
-        <Triggers>
-            <asp:PostBackTrigger ControlID="btnSubmitInquiry" />
-        </Triggers>
-    </asp:UpdatePanel>
-
-    <script>
-        // Toggle OK button visibility based on checkbox
-        document.addEventListener('DOMContentLoaded', function () {
-            const chkTerms = document.getElementById('<%= chkTerms.ClientID %>');
-        const btnTermsOk = document.getElementById('btnTermsOk');
-        const termsHint = document.getElementById('termsHint');
-        
-        if (chkTerms && btnTermsOk && termsHint) {
-            // Function to toggle button visibility
-            function toggleOkButton() {
-                if (chkTerms.checked) {
-                    btnTermsOk.style.display = 'inline-block';
-                    termsHint.style.display = 'none';
-                } else {
-                    btnTermsOk.style.display = 'none';
-                    termsHint.style.display = 'inline-block';
-                }
-            }
-            
-            // Initial check
-            toggleOkButton();
-            
-            // Listen for checkbox changes
-            chkTerms.addEventListener('change', toggleOkButton);
-        }
-    });
-
-    function validateTerms() {
-        var chkTerms = document.getElementById('<%= chkTerms.ClientID %>');
-
-            if (!chkTerms.checked) {
-                var termsModal = new bootstrap.Modal(document.getElementById('termsModal'));
-                termsModal.show();
-                return false;
-            }
-            return true;
-        }
-    </script>
-
-    <script>
-        function validateTerms() {
-            var chkTerms = document.getElementById('<%= chkTerms.ClientID %>');
-
-            if (!chkTerms.checked) {
-                var termsModal = new bootstrap.Modal(document.getElementById('termsModal'));
-                termsModal.show();
-                return false;
-            }
-            return true;
-        }
-    </script>
+                <div class="feature-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Certified Professionals</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-clock"></i>
+                    <span>24/7 Support</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
     <script>
 
@@ -2086,35 +1974,7 @@ section {
 
     <script>
      
-        // --- Contact number validation ---
-        function isDigit(e) {
-            const charCode = e.which || e.keyCode;
-            return (charCode >= 48 && charCode <= 57);
-        }
-
-        function blockNonDigits(e) {
-            const key = e.key;
-            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-            const allowedKeys = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"];
-            if (allowedKeys.includes(key) || isCtrlOrCmd) return true;
-            return /^\d$/.test(key);
-        }
-
-        function validateContactNumber(input) {
-            input.value = input.value.replace(/\D/g, '');
-            if (input.value.length > 11) input.value = input.value.slice(0, 11);
-            if (input.value.length > 0 && !input.value.startsWith("09")) {
-                input.setCustomValidity("Contact number must start with 09.");
-            } else {
-                input.setCustomValidity("");
-            }
-        }
-
-        function handlePaste(e) {
-            const paste = (e.clipboardData || window.clipboardData).getData('text');
-            if (!/^09\d{0,9}$/.test(paste)) e.preventDefault();
-        }
-
+    
         // --- Cookie banner & modal ---
         function acceptCookies() {
             const checkbox = document.getElementById('chkCookiePolicy');

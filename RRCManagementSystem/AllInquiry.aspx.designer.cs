@@ -33,51 +33,6 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.HiddenField hfSelectedInquiryID;
 
         /// <summary>
-        /// hfAssignData control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfAssignData;
-
-        /// <summary>
-        /// btnAssignHidden control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnAssignHidden;
-
-        /// <summary>
-        /// hfDeleteInquiryID control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfDeleteInquiryID;
-
-        /// <summary>
-        /// btnDeleteHidden control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnDeleteHidden;
-
-        /// <summary>
-        /// ddlInspectorSource control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.DropDownList ddlInspectorSource;
-
-        /// <summary>
         /// gvInquiries control.
         /// </summary>
         /// <remarks>

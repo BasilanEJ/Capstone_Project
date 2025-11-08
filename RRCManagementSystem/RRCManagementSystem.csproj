@@ -76,8 +76,8 @@
     <Reference Include="Microsoft.AspNet.FriendlyUrls, Version=1.0.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.FriendlyUrls.Core.1.0.2\lib\net45\Microsoft.AspNet.FriendlyUrls.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform, Version=4.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\lib\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll</HintPath>
+    <Reference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform, Version=3.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.3.6.0\lib\net45\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.ScriptManager.MSAjax, Version=5.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -161,12 +161,14 @@
     <Content Include="AllBooking.aspx" />
     <Content Include="AllEmployee.aspx" />
     <Content Include="AllInquiry.aspx" />
+    <Content Include="AllInspectionDetails.aspx" />
     <Content Include="AllRescheduleBooking.aspx" />
     <Content Include="ApproveRejectBookings.aspx" />
     <Content Include="ApproveRescheduleRequests.aspx" />
     <Content Include="ArchivedAdmins.aspx" />
     <Content Include="ArchivedClients.aspx" />
     <Content Include="ArchivedInquiries.aspx" />
+    <Content Include="ArchivedInspectionDetails.aspx" />
     <Content Include="ArchivedServiceManagement.aspx" />
     <Content Include="ArchivedSuperUser.aspx" />
     <Content Include="ArchivedSuppliers.aspx" />
@@ -177,10 +179,13 @@
     <Content Include="BlogManagement.aspx" />
     <Content Include="BookingDetails.aspx" />
     <Content Include="BookingHistory.aspx" />
+    <Content Include="BookInspection.aspx" />
     <Content Include="BookService.aspx" />
     <Content Include="ChatWithAdmin.aspx" />
     <Content Include="ChatWithClient.aspx" />
     <Content Include="ClientAboutUs.aspx" />
+    <Content Include="ClientInspectionDetails.aspx" />
+    <Content Include="ClientSignup.aspx" />
     <Content Include="ClientsProfiles.aspx" />
     <Content Include="ClientVerifyOTP.aspx" />
     <Content Include="CMS.aspx" />
@@ -261,8 +266,10 @@
     <Content Include="Images\tesda.png" />
     <Content Include="Images\vcmc.png" />
     <Content Include="InspectedInquiry.aspx" />
+    <Content Include="InspectionDetails.aspx" />
     <Content Include="InspectorAreaScope.aspx" />
     <Content Include="InspectorDashboard.aspx" />
+    <Content Include="InspectorReport.aspx" />
     <Content Include="js\enhanced-fingerprint.js" />
     <Content Include="Login.aspx" />
     <Content Include="Logout.aspx" />
@@ -278,10 +285,14 @@
     <Content Include="GetInspectionDetails.ashx" />
     <Content Include="GetNotifications.ashx" />
     <Content Include="LoadInspections.ashx" />
+    <Content Include="MyInquiries.aspx" />
     <Content Include="PayMongoWebhook.ashx" />
     <Content Include="PayPalWebhook.ashx" />
     <Content Include="Anchor.ashx" />
     <Content Include="GetFAQs.ashx" />
+    <Content Include="HeadTechnician.Master" />
+    <Content Include="LoadTeamBookings.ashx" />
+    <Content Include="GetTeamBookingDetails.ashx" />
     <None Include="Properties\PublishProfiles\FolderProfile1.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile2.pubxml" />
     <None Include="Properties\PublishProfiles\FolderProfile3.pubxml" />
@@ -338,6 +349,7 @@
     <Content Include="Scripts\WebForms\WebParts.js" />
     <Content Include="Scripts\WebForms\WebUIValidation.js" />
     <Content Include="ServiceManagement.aspx" />
+    <Content Include="SetServicePricing.aspx" />
     <Content Include="SoilPoisoning.aspx" />
     <Content Include="Styles\Styles.css" />
     <Content Include="SuperAdminDashboard.aspx" />
@@ -345,6 +357,8 @@
     <Content Include="RootAdmin.aspx" />
     <Content Include="SystemChanges.aspx" />
     <Content Include="SystemSettings.aspx" />
+    <Content Include="TechDashboard.aspx" />
+    <Content Include="TechOperations.aspx" />
     <Content Include="Termite.aspx" />
     <Content Include="TermitePrevention.aspx" />
     <Content Include="TotalStocks.aspx" />
@@ -490,6 +504,13 @@
     <Compile Include="AllInquiry.aspx.designer.cs">
       <DependentUpon>AllInquiry.aspx</DependentUpon>
     </Compile>
+    <Compile Include="AllInspectionDetails.aspx.cs">
+      <DependentUpon>AllInspectionDetails.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AllInspectionDetails.aspx.designer.cs">
+      <DependentUpon>AllInspectionDetails.aspx</DependentUpon>
+    </Compile>
     <Compile Include="AllRescheduleBooking.aspx.cs">
       <DependentUpon>AllRescheduleBooking.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -535,6 +556,13 @@
     </Compile>
     <Compile Include="ArchivedInquiries.aspx.designer.cs">
       <DependentUpon>ArchivedInquiries.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ArchivedInspectionDetails.aspx.cs">
+      <DependentUpon>ArchivedInspectionDetails.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ArchivedInspectionDetails.aspx.designer.cs">
+      <DependentUpon>ArchivedInspectionDetails.aspx</DependentUpon>
     </Compile>
     <Compile Include="ArchivedServiceManagement.aspx.cs">
       <DependentUpon>ArchivedServiceManagement.aspx</DependentUpon>
@@ -606,6 +634,13 @@
     <Compile Include="BookingHistory.aspx.designer.cs">
       <DependentUpon>BookingHistory.aspx</DependentUpon>
     </Compile>
+    <Compile Include="BookInspection.aspx.cs">
+      <DependentUpon>BookInspection.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="BookInspection.aspx.designer.cs">
+      <DependentUpon>BookInspection.aspx</DependentUpon>
+    </Compile>
     <Compile Include="BookService.aspx.cs">
       <DependentUpon>BookService.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -640,6 +675,20 @@
     </Compile>
     <Compile Include="ClientAboutUs.aspx.designer.cs">
       <DependentUpon>ClientAboutUs.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ClientInspectionDetails.aspx.cs">
+      <DependentUpon>ClientInspectionDetails.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ClientInspectionDetails.aspx.designer.cs">
+      <DependentUpon>ClientInspectionDetails.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ClientSignup.aspx.cs">
+      <DependentUpon>ClientSignup.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ClientSignup.aspx.designer.cs">
+      <DependentUpon>ClientSignup.aspx</DependentUpon>
     </Compile>
     <Compile Include="ClientsProfiles.aspx.cs">
       <DependentUpon>ClientsProfiles.aspx</DependentUpon>
@@ -782,6 +831,7 @@
     <Compile Include="EditSupplier.aspx.designer.cs">
       <DependentUpon>EditSupplier.aspx</DependentUpon>
     </Compile>
+    <Compile Include="EmailHelper.cs" />
     <Compile Include="EmployeeStatus.aspx.cs">
       <DependentUpon>EmployeeStatus.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -854,6 +904,9 @@
     <Compile Include="GetNotifications.aspx.designer.cs">
       <DependentUpon>GetNotifications.aspx</DependentUpon>
     </Compile>
+    <Compile Include="GetTeamBookingDetails.ashx.cs">
+      <DependentUpon>GetTeamBookingDetails.ashx</DependentUpon>
+    </Compile>
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -863,6 +916,13 @@
     </Compile>
     <Compile Include="GroupEmployees.aspx.designer.cs">
       <DependentUpon>GroupEmployees.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="HeadTechnician.Master.cs">
+      <DependentUpon>HeadTechnician.Master</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="HeadTechnician.Master.designer.cs">
+      <DependentUpon>HeadTechnician.Master</DependentUpon>
     </Compile>
     <Compile Include="Home.aspx.cs">
       <DependentUpon>Home.aspx</DependentUpon>
@@ -886,6 +946,13 @@
     <Compile Include="InspectedInquiry.aspx.designer.cs">
       <DependentUpon>InspectedInquiry.aspx</DependentUpon>
     </Compile>
+    <Compile Include="InspectionDetails.aspx.cs">
+      <DependentUpon>InspectionDetails.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="InspectionDetails.aspx.designer.cs">
+      <DependentUpon>InspectionDetails.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Inspector.master.cs">
       <DependentUpon>Inspector.master</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -907,8 +974,18 @@
     <Compile Include="InspectorDashboard.aspx.designer.cs">
       <DependentUpon>InspectorDashboard.aspx</DependentUpon>
     </Compile>
+    <Compile Include="InspectorReport.aspx.cs">
+      <DependentUpon>InspectorReport.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="InspectorReport.aspx.designer.cs">
+      <DependentUpon>InspectorReport.aspx</DependentUpon>
+    </Compile>
     <Compile Include="LoadInspections.ashx.cs">
       <DependentUpon>LoadInspections.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="LoadTeamBookings.ashx.cs">
+      <DependentUpon>LoadTeamBookings.ashx</DependentUpon>
     </Compile>
     <Compile Include="Login.aspx.cs">
       <DependentUpon>Login.aspx</DependentUpon>
@@ -1006,6 +1083,13 @@
     </Compile>
     <Compile Include="MyBookings.aspx.designer.cs">
       <DependentUpon>MyBookings.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="MyInquiries.aspx.cs">
+      <DependentUpon>MyInquiries.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="MyInquiries.aspx.designer.cs">
+      <DependentUpon>MyInquiries.aspx</DependentUpon>
     </Compile>
     <Compile Include="MyInspections.aspx.cs">
       <DependentUpon>MyInspections.aspx</DependentUpon>
@@ -1129,6 +1213,13 @@
     <Compile Include="ServiceManagement.aspx.designer.cs">
       <DependentUpon>ServiceManagement.aspx</DependentUpon>
     </Compile>
+    <Compile Include="SetServicePricing.aspx.cs">
+      <DependentUpon>SetServicePricing.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="SetServicePricing.aspx.designer.cs">
+      <DependentUpon>SetServicePricing.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Site.Mobile.Master.cs">
       <DependentUpon>Site.Mobile.Master</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -1184,6 +1275,20 @@
     </Compile>
     <Compile Include="SystemSettings.aspx.designer.cs">
       <DependentUpon>SystemSettings.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="TechDashboard.aspx.cs">
+      <DependentUpon>TechDashboard.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="TechDashboard.aspx.designer.cs">
+      <DependentUpon>TechDashboard.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="TechOperations.aspx.cs">
+      <DependentUpon>TechOperations.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="TechOperations.aspx.designer.cs">
+      <DependentUpon>TechOperations.aspx</DependentUpon>
     </Compile>
     <Compile Include="Termite.aspx.cs">
       <DependentUpon>Termite.aspx</DependentUpon>
@@ -1356,7 +1461,9 @@
       <DependentUpon>Web.config</DependentUpon>
     </None>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Upload\Inquiries\" />
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
@@ -1387,9 +1494,9 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Net.Compilers.Toolset.4.14.0\build\Microsoft.Net.Compilers.Toolset.props'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.3.6.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.3.6.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets'))" />
   </Target>
-  <Import Project="..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets" Condition="Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.4.1.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" />
+  <Import Project="..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.3.6.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets" Condition="Exists('..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.3.6.0\build\net472\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

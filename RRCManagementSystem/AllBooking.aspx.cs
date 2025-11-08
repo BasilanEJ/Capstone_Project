@@ -37,18 +37,6 @@ namespace RRCManagementSystem
             if (!IsPostBack)
             {
                 LoadAllBookings();
-
-                if (Request.QueryString["op1"] == "completed")
-                {
-                    string script = @"Swal.fire({
-                        icon: 'success',
-                        title: 'Completed!',
-                        text: 'Operation 1 was successfully marked as completed.',
-                        showConfirmButton: false,
-                        timer: 2000
-                    });";
-                    ClientScript.RegisterStartupScript(this.GetType(), "ShowSuccess", script, true);
-                }
             }
         }
 
@@ -96,7 +84,6 @@ namespace RRCManagementSystem
                 return false; // deny by default
             }
         }
-
 
         private void LoadAllBookings()
         {
@@ -163,77 +150,22 @@ namespace RRCManagementSystem
             }
         }
 
-        private void MarkOp1AsCompleted(int bookingId)
-        {
-            try
-            {
-                int completedFlag = 0;
-
-                using (var con = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.spServiceSchedule_CompleteOp1", con))
-                {
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = bookingId;
-
-                    con.Open();
-                    object result = cmd.ExecuteScalar();
-                    completedFlag = (result == null || result == DBNull.Value) ? 0 : Convert.ToInt32(result);
-                }
-
-                AddAuditLog(Convert.ToInt32(Session["UserID"]),
-                    completedFlag == 1
-                        ? $"Marked Op1 completed for BookingID {bookingId}"
-                        : $"Attempted to mark Op1 completed (no change) for BookingID {bookingId}");
-
-                if (completedFlag == 1)
-                {
-                    // The redirection in btnHiddenCompleteOp1_Click handles the SweetAlert.
-                }
-                else
-                {
-                    lblMessage.Text = "⚠️ Operation 1 not found or already completed.";
-                    lblMessage.ForeColor = System.Drawing.Color.Orange;
-                }
-            }
-            catch (Exception ex)
-            {
-                lblMessage.Text = $"❌ Error updating Op1: {ex.Message}";
-                lblMessage.ForeColor = System.Drawing.Color.Red;
-            }
-        }
-
-        protected void btnHiddenCompleteOp1_Click(object sender, EventArgs e)
-        {
-            if (int.TryParse(hfBookingIDToComplete.Value, out int bookingId))
-            {
-                MarkOp1AsCompleted(bookingId);
-                Response.Redirect("AllBooking.aspx?op1=completed");
-            }
-        }
-
         protected void gvBookings_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
 
-            // Get status values from the DataItem
+            // Get status value from the DataItem
             string bookingStatus = DataBinder.Eval(e.Row.DataItem, "Status")?.ToString();
-            string op1Status = DataBinder.Eval(e.Row.DataItem, "Op1Status")?.ToString();
-            bool isContract = false;
-            var isContractObj = DataBinder.Eval(e.Row.DataItem, "IsContract");
-            if (isContractObj != null && isContractObj != DBNull.Value)
-                isContract = Convert.ToBoolean(isContractObj);
 
-            // Find controls within the row
-            var lblOp1 = (Label)e.Row.FindControl("lblOp1Status");
-            var btnOp1 = (Button)e.Row.FindControl("btnTriggerCompleteOp1");
+            // Find Edit button
             var btnEdit = (Button)e.Row.FindControl("btnEdit");
 
-            // 1. Apply status color styling to the Booking Status column
+            // 1. Apply status color styling to the Booking Status column (column index 7)
             int statusCol = 7;
-            Label statusLabel = e.Row.Cells[statusCol].Controls.Count > 0 ? e.Row.Cells[statusCol].Controls[0] as Label : null;
-            if (statusLabel != null)
+            if (e.Row.Cells.Count > statusCol)
             {
-                e.Row.Cells[statusCol].CssClass = "py-3 px-6 text-center font-semibold";
+                e.Row.Cells[statusCol].CssClass = "py-3 px-6 text-center font-semibold border-r border-gray-200";
+
                 switch (bookingStatus?.ToLower())
                 {
                     case "assigned":
@@ -258,26 +190,7 @@ namespace RRCManagementSystem
                 }
             }
 
-            // 2. Hide/show Op1-related controls based on contract type
-            if (lblOp1 != null)
-            {
-                lblOp1.Visible = isContract;
-                // Apply color to Op1 status label
-                if (isContract && !string.IsNullOrEmpty(op1Status))
-                {
-                    if (string.Equals(op1Status, "Completed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        lblOp1.CssClass += " text-green-500";
-                    }
-                }
-            }
-
-            if (btnOp1 != null)
-                btnOp1.Visible = string.Equals(bookingStatus, "Assigned", StringComparison.OrdinalIgnoreCase)
-                               && !string.Equals(op1Status, "Completed", StringComparison.OrdinalIgnoreCase);
-
-
-            // 3. Permission check for Edit button
+            // 2. Permission check for Edit button
             int userId = Convert.ToInt32(Session["UserID"]);
             if (btnEdit != null)
             {
@@ -288,7 +201,6 @@ namespace RRCManagementSystem
                 }
             }
         }
-
 
         private void AddAuditLog(int adminId, string action)
         {

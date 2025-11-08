@@ -1,0 +1,505 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="HeadTechnician.master.cs" Inherits="RRCManagementSystem.HeadTechnician" %>
+
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <link rel="icon" type="image/png" href="~/Images/rrc-logo.jpg" />
+    <title>Team Leader Panel | RRC Termite & Pest Control</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+
+    <style>
+        /* ===== Variables ===== */
+        :root {
+            --header-height: 64px;
+            --sidebar-collapsed: 80px;
+            --sidebar-expanded: 280px;
+            --primary-blue: #2563eb;
+            --primary-blue-dark: #1e40af;
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+        }
+
+        @media (max-width: 640px) {
+            :root {
+                --header-height: 56px;
+            }
+        }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--primary-blue), var(--primary-blue-dark));
+            border-radius: 4px;
+        }
+
+        /* ===== Body ===== */
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ===== Header ===== */
+        #mainHeader {
+            height: var(--header-height);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+        }
+
+        @media (max-width: 640px) {
+            #mainHeader {
+                padding: 0 0.75rem;
+            }
+        }
+
+        /* ===== Burger Menu ===== */
+        #burgerMenu {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            color: white;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #burgerMenu:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        #burgerMenu:active {
+            transform: scale(0.95);
+        }
+
+        #burgerMenu i {
+            font-size: 1.25rem;
+        }
+
+        /* ===== Logo ===== */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-left: 0.75rem;
+        }
+
+        .logo-img {
+            height: 40px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+        }
+
+        @media (max-width: 640px) {
+            .logo-container {
+                margin-left: 0.5rem;
+            }
+            
+            .logo-img {
+                height: 32px;
+                max-width: 120px;
+            }
+        }
+
+        /* ===== User Profile ===== */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.875rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        @media (max-width: 640px) {
+            .user-profile {
+                gap: 0.5rem;
+                padding: 0.375rem 0.625rem;
+            }
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            min-height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .user-avatar i {
+            font-size: 1rem;
+        }
+
+        .user-name {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 640px) {
+            .user-name {
+                font-size: 0.875rem;
+                max-width: 100px;
+            }
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: #93c5fd;
+        }
+
+        /* ===== Sidebar ===== */
+        #sidebar {
+            position: fixed;
+            left: 0;
+            top: var(--header-height);
+            height: calc(100vh - var(--header-height));
+            width: var(--sidebar-collapsed);
+            background: var(--sidebar-bg);
+            z-index: 40;
+            transition: width 0.3s ease, transform 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
+        }
+
+        #sidebar.expanded {
+            width: var(--sidebar-expanded);
+        }
+
+        /* ===== Sidebar Menu ===== */
+        .sidebar-menu {
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1rem 0;
+            list-style: none;
+            margin: 0;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 0.875rem 1rem;
+            margin: 0.25rem 0.5rem;
+            border-radius: 8px;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            min-height: 48px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .sidebar-link:hover {
+            background: var(--sidebar-hover);
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+
+        .sidebar-link.active {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .sidebar-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-text {
+            margin-left: 1rem;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-size: 0.9375rem;
+        }
+
+        #sidebar.expanded .sidebar-text {
+            opacity: 1;
+        }
+
+        /* ===== Logout Section ===== */
+        .logout-section {
+            padding: 1rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            margin-top: auto;
+        }
+        
+        .logout-button {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            margin: 0 auto;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #sidebar.expanded .logout-button {
+            width: 100%;
+            height: auto;
+            padding: 0.875rem;
+            justify-content: flex-start;
+            padding-left: 1.25rem;
+        }
+
+        .logout-button:hover {
+            background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+            transform: translateY(-2px);
+        }
+
+        .logout-button i {
+            font-size: 1.25rem;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logout-text {
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-weight: 600;
+            display: none;
+        }
+
+        #sidebar.expanded .logout-text {
+            opacity: 1;
+            display: inline;
+        }
+
+        /* ===== Main Content ===== */
+        #content {
+            margin-left: var(--sidebar-collapsed);
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-left: 2rem;
+            padding-right: 2rem;
+            padding-bottom: 2rem;
+            min-height: calc(100vh - var(--header-height));
+            transition: margin-left 0.3s ease;
+        }
+
+        #sidebar.expanded ~ form #content {
+            margin-left: var(--sidebar-expanded);
+        }
+
+        @media (max-width: 640px) {
+            #content {
+                padding: calc(var(--header-height) + 1.25rem) 1rem 1.25rem;
+            }
+        }
+
+        /* ===== Overlay ===== */
+        #sidebarOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 35;
+            display: none;
+        }
+
+        #sidebarOverlay.active {
+            display: block;
+        }
+
+        /* ===== Mobile Adjustments ===== */
+        @media (max-width: 768px) {
+            #sidebar {
+                transform: translateX(-100%);
+            }
+
+            #sidebar.expanded {
+                transform: translateX(0);
+            }
+
+            #content {
+                margin-left: 0 !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <form id="form1" runat="server">
+        <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePartialRendering="true" />
+
+        <header id="mainHeader">
+            <div style="display: flex; align-items: center;">
+                <button id="burgerMenu" type="button" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="logo-container">
+                    <img src="/images/logorrc.png" class="logo-img" alt="RRC Management Logo" />
+                </div>
+            </div>
+
+            <div class="user-profile">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-hard-hat"></i>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <asp:Label ID="lblTeamLeaderName" runat="server" CssClass="user-name" />
+                        <span class="user-role">Team Leader</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div id="sidebarOverlay"></div>
+
+        <nav id="sidebar" role="navigation">
+            <ul class="sidebar-menu">
+                <li>
+                    <a class="sidebar-link" href="TechDashboard.aspx">
+                        <span class="sidebar-icon"><i class="fas fa-tachometer-alt"></i></span>
+                        <span class="sidebar-text">Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" href="TechOperations.aspx">
+                        <span class="sidebar-icon"><i class="fas fa-tasks"></i></span>
+                        <span class="sidebar-text">Operations</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="logout-section">
+                <asp:LinkButton ID="btnLogout" runat="server" OnClick="btnLogout_Click" CssClass="logout-button">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="logout-text">Logout</span>
+                </asp:LinkButton>
+            </div>
+        </nav>
+
+        <main id="content">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+        </main>
+    </form>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const burgerMenu = document.getElementById("burgerMenu");
+            const sidebar = document.getElementById("sidebar");
+            const overlay = document.getElementById("sidebarOverlay");
+
+            let isPinned = false;
+
+            function isMobileView() {
+                return window.innerWidth <= 768;
+            }
+
+            function openSidebar() {
+                sidebar.classList.add("expanded");
+                if (isMobileView()) {
+                    overlay.classList.add("active");
+                }
+                burgerMenu.querySelector("i").classList.replace("fa-bars", "fa-times");
+            }
+
+            function closeSidebar() {
+                if (isPinned) return;
+                sidebar.classList.remove("expanded");
+                overlay.classList.remove("active");
+                burgerMenu.querySelector("i").classList.replace("fa-times", "fa-bars");
+            }
+
+            burgerMenu.addEventListener("click", function () {
+                const wasExpanded = sidebar.classList.contains("expanded");
+                isPinned = !wasExpanded;
+                wasExpanded ? closeSidebar() : openSidebar();
+            });
+
+            overlay.addEventListener("click", function () {
+                isPinned = false;
+                closeSidebar();
+            });
+
+            sidebar.addEventListener("mouseenter", function () {
+                if (!isMobileView() && !isPinned) openSidebar();
+            });
+
+            sidebar.addEventListener("mouseleave", function () {
+                if (!isMobileView() && !isPinned) setTimeout(closeSidebar, 300);
+            });
+
+            // Highlight active page
+            const currentPage = window.location.pathname.split('/').pop();
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                if (link.getAttribute('href') === currentPage) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

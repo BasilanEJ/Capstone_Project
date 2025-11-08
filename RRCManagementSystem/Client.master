@@ -180,7 +180,8 @@
 
 <body class="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 text-gray-800 antialiased">
     <form id="form1" runat="server" class="flex flex-col flex-grow">
-
+                <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePageMethods="true">
+        </asp:ScriptManager>
         <!-- NAVBAR -->
         <nav class="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-700 text-white shadow-lg sticky top-0 z-40">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

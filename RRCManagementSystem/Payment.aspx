@@ -603,7 +603,6 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
 </asp:Content>
 
 <asp:Content ID="MainContentBlock" ContentPlaceHolderID="MainContent" runat="server">
-<asp:ScriptManager ID="ScriptManager1" runat="server" EnablePageMethods="true" />
 
 <div class="fade-in">
     <!-- Page Header -->

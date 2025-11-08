@@ -215,6 +215,10 @@ namespace RRCManagementSystem
             {
                 redirect = "InspectorDashboard.aspx";
             }
+            else if (role.Equals("HeadTechnician", StringComparison.OrdinalIgnoreCase))
+            {
+                redirect = "TechDashboard.aspx";
+            }
             else
             {
                 redirect = "Dashboard.aspx"; // Default for Admin and others

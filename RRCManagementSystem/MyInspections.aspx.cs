@@ -1,324 +1,421 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Text;
 using System.Web.UI;
-using System.Web.Script.Serialization; // For JSON serialization
-using RRCManagementSystem.Helpers; // For AESHelper
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
     public partial class MyInspections : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private static readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private string currentFilter = "All";
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // ✅ Ensure only inspectors can access this page
-            if (Session["UserID"] == null ||
-                !string.Equals(Session["Role"]?.ToString(), "Inspector", StringComparison.OrdinalIgnoreCase))
+            // Check authentication
+            if (Session["UserID"] == null || Session["Role"]?.ToString() != "Inspector")
             {
-                Response.Redirect("~/Login.aspx");
-                return;
-            }
-
-            // ✅ Return services as JSON for the SweetAlert dropdown
-            if (Request.QueryString["getServices"] == "1")
-            {
-                GetServicesAsJson();
+                Response.Redirect("~/Login.aspx", false);
+                Context.ApplicationInstance.CompleteRequest();
                 return;
             }
 
             if (!IsPostBack)
             {
-                // ✅ Handle when inspector marks an inspection as done
-                if (Request.QueryString["done"] != null && int.TryParse(Request.QueryString["done"], out int inspectionId))
-                {
-                    int inspectorId = Convert.ToInt32(Session["UserID"]);
-                    string findings = Request.QueryString["findings"] == null
-                        ? null
-                        : Server.UrlDecode(Request.QueryString["findings"]).Trim();
-
-                    if (string.IsNullOrWhiteSpace(findings))
-                    {
-                        // Redirect if no findings provided
-                        Response.Redirect("MyInspections.aspx?err=nofindings");
-                        return;
-                    }
-
-                    try
-                    {
-                        // 🔹 Validate scheduled date before marking as done
-                        using (var conn = new SqlConnection(connectionString))
-                        using (var cmd = new SqlCommand(@"
-                            SELECT ScheduledDate, InspectionStatus
-                            FROM Inspections
-                            WHERE InspectionID = @InspectionID AND InspectorID = @InspectorID", conn))
-                        {
-                            cmd.Parameters.Add("@InspectionID", SqlDbType.Int).Value = inspectionId;
-                            cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
-
-                            conn.Open();
-                            var reader = cmd.ExecuteReader();
-
-                            if (!reader.Read())
-                            {
-                                throw new Exception("Inspection not found or you are not authorized to update this inspection.");
-                            }
-
-                            DateTime scheduledDate = Convert.ToDateTime(reader["ScheduledDate"]);
-                            string status = reader["InspectionStatus"].ToString();
-                            reader.Close();
-
-                            // ✅ Convert to Philippine Time
-                            TimeZoneInfo phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time"); // PH Time
-                            DateTime phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
-
-                            // ✅ Only compare the DATE (ignore time)
-                            if (scheduledDate.Date > phNow.Date)
-                            {
-                                throw new Exception("You cannot mark this inspection as done before its scheduled date.");
-                            }
-
-                            // ❌ Cannot mark as done if already completed
-                            if (status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
-                            {
-                                throw new Exception("This inspection is already marked as completed.");
-                            }
-                        }
-
-                        // ✅ If validation passed, save the findings and mark as done
-                        MarkInspectionAsDone(inspectionId, inspectorId, findings);
-
-                        Response.Redirect("MyInspections.aspx?marked=1");
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        // 🔹 Show error in SweetAlert after redirect
-                        string script = $@"
-                            <script>
-                                window.onload = function() {{
-                                    Swal.fire('Error', '{ex.Message.Replace("'", "\\'")}', 'error');
-                                }};
-                            </script>";
-
-                        ClientScript.RegisterStartupScript(this.GetType(), "ErrorAlert", script);
-                    }
-                }
-
-                // ✅ Load inspections when page first loads
-                LoadMyInspections();
+                LoadInspections("All");
             }
         }
 
-        protected void ddlStatusFilter_SelectedIndexChanged(object sender, EventArgs e)
+        #region Load Inspections
+
+        /// <summary>
+        /// Load inspections based on filter
+        /// </summary>
+        private void LoadInspections(string filter)
         {
-            LoadMyInspections();
+            try
+            {
+                int inspectorId = Convert.ToInt32(Session["UserID"]);
+
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("dbo.spInspector_GetMyInspections", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
+                    cmd.Parameters.AddWithValue("@StatusFilter", filter);
+
+                    var dt = new DataTable();
+                    using (var adapter = new SqlDataAdapter(cmd))
+                    {
+                        adapter.Fill(dt);
+                    }
+
+                    // Decrypt sensitive fields
+                    DecryptDataTable(dt);
+
+                    // Add computed columns
+                    AddComputedColumns(dt);
+
+                    if (dt.Rows.Count > 0)
+                    {
+                        rptInspections.DataSource = dt;
+                        rptInspections.DataBind();
+                        pnlEmptyState.Visible = false;
+                    }
+                    else
+                    {
+                        rptInspections.DataSource = null;
+                        rptInspections.DataBind();
+                        pnlEmptyState.Visible = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadInspections Error: {ex.Message}");
+                ShowError("Error loading inspections.");
+            }
         }
 
         /// <summary>
-        /// Helper method to return the action button HTML
+        /// Decrypt sensitive data in DataTable
         /// </summary>
-        protected string GetActionButton(object scheduledDateObj, object inspectionStatusObj, object inspectionIdObj)
+        private void DecryptDataTable(DataTable dt)
         {
-            if (scheduledDateObj == null || inspectionStatusObj == null)
+            foreach (DataRow row in dt.Rows)
+            {
+                // Decrypt client email
+                if (row["ClientEmailEnc"] != DBNull.Value)
+                {
+                    row["ClientEmailEnc"] = DecryptField(row["ClientEmailEnc"]);
+                }
+
+                // Decrypt client contact
+                if (row["ClientContactEnc"] != DBNull.Value)
+                {
+                    row["ClientContactEnc"] = DecryptField(row["ClientContactEnc"]);
+                }
+
+                // Decrypt address fields
+                if (row["AddressEnc"] != DBNull.Value)
+                {
+                    row["AddressEnc"] = DecryptField(row["AddressEnc"]);
+                }
+
+                if (row["BarangayEnc"] != DBNull.Value)
+                {
+                    row["BarangayEnc"] = DecryptField(row["BarangayEnc"]);
+                }
+
+                if (row["CityEnc"] != DBNull.Value)
+                {
+                    row["CityEnc"] = DecryptField(row["CityEnc"]);
+                }
+
+                if (row["RegionEnc"] != DBNull.Value)
+                {
+                    row["RegionEnc"] = DecryptField(row["RegionEnc"]);
+                }
+
+                if (row["LandmarkEnc"] != DBNull.Value)
+                {
+                    row["LandmarkEnc"] = DecryptField(row["LandmarkEnc"]);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Add computed columns to DataTable
+        /// </summary>
+        private void AddComputedColumns(DataTable dt)
+        {
+            dt.Columns.Add("ClientName", typeof(string));
+            dt.Columns.Add("ClientEmail", typeof(string));
+            dt.Columns.Add("ClientContact", typeof(string));
+            dt.Columns.Add("FullAddress", typeof(string));
+
+            foreach (DataRow row in dt.Rows)
+            {
+                // Build client name
+                string firstName = row["ClientFirstName"]?.ToString() ?? "";
+                string middleName = row["ClientMiddleName"]?.ToString() ?? "";
+                string lastName = row["ClientLastName"]?.ToString() ?? "";
+                row["ClientName"] = $"{firstName} {middleName} {lastName}".Trim();
+
+                // Set decrypted values
+                row["ClientEmail"] = row["ClientEmailEnc"];
+                row["ClientContact"] = row["ClientContactEnc"];
+
+                // Build full address
+                string street = row["AddressEnc"]?.ToString() ?? "";
+                string barangay = row["BarangayEnc"]?.ToString() ?? "";
+                string city = row["CityEnc"]?.ToString() ?? "";
+                string region = row["RegionEnc"]?.ToString() ?? "";
+                string landmark = row["LandmarkEnc"]?.ToString() ?? "";
+
+                var addressParts = new System.Collections.Generic.List<string>();
+                if (!string.IsNullOrEmpty(street)) addressParts.Add(street);
+                if (!string.IsNullOrEmpty(barangay)) addressParts.Add(barangay);
+                if (!string.IsNullOrEmpty(city)) addressParts.Add(city);
+                if (!string.IsNullOrEmpty(region)) addressParts.Add(region);
+
+                row["FullAddress"] = string.Join(", ", addressParts);
+
+                if (!string.IsNullOrEmpty(landmark))
+                {
+                    row["FullAddress"] += $" (Near: {landmark})";
+                }
+            }
+        }
+
+        #endregion
+
+        #region Filter Buttons
+
+        /// <summary>
+        /// Handle filter button clicks
+        /// </summary>
+        protected void FilterInspections(object sender, EventArgs e)
+        {
+            var btn = (Button)sender;
+            string filter = "All";
+
+            // Reset all tabs
+            btnFilterAll.CssClass = "filter-tab";
+            btnFilterAssigned.CssClass = "filter-tab";
+            btnFilterInProgress.CssClass = "filter-tab";
+            btnFilterCompleted.CssClass = "filter-tab";
+
+            // Set active tab and filter
+            if (btn.ID == "btnFilterAssigned")
+            {
+                filter = "Assigned";
+                btnFilterAssigned.CssClass = "filter-tab active";
+            }
+            else if (btn.ID == "btnFilterInProgress")
+            {
+                filter = "In Progress";
+                btnFilterInProgress.CssClass = "filter-tab active";
+            }
+            else if (btn.ID == "btnFilterCompleted")
+            {
+                filter = "Completed";
+                btnFilterCompleted.CssClass = "filter-tab active";
+            }
+            else
+            {
+                btnFilterAll.CssClass = "filter-tab active";
+            }
+
+            LoadInspections(filter);
+        }
+
+        #endregion
+
+        #region Repeater Events
+
+        /// <summary>
+        /// Handle repeater item commands
+        /// </summary>
+        protected void rptInspections_ItemCommand(object source, RepeaterCommandEventArgs e)
+        {
+            try
+            {
+                int inquiryId = Convert.ToInt32(e.CommandArgument);
+
+                if (e.CommandName == "StartInspection")
+                {
+                    StartInspection(inquiryId);
+                }
+                else if (e.CommandName == "InputReport")
+                {
+                    Response.Redirect($"InspectorReport.aspx?id={inquiryId}", false);
+                }
+                else if (e.CommandName == "ViewDetails")
+                {
+                    Response.Redirect($"InspectionDetails.aspx?id={inquiryId}", false);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ItemCommand Error: {ex.Message}");
+                ShowError("Error processing request.");
+            }
+        }
+
+        #endregion
+
+        #region Actions
+
+        /// <summary>
+        /// Start inspection (change status to In Progress)
+        /// </summary>
+        private void StartInspection(int inquiryId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand(@"
+                    UPDATE dbo.Inquiries
+                    SET Status = 'In Progress',
+                        UpdatedAt = GETDATE()
+                    WHERE InquiryID = @InquiryID
+                ", conn))
+                {
+                    cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                ShowSuccess("Inspection started! You can now input your report.");
+                LoadInspections("All");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"StartInspection Error: {ex.Message}");
+                ShowError("Failed to start inspection.");
+            }
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Decrypt encrypted field
+        /// </summary>
+        private string DecryptField(object value)
+        {
+            if (value == null || value == DBNull.Value)
+                return string.Empty;
+
+            string encrypted = value.ToString();
+            if (string.IsNullOrEmpty(encrypted))
+                return string.Empty;
+
+            try
+            {
+                return AESHelper.DecryptField(encrypted);
+            }
+            catch
+            {
+                return "[Decryption Error]";
+            }
+        }
+
+        /// <summary>
+        /// Get urgency CSS class
+        /// </summary>
+        public string GetUrgencyClass(object urgency)
+        {
+            if (urgency == null || urgency == DBNull.Value)
                 return "";
 
-            DateTime scheduledDate = Convert.ToDateTime(scheduledDateObj);
-            string status = inspectionStatusObj.ToString();
+            string urgencyStr = urgency.ToString().ToLower();
 
-            // ✅ Convert current time to Philippine Time
-            TimeZoneInfo phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
-            DateTime phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
+            if (urgencyStr == "emergency")
+                return "urgent";
+            if (urgencyStr == "high")
+                return "high";
 
-            // ✅ Only compare the date
-            DateTime todayPH = phNow.Date;
-
-            // Show "Mark as Done" if scheduled date is today or earlier and status is Pending
-            if (scheduledDate.Date <= todayPH && status == "Pending")
-            {
-                return $"<button type='button' class='bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors' onclick=\"markDoneWithFindings('{inspectionIdObj}')\">Mark as Done</button>";
-            }
-            // Show disabled button if scheduled date is in the future
-            else if (scheduledDate.Date > todayPH && status == "Pending")
-            {
-                return "<button type='button' class='bg-gray-400 text-white font-bold py-2 px-4 rounded-md text-sm cursor-not-allowed' disabled>Mark Done</button>";
-            }
-
-            return ""; // Completed or other cases → no button
+            return "";
         }
 
         /// <summary>
-        /// Load all inspections assigned to the currently logged-in inspector
+        /// Get status CSS class
         /// </summary>
-        private void LoadMyInspections()
+        public string GetStatusClass(object status)
         {
-            int inspectorId = Convert.ToInt32(Session["UserID"]);
-            string statusFilter = ddlStatusFilter.SelectedValue; // "All", "Pending", "Completed"
+            if (status == null || status == DBNull.Value)
+                return "assigned";
 
-            using (var conn = new SqlConnection(connectionString))
-            using (var da = new SqlDataAdapter("dbo.usp_Inspections_ListByInspector", conn))
+            string statusStr = status.ToString().ToLower().Replace(" ", "-");
+
+            switch (statusStr)
             {
-                da.SelectCommand.CommandType = CommandType.StoredProcedure;
-                da.SelectCommand.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
-                da.SelectCommand.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value =
-                    string.IsNullOrWhiteSpace(statusFilter) ? "All" : statusFilter;
-
-                var dt = new DataTable();
-                da.Fill(dt);
-
-                // ✅ Add FullName column
-                if (!dt.Columns.Contains("FullName"))
-                    dt.Columns.Add("FullName", typeof(string));
-
-                // ===== Decrypt sensitive fields =====
-                foreach (DataRow row in dt.Rows)
-                {
-                    if (row["EmailEnc"] != DBNull.Value)
-                        row["EmailEnc"] = AESHelper.DecryptEmail(row["EmailEnc"].ToString());
-
-                    if (row["ContactEnc"] != DBNull.Value)
-                        row["ContactEnc"] = AESHelper.DecryptField(row["ContactEnc"].ToString());
-
-                    if (row["StreetEnc"] != DBNull.Value)
-                        row["StreetEnc"] = AESHelper.DecryptField(row["StreetEnc"].ToString());
-
-                    if (row["BarangayEnc"] != DBNull.Value)
-                        row["BarangayEnc"] = AESHelper.DecryptField(row["BarangayEnc"].ToString());
-
-                    if (row["CityEnc"] != DBNull.Value)
-                        row["CityEnc"] = AESHelper.DecryptField(row["CityEnc"].ToString());
-
-                    if (row["RegionEnc"] != DBNull.Value)
-                        row["RegionEnc"] = AESHelper.DecryptField(row["RegionEnc"].ToString());
-
-                    if (row["CountryEnc"] != DBNull.Value)
-                        row["CountryEnc"] = AESHelper.DecryptField(row["CountryEnc"].ToString());
-
-                    if (row["LandmarkEnc"] != DBNull.Value)
-                        row["LandmarkEnc"] = AESHelper.DecryptField(row["LandmarkEnc"].ToString());
-
-                    // Build FullName safely
-                    string first = row["FirstName"]?.ToString() ?? "";
-                    string middle = row["MiddleName"]?.ToString() ?? "";
-                    string last = row["LastName"]?.ToString() ?? "";
-                    row["FullName"] = $"{first} {middle} {last}".Replace("  ", " ").Trim();
-                }
-
-                // ✅ Rename columns for display
-                dt.Columns["EmailEnc"].ColumnName = "Email";
-                dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
-                dt.Columns["StreetEnc"].ColumnName = "StreetAndUnit";
-                dt.Columns["BarangayEnc"].ColumnName = "Barangay";
-                dt.Columns["CityEnc"].ColumnName = "City";
-                dt.Columns["RegionEnc"].ColumnName = "Region";
-                dt.Columns["CountryEnc"].ColumnName = "Country";
-                dt.Columns["LandmarkEnc"].ColumnName = "Landmark";
-
-                rptInspections.DataSource = dt;
-                rptInspections.DataBind();
+                case "assigned":
+                    return "assigned";
+                case "in-progress":
+                    return "in-progress";
+                case "inspected":
+                    return "inspected";
+                case "completed":
+                    return "completed";
+                default:
+                    return "assigned";
             }
         }
 
         /// <summary>
-        /// Return services as JSON for SweetAlert dropdown
+        /// Render client uploaded photos
         /// </summary>
-        private void GetServicesAsJson()
+        public string RenderClientPhotos(object imagePaths)
         {
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand(@"
-                SELECT ServiceID, Name, ServiceType 
-                FROM Services 
-                WHERE Status = 'Available'
-                ORDER BY ServiceType ASC, Name ASC", conn))
+            if (imagePaths == null || imagePaths == DBNull.Value || string.IsNullOrEmpty(imagePaths.ToString()))
+                return "";
+
+            var paths = imagePaths.ToString().Split(',');
+            var sb = new StringBuilder();
+
+            sb.Append("<div class='mt-4'>");
+            sb.Append("<h4 class='text-sm font-bold text-gray-700 mb-2'>");
+            sb.Append("<i class='fas fa-images'></i> Client Photos</h4>");
+            sb.Append("<div class='images-preview'>");
+
+            foreach (var path in paths)
             {
-                conn.Open();
-                var reader = cmd.ExecuteReader();
-                var services = new System.Collections.Generic.List<object>();
-
-                while (reader.Read())
+                if (!string.IsNullOrWhiteSpace(path))
                 {
-                    services.Add(new
-                    {
-                        ServiceID = reader["ServiceID"],
-                        Name = reader["Name"].ToString(),
-                        ServiceType = reader["ServiceType"].ToString()
-                    });
+                    string imgUrl = ResolveUrl(path.Trim());
+                    sb.Append($"<img src='{imgUrl}' alt='Client Photo' onclick='window.open(\"{imgUrl}\", \"_blank\")' />");
                 }
-
-                var json = new JavaScriptSerializer().Serialize(services);
-                Response.ContentType = "application/json";
-                Response.Write(json);
-                Response.End();
             }
+
+            sb.Append("</div></div>");
+
+            return sb.ToString();
+        }
+
+        #endregion
+
+        #region UI Messages
+
+        /// <summary>
+        /// Show error message
+        /// </summary>
+        private void ShowError(string message)
+        {
+            string script = $@"
+                Swal.fire({{
+                    icon: 'error',
+                    title: 'Error',
+                    text: '{message.Replace("'", "\\'")}',
+                    confirmButtonColor: '#ef4444'
+                }});
+            ";
+            ScriptManager.RegisterStartupScript(this, GetType(), "ShowError", script, true);
         }
 
         /// <summary>
-        /// Marks the inspection as completed using a stored procedure
+        /// Show success message
         /// </summary>
-        private void MarkInspectionAsDone(int inspectionId, int inspectorId, string findings)
+        private void ShowSuccess(string message)
         {
-            using (var conn = new SqlConnection(connectionString))
-            {
-                conn.Open();
-
-                // Validate the inspection first
-                using (var cmd = new SqlCommand(@"
-                    SELECT ScheduledDate, InspectionStatus 
-                    FROM Inspections 
-                    WHERE InspectionID = @InspectionID AND InspectorID = @InspectorID", conn))
-                {
-                    cmd.Parameters.Add("@InspectionID", SqlDbType.Int).Value = inspectionId;
-                    cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
-
-                    var reader = cmd.ExecuteReader();
-
-                    if (!reader.Read())
-                        throw new Exception("Inspection not found or you are not authorized to update this inspection.");
-
-                    DateTime scheduledDate = Convert.ToDateTime(reader["ScheduledDate"]);
-                    string status = reader["InspectionStatus"].ToString();
-                    reader.Close();
-
-                    // ✅ Convert to Philippine Time
-                    TimeZoneInfo phTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
-                    DateTime phNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, phTimeZone);
-
-                    // ✅ Compare only dates
-                    if (scheduledDate.Date > phNow.Date)
-                        throw new Exception("You cannot mark this inspection as done before its scheduled date.");
-
-                    if (status == "Completed")
-                        throw new Exception("This inspection is already marked as completed.");
-
-                    // ✅ Call the stored procedure
-                    using (var cmdUpdate = new SqlCommand("dbo.usp_Inspection_MarkCompleted", conn))
-                    {
-                        cmdUpdate.CommandType = CommandType.StoredProcedure;
-
-                        // Required input parameters
-                        cmdUpdate.Parameters.Add("@InspectionID", SqlDbType.Int).Value = inspectionId;
-                        cmdUpdate.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
-                        cmdUpdate.Parameters.Add("@Findings", SqlDbType.NVarChar, -1).Value = findings;
-
-                        // ✅ OUTPUT parameter
-                        var rowsAffectedParam = cmdUpdate.Parameters.Add("@RowsAffected", SqlDbType.Int);
-                        rowsAffectedParam.Direction = ParameterDirection.Output;
-
-                        cmdUpdate.ExecuteNonQuery();
-
-                        // Get the value back
-                        int rowsAffected = (int)rowsAffectedParam.Value;
-
-                        // Check if the update actually happened
-                        if (rowsAffected == 0)
-                        {
-                            throw new Exception("No inspection was updated. Ensure you are assigned to this inspection.");
-                        }
-                    }
-                }
-            }
+            string script = $@"
+                Swal.fire({{
+                    icon: 'success',
+                    title: 'Success!',
+                    text: '{message.Replace("'", "\\'")}',
+                    confirmButtonColor: '#10b981'
+                }});
+            ";
+            ScriptManager.RegisterStartupScript(this, GetType(), "ShowSuccess", script, true);
         }
+
+        #endregion
     }
 }
