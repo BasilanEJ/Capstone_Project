@@ -483,9 +483,11 @@
                 <asp:Repeater ID="rptPhotos" runat="server">
                     <ItemTemplate>
                         <div class="relative group">
-                            <img src='<%# Eval("PhotoPath") %>' alt="Inspection Photo"
-                                class="w-full h-48 object-cover" 
-                                onclick="viewImage('<%# Eval("PhotoPath") %>')" />
+                       <img src='<%# ResolveUrl(Eval("PhotoPath").ToString()) %>' 
+     alt="Inspection Photo"
+     class="w-full h-48 object-cover" 
+     onclick="viewImage('<%# ResolveUrl(Eval("PhotoPath").ToString()) %>')" />
+
                             <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center rounded-lg">
                                 <i class="fa-solid fa-search-plus text-white text-3xl opacity-0 group-hover:opacity-100 transition-all duration-300"></i>
                             </div>

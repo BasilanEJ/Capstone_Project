@@ -141,6 +141,24 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Label lblTotalPrice;
 
         /// <summary>
+        /// pnlPaymentPlan control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlPaymentPlan;
+
+        /// <summary>
+        /// ddlPaymentPlan control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.DropDownList ddlPaymentPlan;
+
+        /// <summary>
         /// lblSelectedDateTime control.
         /// </summary>
         /// <remarks>

@@ -44,6 +44,79 @@ namespace RRCManagementSystem
                 }
 
                 LoadInspectionDetails(reportId);
+
+                // ✅ NEW: Check if booking already exists for this report
+                CheckExistingBooking(reportId, clientId);
+            }
+        }
+
+        // ==============================
+        // ✅ NEW: CHECK IF BOOKING EXISTS
+        // ==============================
+        private void CheckExistingBooking(int reportId, int clientId)
+        {
+            const string sql = @"
+                SELECT TOP 1 
+                    B.BookingID,
+                    B.BookingCode,
+                    B.Status,
+                    B.CreatedAt
+                FROM dbo.Bookings B
+                WHERE B.ReportID = @ReportID 
+                  AND B.ClientID = @ClientID
+                ORDER BY B.CreatedAt DESC";
+
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.Add(new SqlParameter("@ReportID", SqlDbType.Int) { Value = reportId });
+                    cmd.Parameters.Add(new SqlParameter("@ClientID", SqlDbType.Int) { Value = clientId });
+
+                    conn.Open();
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            // ✅ Booking exists - hide button and show message
+                            btnBookService.Visible = false;
+
+                            string bookingCode = dr["BookingCode"]?.ToString() ?? "N/A";
+                            string status = dr["Status"]?.ToString() ?? "Unknown";
+                            DateTime createdAt = dr["CreatedAt"] != DBNull.Value
+                                ? Convert.ToDateTime(dr["CreatedAt"])
+                                : DateTime.Now;
+
+                            // Show info message that booking already exists
+                            string infoScript = $@"
+                                Swal.fire({{
+                                    icon: 'info',
+                                    title: 'Already Booked',
+                                    html: '<p>You have already booked this service.</p><p><strong>Booking Code:</strong> {bookingCode}</p><p><strong>Status:</strong> {status}</p><p><strong>Booked On:</strong> {createdAt:MMM dd, yyyy}</p>',
+                                    confirmButtonColor: '#1e40af',
+                                    confirmButtonText: 'View My Bookings'
+                                }}).then((result) => {{
+                                    if (result.isConfirmed) {{
+                                        window.location.href = 'MyBookings.aspx';
+                                    }}
+                                }});
+                            ";
+                            ScriptManager.RegisterStartupScript(this, GetType(), "AlreadyBooked", infoScript, true);
+                        }
+                        else
+                        {
+                            // ✅ No booking exists - show button
+                            btnBookService.Visible = true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("CheckExistingBooking error: " + ex.Message);
+                // If error occurs, keep button visible (fail-safe)
+                btnBookService.Visible = true;
             }
         }
 
@@ -217,6 +290,7 @@ namespace RRCManagementSystem
                             }
 
                             // Parse and bind photos (comma-separated paths)
+                            // Parse and bind photos (comma-separated paths)
                             string photos = SafeGetString(dr, "InspectionPhotosPath");
                             if (!string.IsNullOrEmpty(photos))
                             {
@@ -224,12 +298,14 @@ namespace RRCManagementSystem
                                 dtPhotos.Columns.Add("PhotoPath", typeof(string));
                                 foreach (var path in photos.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    dtPhotos.Rows.Add(path.Trim());
+                                    string resolvedPath = ResolveUrl(path.Trim());
+                                    dtPhotos.Rows.Add(resolvedPath);
                                 }
 
                                 rptPhotos.DataSource = dtPhotos;
                                 rptPhotos.DataBind();
                             }
+
                         }
                     }
                 }
@@ -338,6 +414,14 @@ namespace RRCManagementSystem
                 string reportIdStr = Request.QueryString["ReportID"];
                 if (!string.IsNullOrWhiteSpace(reportIdStr) && int.TryParse(reportIdStr, out int reportId))
                 {
+                    // ✅ Double-check before redirect - prevent race conditions
+                    int clientId = Convert.ToInt32(Session["ClientID"]);
+                    if (HasExistingBooking(reportId, clientId))
+                    {
+                        ShowAlert("warning", "Already Booked", "You have already booked this service.");
+                        return;
+                    }
+
                     // Redirect to BookService with ReportID parameter
                     Response.Redirect($"BookService.aspx?ReportID={reportId}", false);
                     Context.ApplicationInstance.CompleteRequest();
@@ -351,6 +435,37 @@ namespace RRCManagementSystem
             {
                 System.Diagnostics.Debug.WriteLine("btnBookService_Click error: " + ex.Message);
                 ShowAlert("error", "Error", "Unable to proceed to booking.");
+            }
+        }
+
+        // ==============================
+        // ✅ NEW: QUICK CHECK FOR EXISTING BOOKING
+        // ==============================
+        private bool HasExistingBooking(int reportId, int clientId)
+        {
+            const string sql = @"
+                SELECT COUNT(*)
+                FROM dbo.Bookings
+                WHERE ReportID = @ReportID 
+                  AND ClientID = @ClientID";
+
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.Add(new SqlParameter("@ReportID", SqlDbType.Int) { Value = reportId });
+                    cmd.Parameters.Add(new SqlParameter("@ClientID", SqlDbType.Int) { Value = clientId });
+
+                    conn.Open();
+                    int count = Convert.ToInt32(cmd.ExecuteScalar());
+                    return count > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("HasExistingBooking error: " + ex.Message);
+                return false;
             }
         }
 

@@ -12,7 +12,6 @@ namespace RRCManagementSystem
     public partial class MyInspections : System.Web.UI.Page
     {
         private static readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-        private string currentFilter = "All";
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -33,7 +32,7 @@ namespace RRCManagementSystem
         #region Load Inspections
 
         /// <summary>
-        /// Load inspections based on filter
+        /// Load inspections with their report status
         /// </summary>
         private void LoadInspections(string filter)
         {
@@ -42,11 +41,54 @@ namespace RRCManagementSystem
                 int inspectorId = Convert.ToInt32(Session["UserID"]);
 
                 using (var conn = new SqlConnection(connectionString))
-                using (var cmd = new SqlCommand("dbo.spInspector_GetMyInspections", conn))
+                using (var cmd = new SqlCommand(@"
+                    SELECT 
+                        i.InquiryID,
+                        i.InquiryNumber,
+                        i.PestType,
+                        i.Status,
+                        i.Urgency,
+                        i.InspectionDate,
+                        i.InspectionTime,
+                        i.ProblemDescription,
+                        i.InspectionReportPath,
+                        i.AssignedAt,
+                        i.AddressEnc,
+                        i.BarangayEnc,
+                        i.CityEnc,
+                        i.RegionEnc,
+                        i.LandmarkEnc,
+                        c.FirstName AS ClientFirstName,
+                        c.MiddleName AS ClientMiddleName,
+                        c.LastName AS ClientLastName,
+                        c.EmailEnc AS ClientEmailEnc,
+                        c.ContactEnc AS ClientContactEnc,
+                        ir.ReportID,
+                        ir.QuotationCode,
+                        ir.Status AS ReportStatus,
+                        ir.CreatedAt AS ReportCreatedAt
+                    FROM dbo.Inquiries i
+                    INNER JOIN dbo.Clients c ON i.ClientID = c.ClientID
+                    LEFT JOIN dbo.InspectionReports ir ON i.InquiryID = ir.InquiryID
+                    WHERE i.AssignedInspectorID = @InspectorID
+                        AND i.IsDeleted = 0
+                        AND (@Filter = 'All' 
+                            OR (@Filter = 'Assigned' AND i.Status = 'Assigned')
+                            OR (@Filter = 'In Progress' AND i.Status = 'In Progress')
+                            OR (@Filter = 'Inspected' AND i.Status = 'Inspected')
+                            OR (@Filter = 'Drafts' AND ir.Status = 'Draft'))
+                    ORDER BY 
+                        CASE 
+                            WHEN i.Urgency = 'Emergency' THEN 1
+                            WHEN i.Urgency = 'High' THEN 2
+                            WHEN i.Urgency = 'Medium' THEN 3
+                            ELSE 4
+                        END,
+                        i.InspectionDate ASC
+                ", conn))
                 {
-                    cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
-                    cmd.Parameters.AddWithValue("@StatusFilter", filter);
+                    cmd.Parameters.AddWithValue("@Filter", filter);
 
                     var dt = new DataTable();
                     using (var adapter = new SqlDataAdapter(cmd))
@@ -188,7 +230,8 @@ namespace RRCManagementSystem
             btnFilterAll.CssClass = "filter-tab";
             btnFilterAssigned.CssClass = "filter-tab";
             btnFilterInProgress.CssClass = "filter-tab";
-            btnFilterCompleted.CssClass = "filter-tab";
+            btnFilterInspected.CssClass = "filter-tab";
+            btnFilterDrafts.CssClass = "filter-tab";
 
             // Set active tab and filter
             if (btn.ID == "btnFilterAssigned")
@@ -201,10 +244,15 @@ namespace RRCManagementSystem
                 filter = "In Progress";
                 btnFilterInProgress.CssClass = "filter-tab active";
             }
-            else if (btn.ID == "btnFilterCompleted")
+            else if (btn.ID == "btnFilterInspected")
             {
-                filter = "Completed";
-                btnFilterCompleted.CssClass = "filter-tab active";
+                filter = "Inspected";
+                btnFilterInspected.CssClass = "filter-tab active";
+            }
+            else if (btn.ID == "btnFilterDrafts")
+            {
+                filter = "Drafts";
+                btnFilterDrafts.CssClass = "filter-tab active";
             }
             else
             {
@@ -221,23 +269,36 @@ namespace RRCManagementSystem
         /// <summary>
         /// Handle repeater item commands
         /// </summary>
+        /// <summary>
+        /// Handle repeater item commands
+        /// </summary>
         protected void rptInspections_ItemCommand(object source, RepeaterCommandEventArgs e)
         {
             try
             {
-                int inquiryId = Convert.ToInt32(e.CommandArgument);
-
                 if (e.CommandName == "StartInspection")
                 {
+                    int inquiryId = Convert.ToInt32(e.CommandArgument);
                     StartInspection(inquiryId);
                 }
-                else if (e.CommandName == "InputReport")
+                else if (e.CommandName == "CreateReport")
                 {
+                    int inquiryId = Convert.ToInt32(e.CommandArgument);
                     Response.Redirect($"InspectorReport.aspx?id={inquiryId}", false);
                 }
-                else if (e.CommandName == "ViewDetails")
+                else if (e.CommandName == "EditDraft")
                 {
-                    Response.Redirect($"InspectionDetails.aspx?id={inquiryId}", false);
+                    string[] args = e.CommandArgument.ToString().Split('|');
+                    int inquiryId = Convert.ToInt32(args[0]);
+                    int reportId = Convert.ToInt32(args[1]);
+                    Response.Redirect($"InspectorReport.aspx?id={inquiryId}&reportId={reportId}", false);
+                }
+                else if (e.CommandName == "ViewReport")
+                {
+                    string[] args = e.CommandArgument.ToString().Split('|');
+                    int inquiryId = Convert.ToInt32(args[0]);
+                    int reportId = Convert.ToInt32(args[1]);
+                    Response.Redirect($"InspectorViewReport.aspx?id={inquiryId}&reportId={reportId}", false);
                 }
             }
             catch (Exception ex)
@@ -246,6 +307,8 @@ namespace RRCManagementSystem
                 ShowError("Error processing request.");
             }
         }
+
+
 
         #endregion
 
@@ -271,7 +334,7 @@ namespace RRCManagementSystem
                     cmd.ExecuteNonQuery();
                 }
 
-                ShowSuccess("Inspection started! You can now input your report.");
+                ShowSuccess("Inspection started! You can now create your report.");
                 LoadInspections("All");
             }
             catch (Exception ex)
@@ -323,6 +386,75 @@ namespace RRCManagementSystem
                 return "high";
 
             return "";
+        }
+
+        /// <summary>
+        /// Check if report is draft
+        /// </summary>
+        public bool IsReportDraft(object reportStatus)
+        {
+            if (reportStatus == null || reportStatus == DBNull.Value)
+                return false;
+
+            return reportStatus.ToString() == "Draft";
+        }
+
+        /// <summary>
+        /// Render status badges dynamically
+        /// </summary>
+        public string RenderStatusBadges(object inquiryStatus, object reportStatus, object quotationCode)
+        {
+            var sb = new StringBuilder();
+
+            // Inquiry Status Badge
+            string status = inquiryStatus?.ToString() ?? "Assigned";
+            string statusClass = GetStatusClass(inquiryStatus);
+
+            sb.Append($"<span class='status-badge status-{statusClass}'>");
+            sb.Append($"<i class='fas fa-circle'></i> {status}");
+            sb.Append("</span>");
+
+            // Report Status Badge (if exists)
+            if (reportStatus != null && reportStatus != DBNull.Value)
+            {
+                string repStatus = reportStatus.ToString();
+                string code = quotationCode?.ToString() ?? "";
+
+                if (repStatus == "Draft")
+                {
+                    sb.Append(" <span class='status-badge status-draft'>");
+                    sb.Append($"<i class='fas fa-file-edit'></i> DRAFT");
+                    if (!string.IsNullOrEmpty(code))
+                    {
+                        sb.Append($" ({code})");
+                    }
+                    sb.Append("</span>");
+                }
+                else if (repStatus == "Inspected")
+                {
+                    sb.Append(" <span class='status-badge status-inspected'>");
+                    sb.Append($"<i class='fas fa-check-circle'></i> SUBMITTED");
+                    if (!string.IsNullOrEmpty(code))
+                    {
+                        sb.Append($" ({code})");
+                    }
+                    sb.Append("</span>");
+                }
+
+                else if (repStatus == "Approved")
+                {
+                    sb.Append(" <span class='status-badge status-completed'>");
+                    sb.Append($"<i class='fas fa-check-circle'></i> APPROVED");
+                    if (!string.IsNullOrEmpty(code))
+                    {
+                        sb.Append($" ({code})");
+                    }
+                    sb.Append("</span>");
+                }
+
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>

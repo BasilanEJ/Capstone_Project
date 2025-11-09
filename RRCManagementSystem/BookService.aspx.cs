@@ -110,6 +110,18 @@ namespace RRCManagementSystem
                         bool isContract = serviceInfo.HasContractService;
                         hfIsContract.Value = isContract ? "True" : "False";
 
+                        // ✅ UPDATED: Show/hide payment plan dropdown based on contract status
+                        if (isContract)
+                        {
+                            pnlPaymentPlan.Visible = true;
+                            ddlPaymentPlan.SelectedValue = "50-25-25"; // Default for contracts
+                        }
+                        else
+                        {
+                            pnlPaymentPlan.Visible = false;
+                            ddlPaymentPlan.SelectedValue = "100"; // Force full payment for non-contracts
+                        }
+
                         // Inspector info
                         lblInspector.Text = SafeGetString(reader, "InspectorName", "N/A");
 
@@ -169,9 +181,21 @@ namespace RRCManagementSystem
                         serviceDetails.Add(formattedService);
                         totalSQM += sqm;
 
-                        // Check if this service is a contract service
-                        // Termite Control is always contract
-                        if (serviceName.IndexOf("Termite", StringComparison.OrdinalIgnoreCase) >= 0)
+                        // ✅ UPDATED: Check IsContract from JSON first, then fallback to database
+                        bool serviceIsContract = false;
+
+                        if (service["IsContract"] != null)
+                        {
+                            // Use IsContract from JSON if it exists
+                            serviceIsContract = Convert.ToBoolean(service["IsContract"]);
+                        }
+                        else
+                        {
+                            // Fallback: Get IsContract from Services table
+                            serviceIsContract = GetServiceIsContractFromDB(serviceName);
+                        }
+
+                        if (serviceIsContract)
                         {
                             hasContract = true;
                         }
@@ -195,6 +219,29 @@ namespace RRCManagementSystem
             }
 
             return serviceInfo;
+        }
+
+        // ✅ NEW: Get IsContract status from database
+        private bool GetServiceIsContractFromDB(string serviceName)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("SELECT ISNULL(IsContract, 0) FROM dbo.Services WHERE Name = @ServiceName", conn))
+                {
+                    cmd.Parameters.Add("@ServiceName", SqlDbType.NVarChar, 100).Value = serviceName;
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && Convert.ToBoolean(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetServiceIsContractFromDB error: {ex.Message}");
+
+                // Fallback: Use name-based detection as last resort
+                return serviceName.IndexOf("Termite", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
         }
 
         // Helper class for service info
@@ -270,6 +317,19 @@ namespace RRCManagementSystem
                         bool isContractFinal = isTermiteType || isContractCol;
 
                         hfIsContract.Value = isContractFinal ? "True" : "False";
+
+                        // ✅ UPDATED: Show/hide payment plan dropdown for old quotations too
+                        if (isContractFinal)
+                        {
+                            pnlPaymentPlan.Visible = true;
+                            ddlPaymentPlan.SelectedValue = "50-25-25";
+                        }
+                        else
+                        {
+                            pnlPaymentPlan.Visible = false;
+                            ddlPaymentPlan.SelectedValue = "100";
+                        }
+
                         hfQuotationID.Value = SafeGetString(reader, "PendingQuotationID", null);
 
                         lblInspector.Text = SafeGetString(reader, "InspectorName", "N/A");
@@ -525,9 +585,33 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Determine payment plan based on contract status
+            // ✅ UPDATED: Get payment plan based on contract status (using dropdown)
             bool isContract = hfIsContract.Value == "True";
-            string paymentPlan = isContract ? "50-25-25" : "100";
+            string paymentPlan;
+
+            if (isContract)
+            {
+                // Contract booking - use client's selection from dropdown
+                paymentPlan = ddlPaymentPlan.SelectedValue;
+
+                // Validation: Make sure they selected something
+                if (string.IsNullOrWhiteSpace(paymentPlan))
+                {
+                    ScriptManager.RegisterStartupScript(this, GetType(), "noPlan",
+                        @"Swal.fire({
+                            icon: 'warning',
+                            title: 'Payment Plan Required',
+                            text: 'Please select a payment plan for your contract booking.',
+                            confirmButtonColor: '#2563eb'
+                        });", true);
+                    return;
+                }
+            }
+            else
+            {
+                // Non-contract booking - force 100% payment
+                paymentPlan = "100";
+            }
 
             // Get service names from ViewState
             string serviceNames = ViewState["ServiceNames"] != null ? ViewState["ServiceNames"].ToString() : lblServices.Text;
@@ -553,13 +637,13 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = clientId;
                 cmd.Parameters.Add("@InspectorID", SqlDbType.Int).Value = inspectorId;
                 cmd.Parameters.Add("@ScheduledDate", SqlDbType.Date).Value = selectedDate.Date;
-                cmd.Parameters.Add("@StartTime", SqlDbType.Time).Value = startTime; // ✅ Using time slot start time
+                cmd.Parameters.Add("@StartTime", SqlDbType.Time).Value = startTime;
                 cmd.Parameters.Add("@ServiceNames", SqlDbType.NVarChar, -1).Value = serviceNames;
                 cmd.Parameters.Add("@SQM", SqlDbType.Int).Value = sqm;
                 cmd.Parameters.Add("@Price", SqlDbType.Decimal).Value = totalPrice;
                 cmd.Parameters.Add("@TravelExpense", SqlDbType.Decimal).Value = travel;
                 cmd.Parameters.Add("@Miscellaneous", SqlDbType.Decimal).Value = misc;
-                cmd.Parameters.Add("@PaymentPlan", SqlDbType.NVarChar, 100).Value = paymentPlan;
+                cmd.Parameters.Add("@PaymentPlan", SqlDbType.NVarChar, 100).Value = paymentPlan; // ✅ Now uses dropdown selection
                 cmd.Parameters.Add("@Notes", SqlDbType.NVarChar, -1).Value = string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes;
 
                 // Output parameters
@@ -632,7 +716,6 @@ namespace RRCManagementSystem
             }
         }
 
-        // ==================== HELPER METHODS ====================
         private decimal ParseCurrency(string value)
         {
             if (string.IsNullOrWhiteSpace(value)) return 0m;

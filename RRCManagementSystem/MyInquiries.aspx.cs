@@ -25,6 +25,9 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
+                // ✅ Set initial filter
+                ViewState["CurrentFilter"] = "All";
+
                 LoadInquiries("All");
                 UpdateStatusCounts();
             }
@@ -150,6 +153,9 @@ namespace RRCManagementSystem
             {
                 var btn = (LinkButton)sender;
                 string statusFilter = btn.CommandArgument;
+
+                // ✅ Store current filter in ViewState
+                ViewState["CurrentFilter"] = statusFilter;
 
                 // Update active tab styling
                 btnAll.CssClass = "status-tab";
@@ -430,6 +436,16 @@ namespace RRCManagementSystem
                 string status = dataItem["Status"]?.ToString();
                 string clientApproval = dataItem["ClientApproval"]?.ToString();
                 int inquiryId = Convert.ToInt32(dataItem["InquiryID"]);
+
+                // ✅ UPDATED: Only show "View Details" button when viewing "Quotation Sent" tab
+                var btnViewDetails = (LinkButton)e.Item.FindControl("btnViewDetails");
+                if (btnViewDetails != null)
+                {
+                    string currentFilter = ViewState["CurrentFilter"]?.ToString() ?? "All";
+
+                    // Show button only when in "Quotation Sent" tab
+                    btnViewDetails.Visible = (currentFilter == "Quotation Sent");
+                }
 
                 // Show Approval/Rejection buttons if status is "Quotation Sent" and approval is "Pending"
                 if (status == "Quotation Sent" && clientApproval == "Pending")

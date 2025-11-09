@@ -158,8 +158,10 @@ namespace RRCManagementSystem
                                 dtPhotos.Columns.Add("PhotoPath", typeof(string));
                                 foreach (var path in photos.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    dtPhotos.Rows.Add(path.Trim());
+                                    string resolvedPath = ResolveUrl(path.Trim());
+                                    dtPhotos.Rows.Add(resolvedPath);
                                 }
+
 
                                 rptPhotos.DataSource = dtPhotos;
                                 rptPhotos.DataBind();

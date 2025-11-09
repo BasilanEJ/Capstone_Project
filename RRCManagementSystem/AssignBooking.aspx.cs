@@ -166,10 +166,10 @@ namespace RRCManagementSystem
                 {
                     if (reader.Read())
                     {
-                        // Display Booking Code
+                        // 🟦 Display Booking Code
                         lblBookingCode.Text = reader["BookingCode"].ToString();
 
-                        // Display Operation Number (if reschedule)
+                        // 🟦 Display Operation Number (if reschedule)
                         if (scheduleID > 0 && reader["OperationNumber"] != DBNull.Value)
                         {
                             lblOperationNumber.Visible = true;
@@ -180,45 +180,37 @@ namespace RRCManagementSystem
                             lblOperationNumber.Visible = false;
                         }
 
-                        // ✅ NEW: Format and display service details with individual SQM
+                        // 🟦 Extract data from reader
                         string serviceDetails = reader["ServiceDetails"]?.ToString();
                         string serviceName = reader["ServiceName"]?.ToString();
                         int totalSQM = reader["SQM"] != DBNull.Value ? Convert.ToInt32(reader["SQM"]) : 0;
 
-                        // 🟦 If this is a reschedule (ScheduleID > 0), filter out non-contractual services
-                        if (scheduleID > 0 && !string.IsNullOrWhiteSpace(serviceDetails) && serviceDetails.TrimStart().StartsWith("["))
-                        {
-                            try
-                            {
-                                var allServices = JArray.Parse(serviceDetails);
-                                var contractOnly = new JArray();
+                        // ✅ SQL already filters contract-only when reschedule — no need to re-filter here
 
-                                foreach (var s in allServices)
-                                {
-                                    // keep only services where IsContract = 1
-                                    bool isContract = s["IsContract"] != null && s["IsContract"].ToObject<int>() == 1;
-                                    if (isContract)
-                                        contractOnly.Add(s);
-                                }
-
-                                // Replace serviceDetails with filtered version
-                                serviceDetails = contractOnly.ToString();
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine("Service filter error: " + ex.Message);
-                            }
-                        }
-
-                        // ✅ Display filtered or unfiltered service list
+                        // 🟩 Display the services in the header
                         lblServiceName.Text = FormatServiceDetailsForHeader(serviceDetails, serviceName, totalSQM);
 
-                        // ✅ Store the same (possibly filtered) service details for later usage
+                        // 🟩 Store data for chemical/equipment loaders
                         Session["ServiceDetails"] = serviceDetails;
+                        Session["ServiceName"] = serviceName;
+                        Session["SQM"] = totalSQM;
+
+                        // 🟢 Optional: Debug confirmation (you can remove later)
+                        System.Diagnostics.Debug.WriteLine($"[LoadBookingCodeAndOperation] BookingID={bookingID}, ScheduleID={scheduleID}, SQM={totalSQM}");
+                        System.Diagnostics.Debug.WriteLine($"[LoadBookingCodeAndOperation] ServiceDetails={serviceDetails}");
+                    }
+                    else
+                    {
+                        // 🟥 Handle missing booking (defensive)
+                        lblBookingCode.Text = "N/A";
+                        lblServiceName.Text = "<span class='text-gray-400 italic'>No service details found.</span>";
+                        lblOperationNumber.Visible = false;
                     }
                 }
             }
         }
+
+
 
 
         /// <summary>
@@ -228,7 +220,7 @@ namespace RRCManagementSystem
         {
             var html = new System.Text.StringBuilder();
 
-            // Try to parse JSON first (for new bookings with multiple services)
+            // 🟦 Parse JSON if available
             if (!string.IsNullOrWhiteSpace(serviceDetailsJson) && serviceDetailsJson.TrimStart().StartsWith("["))
             {
                 try
@@ -237,20 +229,25 @@ namespace RRCManagementSystem
 
                     foreach (var service in services)
                     {
-                        string name = service["ServiceName"]?.ToString();
+                        // Case-insensitive key handling
+                        string name = service["ServiceName"]?.ToString()
+                                   ?? service["serviceName"]?.ToString()
+                                   ?? service["Name"]?.ToString()
+                                   ?? service["name"]?.ToString();
+
                         int sqm = Convert.ToInt32(service["SQM"] ?? 0);
 
                         if (!string.IsNullOrEmpty(name))
                         {
                             html.Append("<div class='inline-flex items-center gap-2 mr-4 mb-1'>");
-                            html.Append("<i class='fas fa-check-circle text-yellow-300' style='font-size: 0.875rem;'></i>");
+                            html.Append("<i class='fas fa-check-circle text-yellow-300' style='font-size:0.875rem;'></i>");
                             html.Append($"<span class='text-white text-sm'>{System.Web.HttpUtility.HtmlEncode(name)}</span>");
                             html.Append($"<span class='bg-yellow-200 text-blue-900 px-2 py-0.5 rounded text-xs font-semibold'>{sqm} m²</span>");
                             html.Append("</div>");
                         }
                     }
 
-                    // Add total if multiple services
+                    // Add total SQM if multiple services
                     if (services.Count > 1)
                     {
                         html.Append("<div class='block mt-2 pt-2 border-t border-blue-600 text-xs text-gray-300'>");
@@ -263,28 +260,26 @@ namespace RRCManagementSystem
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"FormatServiceDetailsForHeader JSON parse error: {ex.Message}");
-                    // Fall through to simple display
                 }
             }
 
-            // Fallback: Simple display (for old bookings or when JSON is not available)
+            // 🟩 Fallback for plain ServiceNames
             if (!string.IsNullOrWhiteSpace(serviceNames))
             {
                 html.Append("<div class='inline-flex items-center gap-2'>");
-                html.Append("<i class='fas fa-tools text-yellow-300' style='font-size: 0.875rem;'></i>");
+                html.Append("<i class='fas fa-tools text-yellow-300' style='font-size:0.875rem;'></i>");
                 html.Append($"<span class='text-white text-sm'>{System.Web.HttpUtility.HtmlEncode(serviceNames)}</span>");
-
                 if (totalSQM > 0)
                 {
                     html.Append($"<span class='bg-yellow-200 text-blue-900 px-2 py-0.5 rounded text-xs font-semibold'>{totalSQM} m²</span>");
                 }
-
                 html.Append("</div>");
                 return html.ToString();
             }
 
             return "<span class='text-gray-400 text-sm italic'>N/A</span>";
         }
+
 
 
 

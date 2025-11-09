@@ -270,6 +270,7 @@
     <Content Include="InspectorAreaScope.aspx" />
     <Content Include="InspectorDashboard.aspx" />
     <Content Include="InspectorReport.aspx" />
+    <Content Include="InspectorViewReport.aspx" />
     <Content Include="js\enhanced-fingerprint.js" />
     <Content Include="Login.aspx" />
     <Content Include="Logout.aspx" />
@@ -980,6 +981,13 @@
     </Compile>
     <Compile Include="InspectorReport.aspx.designer.cs">
       <DependentUpon>InspectorReport.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="InspectorViewReport.aspx.cs">
+      <DependentUpon>InspectorViewReport.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="InspectorViewReport.aspx.designer.cs">
+      <DependentUpon>InspectorViewReport.aspx</DependentUpon>
     </Compile>
     <Compile Include="LoadInspections.ashx.cs">
       <DependentUpon>LoadInspections.ashx</DependentUpon>

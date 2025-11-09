@@ -31,6 +31,11 @@
             background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
         }
 
+        .inspection-card.draft {
+            border-left-color: #f59e0b;
+            background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+        }
+
         /* Status Badge */
         .status-badge {
             display: inline-flex;
@@ -47,6 +52,7 @@
         .status-in-progress { background: #fef3c7; color: #92400e; }
         .status-inspected { background: #d1fae5; color: #065f46; }
         .status-completed { background: #d1fae5; color: #047857; }
+        .status-draft { background: #fef3c7; color: #92400e; }
 
         /* Info Grid */
         .info-grid {
@@ -161,6 +167,25 @@
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
         }
 
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+
         /* Empty State */
         .empty-state {
             text-align: center;
@@ -257,7 +282,8 @@
             <asp:Button ID="btnFilterAll" runat="server" Text="📋 All" CssClass="filter-tab active" OnClick="FilterInspections" />
             <asp:Button ID="btnFilterAssigned" runat="server" Text="🆕 Assigned" CssClass="filter-tab" OnClick="FilterInspections" />
             <asp:Button ID="btnFilterInProgress" runat="server" Text="🔄 In Progress" CssClass="filter-tab" OnClick="FilterInspections" />
-            <asp:Button ID="btnFilterCompleted" runat="server" Text="✅ Completed" CssClass="filter-tab" OnClick="FilterInspections" />
+            <asp:Button ID="btnFilterInspected" runat="server" Text="✅ Inspected" CssClass="filter-tab" OnClick="FilterInspections" />
+            <asp:Button ID="btnFilterDrafts" runat="server" Text="💾 Drafts" CssClass="filter-tab" OnClick="FilterInspections" />
         </div>
 
         <!-- Inspections List -->
@@ -265,17 +291,14 @@
             <ContentTemplate>
                 <asp:Repeater ID="rptInspections" runat="server" OnItemCommand="rptInspections_ItemCommand">
                     <ItemTemplate>
-                        <div class="inspection-card <%# GetUrgencyClass(Eval("Urgency")) %>">
+                        <div class="inspection-card <%# GetUrgencyClass(Eval("Urgency")) %> <%# IsReportDraft(Eval("ReportStatus")) ? "draft" : "" %>">
                             <!-- Header -->
                             <div class="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 class="text-xl font-bold text-gray-800 mb-2">
                                         <%# Eval("InquiryNumber") %>
                                     </h3>
-                                    <span class="status-badge status-<%# GetStatusClass(Eval("Status")) %>">
-                                        <i class="fas fa-circle"></i>
-                                        <%# Eval("Status") %>
-                                    </span>
+                                    <%# RenderStatusBadges(Eval("Status"), Eval("ReportStatus"), Eval("QuotationCode")) %>
                                 </div>
                                 <div class="text-right">
                                     <span class="text-sm font-semibold text-gray-500">Assigned</span>
@@ -369,25 +392,46 @@
 
                             <!-- Action Buttons -->
                             <div class="flex gap-3 mt-6">
+                                <!-- Start Inspection (Only for Assigned) -->
                                 <asp:Button ID="btnStartInspection" runat="server" 
                                     Text="🚀 Start Inspection" 
                                     CssClass="btn-primary"
                                     CommandName="StartInspection"
                                     CommandArgument='<%# Eval("InquiryID") %>'
-                                    Visible='<%# Eval("Status").ToString() == "Assigned" %>' />
+                                    Visible='<%# Eval("Status").ToString() == "Assigned" && string.IsNullOrEmpty(Eval("ReportStatus")?.ToString()) %>' />
 
-                                <asp:Button ID="btnInputReport" runat="server" 
-                                    Text="📝 Input Report" 
+                                <!-- Create Report (For In Progress with no report) -->
+                                <asp:Button ID="btnCreateReport" runat="server" 
+                                    Text="📝 Create Report" 
                                     CssClass="btn-success"
-                                    CommandName="InputReport"
+                                    CommandName="CreateReport"
                                     CommandArgument='<%# Eval("InquiryID") %>'
-                                    Visible='<%# Eval("Status").ToString() == "In Progress" || Eval("Status").ToString() == "Inspected" %>' />
+                                    Visible='<%# Eval("Status").ToString() == "In Progress" && string.IsNullOrEmpty(Eval("ReportStatus")?.ToString()) %>' />
 
-                                <asp:Button ID="btnViewDetails" runat="server" 
-                                    Text="👁️ View Details" 
-                                    CssClass="btn-primary"
-                                    CommandName="ViewDetails"
-                                    CommandArgument='<%# Eval("InquiryID") %>' />
+                                <!-- Edit Draft (For Draft reports) -->
+                                <asp:Button ID="btnEditDraft" runat="server" 
+                                    Text="✏️ Edit Draft" 
+                                    CssClass="btn-warning"
+                                    CommandName="EditDraft"
+                                    CommandArgument='<%# Eval("InquiryID") + "|" + Eval("ReportID") %>'
+                                    Visible='<%# !string.IsNullOrEmpty(Eval("ReportStatus")?.ToString()) && Eval("ReportStatus").ToString() == "Draft" %>' />
+
+                             <asp:Button ID="btnViewReport" runat="server"
+                                Text="👁️ View Report"
+                                CssClass="btn-primary"
+                                CommandName="ViewReport"
+                                CommandArgument='<%# Eval("InquiryID") + "|" + Eval("ReportID") %>'
+                                Visible='<%# !string.IsNullOrEmpty(Eval("ReportStatus")?.ToString()) 
+                                    && (Eval("ReportStatus").ToString().Trim().ToLower() == "inspected" 
+                                        || Eval("ReportStatus").ToString().Trim().ToLower() == "submitted" 
+                                        || Eval("ReportStatus").ToString().Trim().ToLower() == "completed"
+                                        || Eval("ReportStatus").ToString().Trim().ToLower() == "approved") %>' />
+
+
+
+
+
+                             
                             </div>
                         </div>
                     </ItemTemplate>

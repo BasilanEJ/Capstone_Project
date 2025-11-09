@@ -122,6 +122,77 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* ✅ NEW: Payment Plan Styling */
+        .payment-plan-option {
+            display: block;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .payment-plan-option:hover {
+            border-color: #3b82f6;
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+
+        .payment-plan-option input[type="radio"]:checked + .payment-plan-content {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .payment-plan-option input[type="radio"] {
+            display: none;
+        }
+
+        .payment-plan-content {
+            border: 2px solid transparent;
+            border-radius: 10px;
+            padding: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .payment-plan-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+
+        .payment-plan-desc {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .payment-plan-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .badge-full {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-split {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-flexible {
+            background: #d1fae5;
+            color: #065f46;
+        }
     </style>
 </asp:Content>
 
@@ -243,6 +314,35 @@
 
                 <div class="border-t border-gray-100"></div>
 
+                <!-- ✅ NEW: Payment Plan Selection (Only for Contract Bookings) -->
+               <!-- ✅ UPDATED: Payment Plan Selection (Dropdown Version) -->
+<asp:Panel ID="pnlPaymentPlan" runat="server" Visible="false">
+    <div class="flex items-start">
+        <div class="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
+            <i class="fas fa-credit-card text-yellow-600"></i>
+        </div>
+        <div class="flex-1">
+            <label class="block text-sm font-medium text-gray-600 mb-3">
+                Select Payment Plan <span class="text-red-500">*</span>
+            </label>
+            
+            <asp:DropDownList ID="ddlPaymentPlan" runat="server" 
+                CssClass="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition bg-white text-gray-800 font-medium">
+                <asp:ListItem Value="100" Text="💰 Full Payment (100%) - Pay entire amount upfront"></asp:ListItem>
+                <asp:ListItem Value="70-30" Text="📊 70-30 Plan - 70% now, 30% in 1 month (2 payments)"></asp:ListItem>
+                <asp:ListItem Value="50-25-25" Text="📅 50-25-25 Plan - 50% now, 25% monthly x2 (3 payments)" Selected="True"></asp:ListItem>
+            </asp:DropDownList>
+
+            <div class="mt-3 p-3 bg-blue-50 border-l-4 border-blue-500 text-sm">
+                <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                <span class="text-gray-700">Contract bookings require structured payment plans for your convenience</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="border-t border-gray-100 mt-6"></div>
+</asp:Panel>
+
                 <!-- Preferred Schedule -->
                 <div class="flex items-start">
                     <div class="flex-shrink-0 w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
@@ -266,8 +366,8 @@
 
                 <!-- Additional Notes -->
                 <div class="flex items-start">
-                    <div class="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
-                        <i class="fas fa-sticky-note text-yellow-600"></i>
+                    <div class="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
+                        <i class="fas fa-sticky-note text-gray-600"></i>
                     </div>
                     <div class="flex-1">
                         <label class="block text-sm font-medium text-gray-600 mb-2">Additional Notes (Optional)</label>

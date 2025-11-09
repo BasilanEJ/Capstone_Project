@@ -20,7 +20,7 @@ namespace RRCManagementSystem
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // Check authentication
+            // ✅ Authentication check
             if (Session["UserID"] == null || Session["Role"]?.ToString() != "Inspector")
             {
                 Response.Redirect("~/Login.aspx", false);
@@ -30,7 +30,15 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
+                // 🧩 Step 1: Get the inquiry ID from the query string
                 int inquiryId = GetInquiryIdFromQuery();
+
+                // 🧩 Step 2: Try to get reportId (only present when editing a saved draft)
+                int reportId = 0;
+                if (Request.QueryString["reportId"] != null)
+                    int.TryParse(Request.QueryString["reportId"], out reportId);
+
+                // 🧩 Step 3: Validate inquiry ID
                 if (inquiryId == 0)
                 {
                     Response.Redirect("MyInspections.aspx", false);
@@ -38,11 +46,78 @@ namespace RRCManagementSystem
                     return;
                 }
 
+                // 🧩 Step 4: Load all related data
                 LoadInquiryDetails(inquiryId);
-                LoadCategorizedServices(); // ✅ Replaced old function
-                AutoLoadTravelExpense(inquiryId);
-            }
+                LoadCategorizedServices();  // ✅ Load service types and pricing
+                AutoLoadTravelExpense(inquiryId); // ✅ Auto-detect travel expense based on location
 
+                // 🧩 Step 5: If editing a draft report, load its saved data
+                if (reportId > 0)
+                    LoadExistingReport(reportId);
+            }
+        }
+
+
+        private void LoadExistingReport(int reportId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("SELECT * FROM dbo.InspectionReports WHERE ReportID = @ReportID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@ReportID", reportId);
+                    conn.Open();
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            // ✅ Restore saved report values
+                            ddlInfestationLevel.SelectedValue = reader["InfestationLevel"]?.ToString();
+                            txtFindings.Text = reader["FindingsDescription"]?.ToString();
+                            txtAdditionalNotes.Text = reader["AdditionalNotes"]?.ToString();
+
+                            hfSelectedServices.Value = reader["SelectedServices"]?.ToString();
+                            hfGrandTotal.Value = reader["TotalEstimatedCost"]?.ToString();
+                            hfMiscExpenses.Value = reader["MiscellaneousExpenses"]?.ToString();
+                            hfTravelCost.Value = reader["TravelCost"]?.ToString();
+
+                            // ✅ Follow-up info
+                            if (reader["FollowupRequired"] != DBNull.Value && Convert.ToBoolean(reader["FollowupRequired"]))
+                            {
+                                rbFollowupYes.Checked = true;
+
+                                if (reader["FollowupDate"] != DBNull.Value)
+                                    txtFollowupDate.Text = Convert.ToDateTime(reader["FollowupDate"]).ToString("yyyy-MM-dd");
+
+                                txtFollowupReason.Text = reader["FollowupReason"]?.ToString();
+                            }
+                            else
+                            {
+                                rbFollowupNo.Checked = true;
+                            }
+
+                            // ✅ Optional: Load attached photo previews
+                            if (reader["InspectionPhotosPath"] != DBNull.Value)
+                            {
+                                string[] paths = reader["InspectionPhotosPath"].ToString().Split(',');
+                                if (paths.Length > 0)
+                                {
+                                    string script = "showDraftImages(" + new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(paths) + ");";
+                                    ScriptManager.RegisterStartupScript(this, GetType(), "LoadDraftImages", script, true);
+                                }
+                            }
+
+                            // ✅ Indicate this is an edit mode
+                            ViewState["EditingReportID"] = reportId;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadExistingReport Error: {ex.Message}");
+            }
         }
 
         #region Load Data
@@ -391,7 +466,10 @@ namespace RRCManagementSystem
                 string infestationLevel = ddlInfestationLevel.SelectedValue;
                 string findingsDescription = txtFindings.Text.Trim();
                 string affectedAreas = GetSelectedAffectedAreas();
-                string selectedServices = hfSelectedServices.Value;
+
+                // ✅ MODIFIED: Enrich with IsContract before saving
+                string selectedServicesRaw = hfSelectedServices.Value;
+                string selectedServices = EnrichServicesWithIsContract(selectedServicesRaw);
 
                 // ✅ Get travel expense from ViewState (auto-detected)
                 int travelExpenseId = ViewState["TravelExpenseID"] != null
@@ -425,11 +503,11 @@ namespace RRCManagementSystem
                     // Input parameters
                     cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
                     cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
-                    cmd.Parameters.AddWithValue("@QuotationCode", quotationCode); // ✅ NEW
+                    cmd.Parameters.AddWithValue("@QuotationCode", quotationCode);
                     cmd.Parameters.AddWithValue("@InfestationLevel", infestationLevel);
                     cmd.Parameters.AddWithValue("@FindingsDescription", findingsDescription);
                     cmd.Parameters.AddWithValue("@AffectedAreas", affectedAreas);
-                    cmd.Parameters.AddWithValue("@SelectedServices", selectedServices);
+                    cmd.Parameters.AddWithValue("@SelectedServices", selectedServices); // ✅ Now enriched with IsContract
                     cmd.Parameters.AddWithValue("@TravelExpenseID", travelExpenseId > 0 ? (object)travelExpenseId : DBNull.Value);
                     cmd.Parameters.AddWithValue("@TravelCost", travelCost);
                     cmd.Parameters.AddWithValue("@MiscellaneousExpenses", string.IsNullOrEmpty(miscExpenses) ? "[]" : miscExpenses);
@@ -614,6 +692,62 @@ namespace RRCManagementSystem
             catch
             {
                 return "[Decryption Error]";
+            }
+        }
+
+        /// <summary>
+        /// ✅ NEW: Get IsContract status for a service from database
+        /// </summary>
+        private bool GetServiceIsContract(int serviceId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("SELECT ISNULL(IsContract, 0) FROM dbo.Services WHERE ServiceID = @ServiceID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@ServiceID", serviceId);
+                    conn.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && Convert.ToBoolean(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetServiceIsContract Error: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// ✅ NEW: Enrich SelectedServices JSON with IsContract property
+        /// </summary>
+        private string EnrichServicesWithIsContract(string selectedServicesJson)
+        {
+            if (string.IsNullOrWhiteSpace(selectedServicesJson))
+                return "[]";
+
+            try
+            {
+                var serializer = new JavaScriptSerializer();
+                var services = serializer.Deserialize<System.Collections.Generic.List<System.Collections.Generic.Dictionary<string, object>>>(selectedServicesJson);
+
+                // Add IsContract to each service
+                foreach (var service in services)
+                {
+                    if (service.ContainsKey("ServiceID"))
+                    {
+                        int serviceId = Convert.ToInt32(service["ServiceID"]);
+                        bool isContract = GetServiceIsContract(serviceId);
+                        service["IsContract"] = isContract;
+                    }
+                }
+
+                return serializer.Serialize(services);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"EnrichServicesWithIsContract Error: {ex.Message}");
+                return selectedServicesJson;
             }
         }
 

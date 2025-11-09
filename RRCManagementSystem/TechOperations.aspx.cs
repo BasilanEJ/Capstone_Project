@@ -153,7 +153,8 @@ namespace RRCManagementSystem
                     cmd.Parameters.Add("@UpdatedBy", SqlDbType.Int).Value = teamLeaderID;
 
                     con.Open();
-                    int rowsAffected = cmd.ExecuteNonQuery();
+                    object result = cmd.ExecuteScalar(); // ✅ Read SELECT result
+                    int rowsAffected = result != null ? Convert.ToInt32(result) : 0;
 
                     if (rowsAffected > 0)
                     {
@@ -164,8 +165,6 @@ namespace RRCManagementSystem
                             : "The service is now in progress.";
 
                         ShowAlert(icon, title, message);
-
-                        // Refresh the bookings list
                         LoadTeamBookings();
                     }
                     else
@@ -180,6 +179,7 @@ namespace RRCManagementSystem
                 ShowAlert("error", "Database Error", $"An error occurred: {ex.Message}");
             }
         }
+
 
         /// <summary>
         /// Show detailed booking information in modal

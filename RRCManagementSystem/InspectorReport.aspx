@@ -972,6 +972,28 @@
     </div>
 
     <script>
+        function showDraftImages(paths) {
+            const container = document.getElementById("draftImagePreview");
+            if (!container) return;
+
+            container.innerHTML = "";
+            paths.forEach(path => {
+                const img = document.createElement("img");
+                img.src = path.replace("~", "");
+                img.style.width = "100px";
+                img.style.height = "100px";
+                img.style.margin = "5px";
+                img.style.borderRadius = "8px";
+                img.style.objectFit = "cover";
+                container.appendChild(img);
+            });
+        }
+    </script>
+
+<div id="draftImagePreview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+
+
+    <script>
         // Global variables
         let miscExpenses = [];
         let selectedPhotos = [];
