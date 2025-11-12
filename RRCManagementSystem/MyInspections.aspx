@@ -253,6 +253,21 @@
             transform: scale(1.05);
         }
 
+        /* Search Bar */
+        .search-container {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 18px;
+        }
+
         @media (max-width: 768px) {
             .info-grid {
                 grid-template-columns: 1fr;
@@ -277,13 +292,22 @@
             <p class="text-gray-600">Manage and complete your assigned inspection tasks</p>
         </div>
 
+        <!-- Search Bar -->
+        <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <asp:TextBox ID="txtSearch" runat="server" 
+                CssClass="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                placeholder="Search by Inquiry #, Client Name, Pest Type, or Address..."
+                onkeyup="autoSearch()"
+                AutoCompleteType="Disabled" />
+        </div>
+
         <!-- Filter Tabs -->
         <div class="filter-tabs">
             <asp:Button ID="btnFilterAll" runat="server" Text="📋 All" CssClass="filter-tab active" OnClick="FilterInspections" />
             <asp:Button ID="btnFilterAssigned" runat="server" Text="🆕 Assigned" CssClass="filter-tab" OnClick="FilterInspections" />
             <asp:Button ID="btnFilterInProgress" runat="server" Text="🔄 In Progress" CssClass="filter-tab" OnClick="FilterInspections" />
             <asp:Button ID="btnFilterInspected" runat="server" Text="✅ Inspected" CssClass="filter-tab" OnClick="FilterInspections" />
-            <asp:Button ID="btnFilterDrafts" runat="server" Text="💾 Drafts" CssClass="filter-tab" OnClick="FilterInspections" />
         </div>
 
         <!-- Inspections List -->
@@ -408,30 +432,17 @@
                                     CommandArgument='<%# Eval("InquiryID") %>'
                                     Visible='<%# Eval("Status").ToString() == "In Progress" && string.IsNullOrEmpty(Eval("ReportStatus")?.ToString()) %>' />
 
-                                <!-- Edit Draft (For Draft reports) -->
-                                <asp:Button ID="btnEditDraft" runat="server" 
-                                    Text="✏️ Edit Draft" 
-                                    CssClass="btn-warning"
-                                    CommandName="EditDraft"
+                                <!-- View Report -->
+                                <asp:Button ID="btnViewReport" runat="server"
+                                    Text="👁️ View Report"
+                                    CssClass="btn-primary"
+                                    CommandName="ViewReport"
                                     CommandArgument='<%# Eval("InquiryID") + "|" + Eval("ReportID") %>'
-                                    Visible='<%# !string.IsNullOrEmpty(Eval("ReportStatus")?.ToString()) && Eval("ReportStatus").ToString() == "Draft" %>' />
-
-                             <asp:Button ID="btnViewReport" runat="server"
-                                Text="👁️ View Report"
-                                CssClass="btn-primary"
-                                CommandName="ViewReport"
-                                CommandArgument='<%# Eval("InquiryID") + "|" + Eval("ReportID") %>'
-                                Visible='<%# !string.IsNullOrEmpty(Eval("ReportStatus")?.ToString()) 
-                                    && (Eval("ReportStatus").ToString().Trim().ToLower() == "inspected" 
-                                        || Eval("ReportStatus").ToString().Trim().ToLower() == "submitted" 
-                                        || Eval("ReportStatus").ToString().Trim().ToLower() == "completed"
-                                        || Eval("ReportStatus").ToString().Trim().ToLower() == "approved") %>' />
-
-
-
-
-
-                             
+                                    Visible='<%# !string.IsNullOrEmpty(Eval("ReportStatus")?.ToString()) 
+                                        && (Eval("ReportStatus").ToString().Trim().ToLower() == "inspected" 
+                                            || Eval("ReportStatus").ToString().Trim().ToLower() == "submitted" 
+                                            || Eval("ReportStatus").ToString().Trim().ToLower() == "completed"
+                                            || Eval("ReportStatus").ToString().Trim().ToLower() == "approved") %>' />
                             </div>
                         </div>
                     </ItemTemplate>
@@ -444,6 +455,23 @@
                     <p>You don't have any inspections matching the selected filter.</p>
                 </asp:Panel>
             </ContentTemplate>
+            <Triggers>
+                <asp:AsyncPostBackTrigger ControlID="txtSearch" EventName="TextChanged" />
+            </Triggers>
         </asp:UpdatePanel>
     </div>
+
+    <script type="text/javascript">
+        let searchTimeout;
+        
+        function autoSearch() {
+            // Clear previous timeout
+            clearTimeout(searchTimeout);
+            
+            // Set new timeout for 500ms (0.5 seconds after user stops typing)
+            searchTimeout = setTimeout(function() {
+                __doPostBack('<%= txtSearch.UniqueID %>', '');
+            }, 500);
+        }
+    </script>
 </asp:Content>

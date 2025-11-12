@@ -37,39 +37,74 @@ namespace RRCManagementSystem
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("=== LoadBlogs: Starting ===");
+
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
+                    // Use full table name with schema
                     string query = @"
-                        SELECT BlogID, BlogTitle, BlogDescription, BlogContent, 
-                               ImagePath, DisplayOrder
-                        FROM BlogsCMS
-                        WHERE IsActive = 1
-                        ORDER BY DisplayOrder, BlogID DESC";
+                SELECT TOP (10)
+                    [BlogID],
+                    [BlogTitle],
+                    [BlogDescription],
+                    [BlogContent],
+                    [ImagePath],
+                    [DisplayOrder],
+                    [IsActive],
+                    [CreatedDate],
+                    [ModifiedDate]
+                FROM [EJBasilan_RRCDB].[EJBasilan_admin].[BlogsCMS]
+                WHERE [IsActive] = 1
+                ORDER BY [DisplayOrder], [BlogID] DESC";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
                         conn.Open();
+                        System.Diagnostics.Debug.WriteLine("✅ Database connection opened");
+
                         SqlDataAdapter da = new SqlDataAdapter(cmd);
                         DataTable dt = new DataTable();
                         da.Fill(dt);
 
-                        rptBlogs.DataSource = dt;
-                        rptBlogs.DataBind();
+                        System.Diagnostics.Debug.WriteLine($"✅ Blogs loaded: {dt.Rows.Count}");
 
-                        rptBlogModals.DataSource = dt;
-                        rptBlogModals.DataBind();
+                        if (dt.Rows.Count > 0)
+                        {
+                            // Log each blog
+                            foreach (DataRow row in dt.Rows)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"  - Blog {row["BlogID"]}: {row["BlogTitle"]}");
+                            }
+
+                            // Bind to repeaters
+                            rptBlogs.DataSource = dt;
+                            rptBlogs.DataBind();
+                            System.Diagnostics.Debug.WriteLine("✅ rptBlogs DataBound");
+
+                            rptBlogModals.DataSource = dt;
+                            rptBlogModals.DataBind();
+                            System.Diagnostics.Debug.WriteLine("✅ rptBlogModals DataBound");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("⚠️ No blogs found in database");
+                        }
                     }
                 }
             }
+            catch (SqlException sqlEx)
+            {
+                System.Diagnostics.Debug.WriteLine("❌ SQL Error: " + sqlEx.Message);
+                System.Diagnostics.Debug.WriteLine("Error Number: " + sqlEx.Number);
+                System.Diagnostics.Debug.WriteLine("Stack Trace: " + sqlEx.StackTrace);
+            }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Blog Load Error: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("❌ Blog Load Error: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("Stack Trace: " + ex.StackTrace);
             }
         }
 
-        /// <summary>
-        /// Format blog content for display
-        /// </summary>
         protected string FormatBlogContent(string content)
         {
             if (string.IsNullOrEmpty(content))
@@ -108,17 +143,21 @@ namespace RRCManagementSystem
         /// <summary>
         /// Load reviews from database
         /// </summary>
+        // Update the LoadReviews method in Default.aspx.cs
+
         private void LoadReviews()
         {
             try
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
+                    // Updated query to include ReviewSource
                     string query = @"
-                        SELECT ReviewID, CustomerName, ReviewText, Rating, Recommends
-                        FROM Reviews
-                        WHERE IsActive = 1
-                        ORDER BY DisplayOrder, ReviewID";
+                SELECT ReviewID, CustomerName, ReviewText, Rating, Recommends, 
+                       ISNULL(ReviewSource, 'Website') as ReviewSource
+                FROM Reviews
+                WHERE IsActive = 1
+                ORDER BY DisplayOrder, ReviewID";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
@@ -150,6 +189,71 @@ namespace RRCManagementSystem
             }
             return stars;
         }
+
+
+        protected void btnSubmitReview_Click(object sender, EventArgs e)
+        {
+            string name = txtName.Text.Trim();
+            string reviewText = txtReview.Text.Trim();
+            bool recommends = chkRecommend.Checked;
+            int rating;
+
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(reviewText) ||
+                !int.TryParse(ddlRating.SelectedValue, out rating))
+            {
+                // You can show a SweetAlert or simple message here
+                ScriptManager.RegisterStartupScript(this, GetType(), "alert",
+                    "Swal.fire('Incomplete!', 'Please fill out all fields before submitting.', 'warning');", true);
+                return;
+            }
+
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = @"
+                INSERT INTO Reviews (CustomerName, ReviewText, Rating, Recommends, IsActive, CreatedAt)
+                VALUES (@Name, @Text, @Rating, @Recommends, 1, GETDATE())";
+                    // Set IsActive = 1 if you want auto-publish
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Name", name);
+                        cmd.Parameters.AddWithValue("@Text", reviewText);
+                        cmd.Parameters.AddWithValue("@Rating", rating);
+                        cmd.Parameters.AddWithValue("@Recommends", recommends);
+                        conn.Open();
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                // Clear inputs
+                txtName.Text = "";
+                txtReview.Text = "";
+                ddlRating.SelectedIndex = 0;
+                chkRecommend.Checked = false;
+
+                ScriptManager.RegisterStartupScript(this, GetType(), "success",
+                    "Swal.fire('Thank you!', 'Your review has been submitted for approval.', 'success');", true);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Review Submit Error: " + ex.Message);
+                ScriptManager.RegisterStartupScript(this, GetType(), "error",
+                    "Swal.fire('Error!', 'Something went wrong. Please try again later.', 'error');", true);
+            }
+        }
+
+
+        protected string GetShortReviewText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            var words = text.Split(' ');
+            if (words.Length <= 50) return text;
+            return string.Join(" ", words.Take(50)) + "...";
+        }
+
+
 
         #endregion
 

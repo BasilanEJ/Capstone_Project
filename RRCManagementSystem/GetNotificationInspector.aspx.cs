@@ -15,6 +15,7 @@ namespace RRCManagementSystem
         {
             Response.ContentType = "application/json";
 
+            // --- Validate session ---
             if (Session["UserID"] == null)
             {
                 Response.Write("{\"unread\":0,\"notifications\":[]}");
@@ -24,8 +25,8 @@ namespace RRCManagementSystem
 
             int userId = Convert.ToInt32(Session["UserID"]);
 
-            // Handle mark as read action
-            if (Request.QueryString["action"] == "markread")
+            // --- Handle "mark as read" securely ---
+            if (Request.QueryString["action"] == "markread" && Request.HttpMethod == "POST")
             {
                 MarkAllAsRead(userId);
                 Response.Write("{\"success\":true}");
@@ -33,7 +34,7 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Return JSON notifications
+            // --- Default: Return JSON notifications ---
             var result = new
             {
                 unread = GetUnreadCount(userId),
@@ -44,6 +45,10 @@ namespace RRCManagementSystem
             Response.Write(json);
             HttpContext.Current.ApplicationInstance.CompleteRequest();
         }
+
+        /// <summary>
+        /// Gets the unread notification count for the inspector.
+        /// </summary>
         private int GetUnreadCount(int userId)
         {
             try
@@ -63,6 +68,9 @@ namespace RRCManagementSystem
             }
         }
 
+        /// <summary>
+        /// Retrieves the 10 latest notifications for the inspector.
+        /// </summary>
         private List<object> GetLatestNotifications(int userId)
         {
             var list = new List<object>();
@@ -77,22 +85,21 @@ namespace RRCManagementSystem
                 {
                     cmd.Parameters.AddWithValue("@UserID", userId);
                     conn.Open();
+
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
                             string rawUrl = reader["Url"] != DBNull.Value ? reader["Url"].ToString() : "";
+
                             if (!string.IsNullOrEmpty(rawUrl))
                             {
+                                // Normalize URL
                                 if (rawUrl.StartsWith("~/"))
-                                {
                                     rawUrl = rawUrl.Replace("~/", "/");
-                                }
 
                                 if (!rawUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                                {
                                     rawUrl = HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Authority) + rawUrl;
-                                }
                             }
 
                             list.Add(new
@@ -105,14 +112,20 @@ namespace RRCManagementSystem
                                 url = !string.IsNullOrEmpty(rawUrl) ? rawUrl : "#"
                             });
                         }
-
                     }
                 }
             }
-            catch { }
+            catch
+            {
+                // Fail silently to avoid breaking frontend
+            }
+
             return list;
         }
 
+        /// <summary>
+        /// Marks all notifications for the inspector as read.
+        /// </summary>
         private void MarkAllAsRead(int userId)
         {
             try
@@ -126,7 +139,10 @@ namespace RRCManagementSystem
                     cmd.ExecuteNonQuery();
                 }
             }
-            catch { }
+            catch
+            {
+                // Ignore exceptions to prevent client errors
+            }
         }
     }
 }

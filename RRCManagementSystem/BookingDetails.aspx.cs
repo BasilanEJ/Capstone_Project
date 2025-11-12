@@ -6,7 +6,6 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.IO;
-using System.Threading;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -155,7 +154,6 @@ namespace RRCManagementSystem
 
                 byte[] pdfBytes = ms.ToArray();
 
-                // ✅ Stable response handling
                 Response.Clear();
                 Response.BufferOutput = true;
                 Response.ContentType = "application/pdf";
@@ -164,15 +162,11 @@ namespace RRCManagementSystem
                 Response.Cache.SetCacheability(HttpCacheability.NoCache);
                 Response.Cache.SetNoStore();
 
-                // ✅ Write PDF safely using OutputStream
                 Response.OutputStream.Write(pdfBytes, 0, pdfBytes.Length);
                 Response.Flush();
-
-                // ✅ Suppress further content and gracefully complete
                 Response.SuppressContent = true;
                 HttpContext.Current.ApplicationInstance.CompleteRequest();
 
-                // Cleanup
                 ms.Close();
                 ms.Dispose();
             }
@@ -189,11 +183,7 @@ namespace RRCManagementSystem
 
                 ShowError("Error exporting to PDF: " + ex.Message);
             }
-
-
         }
-
-
 
         private void AddBookingDetailsToPdf(Document document, int bookingID)
         {
@@ -216,6 +206,7 @@ namespace RRCManagementSystem
 
             DataRow row = bookingData.Rows[0];
 
+            // Booking Code Header
             PdfPTable headerTable = new PdfPTable(1);
             headerTable.WidthPercentage = 100;
             PdfPCell headerCell = new PdfPCell(new Phrase("Booking Code: " + row["BookingCode"].ToString(), headingFont));
@@ -224,8 +215,8 @@ namespace RRCManagementSystem
             headerCell.HorizontalAlignment = Element.ALIGN_CENTER;
             headerCell.Border = Rectangle.NO_BORDER;
             headerTable.AddCell(headerCell);
+            headerTable.SpacingAfter = 15f;
             document.Add(headerTable);
-            document.Add(new Paragraph(" "));
 
             // Booking Information
             document.Add(new Paragraph("BOOKING INFORMATION", headingFont));
@@ -254,8 +245,8 @@ namespace RRCManagementSystem
                 ? Convert.ToDateTime(row["CreatedAt"]).ToString("MMM dd, yyyy hh:mm tt")
                 : "N/A";
             AddDetailRow(bookingTable, "Created At:", createdAt, labelFont, valueFont);
+            bookingTable.SpacingAfter = 15f;
             document.Add(bookingTable);
-            document.Add(new Paragraph(" "));
 
             // Customer Information
             document.Add(new Paragraph("CUSTOMER INFORMATION", headingFont));
@@ -302,8 +293,8 @@ namespace RRCManagementSystem
             }
             catch { }
             AddDetailRow(customerTable, "Address:", address, labelFont, valueFont);
+            customerTable.SpacingAfter = 15f;
             document.Add(customerTable);
-            document.Add(new Paragraph(" "));
 
             // Summary
             DataTable summaryData = GetAssignmentSummary(bookingID);
@@ -316,14 +307,16 @@ namespace RRCManagementSystem
                 AddDetailRow(summaryTable, "Team Assigned:", summaryRow["TeamAssigned"].ToString(), labelFont, valueFont);
                 AddDetailRow(summaryTable, "Equipment Items:", summaryRow["EquipmentCount"].ToString(), labelFont, valueFont);
                 AddDetailRow(summaryTable, "Chemicals:", summaryRow["ChemicalCount"].ToString(), labelFont, valueFont);
+                summaryTable.SpacingAfter = 15f;
                 document.Add(summaryTable);
-                document.Add(new Paragraph(" "));
             }
+
 
             AddTeamTableToPdf(document, bookingID, headingFont, labelFont, valueFont);
             AddEquipmentTableToPdf(document, bookingID, headingFont, labelFont, valueFont);
             AddChemicalsTableToPdf(document, bookingID, headingFont, labelFont, valueFont);
         }
+
 
         private PdfPTable CreateDetailTable()
         {
@@ -352,100 +345,145 @@ namespace RRCManagementSystem
         private void AddTeamTableToPdf(Document document, int bookingID, Font headingFont, Font labelFont, Font valueFont)
         {
             DataTable teamData = GetAssignedTeam(bookingID);
-            document.Add(new Paragraph("ASSIGNED TEAM", headingFont));
-            document.Add(new Paragraph(" "));
+
+            Paragraph teamHeading = new Paragraph("ASSIGNED TEAM", headingFont);
+            teamHeading.SpacingBefore = 10f;
+            teamHeading.SpacingAfter = 10f;
+            document.Add(teamHeading);
 
             if (teamData.Rows.Count == 0)
             {
-                document.Add(new Paragraph("No team assigned yet.", valueFont));
-                document.Add(new Paragraph(" "));
+                Paragraph noTeam = new Paragraph("No team assigned yet.", valueFont);
+                noTeam.SpacingAfter = 15f;
+                document.Add(noTeam);
                 return;
             }
 
-            PdfPTable table = new PdfPTable(3);
-            table.WidthPercentage = 100;
-            table.SetWidths(new float[] { 40f, 30f, 30f });
-            AddTableHeader(table, "Team Name", labelFont);
-            AddTableHeader(table, "Status", labelFont);
-            AddTableHeader(table, "Created At", labelFont);
+            // Team info box - ADD TEAM LEADER INFO
+            PdfPTable teamInfoTable = new PdfPTable(1);
+            teamInfoTable.WidthPercentage = 100;
+
+            string teamLeaderInfo = "";
+            if (teamData.Rows[0]["TeamLeaderName"] != DBNull.Value && !string.IsNullOrEmpty(teamData.Rows[0]["TeamLeaderName"].ToString()))
+            {
+                teamLeaderInfo = $"\nTeam Leader: {teamData.Rows[0]["TeamLeaderName"]}";
+                if (teamData.Rows[0]["TeamLeaderEmployeeID"] != DBNull.Value)
+                {
+                    teamLeaderInfo += $" ({teamData.Rows[0]["TeamLeaderEmployeeID"]})";
+                }
+            }
+
+            string teamInfo = $"Team: {teamData.Rows[0]["TeamName"]}\n" +
+                             $"Status: {teamData.Rows[0]["TeamStatus"]}" +
+                             teamLeaderInfo + "\n" +
+                             $"Created: {(teamData.Rows[0]["TeamCreatedAt"] != DBNull.Value ? Convert.ToDateTime(teamData.Rows[0]["TeamCreatedAt"]).ToString("MMM dd, yyyy") : "N/A")}";
+
+            PdfPCell teamInfoCell = new PdfPCell(new Phrase(teamInfo, valueFont));
+            teamInfoCell.BackgroundColor = new BaseColor(239, 246, 255);
+            teamInfoCell.Padding = 12f;
+            teamInfoCell.Border = Rectangle.BOX;
+            teamInfoCell.BorderColor = new BaseColor(191, 219, 254);
+            teamInfoTable.AddCell(teamInfoCell);
+            teamInfoTable.SpacingAfter = 10f;
+            document.Add(teamInfoTable);
+
+            // Team members table
+            PdfPTable membersTable = new PdfPTable(2);
+            membersTable.WidthPercentage = 100;
+            membersTable.SetWidths(new float[] { 50f, 50f });
+
+            AddTableHeader(membersTable, "Name", labelFont);
+            AddTableHeader(membersTable, "Position", labelFont);
 
             foreach (DataRow row in teamData.Rows)
             {
-                AddTableCell(table, row["TeamName"].ToString(), valueFont);
-                AddTableCell(table, row["TeamStatus"].ToString(), valueFont);
-                string createdAt = row["TeamCreatedAt"] != DBNull.Value
-                    ? Convert.ToDateTime(row["TeamCreatedAt"]).ToString("MMM dd, yyyy")
-                    : "";
-                AddTableCell(table, createdAt, valueFont);
+                AddTableCell(membersTable, row["MemberName"]?.ToString() ?? "N/A", valueFont);
+                AddTableCell(membersTable, row["Position"]?.ToString() ?? "N/A", valueFont);
             }
-            document.Add(table);
-            document.Add(new Paragraph(" "));
+
+            membersTable.SpacingAfter = 15f;
+            membersTable.KeepTogether = true;
+            document.Add(membersTable);
         }
 
         private void AddEquipmentTableToPdf(Document document, int bookingID, Font headingFont, Font labelFont, Font valueFont)
         {
             DataTable equipmentData = GetAssignedEquipment(bookingID);
-            document.Add(new Paragraph("ASSIGNED EQUIPMENT", headingFont));
-            document.Add(new Paragraph(" "));
+
+            Paragraph equipmentHeading = new Paragraph("ASSIGNED EQUIPMENT", headingFont);
+            equipmentHeading.SpacingBefore = 10f;
+            equipmentHeading.SpacingAfter = 10f;
+            document.Add(equipmentHeading);
 
             if (equipmentData.Rows.Count == 0)
             {
-                document.Add(new Paragraph("No equipment assigned.", valueFont));
-                document.Add(new Paragraph(" "));
+                Paragraph noEquipment = new Paragraph("No equipment assigned.", valueFont);
+                noEquipment.SpacingAfter = 15f;
+                document.Add(noEquipment);
                 return;
             }
 
             PdfPTable table = new PdfPTable(3);
             table.WidthPercentage = 100;
-            table.SetWidths(new float[] { 40f, 20f, 40f });
-            AddTableHeader(table, "Equipment ID", labelFont);
+            table.SetWidths(new float[] { 50f, 25f, 25f });
+
+            AddTableHeader(table, "Equipment Name", labelFont);
             AddTableHeader(table, "Quantity", labelFont);
             AddTableHeader(table, "Assigned At", labelFont);
 
             foreach (DataRow row in equipmentData.Rows)
             {
-                AddTableCell(table, row["EquipmentID"].ToString(), valueFont);
-                AddTableCell(table, row["QuantityAssigned"].ToString(), valueFont);
+                AddTableCell(table, row["EquipmentName"]?.ToString() ?? "Unknown", valueFont);
+                AddTableCell(table, row["QuantityAssigned"]?.ToString() ?? "0", valueFont);
                 string assignedAt = row["AssignedAt"] != DBNull.Value
                     ? Convert.ToDateTime(row["AssignedAt"]).ToString("MMM dd, yyyy hh:mm tt")
                     : "";
                 AddTableCell(table, assignedAt, valueFont);
             }
+
+            table.SpacingAfter = 15f;
+            table.KeepTogether = true;
             document.Add(table);
-            document.Add(new Paragraph(" "));
         }
 
         private void AddChemicalsTableToPdf(Document document, int bookingID, Font headingFont, Font labelFont, Font valueFont)
         {
             DataTable chemicalData = GetAssignedChemicals(bookingID);
-            document.Add(new Paragraph("ASSIGNED CHEMICALS", headingFont));
-            document.Add(new Paragraph(" "));
+
+            Paragraph chemicalHeading = new Paragraph("ASSIGNED CHEMICALS", headingFont);
+            chemicalHeading.SpacingBefore = 10f;
+            chemicalHeading.SpacingAfter = 10f;
+            document.Add(chemicalHeading);
 
             if (chemicalData.Rows.Count == 0)
             {
-                document.Add(new Paragraph("No chemicals assigned.", valueFont));
-                document.Add(new Paragraph(" "));
+                Paragraph noChemicals = new Paragraph("No chemicals assigned.", valueFont);
+                noChemicals.SpacingAfter = 15f;
+                document.Add(noChemicals);
                 return;
             }
 
             PdfPTable table = new PdfPTable(3);
             table.WidthPercentage = 100;
-            table.SetWidths(new float[] { 40f, 20f, 40f });
-            AddTableHeader(table, "Item ID", labelFont);
+            table.SetWidths(new float[] { 50f, 25f, 25f });
+
+            AddTableHeader(table, "Chemical Name", labelFont);
             AddTableHeader(table, "Quantity", labelFont);
             AddTableHeader(table, "Assigned At", labelFont);
 
             foreach (DataRow row in chemicalData.Rows)
             {
-                AddTableCell(table, row["ItemID"].ToString(), valueFont);
-                AddTableCell(table, row["QuantityAssigned"].ToString(), valueFont);
+                AddTableCell(table, row["ItemName"]?.ToString() ?? "Unknown", valueFont);
+                AddTableCell(table, row["QuantityAssigned"]?.ToString() ?? "0", valueFont);
                 string assignedAt = row["AssignedAt"] != DBNull.Value
                     ? Convert.ToDateTime(row["AssignedAt"]).ToString("MMM dd, yyyy hh:mm tt")
                     : "";
                 AddTableCell(table, assignedAt, valueFont);
             }
+
+            table.SpacingAfter = 15f;
+            table.KeepTogether = true;
             document.Add(table);
-            document.Add(new Paragraph(" "));
         }
 
         private void AddTableHeader(PdfPTable table, string text, Font font)
@@ -729,22 +767,53 @@ namespace RRCManagementSystem
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@BookingID", SqlDbType.Int).Value = BookingID;
+
                 con.Open();
                 using (var adapter = new SqlDataAdapter(cmd))
                 {
                     DataTable dt = new DataTable();
                     adapter.Fill(dt);
+
                     if (dt.Rows.Count > 0)
                     {
-                        gvTeams.DataSource = dt;
-                        gvTeams.DataBind();
-                        gvTeams.Visible = true;
+                        DataRow firstRow = dt.Rows[0];
+                        lblTeamName.Text = firstRow["TeamName"].ToString();
+                        lblTeamStatus.Text = firstRow["TeamStatus"].ToString();
+
+                        if (firstRow["TeamCreatedAt"] != DBNull.Value)
+                        {
+                            DateTime createdDate = Convert.ToDateTime(firstRow["TeamCreatedAt"]);
+                            lblTeamCreatedDate.Text = createdDate.ToString("MMM dd, yyyy");
+                        }
+
+                        // ADD THIS: Display Team Leader
+                        if (firstRow["TeamLeaderName"] != DBNull.Value && !string.IsNullOrEmpty(firstRow["TeamLeaderName"].ToString()))
+                        {
+                            lblTeamLeaderName.Text = firstRow["TeamLeaderName"].ToString();
+
+                            if (firstRow["TeamLeaderEmployeeID"] != DBNull.Value)
+                            {
+                                string employeeID = firstRow["TeamLeaderEmployeeID"].ToString();
+                                lblTeamLeaderEmployeeID.Text = $" ({employeeID})";
+                                lblTeamLeaderEmployeeID.Visible = true;
+                            }
+                        }
+                        else
+                        {
+                            lblTeamLeaderName.Text = "Not assigned";
+                            lblTeamLeaderEmployeeID.Visible = false;
+                        }
+
+                        gvTeamMembers.DataSource = dt;
+                        gvTeamMembers.DataBind();
+
+                        pnlTeamInfo.Visible = true;
                         pnlNoTeam.Visible = false;
                     }
                     else
                     {
                         pnlNoTeam.Visible = true;
-                        gvTeams.Visible = false;
+                        pnlTeamInfo.Visible = false;
                     }
                 }
             }
@@ -826,21 +895,33 @@ namespace RRCManagementSystem
 
         protected void btnBack_Click(object sender, EventArgs e)
         {
-            Response.Redirect("AllBooking.aspx");
+            Response.Redirect("AllBooking.aspx", false);
+            Context.ApplicationInstance.CompleteRequest();
         }
-
         private void ShowError(string message)
         {
             lblMessage.Visible = true;
             lblMessage.Text = "❌ " + message;
-            lblMessage.CssClass = "block mt-6 p-4 rounded-lg font-semibold text-center border-l-4 border-red-500 text-red-800 bg-red-100";
+            lblMessage.CssClass = "detail-card";
+            lblMessage.Style["background-color"] = "#FEE2E2";
+            lblMessage.Style["border-left"] = "4px solid #EF4444";
+            lblMessage.Style["color"] = "#991B1B";
+            lblMessage.Style["padding"] = "1rem";
+            lblMessage.Style["border-radius"] = "8px";
+            lblMessage.Style["font-weight"] = "600";
         }
 
         private void ShowSuccess(string message)
         {
             lblMessage.Visible = true;
             lblMessage.Text = "✅ " + message;
-            lblMessage.CssClass = "block mt-6 p-4 rounded-lg font-semibold text-center border-l-4 border-green-500 text-green-800 bg-green-100";
+            lblMessage.CssClass = "detail-card";
+            lblMessage.Style["background-color"] = "#D1FAE5";
+            lblMessage.Style["border-left"] = "4px solid #10B981";
+            lblMessage.Style["color"] = "#065F46";
+            lblMessage.Style["padding"] = "1rem";
+            lblMessage.Style["border-radius"] = "8px";
+            lblMessage.Style["font-weight"] = "600";
         }
     }
 }

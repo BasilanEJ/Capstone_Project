@@ -1,21 +1,26 @@
-﻿using System;
+﻿using RRCManagementSystem.Helpers;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Text;
 using System.Web.UI;
+using System.Web.UI.WebControls;
 
 namespace RRCManagementSystem
 {
     public partial class ArchivedInquiries : System.Web.UI.Page
     {
-        private readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+        private static readonly string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // Require login
-            if (Session["UserID"] == null || Session["Role"] == null)
+            // Check if admin is logged in
+            if (Session["Role"] == null || Session["Role"].ToString() != "Admin")
             {
-                Response.Redirect("~/Login.aspx");
+                lblPermission.Text = "⚠️ Access Denied. Admin privileges required.";
+                lblPermission.Visible = true;
+                gvArchived.Visible = false;
                 return;
             }
 
@@ -25,91 +30,365 @@ namespace RRCManagementSystem
             }
         }
 
+        #region Load Archived Inquiries
+
+        /// <summary>
+        /// Load all archived inquiries
+        /// </summary>
         private void LoadArchivedInquiries()
         {
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("spInquiries_Archived_List", conn))
-            using (var da = new SqlDataAdapter(cmd))
+            try
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                var dt = new DataTable();
-                conn.Open();
-                da.Fill(dt);
-
-                // Decrypt and rename like in AllInquiry.aspx
-                foreach (DataRow row in dt.Rows)
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand(@"
+                    SELECT 
+                        i.InquiryID,
+                        i.InquiryNumber,
+                        i.ClientID,
+                        i.InspectionDate,
+                        i.InspectionTime,
+                        i.PestType,
+                        i.ProblemDescription,
+                        i.Urgency,
+                        i.Status,
+                        i.UpdatedAt as ArchivedAt,
+                        i.InspectionReportPath,
+                        -- Encrypted Address Fields
+                        i.AddressEnc,
+                        i.BarangayEnc,
+                        i.CityEnc,
+                        i.RegionEnc,
+                        i.LandmarkEnc,
+                        -- Client Info from Clients table
+                        c.FirstName,
+                        c.LastName,
+                        c.MiddleName,
+                        c.EmailEnc,
+                        c.ContactEnc
+                    FROM dbo.Inquiries i
+                    INNER JOIN dbo.Clients c ON i.ClientID = c.ClientID
+                    WHERE i.IsDeleted = 0
+                        AND i.Status = 'Archived'
+                    ORDER BY i.UpdatedAt DESC
+                ", conn))
                 {
-                    if (row["EmailEnc"] != DBNull.Value)
-                        row["EmailEnc"] = Helpers.AESHelper.DecryptEmail(row["EmailEnc"].ToString());
+                    var dt = new DataTable();
+                    using (var adapter = new SqlDataAdapter(cmd))
+                    {
+                        adapter.Fill(dt);
+                    }
 
-                    if (row["ContactEnc"] != DBNull.Value)
-                        row["ContactEnc"] = Helpers.AESHelper.DecryptField(row["ContactEnc"].ToString());
+                    // Decrypt sensitive data
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        // Decrypt Email
+                        if (row["EmailEnc"] != DBNull.Value)
+                        {
+                            row["EmailEnc"] = DecryptField(row["EmailEnc"]);
+                        }
+
+                        // Decrypt Contact
+                        if (row["ContactEnc"] != DBNull.Value)
+                        {
+                            row["ContactEnc"] = DecryptField(row["ContactEnc"]);
+                        }
+
+                        // Decrypt Address Fields
+                        if (row["AddressEnc"] != DBNull.Value)
+                        {
+                            row["AddressEnc"] = DecryptField(row["AddressEnc"]);
+                        }
+
+                        if (row["BarangayEnc"] != DBNull.Value)
+                        {
+                            row["BarangayEnc"] = DecryptField(row["BarangayEnc"]);
+                        }
+
+                        if (row["CityEnc"] != DBNull.Value)
+                        {
+                            row["CityEnc"] = DecryptField(row["CityEnc"]);
+                        }
+
+                        if (row["RegionEnc"] != DBNull.Value)
+                        {
+                            row["RegionEnc"] = DecryptField(row["RegionEnc"]);
+                        }
+
+                        if (row["LandmarkEnc"] != DBNull.Value)
+                        {
+                            row["LandmarkEnc"] = DecryptField(row["LandmarkEnc"]);
+                        }
+                    }
+
+                    // Add computed columns for display
+                    dt.Columns.Add("ClientName", typeof(string));
+                    dt.Columns.Add("ClientEmail", typeof(string));
+                    dt.Columns.Add("ClientContact", typeof(string));
+                    dt.Columns.Add("Street", typeof(string));
+                    dt.Columns.Add("Barangay", typeof(string));
+                    dt.Columns.Add("City", typeof(string));
+                    dt.Columns.Add("Region", typeof(string));
+                    dt.Columns.Add("Landmark", typeof(string));
+
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        // Build full name
+                        string firstName = row["FirstName"]?.ToString() ?? "";
+                        string middleName = row["MiddleName"]?.ToString() ?? "";
+                        string lastName = row["LastName"]?.ToString() ?? "";
+                        row["ClientName"] = $"{firstName} {middleName} {lastName}".Trim();
+
+                        // Set decrypted values
+                        row["ClientEmail"] = row["EmailEnc"];
+                        row["ClientContact"] = row["ContactEnc"];
+                        row["Street"] = row["AddressEnc"];
+                        row["Barangay"] = row["BarangayEnc"];
+                        row["City"] = row["CityEnc"];
+                        row["Region"] = row["RegionEnc"];
+                        row["Landmark"] = row["LandmarkEnc"];
+                    }
+
+                    gvArchived.DataSource = dt;
+                    gvArchived.DataBind();
                 }
-
-                dt.Columns["EmailEnc"].ColumnName = "Email";
-                dt.Columns["ContactEnc"].ColumnName = "ContactNumber";
-
-                gvArchived.DataSource = dt;
-                gvArchived.DataBind();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadArchivedInquiries Error: {ex.Message}");
+                lblPermission.Text = $"⚠️ Error loading archived inquiries: {ex.Message}";
+                lblPermission.Visible = true;
             }
         }
 
-        // Restore
-        protected void btnRestoreHidden_Click(object sender, EventArgs e)
+        #endregion
+
+        #region GridView Events
+
+        /// <summary>
+        /// Handle GridView row commands
+        /// </summary>
+        protected void gvArchived_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            int inquiryId = Convert.ToInt32(hfActionInquiryID.Value);
-
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("spInquiry_Restore", conn))
+            try
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+                int inquiryId = Convert.ToInt32(e.CommandArgument);
 
-                conn.Open();
-                int rows = Convert.ToInt32(cmd.ExecuteScalar());
+                // Check if this is a confirmed action from SweetAlert
+                GridViewRow row = ((Control)e.CommandSource).NamingContainer as GridViewRow;
+                if (row != null)
+                {
+                    var hdnConfirmAction = row.FindControl("hdnConfirmAction") as HiddenField;
 
-                if (rows > 0)
-                {
-                    // ✅ SweetAlert with redirect to AllInquiry.aspx
-                    ScriptManager.RegisterStartupScript(this, GetType(), "RestoredOK",
-                        "Swal.fire('Restored','Inquiry has been moved back to active list.','success').then((result) => { window.location='AllInquiry.aspx'; });", true);
+                    if (hdnConfirmAction != null && !string.IsNullOrEmpty(hdnConfirmAction.Value))
+                    {
+                        if (hdnConfirmAction.Value == "Restore")
+                        {
+                            RestoreInquiry(inquiryId);
+                        }
+                        else if (hdnConfirmAction.Value == "Delete")
+                        {
+                            DeleteInquiry(inquiryId);
+                        }
+
+                        // Clear the confirmation flag
+                        hdnConfirmAction.Value = "";
+                    }
                 }
-                else
-                {
-                    ScriptManager.RegisterStartupScript(this, GetType(), "RestoredErr",
-                        "Swal.fire('Error','Inquiry not found or could not be restored.','error').then((result) => { window.location='AllInquiry.aspx'; });", true);
-                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RowCommand Error: {ex.Message}");
+                ShowError("Error processing request.");
             }
         }
 
-
-        // Delete Permanently
-        protected void btnDeleteHidden_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Handle GridView row data bound
+        /// </summary>
+        protected void gvArchived_RowDataBound(object sender, GridViewRowEventArgs e)
         {
-            int inquiryId = Convert.ToInt32(hfActionInquiryID.Value);
-
-            using (var conn = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("spInquiry_DeletePermanent", conn))
+            if (e.Row.RowType == DataControlRowType.DataRow)
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+                var dataItem = (DataRowView)e.Row.DataItem;
 
-                conn.Open();
-                int rows = Convert.ToInt32(cmd.ExecuteScalar());
-
-                if (rows > 0)
+                // Handle image display
+                var litImages = (Literal)e.Row.FindControl("litImages");
+                if (litImages != null)
                 {
-                    // ✅ SweetAlert with redirect to AllInquiry.aspx
-                    ScriptManager.RegisterStartupScript(this, GetType(), "DeletedOK",
-                        "Swal.fire('Deleted','Inquiry has been permanently deleted.','success').then((result) => { window.location='AllInquiry.aspx'; });", true);
-                }
-                else
-                {
-                    ScriptManager.RegisterStartupScript(this, GetType(), "DeletedErr",
-                        "Swal.fire('Error','Inquiry not found or could not be deleted.','error').then((result) => { window.location='AllInquiry.aspx'; });", true);
+                    string imagePaths = dataItem["InspectionReportPath"]?.ToString();
+                    litImages.Text = RenderImages(imagePaths);
                 }
             }
         }
 
+        #endregion
+
+        #region Restore Inquiry
+
+        /// <summary>
+        /// Restore inquiry back to Pending status
+        /// </summary>
+        private void RestoreInquiry(int inquiryId)
+        {
+            try
+            {
+                int adminId = Convert.ToInt32(Session["UserID"]);
+
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand(@"
+                    UPDATE dbo.Inquiries
+                    SET 
+                        Status = 'Pending',
+                        UpdatedAt = GETDATE()
+                    WHERE InquiryID = @InquiryID
+                ", conn))
+                {
+                    cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                ShowSuccess("Inquiry restored successfully! It's now back in the pending list.");
+                LoadArchivedInquiries();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RestoreInquiry Error: {ex.Message}");
+                ShowError("Failed to restore inquiry.");
+            }
+        }
+
+        #endregion
+
+        #region Delete Inquiry
+
+        /// <summary>
+        /// Permanently delete inquiry (soft delete by setting IsDeleted = 1)
+        /// </summary>
+        private void DeleteInquiry(int inquiryId)
+        {
+            try
+            {
+                int adminId = Convert.ToInt32(Session["UserID"]);
+
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand(@"
+                    UPDATE dbo.Inquiries
+                    SET 
+                        IsDeleted = 1,
+                        UpdatedAt = GETDATE()
+                    WHERE InquiryID = @InquiryID
+                ", conn))
+                {
+                    cmd.Parameters.AddWithValue("@InquiryID", inquiryId);
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                ShowSuccess("Inquiry permanently deleted.");
+                LoadArchivedInquiries();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DeleteInquiry Error: {ex.Message}");
+                ShowError("Failed to delete inquiry.");
+            }
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Decrypt encrypted field
+        /// </summary>
+        private string DecryptField(object value)
+        {
+            if (value == null || value == DBNull.Value)
+                return string.Empty;
+
+            string encrypted = value.ToString();
+            if (string.IsNullOrEmpty(encrypted))
+                return string.Empty;
+
+            try
+            {
+                return AESHelper.DecryptField(encrypted);
+            }
+            catch
+            {
+                return "[Decryption Error]";
+            }
+        }
+
+        /// <summary>
+        /// Render images for display
+        /// </summary>
+        private string RenderImages(string imagePaths)
+        {
+            if (string.IsNullOrEmpty(imagePaths))
+                return "<span class='text-gray-500 italic text-sm'>No photos</span>";
+
+            var images = imagePaths.Split(',');
+            var sb = new StringBuilder();
+
+            sb.Append("<div class='images-grid'>");
+            foreach (var img in images)
+            {
+                if (!string.IsNullOrWhiteSpace(img))
+                {
+                    string imgUrl = ResolveUrl(img.Trim());
+                    sb.Append($@"
+                        <img src='{imgUrl}' 
+                             class='inquiry-photo' 
+                             onclick='showImageModal(""{imgUrl}""); return false;' 
+                             alt='Inspection Photo' />
+                    ");
+                }
+            }
+            sb.Append("</div>");
+
+            return sb.ToString();
+        }
+
+        #endregion
+
+        #region UI Messages
+
+        /// <summary>
+        /// Show error message
+        /// </summary>
+        private void ShowError(string message)
+        {
+            string script = $@"
+                Swal.fire({{
+                    icon: 'error',
+                    title: 'Error',
+                    text: '{message.Replace("'", "\\'")}',
+                    confirmButtonColor: '#ef4444'
+                }});
+            ";
+            ScriptManager.RegisterStartupScript(this, GetType(), "ShowError", script, true);
+        }
+
+        /// <summary>
+        /// Show success message
+        /// </summary>
+        private void ShowSuccess(string message)
+        {
+            string script = $@"
+                Swal.fire({{
+                    icon: 'success',
+                    title: 'Success!',
+                    text: '{message.Replace("'", "\\'")}',
+                    confirmButtonColor: '#10b981'
+                }});
+            ";
+            ScriptManager.RegisterStartupScript(this, GetType(), "ShowSuccess", script, true);
+        }
+
+        #endregion
     }
 }

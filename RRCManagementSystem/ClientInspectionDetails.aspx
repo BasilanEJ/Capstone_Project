@@ -513,7 +513,7 @@
                 </div>
             </div>
 
-            <!-- FOLLOW-UP DETAILS -->
+            <!-- FOLLOW-UP DETAILS 
             <div class="section-container">
                 <h3 class="text-base font-bold mb-4 pb-3 border-b-2" style="color: var(--royal-blue-dark); border-color: var(--royal-blue);">
                     <i class="fa-solid fa-calendar-check mr-2" style="color: var(--royal-blue);"></i>
@@ -544,7 +544,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div>  -->
         </div>
 
       <!-- ACTION BUTTONS -->

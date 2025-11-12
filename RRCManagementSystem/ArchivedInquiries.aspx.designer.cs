@@ -15,40 +15,22 @@ namespace RRCManagementSystem
     {
 
         /// <summary>
-        /// lblMessage control.
+        /// lblPermission control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblMessage;
+        protected global::System.Web.UI.WebControls.Label lblPermission;
 
         /// <summary>
-        /// hfActionInquiryID control.
+        /// hfSelectedInquiryID control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfActionInquiryID;
-
-        /// <summary>
-        /// btnRestoreHidden control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnRestoreHidden;
-
-        /// <summary>
-        /// btnDeleteHidden control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnDeleteHidden;
+        protected global::System.Web.UI.WebControls.HiddenField hfSelectedInquiryID;
 
         /// <summary>
         /// gvArchived control.

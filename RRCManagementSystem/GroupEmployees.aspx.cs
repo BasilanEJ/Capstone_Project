@@ -187,7 +187,7 @@ namespace RRCManagementSystem
                 {
                     if (RemoveEmployeeFromTeam(employeeId))
                     {
-                        feedback.AppendLine($"✅ Removed <strong>{employeeName}</strong> from their team.<br/>");
+                        feedback.AppendLine($"• Removed {employeeName} from their team.");
                         AddAudit(adminId, $"Removed technician '{employeeName}' (ID: {employeeId}) from their team.");
                         changesCount++;
                     }
@@ -198,7 +198,7 @@ namespace RRCManagementSystem
                     if (UpsertEmployeeTeam(employeeId, newTeamId))
                     {
                         string teamName = ddlAction.SelectedItem.Text;
-                        feedback.AppendLine($"✅ <strong>{employeeName}</strong> assigned to <strong>{teamName}</strong>.<br/>");
+                        feedback.AppendLine($"• {employeeName} assigned to {teamName}.");
                         AddAudit(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to team '{teamName}' (TeamID: {newTeamId}).");
                         changesCount++;
                     }
@@ -209,7 +209,7 @@ namespace RRCManagementSystem
                     string fallbackTeamName = ddlExistingTeams.SelectedItem.Text;
                     if (UpsertEmployeeTeam(employeeId, fallbackTeamId))
                     {
-                        feedback.AppendLine($"✅ <strong>{employeeName}</strong> assigned to <strong>{fallbackTeamName}</strong>.<br/>");
+                        feedback.AppendLine($"• {employeeName} assigned to {fallbackTeamName}.");
                         AddAudit(adminId, $"Assigned technician '{employeeName}' (ID: {employeeId}) to team '{fallbackTeamName}' (TeamID: {fallbackTeamId}).");
                         changesCount++;
                     }
@@ -218,8 +218,24 @@ namespace RRCManagementSystem
 
             if (changesCount > 0)
             {
-                lblMessage.Text = $"<i class='fas fa-check-circle'></i> <strong>{changesCount} changes successfully saved!</strong><br/>{feedback}";
-                lblMessage.CssClass = "alert alert-success alert-message auto-fade";
+                // Build HTML for feedback
+                string feedbackHtml = feedback.ToString().Replace(Environment.NewLine, "<br/>");
+
+                // Show SweetAlert instead of inline message
+                string script = $@"
+                    Swal.fire({{
+                        icon: 'success',
+                        title: '<strong>{changesCount} Changes Saved!</strong>',
+                        html: '{feedbackHtml.Replace("'", "\\'")}',
+                        confirmButtonColor: '#10b981',
+                        confirmButtonText: 'OK',
+                        customClass: {{
+                            popup: 'swal-wide'
+                        }}
+                    }});
+                ";
+                System.Web.UI.ScriptManager.RegisterStartupScript(this, GetType(), "SaveSuccess", script, true);
+
                 LoadTechnicians();
             }
             else
@@ -300,8 +316,6 @@ namespace RRCManagementSystem
                 else
                 {
                     string teamLeaderName = ddlTeamLeader.SelectedItem.Text;
-                    lblMessage.Text = $"<i class='fas fa-check-circle'></i> Team '<strong>{teamName}</strong>' created successfully with <strong>{teamLeaderName}</strong> as team leader!";
-                    lblMessage.CssClass = "alert alert-success alert-message auto-fade";
 
                     // Clear form
                     txtModalTeamName.Text = "";
@@ -309,16 +323,27 @@ namespace RRCManagementSystem
                     rbNightShift.Checked = false;
                     ddlTeamLeader.SelectedIndex = 0;
 
-                    // ✅ RELOAD BOTH DROPDOWNS AND GRIDVIEW
-                    LoadExistingTeams();      // Reload top dropdown
-                    LoadTechnicians();        // Rebinds GridView which triggers RowDataBound
+                    // Reload dropdowns and gridview
+                    LoadExistingTeams();
+                    LoadTechnicians();
 
                     // Add audit
                     AddAudit(adminId, $"Created team '{teamName}' (ID: {teamId}) with shift type '{shiftType}' and team leader '{teamLeaderName}' (UserID: {teamLeaderId}).");
 
-                    // Close modal via JavaScript
-                    System.Web.UI.ScriptManager.RegisterStartupScript(this, GetType(), "CloseModal",
-                        "if(createTeamModal) createTeamModal.hide(); Swal.fire({ icon: 'success', title: 'Team Created!', text: 'Team " + teamName + " has been created successfully.', confirmButtonColor: '#2563eb' });", true);
+                    // Close modal and show centered SweetAlert
+                    string script = $@"
+                        if(createTeamModal) createTeamModal.hide();
+                        Swal.fire({{
+                            icon: 'success',
+                            title: '<strong>Team Created!</strong>',
+                            html: 'Team <strong>{teamName}</strong> has been created successfully with <strong>{teamLeaderName}</strong> as team leader.',
+                            confirmButtonColor: '#10b981',
+                            confirmButtonText: 'OK',
+                            timer: 5000,
+                            timerProgressBar: true
+                        }});
+                    ";
+                    System.Web.UI.ScriptManager.RegisterStartupScript(this, GetType(), "CloseModal", script, true);
                 }
             }
             catch (Exception ex)

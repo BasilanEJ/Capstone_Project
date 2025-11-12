@@ -727,12 +727,12 @@
                         <span class="sidebar-text">Inspections</span>
                     </a>
                 </li>
-                <li>
+             <!--   <li>
                     <a class="sidebar-link" href="CreateBooking.aspx" aria-label="Assign Booking">
                         <span class="sidebar-icon"><i class="fas fa-tasks"></i></span>
                         <span class="sidebar-text">Assign Booking</span>
                     </a>
-                </li>
+                </li> --> 
             </ul>
 
             <div class="logout-section">

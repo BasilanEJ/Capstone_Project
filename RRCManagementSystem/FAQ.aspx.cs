@@ -25,7 +25,7 @@ namespace RRCManagementSystem
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 using (SqlCommand cmd = new SqlCommand(
-                    "SELECT * FROM FAQs WHERE IsActive = 1 ORDER BY DisplayOrder, ID", conn))
+                    "SELECT * FROM [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] WHERE IsActive = 1 ORDER BY DisplayOrder, ID", conn))
                 {
                     conn.Open();
                     SqlDataAdapter da = new SqlDataAdapter(cmd);
@@ -57,9 +57,11 @@ namespace RRCManagementSystem
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 using (SqlCommand cmd = new SqlCommand(@"
-                    INSERT INTO FAQs (Question, Answer, DisplayOrder, IsActive, CreatedDate) 
+                    INSERT INTO [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] 
+                    (Question, Answer, DisplayOrder, IsActive, CreatedDate) 
                     VALUES (@Question, @Answer, 
-                        (SELECT ISNULL(MAX(DisplayOrder), 0) + 1 FROM FAQs), 
+                        (SELECT ISNULL(MAX(DisplayOrder), 0) + 1 
+                         FROM [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs]), 
                         1, GETDATE())", conn))
                 {
                     cmd.Parameters.AddWithValue("@Question", question);
@@ -118,7 +120,7 @@ namespace RRCManagementSystem
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 using (SqlCommand cmd = new SqlCommand(
-                    "UPDATE FAQs SET Question = @Question, Answer = @Answer, UpdatedDate = GETDATE() WHERE ID = @ID", conn))
+                    "UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] SET Question = @Question, Answer = @Answer, UpdatedDate = GETDATE() WHERE ID = @ID", conn))
                 {
                     cmd.Parameters.AddWithValue("@ID", id);
                     cmd.Parameters.AddWithValue("@Question", question);
@@ -138,28 +140,25 @@ namespace RRCManagementSystem
             }
         }
 
-        // ✅ NEW: Handle the confirmed delete from SweetAlert
         protected void btnConfirmDelete_Click(object sender, EventArgs e)
         {
             try
             {
-                // Get the row index from hidden field
                 if (!string.IsNullOrEmpty(hfDeleteRowIndex.Value))
                 {
                     int rowIndex = Convert.ToInt32(hfDeleteRowIndex.Value);
                     int id = Convert.ToInt32(gvFaqs.DataKeys[rowIndex].Value);
 
                     using (SqlConnection conn = new SqlConnection(connectionString))
-                    using (SqlCommand cmd = new SqlCommand("UPDATE FAQs SET IsActive = 0, UpdatedDate = GETDATE() WHERE ID = @ID", conn))
+                    using (SqlCommand cmd = new SqlCommand(
+                        "UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] SET IsActive = 0, UpdatedDate = GETDATE() WHERE ID = @ID", conn))
                     {
                         cmd.Parameters.AddWithValue("@ID", id);
                         conn.Open();
                         cmd.ExecuteNonQuery();
                     }
 
-                    // Clear the hidden field
                     hfDeleteRowIndex.Value = string.Empty;
-
                     LoadFaqs();
                     ShowAlert("Archived!", "FAQ has been archived successfully.", "success");
                 }
@@ -170,7 +169,6 @@ namespace RRCManagementSystem
             }
         }
 
-        // ⚠️ OPTIONAL: Keep this for backward compatibility or remove it
         protected void gvFaqs_RowDeleting(object sender, GridViewDeleteEventArgs e)
         {
             try
@@ -178,7 +176,8 @@ namespace RRCManagementSystem
                 int id = Convert.ToInt32(gvFaqs.DataKeys[e.RowIndex].Value);
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
-                using (SqlCommand cmd = new SqlCommand("UPDATE FAQs SET IsActive = 0, UpdatedDate = GETDATE() WHERE ID = @ID", conn))
+                using (SqlCommand cmd = new SqlCommand(
+                    "UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] SET IsActive = 0, UpdatedDate = GETDATE() WHERE ID = @ID", conn))
                 {
                     cmd.Parameters.AddWithValue("@ID", id);
                     conn.Open();
@@ -199,9 +198,7 @@ namespace RRCManagementSystem
             if (e.CommandName != "ToggleActive" &&
                 e.CommandName != "MoveUp" &&
                 e.CommandName != "MoveDown")
-            {
-                return; // It's not our command, so we do nothing.
-            }
+                return;
 
             try
             {
@@ -211,7 +208,7 @@ namespace RRCManagementSystem
                 {
                     using (SqlConnection conn = new SqlConnection(connectionString))
                     using (SqlCommand cmd = new SqlCommand(
-                        "UPDATE FAQs SET IsActive = CASE WHEN IsActive = 1 THEN 0 ELSE 1 END, UpdatedDate = GETDATE() WHERE ID = @ID", conn))
+                        "UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] SET IsActive = CASE WHEN IsActive = 1 THEN 0 ELSE 1 END, UpdatedDate = GETDATE() WHERE ID = @ID", conn))
                     {
                         cmd.Parameters.AddWithValue("@ID", id);
                         conn.Open();
@@ -234,11 +231,6 @@ namespace RRCManagementSystem
                     ShowAlert("Moved Down!", "FAQ has been moved down successfully.", "success");
                 }
             }
-            catch (FormatException)
-            {
-                // This is a good safety net in case a button is misconfigured
-                ShowAlert("Error", "Invalid command argument. Expected a numeric ID.", "error");
-            }
             catch (Exception ex)
             {
                 ShowAlert("Error", "Operation failed: " + ex.Message, "error");
@@ -253,9 +245,9 @@ namespace RRCManagementSystem
                 {
                     conn.Open();
 
-                    // Get current order
                     int currentOrder;
-                    using (SqlCommand cmd = new SqlCommand("SELECT DisplayOrder FROM FAQs WHERE ID = @ID", conn))
+                    using (SqlCommand cmd = new SqlCommand(
+                        "SELECT DisplayOrder FROM [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] WHERE ID = @ID", conn))
                     {
                         cmd.Parameters.AddWithValue("@ID", id);
                         currentOrder = Convert.ToInt32(cmd.ExecuteScalar());
@@ -263,32 +255,28 @@ namespace RRCManagementSystem
 
                     int newOrder = currentOrder + direction;
 
-                    // Check if movement is valid
-                    using (SqlCommand cmd = new SqlCommand("SELECT COUNT(*) FROM FAQs WHERE DisplayOrder = @NewOrder AND IsActive = 1", conn))
+                    using (SqlCommand cmd = new SqlCommand(
+                        "SELECT COUNT(*) FROM [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] WHERE DisplayOrder = @NewOrder AND IsActive = 1", conn))
                     {
                         cmd.Parameters.AddWithValue("@NewOrder", newOrder);
-                        int count = Convert.ToInt32(cmd.ExecuteScalar());
-
-                        if (count == 0) return; // Can't move further
+                        if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+                            return;
                     }
 
-                    // Swap orders
                     using (SqlTransaction transaction = conn.BeginTransaction())
                     {
                         try
                         {
-                            // Update the item that will be swapped
                             using (SqlCommand cmd = new SqlCommand(
-                                "UPDATE FAQs SET DisplayOrder = @CurrentOrder, UpdatedDate = GETDATE() WHERE DisplayOrder = @NewOrder AND IsActive = 1", conn, transaction))
+                                "UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] SET DisplayOrder = @CurrentOrder, UpdatedDate = GETDATE() WHERE DisplayOrder = @NewOrder AND IsActive = 1", conn, transaction))
                             {
                                 cmd.Parameters.AddWithValue("@CurrentOrder", currentOrder);
                                 cmd.Parameters.AddWithValue("@NewOrder", newOrder);
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // Update the current item
                             using (SqlCommand cmd = new SqlCommand(
-                                "UPDATE FAQs SET DisplayOrder = @NewOrder, UpdatedDate = GETDATE() WHERE ID = @ID", conn, transaction))
+                                "UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs] SET DisplayOrder = @NewOrder, UpdatedDate = GETDATE() WHERE ID = @ID", conn, transaction))
                             {
                                 cmd.Parameters.AddWithValue("@NewOrder", newOrder);
                                 cmd.Parameters.AddWithValue("@ID", id);
@@ -313,7 +301,6 @@ namespace RRCManagementSystem
 
         private void ShowAlert(string title, string message, string icon)
         {
-            // Escape single quotes to prevent JavaScript errors
             title = title.Replace("'", "\\'");
             message = message.Replace("'", "\\'");
 
@@ -325,8 +312,7 @@ namespace RRCManagementSystem
                     confirmButtonColor: '#2563eb',
                     timer: 3000,
                     timerProgressBar: true
-                }});
-            ";
+                }});";
 
             ScriptManager.RegisterStartupScript(this, GetType(), "alert_" + Guid.NewGuid(), script, true);
         }

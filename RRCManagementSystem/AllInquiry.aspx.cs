@@ -181,17 +181,26 @@ namespace RRCManagementSystem
             {
                 int inquiryId = Convert.ToInt32(e.CommandArgument);
 
-                if (e.CommandName == "Assign")
+                // Check if this is a confirmed action from SweetAlert
+                GridViewRow row = ((Control)e.CommandSource).NamingContainer as GridViewRow;
+                if (row != null)
                 {
-                    AutoAssignInspector(inquiryId);
-                }
-                else if (e.CommandName == "Archive")
-                {
-                    ArchiveInquiry(inquiryId);
-                }
-                else if (e.CommandName == "ViewDetails")
-                {
-                    Response.Redirect($"InquiryDetails.aspx?id={inquiryId}", false);
+                    var hdnConfirmAction = row.FindControl("hdnConfirmAction") as HiddenField;
+
+                    if (hdnConfirmAction != null && !string.IsNullOrEmpty(hdnConfirmAction.Value))
+                    {
+                        if (hdnConfirmAction.Value == "Assign")
+                        {
+                            AutoAssignInspector(inquiryId);
+                        }
+                        else if (hdnConfirmAction.Value == "Archive")
+                        {
+                            ArchiveInquiry(inquiryId);
+                        }
+
+                        // Clear the confirmation flag
+                        hdnConfirmAction.Value = "";
+                    }
                 }
             }
             catch (Exception ex)
@@ -255,7 +264,7 @@ namespace RRCManagementSystem
                 if (inspectorId == 0)
                 {
                     ShowError($"No available inspectors found for {city}, {region} on {inspectionDate:MMM dd, yyyy}. " +
-                             "Please check inspector area assignments or try another date.");
+                              "Please check inspector area assignments or try another date.");
                     return;
                 }
 
@@ -265,11 +274,15 @@ namespace RRCManagementSystem
                     // Update inspector schedule
                     UpdateInspectorSchedule(inspectorId, inspectionDate);
 
-                    // Get inspector name for confirmation
+                    // Get inspector name and inquiry number for confirmation
                     string inspectorName = GetInspectorName(inspectorId);
+                    string inquiryNumber = GetInquiryNumber(inquiryId);
 
-                    ShowSuccess($"Inspector {inspectorName} automatically assigned! " +
-                               $"Inspection scheduled for {inspectionDate:MMM dd, yyyy} at {inspectionTime} in {city}, {region}");
+                    // 🔔 Send notification to inspector
+                    SendNotificationToInspector(inspectorId, inquiryNumber, inspectionDate, inspectionTime, city, region);
+
+                    ShowSuccess($"Inspector {inspectorName} automatically assigned and notified! " +
+                                $"Inspection scheduled for {inspectionDate:MMM dd, yyyy} at {inspectionTime} in {city}, {region}");
                     LoadInquiries();
                 }
                 else
@@ -283,6 +296,25 @@ namespace RRCManagementSystem
                 ShowError("Error assigning inspector.");
             }
         }
+
+        private string GetInquiryNumber(int inquiryId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand("SELECT InquiryNumber FROM Inquiries WHERE InquiryID=@ID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@ID", inquiryId);
+                    conn.Open();
+                    return cmd.ExecuteScalar()?.ToString() ?? "INQ-Unknown";
+                }
+            }
+            catch
+            {
+                return "INQ-Unknown";
+            }
+        }
+
 
         /// <summary>
         /// Get inquiry details INCLUDING LOCATION (region and city)
@@ -472,9 +504,6 @@ namespace RRCManagementSystem
             }
         }
 
-        /// <summary>
-        /// Get inspector name for display
-        /// </summary>
         /// <summary>
         /// Get inspector name for display
         /// </summary>
@@ -739,6 +768,35 @@ namespace RRCManagementSystem
         }
 
         #endregion
+
+        private void SendNotificationToInspector(int inspectorId, string inquiryNumber, DateTime inspectionDate, string inspectionTime, string city, string region)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(connectionString))
+                using (var cmd = new SqlCommand(@"
+            INSERT INTO Notifications (UserID, Title, Body, Url, IsRead, CreatedAt)
+            VALUES (@UserID, @Title, @Body, @Url, 0, GETDATE())
+        ", conn))
+                {
+                    string title = "New Inspection Assigned";
+                    string body = $"You have been assigned to {inquiryNumber} scheduled on {inspectionDate:MMM dd, yyyy} ({inspectionTime}) at {city}, {region}.";
+                    string url = "MyInspections.aspx"; // This page will open when clicked in notification list
+
+                    cmd.Parameters.AddWithValue("@UserID", inspectorId);
+                    cmd.Parameters.AddWithValue("@Title", title);
+                    cmd.Parameters.AddWithValue("@Body", body);
+                    cmd.Parameters.AddWithValue("@Url", url);
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SendNotificationToInspector Error: {ex.Message}");
+            }
+        }
 
         #region UI Messages
 

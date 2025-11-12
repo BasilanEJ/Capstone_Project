@@ -133,6 +133,39 @@ section {
         gap: 12px;
     }
 }
+/* Make carousel controls appear outside */
+#reviewsCarousel {
+    position: relative;
+}
+
+#reviewsCarousel .carousel-control-prev,
+#reviewsCarousel .carousel-control-next {
+    width: 60px;
+    height: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    opacity: 0.9;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+#reviewsCarousel .carousel-control-prev {
+    left: -70px; /* move it outside the carousel */
+}
+
+#reviewsCarousel .carousel-control-next {
+    right: -70px; /* move it outside the carousel */
+}
+
+#reviewsCarousel .carousel-control-prev:hover,
+#reviewsCarousel .carousel-control-next:hover {
+    transform: translateY(-50%) scale(1.1);
+    opacity: 1;
+}
+
 
 .service-card {
     background: var(--white);
@@ -188,6 +221,98 @@ section {
     margin-bottom: 0;
 }
 
+/* Review Header with Badge */
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.fb-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #1877f2;
+    background: #e7f3ff;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.fb-badge i {
+    font-size: 14px;
+}
+
+/* Facebook Reviews Container */
+.facebook-reviews-container {
+    margin-top: 40px;
+}
+
+.facebook-plugin-wrapper {
+    max-width: 500px;
+    margin: 0 auto;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Facebook Review Button */
+.btn-facebook-review {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #1877f2 0%, #0c5bbd 100%);
+    color: white;
+    padding: 14px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+
+.btn-facebook-review:hover {
+    background: linear-gradient(135deg, #0c5bbd 0%, #084594 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(24, 119, 242, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-facebook-review i {
+    font-size: 20px;
+}
+
+
+
+/* Responsive */
+@media (max-width: 575px) {
+    .facebook-plugin-wrapper {
+        padding: 20px;
+    }
+    
+    .btn-facebook-review {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .review-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .fb-badge {
+        margin-top: 4px;
+    }
+}
+
     .reviews-section {
         text-align: center;
         padding: 80px 20px;
@@ -203,15 +328,7 @@ section {
     }
     
     /* Static Grid (for 4 or fewer reviews) */
-    .reviews-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 24px;
-        margin: 0 auto;
-        max-width: 1200px;
-        padding: 0 20px;
-    }
-    
+  
     /* Carousel Container (for 5+ reviews) */
     .reviews-carousel-container {
         position: relative;
@@ -1428,12 +1545,13 @@ section {
 
         /* ============ Call to Action Section ============ */
 .cta-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
     padding: 80px 20px;
     text-align: center;
     position: relative;
     overflow: hidden;
 }
+
 
 .cta-section::before {
     content: '';
@@ -1866,23 +1984,98 @@ section {
         </div>
     </section>
 
+<!-- ====== CUSTOMER REVIEWS SECTION ====== -->
+<section class="reviews-section lazy-section">
+    <div class="container">
 
-    <section class="reviews-section lazy-section">
-    <h2>What our customers are saying</h2>
-    <div class="reviews-grid">
+        <!-- === Header + Button === -->
+        <section class="reviews-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <h2 class="fw-bold text-dark mb-0">What our customers are saying</h2>
+            <button type="button" class="btn btn-primary rounded-pill px-4"
+                    data-bs-toggle="modal" data-bs-target="#reviewModal">
+                <i class="fas fa-pen"></i> Write a Review
+            </button>
+        </section>
 
+<!-- === Carousel Section (manual only, no auto slide) === -->
+<section id="reviewsCarousel" class="carousel slide" data-bs-ride="false" data-bs-interval="false">
+    <div class="carousel-inner">
         <asp:Repeater ID="rptReviews" runat="server">
             <ItemTemplate>
-                <div class="review-card">
-                    <strong><%# Eval("CustomerName") %></strong>
-                    <%# Convert.ToBoolean(Eval("Recommends")) ? "<p class='recommends'>❤️ recommends</p>" : "" %>
-                    <p><%# Eval("ReviewText") %></p>
-                    <div class="review-rating">
-                        <%# GetStarRatingForReview(Convert.ToInt32(Eval("Rating"))) %>
+                <%# Container.ItemIndex % 3 == 0 ? "<div class='carousel-item " + (Container.ItemIndex == 0 ? "active" : "") + "'><div class='row justify-content-center g-4'>" : "" %>
+
+                <div class="col-md-4 col-sm-6">
+                    <div class="review-card h-100 mx-auto">
+                        <div class="review-header">
+                            <strong><%# Eval("CustomerName") %></strong>
+                            <%# Eval("ReviewSource") != null && Eval("ReviewSource").ToString() == "Facebook" ? 
+                                "<span class='fb-badge'><i class=\"fab fa-facebook\"></i> Facebook</span>" : "" %>
+                        </div>
+                        <%# Convert.ToBoolean(Eval("Recommends")) ? "<p class='recommends'>❤️ recommends</p>" : "" %>
+
+                        <p class="review-text" data-fulltext='<%# Eval("ReviewText").ToString().Replace("'", "\\'") %>'>
+                            <%# GetShortReviewText(Eval("ReviewText").ToString()) %>
+                        </p>
+
+                        <button type="button" class="btn btn-link p-0 see-more-btn text-primary small" style="display:none;">
+                            See more
+                        </button>
+
+                        <div class="review-rating mt-2">
+                            <%# GetStarRatingForReview(Convert.ToInt32(Eval("Rating"))) %>
+                        </div>
                     </div>
                 </div>
+
+                <%# (Container.ItemIndex + 1) % 3 == 0 || (Container.ItemIndex + 1) == ((Repeater)Container.NamingContainer).Items.Count
+                    ? "</div></div>" : "" %>
             </ItemTemplate>
         </asp:Repeater>
+    </div>
+
+    <!-- Carousel Controls -->
+    <button class="carousel-control-prev" type="button" data-bs-target="#reviewsCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon bg-dark rounded-circle p-3"></span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#reviewsCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon bg-dark rounded-circle p-3"></span>
+    </button>
+</section>
+
+
+        <!-- === Modal Section === -->
+        <section class="review-modal">
+            <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content shadow-lg">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="reviewModalLabel">Share Your Experience</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body bg-light">
+                            <asp:TextBox ID="txtName" runat="server" CssClass="form-control mb-3" Placeholder="Your name"></asp:TextBox>
+                            <asp:DropDownList ID="ddlRating" runat="server" CssClass="form-select mb-3">
+                                <asp:ListItem Text="Select Rating" Value="" />
+                                <asp:ListItem Text="⭐ (1)" Value="1" />
+                                <asp:ListItem Text="⭐⭐ (2)" Value="2" />
+                                <asp:ListItem Text="⭐⭐⭐ (3)" Value="3" />
+                                <asp:ListItem Text="⭐⭐⭐⭐ (4)" Value="4" />
+                                <asp:ListItem Text="⭐⭐⭐⭐⭐ (5)" Value="5" />
+                            </asp:DropDownList>
+                            <asp:TextBox ID="txtReview" runat="server" CssClass="form-control mb-3"
+                                         TextMode="MultiLine" Rows="4" Placeholder="Write your review..."></asp:TextBox>
+                            <div class="form-check mb-3">
+                                <asp:CheckBox ID="chkRecommend" runat="server" CssClass="form-check-input" />
+                                <label class="form-check-label">I recommend RRC Termite & Pest Control ❤️</label>
+                            </div>
+                            <asp:Button ID="btnSubmitReview" runat="server" CssClass="btn btn-primary w-100"
+                                        Text="Submit Review" OnClick="btnSubmitReview_Click" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </div>
 </section>
 
@@ -1892,7 +2085,7 @@ section {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 
-<section class="cta-section">
+<section class="cta-section" id="ctaSection">
     <div class="cta-container">
         <div class="cta-content">
             <i class="fas fa-user-plus cta-icon"></i>
@@ -1925,6 +2118,27 @@ section {
         </div>
     </div>
 </section>
+
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // ✅ Fix scroll stuck when modal opens/closes (stronger version)
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                modal.addEventListener('show.bs.modal', () => {
+                    document.body.style.overflow = 'hidden';
+                });
+
+                modal.addEventListener('hidden.bs.modal', () => {
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = 'auto';
+                    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                });
+            });
+        });
+    </script>
+
 
     <script>
 
@@ -2088,6 +2302,50 @@ section {
                     document.documentElement.style.scrollBehavior = '';
                 });
             });
+        });
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Enable "See more / See less"
+            document.querySelectorAll(".review-card").forEach(function (card) {
+                const p = card.querySelector(".review-text");
+                const btn = card.querySelector(".see-more-btn");
+                if (!p || !btn) return;
+
+                const fullText = p.dataset.fulltext;
+                if (fullText && fullText.split(' ').length > 50) {
+                    btn.style.display = "inline";
+                    btn.addEventListener("click", function () {
+                        if (btn.textContent === "See more") {
+                            p.textContent = fullText;
+                            btn.textContent = "See less";
+                        } else {
+                            p.textContent = fullText.split(' ').slice(0, 50).join(' ') + "...";
+                            btn.textContent = "See more";
+                        }
+                    });
+                }
+            });
+
+            // Fix stuck scroll issue when modal opens/closes
+            const reviewModal = document.getElementById('reviewModal');
+            if (reviewModal) {
+                reviewModal.addEventListener('hidden.bs.modal', () => {
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = 'auto';
+                    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                });
+            }
+
+            // Initialize carousel
+            const reviewCarousel = document.querySelector('#reviewsCarousel');
+            if (reviewCarousel) {
+                new bootstrap.Carousel(reviewCarousel, {
+                    interval: false
+                });
+
+            }
         });
     </script>
 

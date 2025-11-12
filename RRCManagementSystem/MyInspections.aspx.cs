@@ -25,16 +25,26 @@ namespace RRCManagementSystem
 
             if (!IsPostBack)
             {
-                LoadInspections("All");
+                LoadInspections("All", "");
+            }
+            else
+            {
+                // Handle search postback
+                if (Request.Form["__EVENTTARGET"] == txtSearch.UniqueID)
+                {
+                    string currentFilter = GetCurrentFilter();
+                    string searchTerm = txtSearch.Text.Trim();
+                    LoadInspections(currentFilter, searchTerm);
+                }
             }
         }
 
         #region Load Inspections
 
         /// <summary>
-        /// Load inspections with their report status
+        /// Load inspections with their report status and search functionality
         /// </summary>
-        private void LoadInspections(string filter)
+        private void LoadInspections(string filter, string searchTerm)
         {
             try
             {
@@ -75,8 +85,7 @@ namespace RRCManagementSystem
                         AND (@Filter = 'All' 
                             OR (@Filter = 'Assigned' AND i.Status = 'Assigned')
                             OR (@Filter = 'In Progress' AND i.Status = 'In Progress')
-                            OR (@Filter = 'Inspected' AND i.Status = 'Inspected')
-                            OR (@Filter = 'Drafts' AND ir.Status = 'Draft'))
+                            OR (@Filter = 'Inspected' AND i.Status = 'Inspected'))
                     ORDER BY 
                         CASE 
                             WHEN i.Urgency = 'Emergency' THEN 1
@@ -102,6 +111,12 @@ namespace RRCManagementSystem
                     // Add computed columns
                     AddComputedColumns(dt);
 
+                    // Apply search filter if provided
+                    if (!string.IsNullOrWhiteSpace(searchTerm))
+                    {
+                        dt = FilterDataTableBySearch(dt, searchTerm);
+                    }
+
                     if (dt.Rows.Count > 0)
                     {
                         rptInspections.DataSource = dt;
@@ -121,6 +136,77 @@ namespace RRCManagementSystem
                 System.Diagnostics.Debug.WriteLine($"LoadInspections Error: {ex.Message}");
                 ShowError("Error loading inspections.");
             }
+        }
+
+        /// <summary>
+        /// Filter DataTable by search term
+        /// </summary>
+        private DataTable FilterDataTableBySearch(DataTable dt, string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return dt;
+
+            searchTerm = searchTerm.ToLower();
+            DataTable filteredDt = dt.Clone();
+
+            foreach (DataRow row in dt.Rows)
+            {
+                bool matchFound = false;
+
+                // Search in Inquiry Number
+                if (row["InquiryNumber"]?.ToString().ToLower().Contains(searchTerm) == true)
+                    matchFound = true;
+
+                // Search in Client Name
+                if (row["ClientName"]?.ToString().ToLower().Contains(searchTerm) == true)
+                    matchFound = true;
+
+                // Search in Pest Type
+                if (row["PestType"]?.ToString().ToLower().Contains(searchTerm) == true)
+                    matchFound = true;
+
+                // Search in Full Address
+                if (row["FullAddress"]?.ToString().ToLower().Contains(searchTerm) == true)
+                    matchFound = true;
+
+                // Search in Problem Description
+                if (row["ProblemDescription"]?.ToString().ToLower().Contains(searchTerm) == true)
+                    matchFound = true;
+
+                // Search in Client Email
+                if (row["ClientEmail"]?.ToString().ToLower().Contains(searchTerm) == true)
+                    matchFound = true;
+
+                // Search in Client Contact
+                if (row["ClientContact"]?.ToString().ToLower().Contains(searchTerm) == true)
+                    matchFound = true;
+
+                // Search in Quotation Code
+                if (row["QuotationCode"]?.ToString().ToLower().Contains(searchTerm) == true)
+                    matchFound = true;
+
+                if (matchFound)
+                {
+                    filteredDt.ImportRow(row);
+                }
+            }
+
+            return filteredDt;
+        }
+
+        /// <summary>
+        /// Get current active filter
+        /// </summary>
+        private string GetCurrentFilter()
+        {
+            if (btnFilterAssigned.CssClass.Contains("active"))
+                return "Assigned";
+            if (btnFilterInProgress.CssClass.Contains("active"))
+                return "In Progress";
+            if (btnFilterInspected.CssClass.Contains("active"))
+                return "Inspected";
+
+            return "All";
         }
 
         /// <summary>
@@ -231,7 +317,6 @@ namespace RRCManagementSystem
             btnFilterAssigned.CssClass = "filter-tab";
             btnFilterInProgress.CssClass = "filter-tab";
             btnFilterInspected.CssClass = "filter-tab";
-            btnFilterDrafts.CssClass = "filter-tab";
 
             // Set active tab and filter
             if (btn.ID == "btnFilterAssigned")
@@ -249,26 +334,20 @@ namespace RRCManagementSystem
                 filter = "Inspected";
                 btnFilterInspected.CssClass = "filter-tab active";
             }
-            else if (btn.ID == "btnFilterDrafts")
-            {
-                filter = "Drafts";
-                btnFilterDrafts.CssClass = "filter-tab active";
-            }
             else
             {
                 btnFilterAll.CssClass = "filter-tab active";
             }
 
-            LoadInspections(filter);
+            // Get current search term
+            string searchTerm = txtSearch.Text.Trim();
+            LoadInspections(filter, searchTerm);
         }
 
         #endregion
 
         #region Repeater Events
 
-        /// <summary>
-        /// Handle repeater item commands
-        /// </summary>
         /// <summary>
         /// Handle repeater item commands
         /// </summary>
@@ -286,13 +365,6 @@ namespace RRCManagementSystem
                     int inquiryId = Convert.ToInt32(e.CommandArgument);
                     Response.Redirect($"InspectorReport.aspx?id={inquiryId}", false);
                 }
-                else if (e.CommandName == "EditDraft")
-                {
-                    string[] args = e.CommandArgument.ToString().Split('|');
-                    int inquiryId = Convert.ToInt32(args[0]);
-                    int reportId = Convert.ToInt32(args[1]);
-                    Response.Redirect($"InspectorReport.aspx?id={inquiryId}&reportId={reportId}", false);
-                }
                 else if (e.CommandName == "ViewReport")
                 {
                     string[] args = e.CommandArgument.ToString().Split('|');
@@ -307,8 +379,6 @@ namespace RRCManagementSystem
                 ShowError("Error processing request.");
             }
         }
-
-
 
         #endregion
 
@@ -335,7 +405,11 @@ namespace RRCManagementSystem
                 }
 
                 ShowSuccess("Inspection started! You can now create your report.");
-                LoadInspections("All");
+
+                // Reload with current filter and search
+                string currentFilter = GetCurrentFilter();
+                string searchTerm = txtSearch.Text.Trim();
+                LoadInspections(currentFilter, searchTerm);
             }
             catch (Exception ex)
             {
@@ -420,17 +494,7 @@ namespace RRCManagementSystem
                 string repStatus = reportStatus.ToString();
                 string code = quotationCode?.ToString() ?? "";
 
-                if (repStatus == "Draft")
-                {
-                    sb.Append(" <span class='status-badge status-draft'>");
-                    sb.Append($"<i class='fas fa-file-edit'></i> DRAFT");
-                    if (!string.IsNullOrEmpty(code))
-                    {
-                        sb.Append($" ({code})");
-                    }
-                    sb.Append("</span>");
-                }
-                else if (repStatus == "Inspected")
+                if (repStatus == "Inspected")
                 {
                     sb.Append(" <span class='status-badge status-inspected'>");
                     sb.Append($"<i class='fas fa-check-circle'></i> SUBMITTED");
@@ -440,7 +504,6 @@ namespace RRCManagementSystem
                     }
                     sb.Append("</span>");
                 }
-
                 else if (repStatus == "Approved")
                 {
                     sb.Append(" <span class='status-badge status-completed'>");
@@ -451,7 +514,6 @@ namespace RRCManagementSystem
                     }
                     sb.Append("</span>");
                 }
-
             }
 
             return sb.ToString();

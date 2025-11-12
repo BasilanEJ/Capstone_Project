@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Web;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -10,12 +9,15 @@ public class GetFAQs : IHttpHandler
 {
     public void ProcessRequest(HttpContext context)
     {
-        context.Response.ContentType = "application/json";
+        // Set headers FIRST
+        context.Response.ContentType = "application/json; charset=utf-8";
         context.Response.AddHeader("Access-Control-Allow-Origin", "*");
         context.Response.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         context.Response.AddHeader("Access-Control-Allow-Headers", "Content-Type");
         context.Response.Cache.SetCacheability(HttpCacheability.NoCache);
         context.Response.Cache.SetNoStore();
+        context.Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1));
+        context.Response.AppendHeader("Pragma", "no-cache");
 
         // Handle OPTIONS preflight request
         if (context.Request.HttpMethod == "OPTIONS")
@@ -27,47 +29,74 @@ public class GetFAQs : IHttpHandler
 
         try
         {
-            string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
+            // Log request
+            System.Diagnostics.Debug.WriteLine("=== GetFAQs Handler Called ===");
+            System.Diagnostics.Debug.WriteLine($"Request URL: {context.Request.Url}");
+            System.Diagnostics.Debug.WriteLine($"Physical Path: {context.Request.PhysicalPath}");
+
+            string connectionString = ConfigurationManager.ConnectionStrings["RRCDB"]?.ConnectionString;
 
             if (string.IsNullOrEmpty(connectionString))
             {
                 throw new Exception("Connection string 'RRCDB' not found in Web.config");
             }
 
+            System.Diagnostics.Debug.WriteLine("Connection string found");
+
             List<FAQ> faqs = new List<FAQ>();
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                using (SqlCommand cmd = new SqlCommand(
-                    "SELECT ID, Question, Answer, DisplayOrder, IsActive FROM FAQs WHERE IsActive = 1 ORDER BY DisplayOrder, ID",
-                    conn))
+                string query = @"
+                    SELECT TOP (1000) [ID]
+                          ,[Question]
+                          ,[Answer]
+                          ,[DisplayOrder]
+                          ,[IsActive]
+                          ,[CreatedDate]
+                          ,[UpdatedDate]
+                    FROM [EJBasilan_RRCDB].[EJBasilan_admin].[FAQs]
+                    WHERE [IsActive] = 1
+                    ORDER BY [DisplayOrder], [ID]";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     conn.Open();
                     System.Diagnostics.Debug.WriteLine("✅ Database connection opened");
 
-                    SqlDataReader reader = cmd.ExecuteReader();
-
-                    while (reader.Read())
+                    using (SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        faqs.Add(new FAQ
+                        while (reader.Read())
                         {
-                            q = reader["Question"].ToString().Trim(),
-                            a = reader["Answer"].ToString().Trim()
-                        });
+                            string question = reader["Question"]?.ToString()?.Trim() ?? "";
+                            string answer = reader["Answer"]?.ToString()?.Trim() ?? "";
+
+                            if (!string.IsNullOrEmpty(question) && !string.IsNullOrEmpty(answer))
+                            {
+                                faqs.Add(new FAQ
+                                {
+                                    q = question,
+                                    a = answer
+                                });
+                                System.Diagnostics.Debug.WriteLine($"Added FAQ: {question}");
+                            }
+                        }
                     }
-                    reader.Close();
                 }
             }
+
+            System.Diagnostics.Debug.WriteLine($"✅ Total FAQs loaded: {faqs.Count}");
 
             // Serialize to JSON
             JavaScriptSerializer serializer = new JavaScriptSerializer();
             string json = serializer.Serialize(faqs);
 
-            // Debug log
-            System.Diagnostics.Debug.WriteLine($"✅ FAQs loaded successfully: {faqs.Count} items");
+            System.Diagnostics.Debug.WriteLine($"JSON Output: {json}");
 
+            // Send success response
             context.Response.StatusCode = 200;
             context.Response.Write(json);
+            context.Response.Flush();
         }
         catch (SqlException sqlEx)
         {
@@ -76,15 +105,19 @@ public class GetFAQs : IHttpHandler
             System.Diagnostics.Debug.WriteLine("Stack Trace: " + sqlEx.StackTrace);
 
             context.Response.StatusCode = 500;
-            context.Response.Write("{\"error\":\"Database error: " + sqlEx.Message.Replace("\"", "'") + "\"}");
+            var error = new { error = "Database error", message = sqlEx.Message, number = sqlEx.Number };
+            JavaScriptSerializer serializer = new JavaScriptSerializer();
+            context.Response.Write(serializer.Serialize(error));
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("❌ Error: " + ex.Message);
+            System.Diagnostics.Debug.WriteLine("❌ General Error: " + ex.Message);
             System.Diagnostics.Debug.WriteLine("Stack Trace: " + ex.StackTrace);
 
             context.Response.StatusCode = 500;
-            context.Response.Write("{\"error\":\"" + ex.Message.Replace("\"", "'") + "\"}");
+            var error = new { error = "Server error", message = ex.Message };
+            JavaScriptSerializer serializer = new JavaScriptSerializer();
+            context.Response.Write(serializer.Serialize(error));
         }
     }
 

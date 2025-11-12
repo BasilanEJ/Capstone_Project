@@ -62,8 +62,7 @@
                     <asp:Button ID="btnTabEquipment" runat="server" Text="Equipment" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabSales" runat="server" Text="Sales" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabBookings" runat="server" Text="Bookings" CssClass="folder-tab" OnClick="TabButton_Click" />
-                    <asp:Button ID="btnTabInspections" runat="server" Text="Inspections" CssClass="folder-tab" OnClick="TabButton_Click" />
-                    <asp:Button ID="btnTabInquiryEstimation" runat="server" Text="Inquiry Estimation" CssClass="folder-tab" OnClick="TabButton_Click" />
+                     <asp:Button ID="btnTabInspectionReports" runat="server" Text="Inspection Reports" CssClass="folder-tab" OnClick="TabButton_Click" />
                     <asp:Button ID="btnTabTeams" runat="server" Text="Team Reports" CssClass="folder-tab" OnClick="TabButton_Click" />
                 </div>
 
@@ -239,79 +238,33 @@
                     </div>
                 </asp:Panel>
 
-<asp:Panel ID="pnlInspections" runat="server" Visible="false" CssClass="report-panel">
+
+                <asp:Panel ID="pnlInspectionReports" runat="server" Visible="false" CssClass="report-panel">
     <div class="flex items-center justify-between mb-4">
-        <h3 class="text-2xl font-semibold text-gray-800">🔍 Inspection Details</h3>
-        <asp:Button ID="btnExportInspections" runat="server" Text="Export Inspections to PDF"
-            CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200"
-            OnClick="btnExportInspections_Click" />
+        <h3 class="text-2xl font-semibold text-gray-800">📋 Inspection Reports Summary</h3>
+        <asp:Button ID="btnExportInspectionReports" runat="server" Text="Export Reports to PDF" 
+            CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" 
+            OnClick="btnExportInspectionReports_Click" />
     </div>
     <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-        <asp:GridView ID="gvInspections" runat="server" AutoGenerateColumns="False"
-            CssClass="min-w-full custom-table"
-            HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider"
-            RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
-            <Columns>
-                <asp:TemplateField HeaderText="Inspection #">
-                    <ItemTemplate>
-                        <%# "Inspect" + String.Format("{0:D4}", Eval("InspectionID")) %>
-                    </ItemTemplate>
-                </asp:TemplateField>
-                <asp:BoundField DataField="InquiryCode" HeaderText="Reference Code" />
-                <asp:BoundField DataField="InspectorName" HeaderText="Inspector" />
-                <asp:BoundField DataField="ClientFullName" HeaderText="Client" />
-                <asp:BoundField DataField="ScheduledDate" HeaderText="Scheduled"
-                    DataFormatString="{0:yyyy-MM-dd}" HtmlEncode="false" />
-                <asp:BoundField DataField="InspectionStatus" HeaderText="Status" />
-                <asp:BoundField DataField="Remarks" HeaderText="Remarks">
-                    <ItemStyle CssClass="whitespace-normal break-words" />
-                </asp:BoundField>
-                <asp:BoundField DataField="ClientAddress" HeaderText="Address">
-                    <ItemStyle CssClass="whitespace-normal break-words" />
-                </asp:BoundField>
-                <asp:BoundField DataField="Findings" HeaderText="Findings">
-                    <ItemStyle CssClass="whitespace-normal break-words" />
-                </asp:BoundField>
-            </Columns>
-        </asp:GridView>
-    </div>
-</asp:Panel>
-
-<asp:Panel ID="pnlInquiryEstimation" runat="server" Visible="false" CssClass="report-panel">
-    <div class="flex items-center justify-between mb-4">
-        <h3 class="text-2xl font-semibold text-gray-800">📑 Inquiry Estimation</h3>
-        <asp:Button ID="btnExportInquiryEstimation" runat="server" Text="Export to PDF"
-            CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200"
-            OnClick="btnExportInquiryEstimation_Click" />
-    </div>
-
-    <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-        <asp:GridView ID="gvInquiryEstimation" runat="server" AutoGenerateColumns="False"
-            CssClass="min-w-full custom-table"
-            HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider"
+        <asp:GridView ID="gvInspectionReports" runat="server" AutoGenerateColumns="False" 
+            CssClass="min-w-full custom-table" 
+            HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" 
             RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
             <Columns>
                 <asp:BoundField DataField="QuotationCode" HeaderText="Quotation Code" />
-                <asp:BoundField DataField="CreatedAt" HeaderText="Created Date" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
+                <asp:BoundField DataField="InquiryNumber" HeaderText="Inquiry #" />
                 <asp:BoundField DataField="ClientName" HeaderText="Client" />
                 <asp:BoundField DataField="InspectorName" HeaderText="Inspector" />
-                <asp:BoundField DataField="ServiceNames" HeaderText="Services" />
-                <asp:BoundField DataField="SQM" HeaderText="SQM" />
-                <asp:BoundField DataField="BasePrice" HeaderText="Base Price (₱)" DataFormatString="{0:N2}" />
-                <asp:BoundField DataField="TravelExpense" HeaderText="Travel Expense (₱)" DataFormatString="{0:N2}" />
-                <asp:BoundField DataField="Miscellaneous" HeaderText="Miscellaneous (₱)" DataFormatString="{0:N2}" />
-                <asp:BoundField DataField="Price" HeaderText="Total Price (₱)" DataFormatString="{0:N2}" />
-                <asp:TemplateField HeaderText="Contract?">
-                    <ItemTemplate>
-                        <%# Convert.ToBoolean(Eval("IsContract")) ? "Yes" : "No" %>
-                    </ItemTemplate>
-                </asp:TemplateField>
+                <asp:BoundField DataField="PestType" HeaderText="Pest Type" />
+                <asp:BoundField DataField="InfestationLevel" HeaderText="Infestation Level" />
+                <asp:BoundField DataField="TotalEstimatedCost" HeaderText="Estimated Cost ₱" DataFormatString="{0:N2}" HtmlEncode="False" />
                 <asp:BoundField DataField="Status" HeaderText="Status" />
+                <asp:BoundField DataField="SubmittedAt" HeaderText="Submitted Date" DataFormatString="{0:yyyy-MM-dd}" />
             </Columns>
         </asp:GridView>
     </div>
 </asp:Panel>
-
 
 
                 <asp:Panel ID="pnlTeams" runat="server" Visible="false" CssClass="report-panel">
@@ -330,18 +283,23 @@
                             <asp:Button ID="btnExportTeamsSummary" runat="server" Text="Export Summary to PDF" CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" OnClick="btnExportTeamsSummary_Click" />
                         </div>
                         <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                            <asp:GridView ID="gvTeamsSummary" runat="server" AutoGenerateColumns="False" CssClass="min-w-full custom-table" HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
-                                <Columns>
-                                    <asp:TemplateField HeaderText="Team">
-                                        <ItemTemplate><%# "Team" + String.Format("{0:D3}", Eval("TeamID")) %> — <%# Eval("GroupName") %></ItemTemplate>
-                                    </asp:TemplateField>
-                                    <asp:BoundField DataField="MembersCount" HeaderText="Members" />
-                                    <asp:BoundField DataField="AssignmentsOnDate" HeaderText="Jobs on Availability Date" />
-                                    <asp:BoundField DataField="AssignmentsInRange" HeaderText="Total Assignments in Date Range" />
-                                    <asp:BoundField DataField="LastScheduled" HeaderText="Last Scheduled" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
-                                    <asp:BoundField DataField="Status" HeaderText="Status" />
-                                </Columns>
-                            </asp:GridView>
+                           <asp:GridView ID="gvTeamsSummary" runat="server" AutoGenerateColumns="False" 
+    CssClass="min-w-full custom-table" 
+    HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" 
+    RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
+    <Columns>
+        <asp:TemplateField HeaderText="Team">
+            <ItemTemplate><%# "Team" + String.Format("{0:D3}", Eval("TeamID")) %> — <%# Eval("GroupName") %></ItemTemplate>
+        </asp:TemplateField>
+        <asp:BoundField DataField="ShiftType" HeaderText="Shift" />
+        <asp:BoundField DataField="TeamLeader" HeaderText="Team Leader" />
+        <asp:BoundField DataField="MembersCount" HeaderText="Members" />
+        <asp:BoundField DataField="AssignmentsOnDate" HeaderText="Jobs on Availability Date" />
+        <asp:BoundField DataField="AssignmentsInRange" HeaderText="Total Assignments in Date Range" />
+        <asp:BoundField DataField="LastScheduled" HeaderText="Last Scheduled" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
+        <asp:BoundField DataField="Status" HeaderText="Status" />
+    </Columns>
+</asp:GridView>
                         </div>
                     </div>
 
@@ -351,17 +309,23 @@
                             <asp:Button ID="btnExportTeamMembers" runat="server" Text="Export Team Members to PDF" CssClass="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200" OnClick="btnExportTeamMembers_Click" />
                         </div>
                         <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                            <asp:GridView ID="gvTeamMembers" runat="server" AutoGenerateColumns="False" CssClass="min-w-full custom-table" HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
-                                <Columns>
-                                    <asp:TemplateField HeaderText="Team">
-                                        <ItemTemplate><%# "Team" + String.Format("{0:D3}", Eval("TeamID")) %> — <%# Eval("GroupName") %></ItemTemplate>
-                                    </asp:TemplateField>
-                                    <asp:BoundField DataField="EmployeeID" HeaderText="Emp ID" />
-                                    <asp:TemplateField HeaderText="Member">
-                                        <ItemTemplate><%# Eval("LastName") %>, <%# Eval("FirstName") %> <%# Eval("MiddleName") %></ItemTemplate>
-                                    </asp:TemplateField>
-                                </Columns>
-                            </asp:GridView>
+                           <asp:GridView ID="gvTeamMembers" runat="server" AutoGenerateColumns="False" 
+    CssClass="min-w-full custom-table" 
+    HeaderStyle-CssClass="bg-gray-100 font-semibold text-gray-700 uppercase tracking-wider" 
+    RowStyle-CssClass="border-b border-gray-200 hover:bg-gray-50">
+    <Columns>
+        <asp:TemplateField HeaderText="Team">
+            <ItemTemplate><%# "Team" + String.Format("{0:D3}", Eval("TeamID")) %> — <%# Eval("GroupName") %></ItemTemplate>
+        </asp:TemplateField>
+        <asp:BoundField DataField="ShiftType" HeaderText="Shift" />
+        <asp:BoundField DataField="TeamLeader" HeaderText="Team Leader" />
+        <asp:BoundField DataField="EmployeeID" HeaderText="Emp ID" />
+        <asp:TemplateField HeaderText="Member">
+            <ItemTemplate><%# Eval("LastName") %>, <%# Eval("FirstName") %> <%# Eval("MiddleName") %></ItemTemplate>
+        </asp:TemplateField>
+        <asp:BoundField DataField="Department" HeaderText="Department" />
+    </Columns>
+</asp:GridView>
                         </div>
                     </div>
                 </asp:Panel>
@@ -376,8 +340,7 @@
         <asp:PostBackTrigger ControlID="btnExportEquipment" />
         <asp:PostBackTrigger ControlID="btnExportSales" />
         <asp:PostBackTrigger ControlID="btnExportBookings" />
-        <asp:PostBackTrigger ControlID="btnExportInspections" />
-        <asp:PostBackTrigger ControlID="btnExportInquiryEstimation" />
+        <asp:PostBackTrigger ControlID="btnExportInspectionReports" />
         <asp:PostBackTrigger ControlID="btnExportTeamsSummary" />
         <asp:PostBackTrigger ControlID="btnExportTeamMembers" />
     </Triggers>

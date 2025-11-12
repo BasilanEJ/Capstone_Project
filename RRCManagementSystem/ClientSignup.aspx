@@ -856,11 +856,13 @@
                                 <asp:TextBox ID="txtFirstName" runat="server" CssClass="input" 
                                     placeholder="Juan" MaxLength="100" />
                             </div>
-                            <div class="input-group">
-                                <label>Middle Name</label>
-                                <asp:TextBox ID="txtMiddleName" runat="server" CssClass="input" 
-                                    placeholder="Santos" MaxLength="100" />
-                            </div>
+                           <div class="input-group">
+    <label>Middle Name</label>
+    <asp:TextBox ID="txtMiddleName" runat="server" CssClass="input"
+        placeholder="Santos" MaxLength="100"
+        oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '');" />
+</div>
+
                         </div>
 
                         <!-- Contact Information -->

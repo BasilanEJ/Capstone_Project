@@ -194,6 +194,100 @@
             }
         }
     </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        attachConfirmationHandlers();
+    });
+
+    function attachConfirmationHandlers() {
+        // Start Service buttons
+        const startButtons = document.querySelectorAll('[id*="btnStartService"]');
+        startButtons.forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const card = this.closest('.booking-card');
+                const bookingCode = card.querySelector('h2').textContent.trim().split('\n')[0].trim();
+                const hdnConfirm = card.querySelector('[id*="hdnConfirmAction"]');
+                const hdnBookingID = card.querySelector('[id*="hdnBookingID"]');
+                const hdnScheduleID = card.querySelector('[id*="hdnScheduleID"]');
+
+                Swal.fire({
+                    title: 'Start Service',
+                    html: `Are you sure you want to start service for:<br><strong>${bookingCode}</strong>?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#16a34a',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '<i class="fas fa-play-circle mr-2"></i>Yes, Start Service',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (hdnConfirm && hdnBookingID && hdnScheduleID) {
+                            // Set hidden field values
+                            hdnConfirm.value = 'StartService';
+
+                            // Submit the form
+                            __doPostBack('ctl00$MainContent$rptBookings', 'StartService|' + hdnBookingID.value + '|' + hdnScheduleID.value);
+                        }
+                    }
+                });
+
+                return false;
+            });
+        });
+
+        // Complete Service buttons
+        const completeButtons = document.querySelectorAll('[id*="btnCompleteService"]');
+        completeButtons.forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const card = this.closest('.booking-card');
+                const bookingCode = card.querySelector('h2').textContent.trim().split('\n')[0].trim();
+                const hdnConfirm = card.querySelector('[id*="hdnConfirmAction"]');
+                const hdnBookingID = card.querySelector('[id*="hdnBookingID"]');
+                const hdnScheduleID = card.querySelector('[id*="hdnScheduleID"]');
+
+                Swal.fire({
+                    title: 'Complete Service',
+                    html: `Are you sure you want to mark this service as completed?<br><strong>${bookingCode}</strong>`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#9333ea',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '<i class="fas fa-check-circle mr-2"></i>Yes, Complete Service',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (hdnConfirm && hdnBookingID && hdnScheduleID) {
+                            // Set hidden field values
+                            hdnConfirm.value = 'CompleteService';
+
+                            // Submit the form
+                            __doPostBack('ctl00$MainContent$rptBookings', 'CompleteService|' + hdnBookingID.value + '|' + hdnScheduleID.value);
+                        }
+                    }
+                });
+
+                return false;
+            });
+        });
+    }
+
+    // Re-attach handlers after partial postback
+    var prm = Sys.WebForms.PageRequestManager.getInstance();
+    if (prm) {
+        prm.add_endRequest(function () {
+            attachConfirmationHandlers();
+        });
+    }
+</script>
+
+
 </asp:Content>
 
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" runat="server">
@@ -205,6 +299,38 @@
     </div>
 
     <asp:Label ID="lblMessage" runat="server" CssClass="text-red-600 font-semibold mb-4 block" Visible="false" />
+
+    <!-- ====== FILTER BAR ====== -->
+<div class="bg-white shadow-sm rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end">
+    <div>
+        <label for="ddlStatus" class="block text-sm font-semibold text-gray-700 mb-1">
+            Filter by Status
+        </label>
+        <asp:DropDownList ID="ddlStatus" runat="server" CssClass="border-gray-300 rounded-md px-3 py-2 text-sm">
+            <asp:ListItem Text="All" Value="" />
+            <asp:ListItem Text="Assigned" Value="Assigned" />
+            <asp:ListItem Text="In Progress" Value="In Progress" />
+            <asp:ListItem Text="Completed" Value="Completed" />
+        </asp:DropDownList>
+    </div>
+
+    <div>
+        <label for="txtDate" class="block text-sm font-semibold text-gray-700 mb-1">
+            Scheduled Date
+        </label>
+        <asp:TextBox ID="txtDate" runat="server" TextMode="Date"
+            CssClass="border-gray-300 rounded-md px-3 py-2 text-sm" />
+    </div>
+
+    <div>
+        <asp:Button ID="btnFilter" runat="server" Text="Apply Filter"
+            CssClass="btn-primary" OnClick="btnFilter_Click" />
+        <asp:Button ID="btnClear" runat="server" Text="Reset"
+            CssClass="btn-success ml-2" OnClick="btnClear_Click" />
+    </div>
+</div>
+
+
 
     <asp:Repeater ID="rptBookings" runat="server" OnItemDataBound="rptBookings_ItemDataBound" OnItemCommand="rptBookings_ItemCommand">
         <ItemTemplate>
@@ -305,7 +431,7 @@
                         CommandName="StartService"
                         CommandArgument='<%# Eval("BookingID") + "|" + (Eval("ScheduleID") ?? "0") %>'
                         Visible='<%# Eval("OperationStatus").ToString() == "Assigned" %>'
-                        OnClientClick="return confirm('Start this service now?');">
+                        OnClientClick="return false;">
                         <i class="fas fa-play-circle"></i>
                         <span>Start Service</span>
                     </asp:LinkButton>
@@ -316,7 +442,7 @@
                         CommandName="CompleteService"
                         CommandArgument='<%# Eval("BookingID") + "|" + (Eval("ScheduleID") ?? "0") %>'
                         Visible='<%# Eval("OperationStatus").ToString() == "In Progress" %>'
-                        OnClientClick="return confirm('Mark this service as completed?');">
+                        OnClientClick="return false;">
                         <i class="fas fa-check-circle"></i>
                         <span>Complete Service</span>
                     </asp:LinkButton>
@@ -330,6 +456,11 @@
                         <i class="fas fa-images"></i>
                         <span>View Photos</span>
                     </asp:LinkButton>
+                    
+                    <!-- Hidden fields for SweetAlert confirmation -->
+                    <asp:HiddenField ID="hdnConfirmAction" runat="server" />
+                    <asp:HiddenField ID="hdnBookingID" runat="server" Value='<%# Eval("BookingID") %>' />
+                    <asp:HiddenField ID="hdnScheduleID" runat="server" Value='<%# Eval("ScheduleID") ?? "0" %>' />
                 </div>
             </div>
         </ItemTemplate>

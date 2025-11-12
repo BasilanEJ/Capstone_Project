@@ -713,16 +713,16 @@
         </div>
 
         <!-- Services under this category -->
-        <asp:Repeater ID="rptServices" runat="server" DataSource='<%# Eval("Services") %>'>
-            <ItemTemplate>
-                <div class="service-item" id="service_<%# Eval("ServiceID") %>">
-                    <input type="checkbox" 
-                        class="service-checkbox" 
-                        id="chkService_<%# Eval("ServiceID") %>"
-                        data-service-id="<%# Eval("ServiceID") %>"
-                        data-service-name="<%# Eval("Name") %>"
-                        data-pricing-tiers='<%# Eval("PricingTiers") %>'
-                        onchange="toggleServiceSQM(this)" />
+       <asp:Repeater ID="rptServices" runat="server" DataSource='<%# Eval("Services") %>'>
+    <ItemTemplate>
+        <div class="service-item" id="service_<%# Eval("ServiceID") %>">
+            <input type="checkbox" 
+                class="service-checkbox" 
+                id="chkService_<%# Eval("ServiceID") %>"
+                data-service-id="<%# Eval("ServiceID") %>"
+                data-service-name='<%# Eval("Name") %>'
+                data-pricing-tiers='<%# System.Web.HttpUtility.HtmlEncode(Eval("PricingTiers").ToString()) %>'
+                onchange="toggleServiceSQM(this)" />
                     
                     <div class="service-info">
                         <div class="service-name"><%# Eval("Name") %></div>
@@ -915,7 +915,7 @@
                     </div>
                 </div>
 
-                <!-- Section 8: Follow-up -->
+                <!-- Section 8: Follow-up
                 <div class="form-section">
                     <div class="section-title">
                         <i class="fas fa-calendar-check"></i>
@@ -952,12 +952,11 @@
                                 MaxLength="500" />
                         </div>
                     </div>
-                </div>
+                </div>  -->
 
                 <!-- Submit Buttons -->
-                <div class="form-section">
-                    <asp:Button ID="btnSaveDraft" runat="server" Text="💾 Save as Draft" CssClass="btn-draft" 
-                        OnClick="btnSaveDraft_Click" OnClientClick="return prepareSaveData();" />
+               <asp:Button ID="btnCancel" runat="server" Text="❌ Cancel" CssClass="btn-draft" 
+    OnClick="btnCancel_Click" OnClientClick="return confirmCancel();" />
                     
                     <asp:Button ID="btnSubmitReport" runat="server" Text="✅ Submit Report" CssClass="btn-submit" 
                         OnClick="btnSubmitReport_Click" OnClientClick="return validateAndSubmit();" />
@@ -966,7 +965,7 @@
             </ContentTemplate>
             <Triggers>
                 <asp:PostBackTrigger ControlID="btnSubmitReport" />
-                <asp:PostBackTrigger ControlID="btnSaveDraft" />
+                <asp:PostBackTrigger ControlID="btnCancel" />
             </Triggers>
         </asp:UpdatePanel>
     </div>
@@ -1113,31 +1112,61 @@
         function prepareSaveData() {
             const services = [];
 
-            document.querySelectorAll('.service-checkbox:checked').forEach(checkbox => {
+            // Debug: Log all checkboxes found
+            const allCheckboxes = document.querySelectorAll('.service-checkbox');
+            console.log('Total service checkboxes found:', allCheckboxes.length);
+
+            const checkedCheckboxes = document.querySelectorAll('.service-checkbox:checked');
+            console.log('Checked service checkboxes:', checkedCheckboxes.length);
+
+            checkedCheckboxes.forEach((checkbox, index) => {
+                console.log(`Checkbox ${index + 1}:`, {
+                    id: checkbox.id,
+                    serviceId: checkbox.dataset.serviceId,
+                    serviceName: checkbox.dataset.serviceName,
+                    pricingTiers: checkbox.dataset.pricingTiers
+                });
+
                 const serviceId = checkbox.dataset.serviceId;
                 const serviceName = checkbox.dataset.serviceName;
-                const sqm = parseFloat(document.getElementById('sqm_' + serviceId).value) || 0;
+                const sqmInput = document.getElementById('sqm_' + serviceId);
+                const sqm = sqmInput ? parseFloat(sqmInput.value) || 0 : 0;
 
                 // Get the flat price from the subtotal
-                const subtotalText = document.getElementById('subtotal_' + serviceId).textContent;
+                const subtotalElement = document.getElementById('subtotal_' + serviceId);
+                const subtotalText = subtotalElement ? subtotalElement.textContent : 'Total: ₱0.00';
                 const flatPrice = parseFloat(subtotalText.replace('Total: ₱', '').replace(/,/g, '')) || 0;
 
                 // Get package range
-                const packageText = document.getElementById('selectedPackage_' + serviceId).textContent;
+                const packageElement = document.getElementById('selectedPackage_' + serviceId);
+                const packageText = packageElement ? packageElement.textContent : '';
 
-                services.push({
+                const serviceData = {
                     ServiceID: serviceId,
                     ServiceName: serviceName,
                     SQM: sqm,
                     FlatPrice: flatPrice,
                     PackageInfo: packageText
-                });
+                };
+
+                console.log(`Service ${index + 1} data:`, serviceData);
+                services.push(serviceData);
             });
 
-            document.getElementById('<%= hfSelectedServices.ClientID %>').value = JSON.stringify(services);
+            const servicesJson = JSON.stringify(services);
+            const hiddenField = document.getElementById('<%= hfSelectedServices.ClientID %>');
 
-            return true;
-        }
+    if (hiddenField) {
+        hiddenField.value = servicesJson;
+        console.log('Services saved to hidden field:', servicesJson);
+        console.log('Hidden field ID:', hiddenField.id);
+        console.log('Hidden field value after assignment:', hiddenField.value);
+    } else {
+        console.error('Hidden field not found!');
+    }
+
+    return true;
+}
 
         // ===== Miscellaneous Expenses =====
         document.getElementById('btnAddExpense').addEventListener('click', function () {
@@ -1381,5 +1410,26 @@
             calculateServicesTotal();
             calculateGrandTotal();
         });
+
+
+
+        // ===== Cancel Confirmation =====
+        function confirmCancel() {
+            Swal.fire({
+                icon: 'question',
+                title: 'Cancel Report?',
+                text: 'Are you sure you want to cancel? Any unsaved changes will be lost.',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, Cancel',
+                cancelButtonText: 'No, Stay'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    __doPostBack('<%= btnCancel.UniqueID %>', '');
+        }
+    });
+    return false; // Prevent default postback
+}
     </script>
 </asp:Content>

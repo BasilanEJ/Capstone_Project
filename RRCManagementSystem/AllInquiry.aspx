@@ -308,7 +308,7 @@
                                     CssClass="px-4 py-2 bg-blue-500 text-white font-bold rounded-md hover:bg-blue-600 transition-colors text-sm"
                                     CommandName="Assign"
                                     CommandArgument='<%# Eval("InquiryID") %>'
-                                    OnClientClick="return confirm('This will automatically assign an inspector using round-robin. Continue?');"
+                                    OnClientClick="return false;"
                                     Visible='<%# Eval("Status").ToString() == "Pending" || Eval("Status").ToString() == "Validated" %>' />
 
                                 <!-- 🗑️ Archive button -->
@@ -316,14 +316,14 @@
                                     CssClass="px-4 py-2 bg-orange-500 text-white font-bold rounded-md hover:bg-orange-600 transition-colors text-sm"
                                     CommandName="Archive"
                                     CommandArgument='<%# Eval("InquiryID") %>'
-                                    OnClientClick="return confirm('Are you sure you want to archive this inquiry?');"
+                                    OnClientClick="return false;"
                                     Visible='<%# Eval("Status").ToString() == "Pending" || Eval("Status").ToString() == "Validated" %>' />
 
-                                <!-- 👁️ View button (always visible) -->
-                                <asp:Button ID="btnView" runat="server" Text="👁️ View"
-                                    CssClass="px-4 py-2 bg-gray-500 text-white font-bold rounded-md hover:bg-gray-600 transition-colors text-sm"
-                                    CommandName="ViewDetails"
-                                    CommandArgument='<%# Eval("InquiryID") %>' />
+                                
+                                <!-- Hidden fields for SweetAlert confirmation -->
+                                <asp:HiddenField ID="hdnConfirmAction" runat="server" />
+                                <asp:HiddenField ID="hdnInquiryID" runat="server" Value='<%# Eval("InquiryID") %>' />
+                                <asp:HiddenField ID="hdnInquiryNumber" runat="server" Value='<%# Eval("InquiryNumber") %>' />
                             </div>
                         </ItemTemplate>
                     </asp:TemplateField>
@@ -380,6 +380,83 @@
             width: '600px'
         });
         return false;
+    }
+
+    // Handle Assign and Archive button clicks with SweetAlert
+    document.addEventListener('DOMContentLoaded', function () {
+        attachConfirmationHandlers();
+    });
+
+    function attachConfirmationHandlers() {
+        // Assign Inspector buttons
+        const assignButtons = document.querySelectorAll('[id*="btnAssign"]');
+        assignButtons.forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const row = this.closest('tr');
+                const inquiryNumber = row.querySelector('[id*="hdnInquiryNumber"]')?.value || 'this inquiry';
+
+                Swal.fire({
+                    title: 'Assign Inspector',
+                    html: `This will automatically assign an inspector using round-robin algorithm for:<br><strong>${inquiryNumber}</strong><br><br>Continue?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3b82f6',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '<i class="fas fa-user-check mr-2"></i>Yes, Assign Inspector',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const hdnConfirm = row.querySelector('[id*="hdnConfirmAction"]');
+                        if (hdnConfirm) {
+                            hdnConfirm.value = 'Assign';
+                            __doPostBack(this.name, '');
+                        }
+                    }
+                });
+
+                return false;
+            });
+        });
+
+        // Archive buttons
+        const archiveButtons = document.querySelectorAll('[id*="btnArchive"]');
+        archiveButtons.forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const row = this.closest('tr');
+                const inquiryNumber = row.querySelector('[id*="hdnInquiryNumber"]')?.value || 'this inquiry';
+
+                Swal.fire({
+                    title: 'Archive Inquiry',
+                    html: `Are you sure you want to archive:<br><strong>${inquiryNumber}</strong>?<br><br>This inquiry will be moved to the archive.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#f97316',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '<i class="fas fa-archive mr-2"></i>Yes, Archive It',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const hdnConfirm = row.querySelector('[id*="hdnConfirmAction"]');
+                        if (hdnConfirm) {
+                            hdnConfirm.value = 'Archive';
+                            __doPostBack(this.name, '');
+                        }
+                    }
+                });
+
+                return false;
+            });
+        });
+    }
+
+    // Re-attach handlers after postback
+    var prm = Sys.WebForms.PageRequestManager.getInstance();
+    if (prm) {
+        prm.add_endRequest(function () {
+            attachConfirmationHandlers();
+        });
     }
 </script>
 </asp:Content>

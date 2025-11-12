@@ -293,6 +293,11 @@
             animation: fadeInOut 6s ease-in-out forwards;
         }
 
+        /* SweetAlert Custom Width */
+        .swal-wide {
+            width: 600px !important;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .shift-type-group {
@@ -370,8 +375,6 @@
                             <asp:TemplateField HeaderText="Action" ItemStyle-Width="24%">
                                 <ItemTemplate>
                                     <asp:DropDownList ID="ddlAction" runat="server" CssClass="form-select form-select-sm">
-                                        <asp:ListItem Text="-- No Action --" Value="" />
-                                        <asp:ListItem Text="❌ Remove from team" Value="REMOVE" />
                                     </asp:DropDownList>
                                     <asp:HiddenField ID="hfEmployeeName" runat="server" Value='<%# Eval("FullName") %>' />
                                 </ItemTemplate>

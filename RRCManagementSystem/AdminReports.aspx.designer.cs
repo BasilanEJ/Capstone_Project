@@ -177,22 +177,13 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.Button btnTabBookings;
 
         /// <summary>
-        /// btnTabInspections control.
+        /// btnTabInspectionReports control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnTabInspections;
-
-        /// <summary>
-        /// btnTabInquiryEstimation control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnTabInquiryEstimation;
+        protected global::System.Web.UI.WebControls.Button btnTabInspectionReports;
 
         /// <summary>
         /// btnTabTeams control.
@@ -429,58 +420,31 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.GridView gvBookings;
 
         /// <summary>
-        /// pnlInspections control.
+        /// pnlInspectionReports control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlInspections;
+        protected global::System.Web.UI.WebControls.Panel pnlInspectionReports;
 
         /// <summary>
-        /// btnExportInspections control.
+        /// btnExportInspectionReports control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnExportInspections;
+        protected global::System.Web.UI.WebControls.Button btnExportInspectionReports;
 
         /// <summary>
-        /// gvInspections control.
+        /// gvInspectionReports control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvInspections;
-
-        /// <summary>
-        /// pnlInquiryEstimation control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlInquiryEstimation;
-
-        /// <summary>
-        /// btnExportInquiryEstimation control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnExportInquiryEstimation;
-
-        /// <summary>
-        /// gvInquiryEstimation control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView gvInquiryEstimation;
+        protected global::System.Web.UI.WebControls.GridView gvInspectionReports;
 
         /// <summary>
         /// pnlTeams control.

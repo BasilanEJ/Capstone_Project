@@ -646,7 +646,8 @@ img.lazy-loaded {
                 <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                     <ul class="navbar-nav ms-auto align-items-center gap-2">
                         <li class="nav-item d-flex gap-2 flex-wrap justify-content-center">
-                            <a href="#inquiryForm" class="btn btn-success nav-btn">Get a Free Inspection</a>
+                            <a href="#ctaSection" class="btn btn-success nav-btn">Register Now!!!</a>
+
                             <a href="../Login.aspx" class="btn btn-primary nav-btn">Users Login</a>
                         </li>
                     </ul>
@@ -725,6 +726,48 @@ img.lazy-loaded {
     </form>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<script>
+    (function () {
+        // Force Bootstrap modal cleanup (works with UpdatePanels)
+        function fixModalState() {
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = 'auto';
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        }
+
+        // Apply fix when a modal closes
+        document.addEventListener('hidden.bs.modal', fixModalState);
+
+        // Also apply fix if Bootstrap somehow fails to trigger events
+        document.addEventListener('shown.bs.modal', function (e) {
+            // If a modal is opened and another backdrop exists, remove duplicates
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 1) {
+                for (let i = 0; i < backdrops.length - 1; i++) {
+                    backdrops[i].remove();
+                }
+            }
+            // Lock scroll properly
+            document.body.style.overflow = 'hidden';
+        });
+
+        // ASP.NET-specific: if postback/UpdatePanel refresh happens, clean up
+        if (typeof Sys !== 'undefined' && Sys.WebForms && Sys.WebForms.PageRequestManager) {
+            Sys.WebForms.PageRequestManager.getInstance().add_endRequest(fixModalState);
+        }
+
+        // Global fail-safe: if body stays frozen for 2s after modal close → unlock
+        document.addEventListener('click', function () {
+            if (!document.querySelector('.modal.show')) {
+                fixModalState();
+            }
+        });
+    })();
+</script>
+
+
 
 <script>
     // ===== Smart Scroll Toggle Button (Up/Down Navigation) =====
@@ -827,6 +870,7 @@ img.lazy-loaded {
 
 
     // ===== RRC Chat Assistant with Auto-Path Detection =====
+    // ===== RRC Chat Assistant with Improved Path Detection =====
     (function () {
         'use strict';
 
@@ -840,77 +884,141 @@ img.lazy-loaded {
 
         let FAQ = [];
 
-        // Load FAQs with auto-path detection
+        // Get the base path dynamically
+        function getBasePath() {
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(s => s);
+
+            // Remove the current page
+            segments.pop();
+
+            return '/' + segments.join('/');
+        }
+
+        // Load FAQs with smart path detection
         function loadFAQs() {
             console.log('🔄 Loading FAQs from server...');
+            console.log('Current URL:', window.location.href);
+            console.log('Current Path:', window.location.pathname);
 
+            const basePath = getBasePath();
+            console.log('Base Path:', basePath);
+
+            // Try multiple path strategies
             const paths = [
-                'GetFAQs.ashx',
+                // Absolute paths
                 '/GetFAQs.ashx',
-                '../GetFAQs.ashx',
+                '/Handlers/GetFAQs.ashx',
+
+                // Relative to current location
+                'GetFAQs.ashx',
                 './GetFAQs.ashx',
-                'Handlers/GetFAQs.ashx',
-                '/Handlers/GetFAQs.ashx'
+                '../GetFAQs.ashx',
+                '../../GetFAQs.ashx',
+
+                // Based on common structures
+                basePath + '/GetFAQs.ashx',
+                basePath + '/../GetFAQs.ashx'
             ];
 
-            tryFetchPaths(paths);
+            // Remove duplicates
+            const uniquePaths = [...new Set(paths)];
+            console.log('Will try these paths:', uniquePaths);
+
+            tryFetchPaths(uniquePaths);
         }
 
         async function tryFetchPaths(paths) {
-            for (const path of paths) {
+            for (let i = 0; i < paths.length; i++) {
+                const path = paths[i];
                 try {
-                    console.log(`🔍 Trying path: ${path}`);
+                    console.log(`🔍 [${i + 1}/${paths.length}] Trying: ${path}`);
 
                     const response = await fetch(path, {
                         method: 'GET',
                         cache: 'no-store',
                         headers: {
+                            'Accept': 'application/json',
                             'Cache-Control': 'no-cache',
                             'Pragma': 'no-cache'
                         }
                     });
+
+                    console.log(`📡 Response status: ${response.status}`);
+                    console.log(`📡 Response type: ${response.headers.get('content-type')}`);
 
                     if (!response.ok) {
                         console.warn(`⚠️ Path ${path} returned status ${response.status}`);
                         continue;
                     }
 
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        console.warn(`⚠️ Path ${path} returned non-JSON content type: ${contentType}`);
+                        continue;
+                    }
+
                     const text = await response.text();
-                    console.log('📄 Raw response preview:', text.substring(0, 200));
+                    console.log('📄 Raw response length:', text.length);
+                    console.log('📄 Raw response preview:', text.substring(0, 300));
+
+                    // Check if response looks like JSON
+                    if (!text.trim().startsWith('[') && !text.trim().startsWith('{')) {
+                        console.warn(`⚠️ Response doesn't look like JSON:`, text.substring(0, 100));
+                        continue;
+                    }
 
                     const data = JSON.parse(text);
-                    console.log(`📊 Successfully parsed ${data.length} FAQs`);
+                    console.log('✅ Successfully parsed JSON');
+                    console.log('📊 Data type:', Array.isArray(data) ? 'Array' : 'Object');
+                    console.log('📊 Data length/keys:', Array.isArray(data) ? data.length : Object.keys(data));
 
                     if (data && Array.isArray(data) && data.length > 0) {
                         FAQ = data;
                         populateDropdown();
-                        console.log(`✅ SUCCESS! Loaded ${FAQ.length} FAQs from: ${path}`);
+                        console.log(`✅✅✅ SUCCESS! Loaded ${FAQ.length} FAQs from: ${path}`);
                         console.log('📋 FAQ Questions:', FAQ.map(f => f.q));
-                        return;
+
+                        // Store successful path for future use
+                        localStorage.setItem('faqPath', path);
+                        return true;
+                    } else if (data && data.error) {
+                        console.error(`❌ Server returned error:`, data.error, data.message);
                     } else {
-                        console.warn(`⚠️ Path ${path} returned empty array`);
+                        console.warn(`⚠️ Path ${path} returned empty or invalid data:`, data);
                     }
                 } catch (error) {
                     console.error(`❌ Error with path ${path}:`, error.message);
+                    if (error instanceof SyntaxError) {
+                        console.error('❌ JSON Parse Error - response was not valid JSON');
+                    }
                 }
             }
 
-            console.error('❌ All paths failed. Using fallback FAQ');
+            console.error('❌❌❌ All paths failed. Using fallback FAQ');
             useFallbackFAQ();
+            return false;
         }
 
         function useFallbackFAQ() {
             console.log('⚠️ Using fallback FAQ');
-            FAQ = [{
-                q: "How to book?",
-                a: "You can submit an inquiry through our inquiry page. Once submitted, our admin will review and dispatch an inspector to check your property."
-            }];
+            FAQ = [
+                {
+                    q: "How to book?",
+                    a: "You can submit an inquiry through our inquiry page. Once submitted, our admin will review and dispatch an inspector to check your property."
+                },
+                {
+                    q: "Need help?",
+                    a: "Please contact us at rctermiteandpestcontrol@gmail.com or call us during business hours."
+                }
+            ];
             populateDropdown();
         }
 
         function populateDropdown() {
             console.log('🔨 Populating dropdown with', FAQ.length, 'items');
 
+            // Clear existing options except the first one
             while (select.options.length > 1) {
                 select.remove(1);
             }
@@ -951,7 +1059,7 @@ img.lazy-loaded {
         function addMsg(text, who = 'bot') {
             const wrap = document.createElement('div');
             wrap.className = `msg ${who}`;
-            const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
             wrap.innerHTML = `${escapedText}<span class="time">${nowTime()}</span>`;
             bodyEl.appendChild(wrap);
             bodyEl.scrollTop = bodyEl.scrollHeight;
@@ -1000,18 +1108,16 @@ img.lazy-loaded {
         function closeChat() {
             chat.classList.remove('open');
             localStorage.setItem('rrcChatOpen', '0');
-            console.log('Chat closed');
         }
 
         function openChat() {
             chat.classList.add('open');
             localStorage.setItem('rrcChatOpen', '1');
-            console.log('Chat opened');
         }
 
+        // Event Listeners
         select.addEventListener('change', () => {
             const val = select.value;
-            console.log('Dropdown changed to:', val);
             if (val) {
                 sendFAQ(val);
                 setTimeout(() => {
@@ -1023,7 +1129,6 @@ img.lazy-loaded {
         askBtn.addEventListener('click', () => {
             const val = select.value;
             if (!val) {
-                console.warn('⚠️ No question selected');
                 select.classList.add('is-invalid');
                 setTimeout(() => select.classList.remove('is-invalid'), 1000);
                 return;
@@ -1034,11 +1139,7 @@ img.lazy-loaded {
 
         toggle.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (chat.classList.contains('open')) {
-                closeChat();
-            } else {
-                openChat();
-            }
+            chat.classList.toggle('open');
         });
 
         closeBtn.addEventListener('click', (e) => {
@@ -1047,10 +1148,8 @@ img.lazy-loaded {
         });
 
         document.addEventListener('click', (e) => {
-            if (chat.classList.contains('open')) {
-                if (!chat.contains(e.target)) {
-                    closeChat();
-                }
+            if (chat.classList.contains('open') && !chat.contains(e.target)) {
+                closeChat();
             }
         });
 
@@ -1058,6 +1157,7 @@ img.lazy-loaded {
             e.stopPropagation();
         });
 
+        // Initialize
         console.log('🚀 Initializing RRC Chat Assistant...');
         loadFAQs();
 
@@ -1071,13 +1171,34 @@ img.lazy-loaded {
             openChat();
         }
 
+        // Debug helper
         window.debugFAQ = function () {
+            console.log('=== FAQ Debug Info ===');
             console.log('Current FAQ array:', FAQ);
+            console.log('FAQ count:', FAQ.length);
             console.log('Dropdown options count:', select.options.length - 1);
+            console.log('Questions:', FAQ.map(f => f.q));
             return FAQ;
         };
 
-        console.log('✅ Chat Assistant initialized. Type debugFAQ() in console to inspect.');
+        window.testFAQPath = async function (path) {
+            console.log(`Testing path: ${path}`);
+            try {
+                const response = await fetch(path);
+                console.log('Status:', response.status);
+                console.log('Content-Type:', response.headers.get('content-type'));
+                const text = await response.text();
+                console.log('Response:', text);
+                return text;
+            } catch (error) {
+                console.error('Error:', error);
+                return null;
+            }
+        };
+
+        console.log('✅ Chat Assistant initialized');
+        console.log('💡 Type debugFAQ() in console to inspect FAQs');
+        console.log('💡 Type testFAQPath("/your/path.ashx") to test a specific path');
     })();
 </script>
 

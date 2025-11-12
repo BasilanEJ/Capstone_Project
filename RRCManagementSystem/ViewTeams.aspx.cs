@@ -78,7 +78,12 @@ namespace RRCManagementSystem
         private void LoadTeamLeaders()
         {
             using (var con = new SqlConnection(connectionString))
-            using (var cmd = new SqlCommand("SELECT UserID, Name FROM dbo.Users WHERE Role = 'Headtechnician' AND Status = 'Active' ORDER BY Name", con))
+            using (var cmd = new SqlCommand(@"
+        SELECT UserID, Name 
+        FROM dbo.Users 
+        WHERE Role = 'Headtechnician' 
+          AND Status IN ('Active', 'Available')
+        ORDER BY Name", con))
             using (var da = new SqlDataAdapter(cmd))
             {
                 var dt = new DataTable();
@@ -91,6 +96,7 @@ namespace RRCManagementSystem
                 ddlEditTeamLeader.Items.Insert(0, new ListItem("-- Select a Head Technician --", ""));
             }
         }
+
 
         protected void btnFilterDate_Click(object sender, EventArgs e)
         {

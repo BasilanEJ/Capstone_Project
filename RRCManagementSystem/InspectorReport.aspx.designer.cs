@@ -285,13 +285,13 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.WebControls.TextBox txtFollowupReason;
 
         /// <summary>
-        /// btnSaveDraft control.
+        /// btnCancel control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnSaveDraft;
+        protected global::System.Web.UI.WebControls.Button btnCancel;
 
         /// <summary>
         /// btnSubmitReport control.

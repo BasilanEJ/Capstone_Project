@@ -361,29 +361,13 @@ namespace RRCManagementSystem
         /// <summary>
         /// Save report as draft
         /// </summary>
-        protected void btnSaveDraft_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Cancel and return to MyInspections
+        /// </summary>
+        protected void btnCancel_Click(object sender, EventArgs e)
         {
-            try
-            {
-                int inquiryId = GetInquiryIdFromQuery();
-                int inspectorId = Convert.ToInt32(Session["UserID"]);
-
-                // ✅ Generate quotation code
-                string quotationCode = GenerateQuotationCode();
-
-                if (!SaveReport(inquiryId, inspectorId, quotationCode, "Draft"))
-                {
-                    ShowError("Failed to save draft.");
-                    return;
-                }
-
-                ShowSuccess($"Draft saved successfully!<br><strong>Quotation Code: {quotationCode}</strong>");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Save Draft Error: {ex.Message}");
-                ShowError("Error saving draft.");
-            }
+            Response.Redirect("MyInspections.aspx", false);
+            Context.ApplicationInstance.CompleteRequest();
         }
 
         #endregion
@@ -469,7 +453,22 @@ namespace RRCManagementSystem
 
                 // ✅ MODIFIED: Enrich with IsContract before saving
                 string selectedServicesRaw = hfSelectedServices.Value;
+
+                // ✅ DEBUG: Log the raw value
+                System.Diagnostics.Debug.WriteLine($"RAW SelectedServices: {selectedServicesRaw}");
+
+                // ✅ VALIDATION: Check if services are empty
+                if (string.IsNullOrWhiteSpace(selectedServicesRaw) || selectedServicesRaw == "[]")
+                {
+                    System.Diagnostics.Debug.WriteLine("ERROR: No services selected!");
+                    ShowError("No services were selected. Please select at least one service.");
+                    return false;
+                }
+
                 string selectedServices = EnrichServicesWithIsContract(selectedServicesRaw);
+
+                // ✅ DEBUG: Log the enriched value
+                System.Diagnostics.Debug.WriteLine($"ENRICHED SelectedServices: {selectedServices}");
 
                 // ✅ Get travel expense from ViewState (auto-detected)
                 int travelExpenseId = ViewState["TravelExpenseID"] != null
@@ -528,12 +527,18 @@ namespace RRCManagementSystem
                     cmd.ExecuteNonQuery();
 
                     int reportId = pReportId.Value != DBNull.Value ? Convert.ToInt32(pReportId.Value) : 0;
+
+                    // ✅ DEBUG: Log the result
+                    System.Diagnostics.Debug.WriteLine($"Report saved with ID: {reportId}");
+
                     return reportId > 0;
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"SaveReport Error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+                ShowError($"Error saving report: {ex.Message}");
                 return false;
             }
         }

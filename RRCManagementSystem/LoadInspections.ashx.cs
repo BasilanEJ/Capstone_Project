@@ -14,6 +14,7 @@ namespace RRCManagementSystem
         {
             context.Response.ContentType = "application/json";
 
+            // 🔐 Verify session and role
             if (context.Session["UserID"] == null || context.Session["Role"]?.ToString() != "Inspector")
             {
                 context.Response.Write("[]");
@@ -28,11 +29,19 @@ namespace RRCManagementSystem
                 using (SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString))
                 {
                     string query = @"
-                        SELECT i.InspectionID, i.ScheduledDate, i.InspectionStatus, q.InquiryCode,
-                               q.FirstName, q.LastName
-                        FROM Inspections i
-                        INNER JOIN InquirySimple q ON i.InquiryID = q.InquiryID
-                        WHERE i.InspectorID = @InspectorID";
+                        SELECT 
+                            InquiryID,
+                            InquiryNumber,
+                            PestType,
+                            InspectionDate,
+                            InspectionTime,
+                            Status
+                        FROM dbo.Inquiries
+                        WHERE AssignedInspectorID = @InspectorID
+                            AND IsDeleted = 0
+                            AND Status IN ('Assigned', 'Inspected', 'In-Progress', 'Completed')
+                            AND InspectionDate IS NOT NULL
+                        ORDER BY InspectionDate ASC";
 
                     SqlCommand cmd = new SqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@InspectorID", inspectorId);
@@ -41,24 +50,38 @@ namespace RRCManagementSystem
                     SqlDataReader reader = cmd.ExecuteReader();
                     while (reader.Read())
                     {
-                        // Determine color based on status
-                        string status = reader["InspectionStatus"].ToString();
-                        string bgColor = "#3b82f6"; // Default blue
-                        if (status == "Pending") bgColor = "#facc15";   // Yellow
-                        if (status == "Completed") bgColor = "#22c55e"; // Green
-                        if (status == "Cancelled") bgColor = "#ef4444"; // Red
+                        // Extract status for color coding
+                        string status = reader["Status"].ToString();
+                        string bgColor = "#3b82f6"; // Blue (default)
+
+                        switch (status)
+                        {
+                            case "Assigned": bgColor = "#facc15"; break;   // Yellow
+                            case "In-Progress": bgColor = "#fb923c"; break; // Orange
+                            case "Inspected": bgColor = "#22d3ee"; break;  // Cyan
+                            case "Completed": bgColor = "#22c55e"; break;  // Green
+                            case "Cancelled": bgColor = "#ef4444"; break;  // Red
+                        }
+
+                        // Convert InspectionDate and InspectionTime to valid ISO datetime
+                        DateTime date = Convert.ToDateTime(reader["InspectionDate"]);
+                        string inspectionTime = reader["InspectionTime"]?.ToString() ?? "";
+
+                        string startTime = ExtractStartTime(inspectionTime);
+                        string endTime = ExtractEndTime(inspectionTime);
 
                         events.Add(new
                         {
-                            id = reader["InspectionID"].ToString(),
-                            title = $"{reader["FirstName"]} {reader["LastName"]} - {status}",
-                            start = Convert.ToDateTime(reader["ScheduledDate"]).ToString("yyyy-MM-ddTHH:mm:ss"),
+                            id = reader["InquiryID"].ToString(),
+                            title = $"{reader["InquiryNumber"]} - {reader["PestType"]}",
+                            start = $"{date:yyyy-MM-dd}T{startTime}",
+                            end = $"{date:yyyy-MM-dd}T{endTime}",
                             color = bgColor,
                             extendedProps = new
                             {
-                                inquiryCode = reader["InquiryCode"].ToString(),
-                                clientName = $"{reader["FirstName"]} {reader["LastName"]}",
-                                status = status
+                                status = status,
+                                pestType = reader["PestType"].ToString(),
+                                inquiryNumber = reader["InquiryNumber"].ToString()
                             }
                         });
                     }
@@ -70,10 +93,42 @@ namespace RRCManagementSystem
             catch (Exception ex)
             {
                 context.Response.StatusCode = 500;
-                context.Response.Write("{\"error\": \"" + ex.Message + "\"}");
+                context.Response.Write("{\"error\": \"" + ex.Message.Replace("\"", "\\\"") + "\"}");
             }
         }
 
         public bool IsReusable => false;
+
+        // Helper to extract start time from "2:00 PM - 5:00 PM"
+        private static string ExtractStartTime(string timeRange)
+        {
+            try
+            {
+                string[] parts = timeRange.Split('-');
+                if (parts.Length > 0)
+                {
+                    DateTime parsed = DateTime.Parse(parts[0].Trim());
+                    return parsed.ToString("HH:mm:ss");
+                }
+            }
+            catch { }
+            return "08:00:00"; // Default 8AM
+        }
+
+        // Helper to extract end time from "2:00 PM - 5:00 PM"
+        private static string ExtractEndTime(string timeRange)
+        {
+            try
+            {
+                string[] parts = timeRange.Split('-');
+                if (parts.Length > 1)
+                {
+                    DateTime parsed = DateTime.Parse(parts[1].Trim());
+                    return parsed.ToString("HH:mm:ss");
+                }
+            }
+            catch { }
+            return "17:00:00"; // Default 5PM
+        }
     }
 }

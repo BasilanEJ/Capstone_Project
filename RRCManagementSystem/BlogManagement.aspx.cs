@@ -24,27 +24,32 @@ namespace RRCManagementSystem
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("=== LoadBlogList: Starting ===");
+
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
                         SELECT BlogID, BlogTitle, BlogDescription, BlogContent, 
                                ImagePath, DisplayOrder, IsActive, CreatedDate
-                        FROM BlogsCMS
-                        WHERE IsActive = 1
+                        FROM [EJBasilan_RRCDB].[EJBasilan_admin].[BlogsCMS]
                         ORDER BY DisplayOrder, BlogID DESC";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
                         conn.Open();
+                        System.Diagnostics.Debug.WriteLine("✅ Database connection opened");
+
                         SqlDataAdapter da = new SqlDataAdapter(cmd);
                         DataTable dt = new DataTable();
                         da.Fill(dt);
+
+                        System.Diagnostics.Debug.WriteLine($"✅ Blogs loaded: {dt.Rows.Count}");
 
                         if (dt.Rows.Count > 0)
                         {
                             rptBlogList.DataSource = dt;
                             rptBlogList.DataBind();
-                            lblBlogCount.Text = $"Total: {dt.Rows.Count} active blog(s)";
+                            lblBlogCount.Text = $"Total: {dt.Rows.Count} blog(s)";
                             lblNoBlogsMessage.Visible = false;
                         }
                         else
@@ -58,6 +63,7 @@ namespace RRCManagementSystem
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine("❌ Error loading blogs: " + ex.Message);
                 ShowAlert("Error", "Failed to load blogs: " + ex.Message, "error");
             }
         }
@@ -116,7 +122,8 @@ namespace RRCManagementSystem
                     if (blogID == 0) // Insert
                     {
                         query = @"
-                            INSERT INTO BlogsCMS (BlogTitle, BlogDescription, BlogContent, ImagePath, DisplayOrder, IsActive)
+                            INSERT INTO [EJBasilan_RRCDB].[EJBasilan_admin].[BlogsCMS] 
+                            (BlogTitle, BlogDescription, BlogContent, ImagePath, DisplayOrder, IsActive)
                             VALUES (@Title, @Description, @Content, @ImagePath, @DisplayOrder, @IsActive)";
                     }
                     else // Update
@@ -124,7 +131,7 @@ namespace RRCManagementSystem
                         if (!string.IsNullOrEmpty(imagePath))
                         {
                             query = @"
-                                UPDATE BlogsCMS 
+                                UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[BlogsCMS] 
                                 SET BlogTitle = @Title, 
                                     BlogDescription = @Description,
                                     BlogContent = @Content, 
@@ -137,7 +144,7 @@ namespace RRCManagementSystem
                         else
                         {
                             query = @"
-                                UPDATE BlogsCMS 
+                                UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[BlogsCMS] 
                                 SET BlogTitle = @Title, 
                                     BlogDescription = @Description,
                                     BlogContent = @Content, 
@@ -189,11 +196,9 @@ namespace RRCManagementSystem
                 }
                 else if (e.CommandName == "ToggleActive")
                 {
-                    // Only handle unarchive here (when IsActive is false)
-                    // Archive is handled by btnHiddenArchive_Click with SweetAlert confirmation
                     using (SqlConnection conn = new SqlConnection(connectionString))
                     {
-                        string checkQuery = "SELECT IsActive FROM BlogsCMS WHERE BlogID = @BlogID";
+                        string checkQuery = "SELECT IsActive FROM [EJBasilan_RRCDB].[EJBasilan_admin].[BlogsCMS] WHERE BlogID = @BlogID";
                         using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
                         {
                             checkCmd.Parameters.AddWithValue("@BlogID", blogID);
@@ -237,7 +242,7 @@ namespace RRCManagementSystem
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    string query = "SELECT * FROM BlogsCMS WHERE BlogID = @BlogID";
+                    string query = "SELECT * FROM [EJBasilan_RRCDB].[EJBasilan_admin].[BlogsCMS] WHERE BlogID = @BlogID";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
@@ -286,7 +291,7 @@ namespace RRCManagementSystem
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     // Check current status
-                    string checkQuery = "SELECT IsActive FROM BlogsCMS WHERE BlogID = @BlogID";
+                    string checkQuery = "SELECT IsActive FROM [EJBasilan_RRCDB].[EJBasilan_admin].[BlogsCMS] WHERE BlogID = @BlogID";
                     using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
                     {
                         checkCmd.Parameters.AddWithValue("@BlogID", blogID);
@@ -296,7 +301,7 @@ namespace RRCManagementSystem
 
                     // Toggle status
                     string query = @"
-                        UPDATE BlogsCMS 
+                        UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[BlogsCMS] 
                         SET IsActive = CASE WHEN IsActive = 1 THEN 0 ELSE 1 END,
                             ModifiedDate = GETDATE()
                         WHERE BlogID = @BlogID";

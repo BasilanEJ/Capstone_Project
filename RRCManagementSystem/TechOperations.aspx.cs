@@ -29,12 +29,28 @@ namespace RRCManagementSystem
             }
         }
 
+
+        protected void btnFilter_Click(object sender, EventArgs e)
+        {
+            LoadTeamBookings();
+        }
+
+        protected void btnClear_Click(object sender, EventArgs e)
+        {
+            ddlStatus.SelectedIndex = 0;
+            txtDate.Text = "";
+            LoadTeamBookings();
+        }
+
+
         /// <summary>
         /// Load all bookings assigned to the team leader's team
         /// </summary>
         private void LoadTeamBookings()
         {
             int teamLeaderID = Convert.ToInt32(Session["UserID"]);
+            string selectedStatus = ddlStatus.SelectedValue;
+            string selectedDate = txtDate.Text;
 
             try
             {
@@ -49,17 +65,29 @@ namespace RRCManagementSystem
                         var dt = new DataTable();
                         da.Fill(dt);
 
-                        if (dt.Rows.Count > 0)
+                        // 🧩 Apply filters in-memory
+                        DataView dv = dt.DefaultView;
+
+                        string filter = "";
+                        if (!string.IsNullOrEmpty(selectedStatus))
+                            filter += $"OperationStatus = '{selectedStatus.Replace("'", "''")}'";
+
+                        if (!string.IsNullOrEmpty(selectedDate))
                         {
-                            rptBookings.DataSource = dt;
-                            rptBookings.DataBind();
-                            lblNoBookings.Visible = false;
+                            DateTime date = DateTime.Parse(selectedDate);
+                            if (!string.IsNullOrEmpty(filter)) filter += " AND ";
+                            filter += $"CONVERT(ScheduledDate, 'System.DateTime') = #{date:yyyy-MM-dd}#";
                         }
-                        else
-                        {
-                            rptBookings.Visible = false;
-                            lblNoBookings.Visible = true;
-                        }
+
+                        if (!string.IsNullOrEmpty(filter))
+                            dv.RowFilter = filter;
+
+                        DataTable filtered = dv.ToTable();
+
+                        rptBookings.Visible = filtered.Rows.Count > 0;
+                        lblNoBookings.Visible = filtered.Rows.Count == 0;
+                        rptBookings.DataSource = filtered;
+                        rptBookings.DataBind();
                     }
                 }
             }
@@ -70,6 +98,7 @@ namespace RRCManagementSystem
                 System.Diagnostics.Debug.WriteLine($"LoadTeamBookings error: {ex.Message}");
             }
         }
+
 
         /// <summary>
         /// Handle repeater item data binding
@@ -101,36 +130,54 @@ namespace RRCManagementSystem
         /// </summary>
         protected void rptBookings_ItemCommand(object source, RepeaterCommandEventArgs e)
         {
-            int bookingID;
-            int scheduleID;
+            // Get the command argument
+            string commandArg = e.CommandArgument?.ToString();
 
             switch (e.CommandName)
             {
                 case "ViewDetails":
-                    string[] detailArgs = e.CommandArgument.ToString().Split('|');
-                    bookingID = Convert.ToInt32(detailArgs[0]);
+                    string[] detailArgs = commandArg.Split('|');
+                    int bookingID = Convert.ToInt32(detailArgs[0]);
                     int reportID = detailArgs.Length > 1 && int.TryParse(detailArgs[1], out int rId) ? rId : 0;
                     ShowBookingDetails(bookingID, reportID);
                     break;
 
                 case "ViewPhotos":
-                    string photosPath = e.CommandArgument.ToString();
+                    string photosPath = commandArg;
                     ShowPhotos(photosPath);
                     break;
+            }
+        }
 
-                case "StartService":
-                    string[] startArgs = e.CommandArgument.ToString().Split('|');
-                    bookingID = Convert.ToInt32(startArgs[0]);
-                    scheduleID = startArgs.Length > 1 && int.TryParse(startArgs[1], out int sId1) ? sId1 : 0;
-                    UpdateServiceStatus(scheduleID, bookingID, "In Progress");
-                    break;
+        // Add this NEW method to handle the postback from JavaScript
+        protected void Page_Init(object sender, EventArgs e)
+        {
+            // Check for postback from our custom __doPostBack
+            if (IsPostBack && Request.Form["__EVENTTARGET"] != null)
+            {
+                string eventTarget = Request.Form["__EVENTTARGET"];
+                string eventArgument = Request.Form["__EVENTARGUMENT"];
 
-                case "CompleteService":
-                    string[] completeArgs = e.CommandArgument.ToString().Split('|');
-                    bookingID = Convert.ToInt32(completeArgs[0]);
-                    scheduleID = completeArgs.Length > 1 && int.TryParse(completeArgs[1], out int sId2) ? sId2 : 0;
-                    UpdateServiceStatus(scheduleID, bookingID, "Completed");
-                    break;
+                if (eventTarget.Contains("rptBookings") && !string.IsNullOrEmpty(eventArgument))
+                {
+                    string[] parts = eventArgument.Split('|');
+
+                    if (parts.Length == 3)
+                    {
+                        string action = parts[0]; // "StartService" or "CompleteService"
+                        int bookingID = Convert.ToInt32(parts[1]);
+                        int scheduleID = Convert.ToInt32(parts[2]);
+
+                        if (action == "StartService")
+                        {
+                            UpdateServiceStatus(scheduleID, bookingID, "In Progress");
+                        }
+                        else if (action == "CompleteService")
+                        {
+                            UpdateServiceStatus(scheduleID, bookingID, "Completed");
+                        }
+                    }
+                }
             }
         }
 
@@ -651,6 +698,9 @@ namespace RRCManagementSystem
         /// <summary>
         /// Show inspection photos
         /// </summary>
+        /// <summary>
+        /// Show inspection photos in a gallery modal
+        /// </summary>
         private void ShowPhotos(string photosPath)
         {
             if (string.IsNullOrWhiteSpace(photosPath))
@@ -659,15 +709,117 @@ namespace RRCManagementSystem
                 return;
             }
 
-            string script = $@"
-                Swal.fire({{
-                    title: 'Inspection Photos',
-                    html: '<p>Photo viewing feature coming soon</p><p class=""text-sm text-gray-600"">Path: {System.Web.HttpUtility.JavaScriptStringEncode(photosPath)}</p>',
-                    icon: 'info',
-                    confirmButtonColor: '#2563eb'
-                }});";
+            // Split multiple photo paths (comma-separated)
+            string[] photos = photosPath.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-            ScriptManager.RegisterStartupScript(this, GetType(), "ShowPhotos", script, true);
+            if (photos.Length == 0)
+            {
+                ShowAlert("info", "No Photos", "No inspection photos available for this booking.");
+                return;
+            }
+
+            // Build photo gallery HTML
+            var galleryHtml = new System.Text.StringBuilder();
+
+            galleryHtml.Append(@"
+        <div style='display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; padding: 1rem;'>
+    ");
+
+            foreach (string photo in photos)
+            {
+                string photoPath = photo.Trim();
+                if (string.IsNullOrEmpty(photoPath)) continue;
+
+                // ✅ Handle both formats: "~/Upload/..." and "/Upload/..."
+                string photoUrl = photoPath;
+                if (photoPath.StartsWith("~/"))
+                {
+                    photoUrl = ResolveUrl(photoPath);
+                }
+                else if (!photoPath.StartsWith("/") && !photoPath.StartsWith("http"))
+                {
+                    photoUrl = ResolveUrl("~/" + photoPath);
+                }
+
+                // ✅ JavaScript-safe encoding
+                string jsPhotoUrl = System.Web.HttpUtility.JavaScriptStringEncode(photoUrl);
+                string htmlPhotoUrl = System.Web.HttpUtility.HtmlAttributeEncode(photoUrl);
+
+                galleryHtml.Append($@"
+            <div style='position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;'
+                 onclick='window.open(""{jsPhotoUrl}"", ""_blank"")'>
+                <img src='{htmlPhotoUrl}' 
+                     style='width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;'
+                     onmouseover='this.style.transform=""scale(1.05)""'
+                     onmouseout='this.style.transform=""scale(1)""'
+                     onerror='this.parentElement.innerHTML=""<div style=\\""display:flex;align-items:center;justify-content:center;height:100%;background:#f3f4f6;color:#9ca3af;flex-direction:column;gap:8px;\\""><i class=\\""fas fa-image-slash fa-2x\\""></i><span style=\\""font-size:12px;\\"">{System.Web.HttpUtility.JavaScriptStringEncode(System.IO.Path.GetFileName(photoPath))}</span></div>""'
+                     alt='Inspection Photo' />
+                <div style='position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); padding: 0.5rem; color: white; font-size: 0.75rem; text-align: center;'>
+                    <i class='fas fa-search-plus'></i> Click to enlarge
+                </div>
+            </div>
+        ");
+            }
+
+            galleryHtml.Append("</div>");
+
+            galleryHtml.Append($@"
+        <p style='text-align: center; margin-top: 1rem; color: #64748b; font-size: 0.875rem;'>
+            <i class='fas fa-info-circle'></i> {photos.Length} photo(s) available - Click any image to view full size
+        </p>
+    ");
+
+            // ✅ Properly escape for JavaScript
+            string safeHtml = galleryHtml.ToString()
+                .Replace("\\", "\\\\")  // Escape backslashes first
+                .Replace("'", "\\'")    // Escape single quotes
+                .Replace("\r\n", " ")
+                .Replace("\n", " ")
+                .Replace("\r", " ");
+
+            string script = $@"
+        Swal.fire({{
+            title: '<div style=""text-align:center;""><i class=""fas fa-images"" style=""color: #2563eb; font-size: 1.5rem; margin-right: 0.5rem;""></i>Inspection Photos</div>',
+            html: '{safeHtml}',
+            width: '800px',
+            showCloseButton: true,
+            showConfirmButton: false,
+            customClass: {{
+                popup: 'swal-photo-gallery',
+                htmlContainer: 'swal-scrollable-content'
+            }},
+            didOpen: () => {{
+                const style = document.createElement('style');
+                style.textContent = `
+                    .swal-photo-gallery {{
+                        border-radius: 16px;
+                        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                    }}
+                    .swal-scrollable-content {{
+                        max-height: 70vh;
+                        overflow-y: auto;
+                    }}
+                    .swal-scrollable-content::-webkit-scrollbar {{
+                        width: 8px;
+                    }}
+                    .swal-scrollable-content::-webkit-scrollbar-track {{
+                        background: #f1f5f9;
+                        border-radius: 4px;
+                    }}
+                    .swal-scrollable-content::-webkit-scrollbar-thumb {{
+                        background: #cbd5e1;
+                        border-radius: 4px;
+                    }}
+                    .swal-scrollable-content::-webkit-scrollbar-thumb:hover {{
+                        background: #94a3b8;
+                    }}
+                `;
+                document.head.appendChild(style);
+            }}
+        }});
+    ";
+
+            ScriptManager.RegisterStartupScript(this, GetType(), "ShowPhotos_" + DateTime.Now.Ticks, script, true);
         }
 
         /// <summary>

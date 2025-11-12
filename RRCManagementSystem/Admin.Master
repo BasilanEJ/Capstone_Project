@@ -599,7 +599,7 @@
                     </li>
                 <% } %>
 
-                <% if (allowed.Contains("CreateCustomerAccount")) { %>
+         <!--       <% if (allowed.Contains("CreateCustomerAccount")) { %>
                     <li>
                         <a class="sidebar-link <%= currentPath.Contains("createcustomeraccount.aspx") ? "active" : "" %>" 
                             href='<%= ResolveUrl("~/CreateCustomerAccount.aspx") %>'>
@@ -607,7 +607,7 @@
                             <span class="sidebar-text">Create Customer Account</span>
                         </a>
                     </li>
-                <% } %>
+                <% } %> -->
 
                 <% if (allowed.Contains("AdminGuide")) { %>
                     <li>

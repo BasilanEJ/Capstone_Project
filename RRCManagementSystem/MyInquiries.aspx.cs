@@ -147,14 +147,25 @@ namespace RRCManagementSystem
         /// <summary>
         /// Handle status filter tab clicks
         /// </summary>
+        /// 
+        private void RestoreTabText()
+        {
+            btnAll.Text = "<i class='fas fa-list'></i> <span>All</span>";
+            btnPending.Text = "<i class='fas fa-clock'></i> <span>Pending</span>";
+            btnAssigned.Text = "<i class='fas fa-user-check'></i> <span>Assigned</span>";
+            btnInspected.Text = "<i class='fas fa-clipboard-check'></i> <span>Inspected</span>";
+            btnQuotation.Text = "<i class='fas fa-file-invoice-dollar'></i> <span>Quotation</span>";
+        }
+
+
         protected void FilterStatus_Click(object sender, EventArgs e)
         {
+            RestoreTabText();
             try
             {
                 var btn = (LinkButton)sender;
                 string statusFilter = btn.CommandArgument;
 
-                // ✅ Store current filter in ViewState
                 ViewState["CurrentFilter"] = statusFilter;
 
                 // Update active tab styling
@@ -168,6 +179,10 @@ namespace RRCManagementSystem
 
                 // Load filtered inquiries
                 LoadInquiries(statusFilter);
+
+                // ✅ ADD: Update both panels
+                upTabs.Update();
+                upInquiries.Update();
             }
             catch (Exception ex)
             {
@@ -216,11 +231,11 @@ namespace RRCManagementSystem
             {
                 using (var conn = new SqlConnection(connectionString))
                 using (var cmd = new SqlCommand(@"
-    SELECT TOP 1 ReportID, Status 
-    FROM dbo.InspectionReports 
-    WHERE InquiryID = @InquiryID 
-      AND Status IN ('Quotation Sent', 'Approved')
-    ORDER BY CreatedAt DESC", conn))
+SELECT TOP 1 ReportID, Status 
+FROM dbo.InspectionReports 
+WHERE InquiryID = @InquiryID 
+  AND Status IN ('Quotation Sent', 'Approved')
+ORDER BY CreatedAt DESC", conn))
 
                 {
                     cmd.Parameters.Add("@InquiryID", SqlDbType.Int).Value = inquiryId;
@@ -247,7 +262,6 @@ namespace RRCManagementSystem
 
             return new InspectionInfo { HasReport = false };
         }
-
         /// <summary>
         /// Helper class for inspection info
         /// </summary>
@@ -258,9 +272,39 @@ namespace RRCManagementSystem
             public string Status { get; set; }
         }
 
-        /// <summary>
-        /// Handle approve quotation button click
-        /// </summary>
+
+        private void RestoreActiveTab(string currentFilter)
+        {
+            // Reset all tabs
+            btnAll.CssClass = "status-tab";
+            btnPending.CssClass = "status-tab";
+            btnAssigned.CssClass = "status-tab";
+            btnInspected.CssClass = "status-tab";
+            btnQuotation.CssClass = "status-tab";
+
+            // Set active tab based on current filter
+            switch (currentFilter)
+            {
+                case "All":
+                    btnAll.CssClass = "status-tab active";
+                    break;
+                case "Pending":
+                    btnPending.CssClass = "status-tab active";
+                    break;
+                case "Assigned":
+                    btnAssigned.CssClass = "status-tab active";
+                    break;
+                case "Inspected":
+                    btnInspected.CssClass = "status-tab active";
+                    break;
+                case "Quotation Sent":
+                    btnQuotation.CssClass = "status-tab active";
+                    break;
+                default:
+                    btnAll.CssClass = "status-tab active";
+                    break;
+            }
+        }
         protected void btnApproveQuotation_Click(object sender, EventArgs e)
         {
             try
@@ -271,8 +315,14 @@ namespace RRCManagementSystem
                 if (ApproveQuotation(inquiryId))
                 {
                     ShowSuccess("Quotation approved successfully! We'll contact you to schedule the service.");
-                    LoadInquiries("All");
+
+                    string currentFilter = ViewState["CurrentFilter"]?.ToString() ?? "All";
+                    LoadInquiries(currentFilter);
                     UpdateStatusCounts();
+                    RestoreActiveTab(currentFilter);
+
+                    // ✅ ADD: Update tabs panel
+                    upTabs.Update();
                 }
                 else
                 {
@@ -285,7 +335,6 @@ namespace RRCManagementSystem
                 ShowError("Error approving quotation.");
             }
         }
-
         /// <summary>
         /// Handle reject quotation button click
         /// </summary>
@@ -379,8 +428,14 @@ namespace RRCManagementSystem
                     if (RejectQuotation(inquiryId, reason))
                     {
                         ShowSuccess("Quotation rejected. Thank you for your feedback.");
-                        LoadInquiries("All");
+
+                        // ✅ Reload with current filter
+                        string currentFilter = ViewState["CurrentFilter"]?.ToString() ?? "All";
+                        LoadInquiries(currentFilter);
                         UpdateStatusCounts();
+
+                        // ✅ ADD THIS: Restore active tab styling
+                        RestoreActiveTab(currentFilter);
                     }
                     else
                     {
@@ -395,8 +450,14 @@ namespace RRCManagementSystem
                 if (CancelInquiry(inquiryId))
                 {
                     ShowSuccess("Inspection request cancelled successfully.");
-                    LoadInquiries("All");
+
+                    // ✅ Reload with current filter
+                    string currentFilter = ViewState["CurrentFilter"]?.ToString() ?? "All";
+                    LoadInquiries(currentFilter);
                     UpdateStatusCounts();
+
+                    // ✅ ADD THIS: Restore active tab styling
+                    RestoreActiveTab(currentFilter);
                 }
                 else
                 {
@@ -423,8 +484,6 @@ namespace RRCManagementSystem
                 var phImages = (PlaceHolder)e.Item.FindControl("phImages");
                 var phQuotationInfo = (PlaceHolder)e.Item.FindControl("phQuotationInfo");
                 var phTimeline = (PlaceHolder)e.Item.FindControl("phTimeline");
-                var phApprovalButtons = (PlaceHolder)e.Item.FindControl("phApprovalButtons");
-                var phCancelButton = (PlaceHolder)e.Item.FindControl("phCancelButton");
 
                 // Add HTML using Literal controls
                 phInspectorInfo.Controls.Add(new Literal { Text = ShowInspectorInfo(dataItem["InspectorName"], dataItem["AssignedAt"]) });
@@ -432,56 +491,40 @@ namespace RRCManagementSystem
                 phQuotationInfo.Controls.Add(new Literal { Text = ShowQuotationInfo(dataItem["QuotationAmount"], dataItem["QuotationDetails"], dataItem["QuotationSentAt"]) });
                 phTimeline.Controls.Add(new Literal { Text = ShowTimeline(dataItem["Status"], dataItem["CreatedAt"], dataItem["AssignedAt"], dataItem["InspectionCompletedAt"], dataItem["QuotationSentAt"]) });
 
-                // Handle dynamic buttons
+                // Handle dynamic buttons visibility
                 string status = dataItem["Status"]?.ToString();
                 string clientApproval = dataItem["ClientApproval"]?.ToString();
-                int inquiryId = Convert.ToInt32(dataItem["InquiryID"]);
 
-                // ✅ UPDATED: Only show "View Details" button when viewing "Quotation Sent" tab
+                // Find button controls
                 var btnViewDetails = (LinkButton)e.Item.FindControl("btnViewDetails");
+                var btnApproveQuotation = (LinkButton)e.Item.FindControl("btnApproveQuotation");
+                var btnRejectQuotation = (LinkButton)e.Item.FindControl("btnRejectQuotation");
+                var btnCancelInquiry = (LinkButton)e.Item.FindControl("btnCancelInquiry");
+
+                // Get current filter
+                string currentFilter = ViewState["CurrentFilter"]?.ToString() ?? "All";
+
+                // Show "View Details" button only when in "Quotation Sent" tab
                 if (btnViewDetails != null)
                 {
-                    string currentFilter = ViewState["CurrentFilter"]?.ToString() ?? "All";
-
-                    // Show button only when in "Quotation Sent" tab
                     btnViewDetails.Visible = (currentFilter == "Quotation Sent");
                 }
 
                 // Show Approval/Rejection buttons if status is "Quotation Sent" and approval is "Pending"
                 if (status == "Quotation Sent" && clientApproval == "Pending")
                 {
-                    var btnApprove = new LinkButton
-                    {
-                        CssClass = "btn btn-success",
-                        CommandArgument = inquiryId.ToString(),
-                        Text = "<i class='fas fa-check'></i> Approve Quotation"
-                    };
-                    btnApprove.Click += btnApproveQuotation_Click;
+                    if (btnApproveQuotation != null)
+                        btnApproveQuotation.Visible = true;
 
-                    var btnReject = new LinkButton
-                    {
-                        CssClass = "btn btn-danger",
-                        CommandArgument = inquiryId.ToString(),
-                        Text = "<i class='fas fa-times'></i> Reject Quotation"
-                    };
-                    btnReject.Click += btnRejectQuotation_Click;
-
-                    phApprovalButtons.Controls.Add(btnApprove);
-                    phApprovalButtons.Controls.Add(btnReject);
+                    if (btnRejectQuotation != null)
+                        btnRejectQuotation.Visible = true;
                 }
 
                 // Show Cancel button if status allows (Pending, Validated, Assigned)
                 if (status == "Pending" || status == "Validated" || status == "Assigned")
                 {
-                    var btnCancel = new LinkButton
-                    {
-                        CssClass = "btn btn-secondary",
-                        CommandArgument = inquiryId.ToString(),
-                        Text = "<i class='fas fa-ban'></i> Cancel Request"
-                    };
-                    btnCancel.Click += btnCancelInquiry_Click;
-
-                    phCancelButton.Controls.Add(btnCancel);
+                    if (btnCancelInquiry != null)
+                        btnCancelInquiry.Visible = true;
                 }
             }
         }

@@ -101,6 +101,7 @@
             display: grid;
             grid-template-columns: 1fr;
             gap: 1.5rem;
+            margin-top: 1rem;
         }
 
         @media (min-width: 1024px) {
@@ -328,7 +329,7 @@
         @media (min-width: 640px) {
             .action-buttons {
                 flex-direction: row;
-                justify-content: space-between;
+                justify-content: flex-start;
             }
         }
 
@@ -501,29 +502,55 @@
                     <span class="detail-value"><asp:Label ID="lblCustomerAddress" runat="server" /></span>
                 </div>
             </div>
-
-            <!-- Assigned Team -->
-            <div class="detail-card">
-                <h2 class="section-title">
-                    <i class="fas fa-users"></i>Assigned Team
-                </h2>
-                <asp:Panel ID="pnlNoTeam" runat="server" Visible="false" CssClass="no-data">
-                    No team assigned yet.
-                </asp:Panel>
-                <div class="table-container">
-                    <asp:GridView ID="gvTeams" runat="server" AutoGenerateColumns="False" Visible="false">
-                        <Columns>
-                            <asp:BoundField DataField="TeamName" HeaderText="Team Name" />
-                            <asp:BoundField DataField="TeamStatus" HeaderText="Status" />
-                            <asp:BoundField DataField="TeamCreatedAt" HeaderText="Created At" DataFormatString="{0:MMM dd, yyyy}" />
-                        </Columns>
-                    </asp:GridView>
-                </div>
-            </div>
         </div>
 
-        <!-- Full Width Sections -->
-        
+        <!-- Assigned Team -->
+        <div class="detail-card">
+            <h2 class="section-title">
+                <i class="fas fa-users"></i>Assigned Team
+            </h2>
+            
+            <asp:Panel ID="pnlNoTeam" runat="server" Visible="false" CssClass="no-data">
+                No team assigned yet.
+            </asp:Panel>
+            
+
+<asp:Panel ID="pnlTeamInfo" runat="server" Visible="false">
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+                <h3 style="font-size: 1.125rem; font-weight: 600; color: #1e3a8a; margin: 0 0 0.25rem 0;">
+                    <asp:Label ID="lblTeamName" runat="server" />
+                </h3>
+                <p style="font-size: 0.875rem; color: #1e40af; margin: 0;">
+                    Status: <asp:Label ID="lblTeamStatus" runat="server" />
+                </p>
+
+                <p style="font-size: 0.875rem; color: #1e40af; margin: 0.25rem 0 0 0;">
+                    <strong>Team Leader:</strong> 
+                    <asp:Label ID="lblTeamLeaderName" runat="server" Text="Not assigned" />
+                    <asp:Label ID="lblTeamLeaderEmployeeID" runat="server" Visible="false" />
+                </p>
+            </div>
+            <div style="text-align: right; font-size: 0.875rem; color: #6b7280;">
+                Created: <asp:Label ID="lblTeamCreatedDate" runat="server" />
+            </div>
+        </div>
+    </div>
+    
+    <!-- Team Members -->
+    <h4 style="font-weight: 600; color: #374151; margin-bottom: 0.5rem;">Team Members:</h4>
+    <div class="table-container">
+        <asp:GridView ID="gvTeamMembers" runat="server" AutoGenerateColumns="False">
+            <Columns>
+                <asp:BoundField DataField="MemberName" HeaderText="Name" />
+                <asp:BoundField DataField="Position" HeaderText="Position" />
+            </Columns>
+        </asp:GridView>
+    </div>
+</asp:Panel>
+        </div>
+
         <!-- Assigned Equipment -->
         <div class="detail-card">
             <h2 class="section-title">
@@ -535,7 +562,7 @@
             <div class="table-container">
                 <asp:GridView ID="gvEquipment" runat="server" AutoGenerateColumns="False" Visible="false">
                     <Columns>
-                        <asp:BoundField DataField="EquipmentID" HeaderText="Equipment ID" />
+                        <asp:BoundField DataField="EquipmentName" HeaderText="Equipment Name" />
                         <asp:BoundField DataField="QuantityAssigned" HeaderText="Quantity" />
                         <asp:BoundField DataField="AssignedAt" HeaderText="Assigned At" DataFormatString="{0:MMM dd, yyyy hh:mm tt}" />
                     </Columns>
@@ -554,27 +581,23 @@
             <div class="table-container">
                 <asp:GridView ID="gvChemicals" runat="server" AutoGenerateColumns="False" Visible="false">
                     <Columns>
-                        <asp:BoundField DataField="ItemID" HeaderText="Item ID" />
+                        <asp:BoundField DataField="ItemName" HeaderText="Chemical Name" />
                         <asp:BoundField DataField="QuantityAssigned" HeaderText="Quantity" />
                         <asp:BoundField DataField="AssignedAt" HeaderText="Assigned At" DataFormatString="{0:MMM dd, yyyy hh:mm tt}" />
                     </Columns>
                 </asp:GridView>
             </div>
-        </div>
 
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <asp:Button ID="btnBack" runat="server" Text="← Back to Bookings" 
-                OnClick="btnBack_Click"
-                CssClass="btn-secondary" />
-            
-            <asp:Button ID="btnExportPdf" runat="server" Text="📄 Export to PDF" 
-                OnClick="btnExportPdf_Click"
-                CssClass="btn-primary" />
-            
-            <asp:Button ID="btnPrint" runat="server" Text="🖨️ Print Details" 
-                OnClientClick="window.print(); return false;"
-                CssClass="btn-primary" />
+            <!-- Action Buttons Below Chemicals -->
+            <div class="action-buttons">
+                <asp:Button ID="btnBack" runat="server" Text="← Back to Bookings" 
+                    OnClick="btnBack_Click"
+                    CssClass="btn-secondary" />
+                
+                <asp:Button ID="btnExportPdf" runat="server" Text="📄 Export to PDF" 
+                    OnClick="btnExportPdf_Click"
+                    CssClass="btn-primary" />
+            </div>
         </div>
         
         </asp:Panel>

@@ -22,20 +22,17 @@ namespace RRCManagementSystem
         {
             if (!IsPostBack)
             {
-                txtFromDate.Text = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd");
+                txtFromDate.Text = new DateTime(2025, 11, 1).ToString("yyyy-MM-dd"); // Nov 1, 2025
                 txtToDate.Text = DateTime.Now.ToString("yyyy-MM-dd");
                 txtTeamDate.Text = DateTime.Today.ToString("yyyy-MM-dd");
 
-                // Load all data on initial page load
                 LoadAllReportData();
-
-                // Set the initial active tab and panel
                 SetActiveTab("btnTabUsers");
                 pnlUsers.Visible = true;
             }
         }
 
-      
+
         // ---------------------- UI actions ----------------------
 
         protected void TabButton_Click(object sender, EventArgs e)
@@ -73,13 +70,11 @@ namespace RRCManagementSystem
         {
             try
             {
-                // Load all data to ensure grids are populated
                 LoadAllReportData();
 
                 string userName = Session["Name"]?.ToString() ?? "Unknown User";
                 string logoPath = Server.MapPath("~/Images/logorrc.png");
 
-                // Create the PDF document
                 var doc = new Document(PageSize.A4.Rotate(), 10f, 10f, 60f, 40f);
                 byte[] pdfBytes;
 
@@ -98,10 +93,8 @@ namespace RRCManagementSystem
 
                     doc.Open();
 
-                    // RESET the flag for first grid
                     isFirstGrid = true;
 
-                    // Add all grids to PDF
                     AddGridToPDF(doc, gvUserAccounts, "👤 User Accounts");
                     AddGridToPDF(doc, gvInquiries, "📬 Inquiries");
                     AddGridToPDF(doc, gvApprovedClients, "✅ Approved Clients");
@@ -110,21 +103,17 @@ namespace RRCManagementSystem
                     AddGridToPDF(doc, gvSales, "💳 Sales");
                     AddGridToPDF(doc, gvEquipment, "🛠️ Equipment Status");
                     AddGridToPDF(doc, gvBookings, "📅 Booking Details");
-                    AddGridToPDF(doc, gvInspections, "🔍 Inspection Details");
-                    AddGridToPDF(doc, gvInquiryEstimation, "📑 Inquiry Estimation");
+                    AddGridToPDF(doc, gvInspectionReports, "📋 Inspection Reports Summary"); // ADD THIS
                     AddGridToPDF(doc, gvTeamsSummary, "👥 Team Summary");
                     AddGridToPDF(doc, gvTeamMembers, "👨‍👩‍👧‍👦 Team Members");
 
                     doc.Close();
 
-                    // Store the PDF bytes before closing the stream
                     pdfBytes = ms.ToArray();
                 }
 
-                // Log audit BEFORE sending response
                 AddAuditLog(Convert.ToInt32(Session["UserID"]), "Exported All Reports to PDF");
 
-                // NOW send the PDF - clear everything first
                 HttpContext.Current.Response.Clear();
                 HttpContext.Current.Response.ClearContent();
                 HttpContext.Current.Response.ClearHeaders();
@@ -136,16 +125,12 @@ namespace RRCManagementSystem
                 HttpContext.Current.Response.Cache.SetCacheability(HttpCacheability.NoCache);
                 HttpContext.Current.Response.Cache.SetNoStore();
 
-                // Write the PDF bytes
                 HttpContext.Current.Response.BinaryWrite(pdfBytes);
                 HttpContext.Current.Response.Flush();
-
-                // End the response - this will throw ThreadAbortException
                 HttpContext.Current.Response.End();
             }
             catch (System.Threading.ThreadAbortException)
             {
-
             }
             catch (Exception ex)
             {
@@ -232,15 +217,11 @@ namespace RRCManagementSystem
         {
             if (gvBookings.Rows.Count > 0) ExportGridViewToPDF(gvBookings, "Bookings_Report");
         }
-        
-        protected void btnExportInspections_Click(object sender, EventArgs e)
+
+        protected void btnExportInspectionReports_Click(object sender, EventArgs e)
         {
-            if (gvInspections.Rows.Count > 0) ExportGridViewToPDF(gvInspections, "Inspections_Report");
-        }
-        protected void btnExportInquiryEstimation_Click(object sender, EventArgs e)
-        {
-            if (gvInquiryEstimation.Rows.Count > 0)
-                ExportGridViewToPDF(gvInquiryEstimation, "InquiryEstimation_Report");
+            if (gvInspectionReports.Rows.Count > 0)
+                ExportGridViewToPDF(gvInspectionReports, "Inspection_Reports");
         }
 
 
@@ -255,9 +236,8 @@ namespace RRCManagementSystem
             pnlInventorySnapshots.Visible = false;
             pnlEquipment.Visible = false;
             pnlSales.Visible = false;
+            pnlInspectionReports.Visible = false;
             pnlBookings.Visible = false;
-            pnlInspections.Visible = false;
-            pnlInquiryEstimation.Visible = false;
             pnlTeams.Visible = false;
         }
 
@@ -271,9 +251,8 @@ namespace RRCManagementSystem
             btnTabEquipment.CssClass = "folder-tab";
             btnTabSales.CssClass = "folder-tab";
             btnTabBookings.CssClass = "folder-tab";
-            btnTabInspections.CssClass = "folder-tab";
+            btnTabInspectionReports.CssClass = "folder-tab";
             btnTabTeams.CssClass = "folder-tab";
-            btnTabInquiryEstimation.CssClass = "folder-tab"; 
             Button activeButton = (Button)ReportsUpdatePanel.FindControl(activeButtonID);
             if (activeButton != null)
             {
@@ -297,11 +276,9 @@ namespace RRCManagementSystem
             LoadInventorySnapshots(from, to);
             LoadInventory();
             LoadEquipment();
-            LoadBookings(from, to);
-            LoadInspections(from, to);
             LoadSales(from, to);
+            LoadInspectionReports(from, to);
             LoadTeamReports(from, to, teamDate);
-            LoadInquiryEstimation(from, to);
         }
 
         private void LoadSpecificReport(string tabId)
@@ -339,17 +316,13 @@ namespace RRCManagementSystem
                     pnlSales.Visible = true;
                     LoadSales(from, to);
                     break;
+                case "btnTabInspectionReports":
+                    pnlInspectionReports.Visible = true;
+                    LoadInspectionReports(from, to);
+                    break;
                 case "btnTabBookings":
                     pnlBookings.Visible = true;
                     LoadBookings(from, to);
-                    break;
-                case "btnTabInspections":
-                    pnlInspections.Visible = true;
-                    LoadInspections(from, to);
-                    break;
-                case "btnTabInquiryEstimation":
-                    pnlInquiryEstimation.Visible = true;
-                    LoadInquiryEstimation(from, to);
                     break;
                 case "btnTabTeams":
                     pnlTeams.Visible = true;
@@ -379,6 +352,17 @@ namespace RRCManagementSystem
                 }
             }
         }
+
+        private void LoadInspectionReports(DateTime from, DateTime to)
+        {
+            gvInspectionReports.DataSource = ExecToTable(
+                "dbo.spReports_InspectionReports",
+                new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
+                new SqlParameter("@ToDate", SqlDbType.Date) { Value = to }
+            );
+            gvInspectionReports.DataBind();
+        }
+
 
         private void LoadUserAccounts()
         {
@@ -523,40 +507,7 @@ namespace RRCManagementSystem
             gvBookings.DataBind();
         }
 
-        private void LoadInspections(DateTime from, DateTime to)
-        {
-            var dt = ExecToTable("dbo.spReports_Inspections",
-                new SqlParameter("@FromDate", SqlDbType.Date) { Value = from },
-                new SqlParameter("@ToDate", SqlDbType.Date) { Value = to });
-
-            foreach (DataRow row in dt.Rows)
-            {
-                string street = row["StreetEnc"] != DBNull.Value ? AESHelper.DecryptField(row["StreetEnc"].ToString()) : "";
-                string barangay = row["BarangayEnc"] != DBNull.Value ? AESHelper.DecryptField(row["BarangayEnc"].ToString()) : "";
-                string city = row["CityEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CityEnc"].ToString()) : "";
-                string region = row["RegionEnc"] != DBNull.Value ? AESHelper.DecryptField(row["RegionEnc"].ToString()) : "";
-                string country = row["CountryEnc"] != DBNull.Value ? AESHelper.DecryptField(row["CountryEnc"].ToString()) : "";
-
-                row["StreetEnc"] = $"{street}, {barangay}, {city}, {region}, {country}".Trim(',', ' ');
-            }
-
-            dt.Columns["StreetEnc"].ColumnName = "ClientAddress";
-
-            gvInspections.DataSource = dt;
-            gvInspections.DataBind();
-        }
-
-        private void LoadInquiryEstimation(DateTime from, DateTime to)
-        {
-            var dt = ExecToTable(
-                "usp_GetPendingQuotations",
-                new SqlParameter("@FromDate", SqlDbType.DateTime) { Value = from },
-                new SqlParameter("@ToDate", SqlDbType.DateTime) { Value = to },
-                new SqlParameter("@InspectorID", SqlDbType.Int) { Value = DBNull.Value } 
-            );
-            gvInquiryEstimation.DataSource = dt;
-            gvInquiryEstimation.DataBind();
-        }
+    
 
 
 

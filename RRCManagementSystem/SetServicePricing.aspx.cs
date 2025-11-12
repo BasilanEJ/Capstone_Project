@@ -35,7 +35,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         private void LoadServices()
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -56,7 +55,10 @@ namespace RRCManagementSystem
             if (!string.IsNullOrEmpty(ddlServices.SelectedValue))
                 LoadPricingTiers();
             else
+            {
                 gvPricing.DataSource = null;
+                gvPricing.DataBind();
+            }
         }
 
         private void LoadPricingTiers()
@@ -65,11 +67,11 @@ namespace RRCManagementSystem
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             using (SqlCommand cmd = new SqlCommand(@"
-        SELECT T.TierID, S.Name AS ServiceName, T.MinSQM, T.MaxSQM, T.FlatPrice
-        FROM dbo.ServicePricingTiers T
-        INNER JOIN dbo.Services S ON T.ServiceID = S.ServiceID
-        WHERE T.ServiceID = @ServiceID
-        ORDER BY T.MinSQM", conn))
+                SELECT T.TierID, S.Name AS ServiceName, T.MinSQM, T.MaxSQM, T.FlatPrice
+                FROM dbo.ServicePricingTiers T
+                INNER JOIN dbo.Services S ON T.ServiceID = S.ServiceID
+                WHERE T.ServiceID = @ServiceID
+                ORDER BY T.MinSQM", conn))
             {
                 cmd.Parameters.AddWithValue("@ServiceID", serviceId);
                 conn.Open();
@@ -84,13 +86,11 @@ namespace RRCManagementSystem
             }
         }
 
-
         protected void btnAddTier_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(ddlServices.SelectedValue))
             {
-                lblMessage.Text = "⚠ Please select a service first.";
-                lblMessage.CssClass = "text-red-600 text-center font-semibold";
+                ShowAlert("warning", "Selection Required", "Please select a service first.");
                 return;
             }
 
@@ -101,31 +101,34 @@ namespace RRCManagementSystem
 
             if (flatPrice <= 0)
             {
-                lblMessage.Text = "⚠ Please enter a valid flat price.";
-                lblMessage.CssClass = "text-red-600 text-center font-semibold";
+                ShowAlert("warning", "Invalid Price", "Please enter a valid flat price.");
                 return;
             }
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand("dbo.spServicePricing_InsertTier", conn))
+            try
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@ServiceID", serviceId);
-                cmd.Parameters.AddWithValue("@MinSQM", minSQM);
-                cmd.Parameters.AddWithValue("@MaxSQM", maxSQM == 0 ? (object)DBNull.Value : maxSQM);
-                cmd.Parameters.AddWithValue("@FlatPrice", flatPrice);
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand("dbo.spServicePricing_InsertTier", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@ServiceID", serviceId);
+                    cmd.Parameters.AddWithValue("@MinSQM", minSQM);
+                    cmd.Parameters.AddWithValue("@MaxSQM", maxSQM == 0 ? (object)DBNull.Value : maxSQM);
+                    cmd.Parameters.AddWithValue("@FlatPrice", flatPrice);
 
-                conn.Open();
-                cmd.ExecuteNonQuery();
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                ShowAlert("success", "Success!", "Pricing tier added successfully.");
+
+                txtMinSQM.Text = txtMaxSQM.Text = txtFlatPrice.Text = string.Empty;
+                LoadPricingTiers();
             }
-
-
-            lblMessage.Text = "✅ Pricing tier added successfully.";
-            lblMessage.CssClass = "text-green-600 text-center font-semibold";
-
-            txtMinSQM.Text = txtMaxSQM.Text = txtFlatPrice.Text = string.Empty;
-
-            LoadPricingTiers();
+            catch (Exception ex)
+            {
+                ShowAlert("error", "Error", $"Failed to add pricing tier: {ex.Message}");
+            }
         }
 
         protected void gvPricing_RowEditing(object sender, GridViewEditEventArgs e)
@@ -142,41 +145,91 @@ namespace RRCManagementSystem
 
         protected void gvPricing_RowUpdating(object sender, GridViewUpdateEventArgs e)
         {
-            int tierId = Convert.ToInt32(gvPricing.DataKeys[e.RowIndex].Value);
-            GridViewRow row = gvPricing.Rows[e.RowIndex];
-
-            int minSQM = Convert.ToInt32(((TextBox)row.Cells[1].Controls[0]).Text);
-            int maxSQM = Convert.ToInt32(((TextBox)row.Cells[2].Controls[0]).Text);
-            decimal flatPrice = Convert.ToDecimal(((TextBox)row.Cells[3].Controls[0]).Text);
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand("UPDATE dbo.ServicePricingTiers SET MinSQM=@MinSQM, MaxSQM=@MaxSQM, FlatPrice=@FlatPrice WHERE TierID=@TierID", conn))
+            try
             {
-                cmd.Parameters.AddWithValue("@TierID", tierId);
-                cmd.Parameters.AddWithValue("@MinSQM", minSQM);
-                cmd.Parameters.AddWithValue("@MaxSQM", maxSQM);
-                cmd.Parameters.AddWithValue("@FlatPrice", flatPrice);
-                conn.Open();
-                cmd.ExecuteNonQuery();
-            }
+                int tierId = Convert.ToInt32(gvPricing.DataKeys[e.RowIndex].Value);
+                GridViewRow row = gvPricing.Rows[e.RowIndex];
 
-            gvPricing.EditIndex = -1;
-            LoadPricingTiers();
+                // ✅ CORRECT WAY: Find TextBox controls by their position in edit mode
+                // Cell 0: TierID (Hidden)
+                // Cell 1: ServiceName (ReadOnly)
+                // Cell 2: MinSQM (Editable)
+                // Cell 3: MaxSQM (Editable)
+                // Cell 4: FlatPrice (Editable)
+                // Cell 5: Edit Button
+                // Cell 6: Delete Button
+
+                TextBox txtMinSQM = (TextBox)row.Cells[2].Controls[0];
+                TextBox txtMaxSQM = (TextBox)row.Cells[3].Controls[0];
+                TextBox txtFlatPrice = (TextBox)row.Cells[4].Controls[0];
+
+                int minSQM = Convert.ToInt32(txtMinSQM.Text);
+                int maxSQM = Convert.ToInt32(txtMaxSQM.Text);
+                decimal flatPrice = Convert.ToDecimal(txtFlatPrice.Text);
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand(@"
+                    UPDATE dbo.ServicePricingTiers 
+                    SET MinSQM = @MinSQM, 
+                        MaxSQM = @MaxSQM, 
+                        FlatPrice = @FlatPrice 
+                    WHERE TierID = @TierID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@TierID", tierId);
+                    cmd.Parameters.AddWithValue("@MinSQM", minSQM);
+                    cmd.Parameters.AddWithValue("@MaxSQM", maxSQM);
+                    cmd.Parameters.AddWithValue("@FlatPrice", flatPrice);
+
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                gvPricing.EditIndex = -1;
+                LoadPricingTiers();
+
+                ShowAlert("success", "Updated!", "Pricing tier updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                ShowAlert("error", "Update Failed", $"Error updating pricing tier: {ex.Message}");
+            }
         }
 
         protected void gvPricing_RowDeleting(object sender, GridViewDeleteEventArgs e)
         {
-            int tierId = Convert.ToInt32(gvPricing.DataKeys[e.RowIndex].Value);
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.ServicePricingTiers WHERE TierID = @TierID", conn))
+            try
             {
-                cmd.Parameters.AddWithValue("@TierID", tierId);
-                conn.Open();
-                cmd.ExecuteNonQuery();
-            }
+                int tierId = Convert.ToInt32(gvPricing.DataKeys[e.RowIndex].Value);
 
-            LoadPricingTiers();
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand("DELETE FROM dbo.ServicePricingTiers WHERE TierID = @TierID", conn))
+                {
+                    cmd.Parameters.AddWithValue("@TierID", tierId);
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                LoadPricingTiers();
+                ShowAlert("success", "Deleted!", "Pricing tier deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                ShowAlert("error", "Delete Failed", $"Error deleting pricing tier: {ex.Message}");
+            }
+        }
+
+        // Helper method to show SweetAlert
+        private void ShowAlert(string icon, string title, string text)
+        {
+            string script = $@"
+                Swal.fire({{
+                    icon: '{icon}',
+                    title: '{title}',
+                    text: '{text.Replace("'", "\\'")}',
+                    confirmButtonColor: '#3b82f6'
+                }});
+            ";
+            ScriptManager.RegisterStartupScript(this, GetType(), "ShowAlert", script, true);
         }
     }
 }

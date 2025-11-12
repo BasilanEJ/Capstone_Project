@@ -496,50 +496,51 @@
             <p class="page-subtitle">Track and manage your inspection requests</p>
         </div>
 
-        <!-- Updated Status Tabs - Removed Completed -->
-        <div class="status-tabs">
-            <asp:LinkButton ID="btnAll" runat="server" CssClass="status-tab active" OnClick="FilterStatus_Click" CommandArgument="All">
-                <i class="fas fa-list"></i>
-                <span>All</span>
-                <span class="badge"><asp:Label ID="lblCountAll" runat="server" Text="0"></asp:Label></span>
-            </asp:LinkButton>
-
-            <asp:LinkButton ID="btnPending" runat="server" CssClass="status-tab" OnClick="FilterStatus_Click" CommandArgument="Pending">
-                <i class="fas fa-clock"></i>
-                <span>Pending</span>
-                <span class="badge"><asp:Label ID="lblCountPending" runat="server" Text="0"></asp:Label></span>
-            </asp:LinkButton>
-
-            <asp:LinkButton ID="btnAssigned" runat="server" CssClass="status-tab" OnClick="FilterStatus_Click" CommandArgument="Assigned">
-                <i class="fas fa-user-check"></i>
-                <span>Assigned</span>
-                <span class="badge"><asp:Label ID="lblCountAssigned" runat="server" Text="0"></asp:Label></span>
-            </asp:LinkButton>
-
-            <asp:LinkButton ID="btnInspected" runat="server" CssClass="status-tab" OnClick="FilterStatus_Click" CommandArgument="Inspected">
-                <i class="fas fa-clipboard-check"></i>
-                <span>Inspected</span>
-                <span class="badge"><asp:Label ID="lblCountInspected" runat="server" Text="0"></asp:Label></span>
-            </asp:LinkButton>
-
-            <asp:LinkButton ID="btnQuotation" runat="server" CssClass="status-tab" OnClick="FilterStatus_Click" CommandArgument="Quotation Sent">
-                <i class="fas fa-file-invoice-dollar"></i>
-                <span>Quotation</span>
-                <span class="badge"><asp:Label ID="lblCountQuotation" runat="server" Text="0"></asp:Label></span>
-            </asp:LinkButton>
-        </div>
-
-        <!-- Inquiries List -->
-        <asp:UpdatePanel ID="upInquiries" runat="server" UpdateMode="Conditional">
+        <!-- ✅ NEW: Separate UpdatePanel for Status Tabs -->
+        <asp:UpdatePanel ID="upTabs" runat="server" UpdateMode="Conditional">
             <ContentTemplate>
-                
-                <!-- Loading State -->
+                <div class="status-tabs">
+                    <asp:LinkButton ID="btnAll" runat="server" CssClass="status-tab active" OnClick="FilterStatus_Click" CommandArgument="All">
+                        <i class="fas fa-list"></i>
+                        <span>All</span>
+                        <span class="badge"><asp:Label ID="lblCountAll" runat="server" Text="0"></asp:Label></span>
+                    </asp:LinkButton>
+
+                    <asp:LinkButton ID="btnPending" runat="server" CssClass="status-tab" OnClick="FilterStatus_Click" CommandArgument="Pending">
+                        <i class="fas fa-clock"></i>
+                        <span>Pending</span>
+                        <span class="badge"><asp:Label ID="lblCountPending" runat="server" Text="0"></asp:Label></span>
+                    </asp:LinkButton>
+
+                    <asp:LinkButton ID="btnAssigned" runat="server" CssClass="status-tab" OnClick="FilterStatus_Click" CommandArgument="Assigned">
+                        <i class="fas fa-user-check"></i>
+                        <span>Assigned</span>
+                        <span class="badge"><asp:Label ID="lblCountAssigned" runat="server" Text="0"></asp:Label></span>
+                    </asp:LinkButton>
+
+                    <asp:LinkButton ID="btnInspected" runat="server" CssClass="status-tab" OnClick="FilterStatus_Click" CommandArgument="Inspected">
+                        <i class="fas fa-clipboard-check"></i>
+                        <span>Inspected</span>
+                        <span class="badge"><asp:Label ID="lblCountInspected" runat="server" Text="0"></asp:Label></span>
+                    </asp:LinkButton>
+
+                    <asp:LinkButton ID="btnQuotation" runat="server" CssClass="status-tab" OnClick="FilterStatus_Click" CommandArgument="Quotation Sent">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <span>Quotation</span>
+                        <span class="badge"><asp:Label ID="lblCountQuotation" runat="server" Text="0"></asp:Label></span>
+                    </asp:LinkButton>
+                </div>
+            </ContentTemplate>
+        </asp:UpdatePanel>
+
+        <asp:UpdatePanel ID="upInquiries" runat="server" UpdateMode="Conditional" ChildrenAsTriggers="true">
+            <ContentTemplate>
+
                 <asp:Panel ID="pnlLoading" runat="server" Visible="false" CssClass="loading-container">
                     <div class="spinner"></div>
                     <p style="color: #6b7280;">Loading your inspections...</p>
                 </asp:Panel>
 
-                <!-- Empty State -->
                 <asp:Panel ID="pnlEmpty" runat="server" Visible="false" CssClass="empty-state">
                     <div class="empty-state-icon">📋</div>
                     <h3 class="empty-state-title">No Inspections Found</h3>
@@ -550,11 +551,10 @@
                     </a>
                 </asp:Panel>
 
-                <!-- Inquiries Repeater -->
                 <asp:Repeater ID="rptInquiries" runat="server" OnItemDataBound="rptInquiries_ItemDataBound">
                     <ItemTemplate>
                         <div class="inquiry-card status-<%# GetStatusClass(Eval("Status")) %>">
-                            <!-- Card Header -->
+
                             <div class="card-header">
                                 <div class="inquiry-number">
                                     <i class="fas fa-hashtag"></i>
@@ -565,7 +565,6 @@
                                 </span>
                             </div>
 
-                            <!-- Card Body -->
                             <div class="card-body">
                                 <div class="info-item">
                                     <span class="info-label">Inspection Date</span>
@@ -607,26 +606,18 @@
                                     </span>
                                 </div>
 
-                                <!-- Inspector Info Placeholder -->
                                 <asp:PlaceHolder ID="phInspectorInfo" runat="server"></asp:PlaceHolder>
                             </div>
 
-                            <!-- Problem Description -->
                             <div class="problem-description">
                                 <div class="label">Problem Description</div>
                                 <div class="text"><%# Eval("ProblemDescription") %></div>
                             </div>
 
-                            <!-- Images Placeholder -->
                             <asp:PlaceHolder ID="phImages" runat="server"></asp:PlaceHolder>
-
-                            <!-- Quotation Info Placeholder -->
                             <asp:PlaceHolder ID="phQuotationInfo" runat="server"></asp:PlaceHolder>
-
-                            <!-- Timeline Placeholder -->
                             <asp:PlaceHolder ID="phTimeline" runat="server"></asp:PlaceHolder>
 
-                            <!-- Card Actions -->
                             <div class="card-actions">
                                 <asp:LinkButton ID="btnViewDetails" runat="server" 
                                     CssClass="btn btn-primary" 
@@ -635,17 +626,43 @@
                                     <i class="fas fa-eye"></i> View Details
                                 </asp:LinkButton>
 
-                                <!-- Approval/Rejection Buttons Placeholder -->
-                                <asp:PlaceHolder ID="phApprovalButtons" runat="server"></asp:PlaceHolder>
+                                <asp:LinkButton ID="btnApproveQuotation" runat="server"
+                                    CssClass="btn btn-success"
+                                    CommandArgument='<%# Eval("InquiryID") %>'
+                                    OnClick="btnApproveQuotation_Click"
+                                    Visible="false">
+                                    <i class="fas fa-check"></i> Approve Quotation
+                                </asp:LinkButton>
 
-                                <!-- Cancel Button Placeholder -->
-                                <asp:PlaceHolder ID="phCancelButton" runat="server"></asp:PlaceHolder>
+                                <asp:LinkButton ID="btnRejectQuotation" runat="server"
+                                    CssClass="btn btn-danger"
+                                    CommandArgument='<%# Eval("InquiryID") %>'
+                                    OnClick="btnRejectQuotation_Click"
+                                    Visible="false">
+                                    <i class="fas fa-times"></i> Reject Quotation
+                                </asp:LinkButton>
+
+                                <asp:LinkButton ID="btnCancelInquiry" runat="server"
+                                    CssClass="btn btn-secondary"
+                                    CommandArgument='<%# Eval("InquiryID") %>'
+                                    OnClick="btnCancelInquiry_Click"
+                                    Visible="false">
+                                    <i class="fas fa-ban"></i> Cancel Request
+                                </asp:LinkButton>
                             </div>
                         </div>
                     </ItemTemplate>
                 </asp:Repeater>
 
             </ContentTemplate>
+
+            <Triggers>
+                <asp:AsyncPostBackTrigger ControlID="btnAll" EventName="Click" />
+                <asp:AsyncPostBackTrigger ControlID="btnPending" EventName="Click" />
+                <asp:AsyncPostBackTrigger ControlID="btnAssigned" EventName="Click" />
+                <asp:AsyncPostBackTrigger ControlID="btnInspected" EventName="Click" />
+                <asp:AsyncPostBackTrigger ControlID="btnQuotation" EventName="Click" />
+            </Triggers>
         </asp:UpdatePanel>
 
     </div>
