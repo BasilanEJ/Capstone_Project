@@ -601,12 +601,19 @@
         </li>
 
         <li>
+            <a class='nav-link <%= GetActiveClass("ReviewManagement.aspx") %>' href="ReviewManagement.aspx">
+                <i class="fas fa-star"></i> Review Management
+            </a>
+        </li>
+
+        <li>
             <a class='nav-link <%= GetActiveClass("ArchivedServiceManagement.aspx") %>' href="ArchivedServiceManagement.aspx">
                 <i class="fas fa-archive"></i> Archive CMS Content
             </a>
         </li>
     </ul>
 </li>
+
 
 
 

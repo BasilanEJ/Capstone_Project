@@ -123,6 +123,24 @@ namespace RRCManagementSystem
         protected global::System.Web.UI.UpdatePanel UpdatePanel2;
 
         /// <summary>
+        /// hdnDeleteId control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hdnDeleteId;
+
+        /// <summary>
+        /// btnDeleteHidden control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnDeleteHidden;
+
+        /// <summary>
         /// gvAreaScopes control.
         /// </summary>
         /// <remarks>

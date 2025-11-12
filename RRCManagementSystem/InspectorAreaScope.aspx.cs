@@ -42,21 +42,11 @@ namespace RRCManagementSystem
                 return;
             }
 
-            // Handle custom delete postback
+            // REMOVE the delete handling code from here completely
+
             if (IsPostBack)
             {
-                string eventTarget = Request.Form["__EVENTTARGET"];
-                string eventArgument = Request.Form["__EVENTARGUMENT"];
-                if (eventTarget == "DeleteAreaScope" && !string.IsNullOrEmpty(eventArgument))
-                {
-                    int areaScopeId;
-                    if (int.TryParse(eventArgument, out areaScopeId))
-                    {
-                        HandleDelete(areaScopeId);
-                        return;
-                    }
-                }
-                // IMPORTANT: Recreate checkboxes on EVERY postback if a region is selected
+                // Only recreate checkboxes if a region is selected
                 if (!string.IsNullOrEmpty(ddlRegion.SelectedValue))
                 {
                     BindCityCheckboxes(ddlRegion.SelectedValue);
@@ -69,6 +59,26 @@ namespace RRCManagementSystem
                 LoadAreaScopes();
             }
         }
+        protected void btnDeleteHidden_Click(object sender, EventArgs e)
+        {
+            int areaScopeId;
+            if (int.TryParse(hdnDeleteId.Value, out areaScopeId))
+            {
+                try
+                {
+                    RemoveAreaScope(areaScopeId);
+                    LoadAreaScopes();
+
+                    ShowSweetAlert("Removed! 👋", "Area scope successfully removed.", "success");
+                }
+                catch (Exception ex)
+                {
+                    ShowSweetAlert("Error!", $"An error occurred: {ex.Message}", "error");
+                }
+
+                UpdatePanel2.Update();
+            }
+        }
 
         private void HandleDelete(int areaScopeId)
         {
@@ -78,13 +88,15 @@ namespace RRCManagementSystem
                 LoadAreaScopes();
 
                 ShowSweetAlert("Removed! 👋", "Area scope successfully removed.", "success");
+
+                // Force update of the grid panel
+                UpdatePanel2.Update();
             }
             catch (Exception ex)
             {
                 ShowSweetAlert("Error!", $"An error occurred while removing the scope: {ex.Message}", "error");
+                UpdatePanel2.Update();
             }
-
-            UpdatePanel2.Update();
         }
 
         private void ShowSweetAlert(string title, string text, string icon)

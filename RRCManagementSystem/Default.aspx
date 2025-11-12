@@ -1,5 +1,6 @@
 ﻿<%@ Page Title="RRC Termite & Pest Control" Language="C#" EnableEventValidation="true" MasterPageFile="~/Inquiry.Master" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="RRCManagementSystem.Default" %>
 
+
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
     <asp:ScriptManager ID="ScriptManager1" runat="server" />
@@ -1984,25 +1985,12 @@ section {
         </div>
     </section>
 
-<!-- ====== CUSTOMER REVIEWS SECTION ====== -->
-<section class="reviews-section lazy-section">
-    <div class="container">
-
-        <!-- === Header + Button === -->
-        <section class="reviews-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <h2 class="fw-bold text-dark mb-0">What our customers are saying</h2>
-            <button type="button" class="btn btn-primary rounded-pill px-4"
-                    data-bs-toggle="modal" data-bs-target="#reviewModal">
-                <i class="fas fa-pen"></i> Write a Review
-            </button>
-        </section>
-
 <!-- === Carousel Section (manual only, no auto slide) === -->
 <section id="reviewsCarousel" class="carousel slide" data-bs-ride="false" data-bs-interval="false">
     <div class="carousel-inner">
         <asp:Repeater ID="rptReviews" runat="server">
             <ItemTemplate>
-                <%# Container.ItemIndex % 3 == 0 ? "<div class='carousel-item " + (Container.ItemIndex == 0 ? "active" : "") + "'><div class='row justify-content-center g-4'>" : "" %>
+                <%# GetCarouselSlideOpen(Container.ItemIndex) %>
 
                 <div class="col-md-4 col-sm-6">
                     <div class="review-card h-100 mx-auto">
@@ -2027,8 +2015,7 @@ section {
                     </div>
                 </div>
 
-                <%# (Container.ItemIndex + 1) % 3 == 0 || (Container.ItemIndex + 1) == ((Repeater)Container.NamingContainer).Items.Count
-                    ? "</div></div>" : "" %>
+                <%# GetCarouselSlideClose(Container.ItemIndex, GetTotalReviews()) %>
             </ItemTemplate>
         </asp:Repeater>
     </div>

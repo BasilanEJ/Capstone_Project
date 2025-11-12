@@ -273,12 +273,13 @@ namespace RRCManagementSystem
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
-                        SELECT BlogID, BlogTitle, BlogDescription, BlogContent, 
-                               ImagePath, DisplayOrder, IsActive, 
-                               CreatedDate, ModifiedDate
-                        FROM BlogsCMS
-                        WHERE IsActive = 0
-                        ORDER BY ModifiedDate DESC, DisplayOrder, BlogID DESC";
+    SELECT BlogID, BlogTitle, BlogDescription, BlogContent, 
+           ImagePath, DisplayOrder, IsActive, 
+           CreatedDate, ModifiedDate
+    FROM EJBasilan_admin.BlogsCMS
+    WHERE IsActive = 0
+    ORDER BY ModifiedDate DESC, DisplayOrder, BlogID DESC";
+
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
@@ -393,11 +394,12 @@ namespace RRCManagementSystem
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
-                        SELECT ID, Question, Answer, DisplayOrder, IsActive, 
-                               CreatedDate, UpdatedDate
-                        FROM FAQs
-                        WHERE IsActive = 0
-                        ORDER BY UpdatedDate DESC, DisplayOrder, ID";
+    SELECT ID, Question, Answer, DisplayOrder, IsActive, 
+           CreatedDate, UpdatedDate
+    FROM EJBasilan_admin.FAQs
+    WHERE IsActive = 0
+    ORDER BY UpdatedDate DESC, DisplayOrder, ID";
+
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {

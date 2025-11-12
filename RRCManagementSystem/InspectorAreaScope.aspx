@@ -550,155 +550,156 @@
                     Current Area Scopes
                 </div>
 
-                <asp:UpdatePanel ID="UpdatePanel2" runat="server" UpdateMode="Conditional">
-                    <ContentTemplate>
-                        <div class="table-container">
-                            <div class="table-responsive">
-                                <asp:GridView 
-                                    ID="gvAreaScopes" 
-                                    runat="server" 
-                                    AutoGenerateColumns="False"
-                                    DataKeyNames="AreaScopeID"
-                                    AllowPaging="True" 
-                                    PageSize="10" 
-                                    OnPageIndexChanging="gvAreaScopes_PageIndexChanging"
-                                    GridLines="None"
-                                    CssClass="table table-hover mb-0"
-                                    PagerSettings-Visible="false">
-                                    <Columns>
-                                        <asp:BoundField 
-                                            DataField="InspectorName" 
-                                            HeaderText="Inspector Name" 
-                                            ItemStyle-CssClass="text-start" 
-                                            HeaderStyle-CssClass="text-start" />
-                                        
-                                        <asp:BoundField 
-                                            DataField="Region" 
-                                            HeaderText="Region" 
-                                            ItemStyle-CssClass="text-center" 
-                                            HeaderStyle-CssClass="text-center" />
-                                        
-                                        <asp:BoundField 
-                                            DataField="City" 
-                                            HeaderText="City" 
-                                            ItemStyle-CssClass="text-center" 
-                                            HeaderStyle-CssClass="text-center" />
+               <asp:UpdatePanel ID="UpdatePanel2" runat="server" UpdateMode="Conditional">
+    <ContentTemplate>
+        <!-- Hidden controls for delete operation -->
+        <asp:HiddenField ID="hdnDeleteId" runat="server" />
+        <asp:Button ID="btnDeleteHidden" runat="server" 
+                    OnClick="btnDeleteHidden_Click" 
+                    Style="display:none;" 
+                    CausesValidation="false" />
+        
+        <div class="table-container">
+            <div class="table-responsive">
+                <asp:GridView 
+                    ID="gvAreaScopes" 
+                    runat="server" 
+                    AutoGenerateColumns="False"
+                    DataKeyNames="AreaScopeID"
+                    AllowPaging="True" 
+                    PageSize="10" 
+                    OnPageIndexChanging="gvAreaScopes_PageIndexChanging"
+                    GridLines="None"
+                    CssClass="table table-hover mb-0"
+                    PagerSettings-Visible="false">
+                    <Columns>
+                        <asp:BoundField 
+                            DataField="InspectorName" 
+                            HeaderText="Inspector Name" 
+                            ItemStyle-CssClass="text-start" 
+                            HeaderStyle-CssClass="text-start" />
+                        
+                        <asp:BoundField 
+                            DataField="Region" 
+                            HeaderText="Region" 
+                            ItemStyle-CssClass="text-center" 
+                            HeaderStyle-CssClass="text-center" />
+                        
+                        <asp:BoundField 
+                            DataField="City" 
+                            HeaderText="City" 
+                            ItemStyle-CssClass="text-center" 
+                            HeaderStyle-CssClass="text-center" />
 
-                                        <asp:BoundField 
-                                            DataField="CreatedAt" 
-                                            HeaderText="Assigned Date" 
-                                            DataFormatString="{0:MMM dd, yyyy}" 
-                                            ItemStyle-CssClass="text-center" 
-                                            HeaderStyle-CssClass="text-center" />
-                                        
-                                        <asp:TemplateField 
-                                            HeaderText="Action" 
-                                            ItemStyle-CssClass="text-center" 
-                                            HeaderStyle-CssClass="text-center">
-                                            <ItemTemplate>
-                                                <asp:LinkButton 
-                                                    ID="btnDelete" 
-                                                    runat="server" 
-                                                    CssClass="btn-remove"
-                                                    OnClientClick='<%# "return confirmDelete(" + Eval("AreaScopeID") + ", \u0027" + Eval("InspectorName") + "\u0027, \u0027" + Eval("City") + "\u0027);" %>'> 
-                                                    <i class="fas fa-trash-alt"></i> Remove
-                                                </asp:LinkButton>
-                                            </ItemTemplate>
-                                        </asp:TemplateField>
-                                    </Columns>
-                                </asp:GridView>
-                            </div>
-                            
-                            <asp:Panel ID="pnlCustomPagination" runat="server" CssClass="custom-pagination">
+                        <asp:BoundField 
+                            DataField="CreatedAt" 
+                            HeaderText="Assigned Date" 
+                            DataFormatString="{0:MMM dd, yyyy}" 
+                            ItemStyle-CssClass="text-center" 
+                            HeaderStyle-CssClass="text-center" />
+                        
+                        <asp:TemplateField 
+                            HeaderText="Action" 
+                            ItemStyle-CssClass="text-center" 
+                            HeaderStyle-CssClass="text-center">
+                            <ItemTemplate>
                                 <asp:LinkButton 
-                                    ID="btnFirstPage" 
+                                    ID="btnDelete" 
                                     runat="server" 
-                                    CssClass="pagination-button" 
-                                    OnClick="btnFirstPage_Click" 
-                                    ToolTip="First Page" 
-                                    CausesValidation="false">
-                                    <i class="fas fa-angle-double-left"></i>
+                                    CssClass="btn-remove"
+                                    CausesValidation="false"
+                                    OnClientClick='<%# "confirmDelete(" + Eval("AreaScopeID") + ", \u0027" + Eval("InspectorName") + "\u0027, \u0027" + Eval("City") + "\u0027); return false;" %>'> 
+                                    <i class="fas fa-trash-alt"></i> Remove
                                 </asp:LinkButton>
-                                
-                                <asp:LinkButton 
-                                    ID="btnPrevPage" 
-                                    runat="server" 
-                                    CssClass="pagination-button" 
-                                    OnClick="btnPrevPage_Click" 
-                                    ToolTip="Previous Page" 
-                                    CausesValidation="false">
-                                    <i class="fas fa-angle-left"></i>
-                                </asp:LinkButton>
-                                
-                                <span class="pagination-info">
-                                    <asp:Literal ID="litPageInfo" runat="server"></asp:Literal>
-                                </span>
-                                
-                                <asp:LinkButton 
-                                    ID="btnNextPage" 
-                                    runat="server" 
-                                    CssClass="pagination-button" 
-                                    OnClick="btnNextPage_Click" 
-                                    ToolTip="Next Page" 
-                                    CausesValidation="false">
-                                    <i class="fas fa-angle-right"></i>
-                                </asp:LinkButton>
-                                
-                                <asp:LinkButton 
-                                    ID="btnLastPage" 
-                                    runat="server" 
-                                    CssClass="pagination-button" 
-                                    OnClick="btnLastPage_Click" 
-                                    ToolTip="Last Page" 
-                                    CausesValidation="false">
-                                    <i class="fas fa-angle-double-right"></i>
-                                </asp:LinkButton>
-                            </asp:Panel>
-                        </div>
-                    </ContentTemplate>
-                </asp:UpdatePanel>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                    </Columns>
+                </asp:GridView>
+            </div>
+            
+            <asp:Panel ID="pnlCustomPagination" runat="server" CssClass="custom-pagination">
+                <asp:LinkButton 
+                    ID="btnFirstPage" 
+                    runat="server" 
+                    CssClass="pagination-button" 
+                    OnClick="btnFirstPage_Click" 
+                    ToolTip="First Page" 
+                    CausesValidation="false">
+                    <i class="fas fa-angle-double-left"></i>
+                </asp:LinkButton>
+                
+                <asp:LinkButton 
+                    ID="btnPrevPage" 
+                    runat="server" 
+                    CssClass="pagination-button" 
+                    OnClick="btnPrevPage_Click" 
+                    ToolTip="Previous Page" 
+                    CausesValidation="false">
+                    <i class="fas fa-angle-left"></i>
+                </asp:LinkButton>
+                
+                <span class="pagination-info">
+                    <asp:Literal ID="litPageInfo" runat="server"></asp:Literal>
+                </span>
+                
+                <asp:LinkButton 
+                    ID="btnNextPage" 
+                    runat="server" 
+                    CssClass="pagination-button" 
+                    OnClick="btnNextPage_Click" 
+                    ToolTip="Next Page" 
+                    CausesValidation="false">
+                    <i class="fas fa-angle-right"></i>
+                </asp:LinkButton>
+                
+                <asp:LinkButton 
+                    ID="btnLastPage" 
+                    runat="server" 
+                    CssClass="pagination-button" 
+                    OnClick="btnLastPage_Click" 
+                    ToolTip="Last Page" 
+                    CausesValidation="false">
+                    <i class="fas fa-angle-double-right"></i>
+                </asp:LinkButton>
+            </asp:Panel>
+        </div>
+    </ContentTemplate>
+    <Triggers>
+        <asp:AsyncPostBackTrigger ControlID="btnDeleteHidden" EventName="Click" />
+    </Triggers>
+</asp:UpdatePanel>
             </div>
         </div>
     </div>
 
     <!-- JavaScript -->
-    <script type="text/javascript">
-        // Confirm delete action
-        function confirmDelete(areaScopeId, inspectorName, city) {
-            Swal.fire({
-                title: 'Remove Area Scope?',
-                html: '<div style="text-align:center;"><i class="fas fa-exclamation-triangle" style="font-size:3rem;color:#dc3545;margin-bottom:15px;"></i><br/>Remove <strong style="color:#dc3545;">' + city + '</strong> from<br/><strong style="font-size:1.1rem;color:#4169E1;">' + inspectorName + '</strong>\'s area scope?</div>',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-trash me-2"></i>Yes, Remove',
-                cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
-                customClass: {
-                    popup: 'animated-popup',
-                    confirmButton: 'btn-confirm-custom',
-                    cancelButton: 'btn-cancel-custom'
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Show loading
-                    Swal.fire({
-                        title: 'Removing...',
-                        html: 'Please wait while we remove the area scope.',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
-                    __doPostBack('DeleteAreaScope', areaScopeId);
-                }
-            });
-            return false;
-        }
-    </script>
-
+<script type="text/javascript">
+    // Confirm delete action
+    function confirmDelete(areaScopeId, inspectorName, city) {
+        Swal.fire({
+            title: 'Remove Area Scope?',
+            html: '<div style="text-align:center;"><i class="fas fa-exclamation-triangle" style="font-size:3rem;color:#dc3545;margin-bottom:15px;"></i><br/>Remove <strong style="color:#dc3545;">' + city + '</strong> from<br/><strong style="font-size:1.1rem;color:#4169E1;">' + inspectorName + '</strong>\'s area scope?</div>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-trash me-2"></i>Yes, Remove',
+            cancelButtonText: '<i class="fas fa-times me-2"></i>Cancel',
+            customClass: {
+                popup: 'animated-popup',
+                confirmButton: 'btn-confirm-custom',
+                cancelButton: 'btn-cancel-custom'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Set the ID and trigger the hidden button (no loading animation)
+                document.getElementById('<%= hdnDeleteId.ClientID %>').value = areaScopeId;
+                document.getElementById('<%= btnDeleteHidden.ClientID %>').click();
+            }
+        });
+        return false;
+    }
+</script>
     <style>
         .btn-confirm-custom,
         .btn-cancel-custom {

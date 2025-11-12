@@ -22,6 +22,10 @@ namespace RRCManagementSystem
                 return;
             }
 
+            // ✅ Hide unlock buttons for non-SuperAdmins just to be safe
+            btnUnlockAllUsers.Visible = false;
+            btnUnlockAllDevices.Visible = false;
+
             if (!IsPostBack)
             {
                 LoadDashboardStats();
@@ -41,6 +45,7 @@ namespace RRCManagementSystem
             LoadLockedDevices();
             LoadRecentFailedAttempts();
         }
+
 
         private void LoadSummaryCards()
         {

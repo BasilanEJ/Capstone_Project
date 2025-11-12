@@ -992,444 +992,485 @@
 <div id="draftImagePreview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
 
 
-    <script>
-        // Global variables
-        let miscExpenses = [];
-        let selectedPhotos = [];
+   <script>
+       // Global variables
+       let miscExpenses = [];
+       let selectedPhotos = [];
 
-        // ===== Bundle Pricing Calculation =====
-        function calculateServiceBundlePrice(serviceId) {
-            const checkbox = document.getElementById('chkService_' + serviceId);
-            const sqmInput = document.getElementById('sqm_' + serviceId);
-            const subtotalLabel = document.getElementById('subtotal_' + serviceId);
-            const packageLabel = document.getElementById('selectedPackage_' + serviceId);
+       // ===== Bundle Pricing Calculation =====
+       function calculateServiceBundlePrice(serviceId) {
+           const checkbox = document.getElementById('chkService_' + serviceId);
+           const sqmInput = document.getElementById('sqm_' + serviceId);
+           const subtotalLabel = document.getElementById('subtotal_' + serviceId);
+           const packageLabel = document.getElementById('selectedPackage_' + serviceId);
 
-            if (!checkbox.checked) {
-                subtotalLabel.textContent = 'Total: ₱0.00';
-                packageLabel.textContent = 'Select area size to see package';
-                calculateServicesTotal();
-                return;
-            }
+           if (!checkbox.checked) {
+               subtotalLabel.textContent = 'Total: ₱0.00';
+               packageLabel.textContent = 'Select area size to see package';
+               calculateServicesTotal();
+               return;
+           }
 
-            const sqm = parseFloat(sqmInput.value) || 0;
+           const sqm = parseFloat(sqmInput.value) || 0;
 
-            if (sqm === 0) {
-                subtotalLabel.textContent = 'Total: ₱0.00';
-                packageLabel.textContent = 'Select area size to see package';
-                calculateServicesTotal();
-                return;
-            }
+           if (sqm === 0) {
+               subtotalLabel.textContent = 'Total: ₱0.00';
+               packageLabel.textContent = 'Select area size to see package';
+               calculateServicesTotal();
+               return;
+           }
 
-            const pricingTiers = JSON.parse(checkbox.dataset.pricingTiers || '[]');
+           const pricingTiers = JSON.parse(checkbox.dataset.pricingTiers || '[]');
 
-            // Find applicable bundle
-            let flatPrice = 0;
-            let packageRange = '';
+           // Find applicable bundle
+           let flatPrice = 0;
+           let packageRange = '';
 
-            for (let tier of pricingTiers) {
-                const minSqm = tier.MinSQM;
-                const maxSqm = tier.MaxSQM;
+           for (let tier of pricingTiers) {
+               const minSqm = tier.MinSQM;
+               const maxSqm = tier.MaxSQM;
 
-                if (sqm >= minSqm && (maxSqm === null || sqm <= maxSqm)) {
-                    flatPrice = tier.FlatPrice;
+               if (sqm >= minSqm && (maxSqm === null || sqm <= maxSqm)) {
+                   flatPrice = tier.FlatPrice;
 
-                    if (maxSqm === null) {
-                        packageRange = `${minSqm}+ sqm`;
-                    } else {
-                        packageRange = `${minSqm}-${maxSqm} sqm`;
-                    }
-                    break;
-                }
-            }
+                   if (maxSqm === null) {
+                       packageRange = `${minSqm}+ sqm`;
+                   } else {
+                       packageRange = `${minSqm}-${maxSqm} sqm`;
+                   }
+                   break;
+               }
+           }
 
-            if (flatPrice === 0) {
-                subtotalLabel.textContent = 'Total: ₱0.00';
-                packageLabel.innerHTML = '<span style="color: #ef4444;">⚠️ No package available for this area size</span>';
-                calculateServicesTotal();
-                return;
-            }
+           if (flatPrice === 0) {
+               subtotalLabel.textContent = 'Total: ₱0.00';
+               packageLabel.innerHTML = '<span style="color: #ef4444;">⚠️ No package available for this area size</span>';
+               calculateServicesTotal();
+               return;
+           }
 
-            subtotalLabel.textContent = 'Total: ₱' + flatPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            packageLabel.innerHTML = `📦 Package: <strong>${packageRange}</strong> - ₱${flatPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+           subtotalLabel.textContent = 'Total: ₱' + flatPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+           packageLabel.innerHTML = `📦 Package: <strong>${packageRange}</strong> - ₱${flatPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
-            calculateServicesTotal();
-        }
+           calculateServicesTotal();
+       }
 
-        // ===== Service Selection =====
-        function toggleServiceSQM(checkbox) {
-            const serviceItem = checkbox.closest('.service-item');
+       // ===== Service Selection =====
+       function toggleServiceSQM(checkbox) {
+           const serviceItem = checkbox.closest('.service-item');
 
-            if (checkbox.checked) {
-                serviceItem.classList.add('selected');
-            } else {
-                serviceItem.classList.remove('selected');
-                const serviceId = checkbox.dataset.serviceId;
-                document.getElementById('sqm_' + serviceId).value = '';
-                document.getElementById('subtotal_' + serviceId).textContent = 'Total: ₱0.00';
-                document.getElementById('selectedPackage_' + serviceId).textContent = 'Select area size to see package';
-            }
+           if (checkbox.checked) {
+               serviceItem.classList.add('selected');
+           } else {
+               serviceItem.classList.remove('selected');
+               const serviceId = checkbox.dataset.serviceId;
+               document.getElementById('sqm_' + serviceId).value = '';
+               document.getElementById('subtotal_' + serviceId).textContent = 'Total: ₱0.00';
+               document.getElementById('selectedPackage_' + serviceId).textContent = 'Select area size to see package';
+           }
 
-            calculateServicesTotal();
-        }
+           calculateServicesTotal();
+       }
 
-        // ===== Calculate Services Total =====
-        function calculateServicesTotal() {
-            let total = 0;
+       // ===== Calculate Services Total =====
+       function calculateServicesTotal() {
+           let total = 0;
 
-            document.querySelectorAll('.service-checkbox:checked').forEach(checkbox => {
-                const serviceId = checkbox.dataset.serviceId;
-                const subtotalText = document.getElementById('subtotal_' + serviceId).textContent;
-                const subtotal = parseFloat(subtotalText.replace('Total: ₱', '').replace(/,/g, '')) || 0;
-                total += subtotal;
-            });
+           document.querySelectorAll('.service-checkbox:checked').forEach(checkbox => {
+               const serviceId = checkbox.dataset.serviceId;
+               const subtotalText = document.getElementById('subtotal_' + serviceId).textContent;
+               const subtotal = parseFloat(subtotalText.replace('Total: ₱', '').replace(/,/g, '')) || 0;
+               total += subtotal;
+           });
 
-            document.getElementById('lblServicesTotal').textContent = '₱' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            document.getElementById('lblServicesBreakdown').textContent = '₱' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+           document.getElementById('lblServicesTotal').textContent = '₱' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+           document.getElementById('lblServicesBreakdown').textContent = '₱' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            calculateGrandTotal();
-        }
+           calculateGrandTotal();
+       }
 
-        // ===== Grand Total Calculation =====
-        function calculateGrandTotal() {
-            const servicesText = document.getElementById('lblServicesTotal').textContent.replace('₱', '').replace(/,/g, '');
-            const services = parseFloat(servicesText) || 0;
+       // ===== Grand Total Calculation =====
+       function calculateGrandTotal() {
+           const servicesText = document.getElementById('lblServicesTotal').textContent.replace('₱', '').replace(/,/g, '');
+           const services = parseFloat(servicesText) || 0;
 
-            const travel = parseFloat(document.getElementById('<%= hfTravelCost.ClientID %>').value) || 0;
+           const travel = parseFloat(document.getElementById('<%= hfTravelCost.ClientID %>').value) || 0;
 
-            const miscText = document.getElementById('lblMiscTotal').textContent.replace('₱', '').replace(/,/g, '');
-            const misc = parseFloat(miscText) || 0;
+        const miscText = document.getElementById('lblMiscTotal').textContent.replace('₱', '').replace(/,/g, '');
+        const misc = parseFloat(miscText) || 0;
 
-            const grandTotal = services + travel + misc;
+        const grandTotal = services + travel + misc;
 
-            document.getElementById('lblGrandTotal').textContent = '₱' + grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            document.getElementById('lblTravelBreakdown').textContent = '₱' + travel.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('lblGrandTotal').textContent = '₱' + grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('lblTravelBreakdown').textContent = '₱' + travel.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            // Store in hidden field
-            document.getElementById('<%= hfGrandTotal.ClientID %>').value = grandTotal.toFixed(2);
-        }
+        // Store in hidden field
+        document.getElementById('<%= hfGrandTotal.ClientID %>').value = grandTotal.toFixed(2);
+       }
 
-        // ===== Prepare Data for Submission =====
-        function prepareSaveData() {
-            const services = [];
+       // ===== Prepare Data for Submission =====
+       function prepareSaveData() {
+           const services = [];
 
-            // Debug: Log all checkboxes found
-            const allCheckboxes = document.querySelectorAll('.service-checkbox');
-            console.log('Total service checkboxes found:', allCheckboxes.length);
+           // Debug: Log all checkboxes found
+           const allCheckboxes = document.querySelectorAll('.service-checkbox');
+           console.log('=== PREPARE SAVE DATA ===');
+           console.log('Total service checkboxes found:', allCheckboxes.length);
 
-            const checkedCheckboxes = document.querySelectorAll('.service-checkbox:checked');
-            console.log('Checked service checkboxes:', checkedCheckboxes.length);
+           const checkedCheckboxes = document.querySelectorAll('.service-checkbox:checked');
+           console.log('Checked service checkboxes:', checkedCheckboxes.length);
 
-            checkedCheckboxes.forEach((checkbox, index) => {
-                console.log(`Checkbox ${index + 1}:`, {
-                    id: checkbox.id,
-                    serviceId: checkbox.dataset.serviceId,
-                    serviceName: checkbox.dataset.serviceName,
-                    pricingTiers: checkbox.dataset.pricingTiers
-                });
+           if (checkedCheckboxes.length === 0) {
+               console.error('❌ No services selected!');
+               return false;
+           }
 
-                const serviceId = checkbox.dataset.serviceId;
-                const serviceName = checkbox.dataset.serviceName;
-                const sqmInput = document.getElementById('sqm_' + serviceId);
-                const sqm = sqmInput ? parseFloat(sqmInput.value) || 0 : 0;
+           checkedCheckboxes.forEach((checkbox, index) => {
+               console.log(`Checkbox ${index + 1}:`, {
+                   id: checkbox.id,
+                   serviceId: checkbox.dataset.serviceId,
+                   serviceName: checkbox.dataset.serviceName,
+                   pricingTiers: checkbox.dataset.pricingTiers
+               });
 
-                // Get the flat price from the subtotal
-                const subtotalElement = document.getElementById('subtotal_' + serviceId);
-                const subtotalText = subtotalElement ? subtotalElement.textContent : 'Total: ₱0.00';
-                const flatPrice = parseFloat(subtotalText.replace('Total: ₱', '').replace(/,/g, '')) || 0;
+               const serviceId = checkbox.dataset.serviceId;
+               const serviceName = checkbox.dataset.serviceName;
+               const sqmInput = document.getElementById('sqm_' + serviceId);
+               const sqm = sqmInput ? parseFloat(sqmInput.value) || 0 : 0;
 
-                // Get package range
-                const packageElement = document.getElementById('selectedPackage_' + serviceId);
-                const packageText = packageElement ? packageElement.textContent : '';
+               // Get the flat price from the subtotal
+               const subtotalElement = document.getElementById('subtotal_' + serviceId);
+               const subtotalText = subtotalElement ? subtotalElement.textContent : 'Total: ₱0.00';
+               const flatPrice = parseFloat(subtotalText.replace('Total: ₱', '').replace(/,/g, '')) || 0;
 
-                const serviceData = {
-                    ServiceID: serviceId,
-                    ServiceName: serviceName,
-                    SQM: sqm,
-                    FlatPrice: flatPrice,
-                    PackageInfo: packageText
-                };
+               // Get package range
+               const packageElement = document.getElementById('selectedPackage_' + serviceId);
+               const packageText = packageElement ? packageElement.textContent : '';
 
-                console.log(`Service ${index + 1} data:`, serviceData);
-                services.push(serviceData);
-            });
+               const serviceData = {
+                   ServiceID: parseInt(serviceId),
+                   ServiceName: serviceName,
+                   SQM: sqm,
+                   FlatPrice: flatPrice,
+                   PackageInfo: packageText
+               };
 
-            const servicesJson = JSON.stringify(services);
-            const hiddenField = document.getElementById('<%= hfSelectedServices.ClientID %>');
+               console.log(`Service ${index + 1} data:`, serviceData);
+               services.push(serviceData);
+           });
 
-    if (hiddenField) {
-        hiddenField.value = servicesJson;
-        console.log('Services saved to hidden field:', servicesJson);
-        console.log('Hidden field ID:', hiddenField.id);
-        console.log('Hidden field value after assignment:', hiddenField.value);
-    } else {
-        console.error('Hidden field not found!');
-    }
+           const servicesJson = JSON.stringify(services);
+           const hiddenField = document.getElementById('<%= hfSelectedServices.ClientID %>');
 
-    return true;
-}
+           if (!hiddenField) {
+               console.error('❌ Hidden field not found!');
+               return false;
+           }
 
-        // ===== Miscellaneous Expenses =====
-        document.getElementById('btnAddExpense').addEventListener('click', function () {
-            const desc = document.getElementById('txtExpenseDescription').value.trim();
-            const amount = parseFloat(document.getElementById('txtExpenseAmount').value) || 0;
+           hiddenField.value = servicesJson;
+           console.log('✅ Services JSON saved:', servicesJson);
+           console.log('✅ Hidden field ID:', hiddenField.id);
+           console.log('✅ Hidden field value confirmed:', hiddenField.value);
 
-            if (!desc) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Missing Information',
-                    text: 'Please enter expense description',
-                    confirmButtonColor: '#3b82f6'
-                });
-                return;
-            }
+           return true;
+       }
 
-            if (amount <= 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Invalid Amount',
-                    text: 'Please enter a valid amount',
-                    confirmButtonColor: '#3b82f6'
-                });
-                return;
-            }
+       // ===== Miscellaneous Expenses =====
+       function initializeMiscExpenses() {
+           const btnAddExpense = document.getElementById('btnAddExpense');
+           if (btnAddExpense) {
+               btnAddExpense.addEventListener('click', function () {
+                   const desc = document.getElementById('txtExpenseDescription').value.trim();
+                   const amount = parseFloat(document.getElementById('txtExpenseAmount').value) || 0;
 
-            miscExpenses.push({ description: desc, amount: amount });
+                   if (!desc) {
+                       Swal.fire({
+                           icon: 'warning',
+                           title: 'Missing Information',
+                           text: 'Please enter expense description',
+                           confirmButtonColor: '#3b82f6'
+                       });
+                       return;
+                   }
 
-            renderExpenseItems();
-            calculateMiscTotal();
+                   if (amount <= 0) {
+                       Swal.fire({
+                           icon: 'warning',
+                           title: 'Invalid Amount',
+                           text: 'Please enter a valid amount',
+                           confirmButtonColor: '#3b82f6'
+                       });
+                       return;
+                   }
 
-            // Clear inputs
-            document.getElementById('txtExpenseDescription').value = '';
-            document.getElementById('txtExpenseAmount').value = '';
-        });
+                   miscExpenses.push({ description: desc, amount: amount });
 
-        function removeExpenseItem(index) {
-            miscExpenses.splice(index, 1);
-            renderExpenseItems();
-            calculateMiscTotal();
-        }
+                   renderExpenseItems();
+                   calculateMiscTotal();
 
-        function renderExpenseItems() {
-            const container = document.getElementById('expenseItemsContainer');
+                   // Clear inputs
+                   document.getElementById('txtExpenseDescription').value = '';
+                   document.getElementById('txtExpenseAmount').value = '';
+               });
+           }
+       }
 
-            if (miscExpenses.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px; font-size: 14px;">No miscellaneous expenses added yet</div>';
-                return;
-            }
+       function removeExpenseItem(index) {
+           miscExpenses.splice(index, 1);
+           renderExpenseItems();
+           calculateMiscTotal();
+       }
 
-            container.innerHTML = miscExpenses.map((exp, index) => `
-                <div class="expense-item">
-                    <span class="expense-description">${exp.description}</span>
-                    <span class="expense-amount">₱${exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                    <button type="button" class="btn-remove-expense" onclick="removeExpenseItem(${index})">
+       function renderExpenseItems() {
+           const container = document.getElementById('expenseItemsContainer');
+
+           if (miscExpenses.length === 0) {
+               container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px; font-size: 14px;">No miscellaneous expenses added yet</div>';
+               return;
+           }
+
+           container.innerHTML = miscExpenses.map((exp, index) => `
+            <div class="expense-item">
+                <span class="expense-description">${exp.description}</span>
+                <span class="expense-amount">₱${exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <button type="button" class="btn-remove-expense" onclick="removeExpenseItem(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+       }
+
+       function calculateMiscTotal() {
+           const total = miscExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+           document.getElementById('lblMiscTotal').textContent = '₱' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+           document.getElementById('lblMiscBreakdown').textContent = '₱' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+           // Store in hidden field
+           document.getElementById('<%= hfMiscExpenses.ClientID %>').value = JSON.stringify(miscExpenses);
+
+           calculateGrandTotal();
+       }
+
+       // ===== Photo Upload Handling =====
+       function handlePhotoSelect(input) {
+           const files = Array.from(input.files);
+           const maxFiles = 10;
+           const maxSize = 5 * 1024 * 1024; // 5MB
+
+           let validFiles = [];
+           let errors = [];
+
+           files.forEach(file => {
+               if (!file.type.match('image/(jpeg|jpg|png)')) {
+                   errors.push(`${file.name}: Invalid file type`);
+                   return;
+               }
+
+               if (file.size > maxSize) {
+                   errors.push(`${file.name}: File too large (max 5MB)`);
+                   return;
+               }
+
+               if (selectedPhotos.length + validFiles.length >= maxFiles) {
+                   errors.push(`Maximum ${maxFiles} images allowed`);
+                   return;
+               }
+
+               validFiles.push(file);
+           });
+
+           if (errors.length > 0) {
+               Swal.fire({
+                   icon: 'error',
+                   title: 'Upload Error',
+                   html: errors.join('<br>'),
+                   confirmButtonColor: '#3b82f6'
+               });
+           }
+
+           validFiles.forEach(file => {
+               selectedPhotos.push(file);
+           });
+
+           renderPhotoPreview();
+       }
+
+       function renderPhotoPreview() {
+           const container = document.getElementById('photoPreviewContainer');
+           container.innerHTML = '';
+
+           selectedPhotos.forEach((file, index) => {
+               const reader = new FileReader();
+               reader.onload = function (e) {
+                   const div = document.createElement('div');
+                   div.className = 'photo-preview-item';
+                   div.innerHTML = `
+                    <img src="${e.target.result}" alt="Photo ${index + 1}" />
+                    <button type="button" class="photo-remove-btn" onclick="removePhoto(${index})">
                         <i class="fas fa-times"></i>
                     </button>
-                </div>
-            `).join('');
-        }
+                `;
+                   container.appendChild(div);
+               };
+               reader.readAsDataURL(file);
+           });
+       }
 
-        function calculateMiscTotal() {
-            const total = miscExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-            document.getElementById('lblMiscTotal').textContent = '₱' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            document.getElementById('lblMiscBreakdown').textContent = '₱' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+       function removePhoto(index) {
+           selectedPhotos.splice(index, 1);
+           renderPhotoPreview();
+       }
 
-            // Store in hidden field
-            document.getElementById('<%= hfMiscExpenses.ClientID %>').value = JSON.stringify(miscExpenses);
+       // ===== Follow-up Toggle =====
+       function initializeFollowupToggle() {
+           const rbFollowupNo = document.getElementById('<%= rbFollowupNo.ClientID %>');
+           if (rbFollowupNo) {
+               rbFollowupNo.addEventListener('change', function () {
+                   if (this.checked) {
+                       document.getElementById('followupDetails').style.display = 'none';
+                   }
+               });
+           }
+       }
 
-            calculateGrandTotal();
-        }
+       // ===== Validation =====
+       function validateAndSubmit() {
+           console.log('=== VALIDATION STARTED ===');
 
-        // ===== Photo Upload Handling =====
-        function handlePhotoSelect(input) {
-            const files = Array.from(input.files);
-            const maxFiles = 10;
-            const maxSize = 5 * 1024 * 1024; // 5MB
-
-            let validFiles = [];
-            let errors = [];
-
-            files.forEach(file => {
-                if (!file.type.match('image/(jpeg|jpg|png)')) {
-                    errors.push(`${file.name}: Invalid file type`);
-                    return;
-                }
-
-                if (file.size > maxSize) {
-                    errors.push(`${file.name}: File too large (max 5MB)`);
-                    return;
-                }
-
-                if (selectedPhotos.length + validFiles.length >= maxFiles) {
-                    errors.push(`Maximum ${maxFiles} images allowed`);
-                    return;
-                }
-
-                validFiles.push(file);
-            });
-
-            if (errors.length > 0) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Upload Error',
-                    html: errors.join('<br>'),
-                    confirmButtonColor: '#3b82f6'
-                });
-            }
-
-            validFiles.forEach(file => {
-                selectedPhotos.push(file);
-            });
-
-            renderPhotoPreview();
-        }
-
-        function renderPhotoPreview() {
-            const container = document.getElementById('photoPreviewContainer');
-            container.innerHTML = '';
-
-            selectedPhotos.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const div = document.createElement('div');
-                    div.className = 'photo-preview-item';
-                    div.innerHTML = `
-                        <img src="${e.target.result}" alt="Photo ${index + 1}" />
-                        <button type="button" class="photo-remove-btn" onclick="removePhoto(${index})">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    `;
-                    container.appendChild(div);
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function removePhoto(index) {
-            selectedPhotos.splice(index, 1);
-            renderPhotoPreview();
-        }
-
-        // ===== Follow-up Toggle =====
-        document.getElementById('<%= rbFollowupNo.ClientID %>').addEventListener('change', function () {
-            if (this.checked) {
-                document.getElementById('followupDetails').style.display = 'none';
-            }
-        });
-
-        // ===== Validation =====
-        function validateAndSubmit() {
-            // Validate infestation level
-            if (document.getElementById('<%= ddlInfestationLevel.ClientID %>').value === '') {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Missing Information',
-                    text: 'Please select infestation level',
-                    confirmButtonColor: '#3b82f6'
-                });
-                return false;
-            }
-
-            // Validate findings
-            const findings = document.getElementById('<%= txtFindings.ClientID %>').value.trim();
-            if (!findings || findings.length < 20) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Incomplete Information',
-                    text: 'Please provide detailed findings (at least 20 characters)',
-                    confirmButtonColor: '#3b82f6'
-                });
-                return false;
-            }
-
-            // Validate affected areas
-            const affectedAreas = document.querySelectorAll('.checkbox-item input[type="checkbox"]:checked');
-            if (affectedAreas.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Missing Information',
-                    text: 'Please select at least one affected area',
-                    confirmButtonColor: '#3b82f6'
-                });
-                return false;
-            }
-
-            // Validate services
-            const selectedServices = document.querySelectorAll('.service-checkbox:checked');
-            if (selectedServices.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No Services Selected',
-                    text: 'Please select at least one recommended service',
-                    confirmButtonColor: '#3b82f6'
-                });
-                return false;
-            }
-
-            // Validate SQM for selected services
-            let sqmValid = true;
-            selectedServices.forEach(checkbox => {
-                const serviceId = checkbox.dataset.serviceId;
-                const sqm = parseFloat(document.getElementById('sqm_' + serviceId).value) || 0;
-                if (sqm <= 0) {
-                    sqmValid = false;
-                }
-            });
-
-            if (!sqmValid) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Missing Area Size',
-                    text: 'Please enter area size (sqm) for all selected services',
-                    confirmButtonColor: '#3b82f6'
-                });
-                return false;
-            }
-
-            // Validate follow-up details if required
-            if (document.getElementById('<%= rbFollowupYes.ClientID %>').checked) {
-                const followupDate = document.getElementById('<%= txtFollowupDate.ClientID %>').value;
-                const followupReason = document.getElementById('<%= txtFollowupReason.ClientID %>').value.trim();
-
-                if (!followupDate || !followupReason) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Incomplete Follow-up Information',
-                        text: 'Please provide follow-up date and reason',
-                        confirmButtonColor: '#3b82f6'
-                    });
-                    return false;
-                }
-            }
-
-            return prepareSaveData();
-        }
-
-        // ===== Initialize =====
-        document.addEventListener('DOMContentLoaded', function () {
-            renderExpenseItems();
-            calculateServicesTotal();
-            calculateGrandTotal();
-        });
-
-
-
-        // ===== Cancel Confirmation =====
-        function confirmCancel() {
+           // Validate infestation level
+           if (document.getElementById('<%= ddlInfestationLevel.ClientID %>').value === '') {
             Swal.fire({
-                icon: 'question',
-                title: 'Cancel Report?',
-                text: 'Are you sure you want to cancel? Any unsaved changes will be lost.',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#6b7280',
-                confirmButtonText: 'Yes, Cancel',
-                cancelButtonText: 'No, Stay'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    __doPostBack('<%= btnCancel.UniqueID %>', '');
+                icon: 'warning',
+                title: 'Missing Information',
+                text: 'Please select infestation level',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
         }
-    });
-    return false; // Prevent default postback
-}
-    </script>
+
+        // Validate findings
+        const findings = document.getElementById('<%= txtFindings.ClientID %>').value.trim();
+        if (!findings || findings.length < 20) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Incomplete Information',
+                text: 'Please provide detailed findings (at least 20 characters)',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+
+        // Validate affected areas
+        const affectedAreas = document.querySelectorAll('.checkbox-item input[type="checkbox"]:checked');
+        if (affectedAreas.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Missing Information',
+                text: 'Please select at least one affected area',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+
+        // Validate services
+        const selectedServices = document.querySelectorAll('.service-checkbox:checked');
+        if (selectedServices.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Services Selected',
+                text: 'Please select at least one recommended service',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+
+        // Validate SQM for selected services
+        let sqmValid = true;
+        let invalidServiceName = '';
+        
+        selectedServices.forEach(checkbox => {
+            const serviceId = checkbox.dataset.serviceId;
+            const sqm = parseFloat(document.getElementById('sqm_' + serviceId).value) || 0;
+            if (sqm <= 0) {
+                sqmValid = false;
+                invalidServiceName = checkbox.dataset.serviceName;
+            }
+        });
+
+        if (!sqmValid) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Missing Area Size',
+                text: 'Please enter area size (sqm) for all selected services' + (invalidServiceName ? ': ' + invalidServiceName : ''),
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+
+        // Validate follow-up details if required
+        const rbFollowupYes = document.getElementById('<%= rbFollowupYes.ClientID %>');
+        if (rbFollowupYes && rbFollowupYes.checked) {
+            const followupDate = document.getElementById('<%= txtFollowupDate.ClientID %>').value;
+            const followupReason = document.getElementById('<%= txtFollowupReason.ClientID %>').value.trim();
+
+            if (!followupDate || !followupReason) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Incomplete Follow-up Information',
+                    text: 'Please provide follow-up date and reason',
+                    confirmButtonColor: '#3b82f6'
+                });
+                return false;
+            }
+        }
+
+        // ✅ CRITICAL FIX: Prepare data RIGHT BEFORE returning true
+        console.log('All validations passed. Preparing data...');
+        
+        if (!prepareSaveData()) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to prepare service data. Please try again.',
+                confirmButtonColor: '#ef4444'
+            });
+            return false;
+        }
+
+        console.log('=== VALIDATION COMPLETED SUCCESSFULLY ===');
+        return true; // Allow postback
+    }
+
+    // ===== Cancel Confirmation =====
+    function confirmCancel() {
+        Swal.fire({
+            icon: 'question',
+            title: 'Cancel Report?',
+            text: 'Are you sure you want to cancel? Any unsaved changes will be lost.',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, Cancel',
+            cancelButtonText: 'No, Stay'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                __doPostBack('<%= btnCancel.UniqueID %>', '');
+            }
+        });
+           return false; // Prevent default postback
+       }
+
+       // ===== Initialize =====
+       document.addEventListener('DOMContentLoaded', function () {
+           console.log('Page loaded. Initializing...');
+
+           initializeMiscExpenses();
+           initializeFollowupToggle();
+           renderExpenseItems();
+           calculateServicesTotal();
+           calculateGrandTotal();
+
+           console.log('Initialization complete.');
+       });
+   </script>
 </asp:Content>

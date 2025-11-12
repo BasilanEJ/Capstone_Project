@@ -139,19 +139,40 @@ namespace RRCManagementSystem
         #endregion
 
         #region Review Methods
+        // Add this method to your Default.aspx.cs
 
         /// <summary>
-        /// Load reviews from database
+        /// Get opening HTML for carousel slide (every 3 reviews)
         /// </summary>
-        // Update the LoadReviews method in Default.aspx.cs
+        protected string GetCarouselSlideOpen(int index)
+        {
+            if (index % 3 == 0)
+            {
+                string activeClass = index == 0 ? "active" : "";
+                return $"<div class='carousel-item {activeClass}'><div class='row justify-content-center g-4'>";
+            }
+            return "";
+        }
 
+        /// <summary>
+        /// Get closing HTML for carousel slide (every 3 reviews or at end)
+        /// </summary>
+        protected string GetCarouselSlideClose(int index, int totalCount)
+        {
+            if ((index + 1) % 3 == 0 || (index + 1) == totalCount)
+            {
+                return "</div></div>";
+            }
+            return "";
+        }
+
+        // Update LoadReviews method to also count total reviews
         private void LoadReviews()
         {
             try
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    // Updated query to include ReviewSource
                     string query = @"
                 SELECT ReviewID, CustomerName, ReviewText, Rating, Recommends, 
                        ISNULL(ReviewSource, 'Website') as ReviewSource
@@ -166,6 +187,9 @@ namespace RRCManagementSystem
                         DataTable dt = new DataTable();
                         da.Fill(dt);
 
+                        // Store total count in ViewState or Session
+                        ViewState["TotalReviews"] = dt.Rows.Count;
+
                         rptReviews.DataSource = dt;
                         rptReviews.DataBind();
                     }
@@ -175,6 +199,12 @@ namespace RRCManagementSystem
             {
                 System.Diagnostics.Debug.WriteLine("Review Load Error: " + ex.Message);
             }
+        }
+
+        // Helper to get total count
+        protected int GetTotalReviews()
+        {
+            return ViewState["TotalReviews"] != null ? (int)ViewState["TotalReviews"] : 0;
         }
 
         /// <summary>
