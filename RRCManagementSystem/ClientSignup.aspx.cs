@@ -281,10 +281,19 @@ namespace RRCManagementSystem
                 return false;
             }
 
-            // Validate password
+            // Validate password length
             if (password.Length < 8)
             {
                 ShowSweetAlert("Weak Password", "Password must be at least 8 characters long.", "warning");
+                return false;
+            }
+
+
+            if (!Regex.IsMatch(password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"))
+            {
+                ShowSweetAlert("Weak Password",
+                    "Password must contain at least:<br/>• One uppercase letter (A-Z)<br/>• One lowercase letter (a-z)<br/>• One number (0-9)<br/>• One special character (no spaces)",
+                    "warning");
                 return false;
             }
 

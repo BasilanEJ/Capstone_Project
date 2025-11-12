@@ -1984,88 +1984,93 @@ section {
             <asp:Image ID="imgCO" runat="server" alt="Certifications & Organizations" />
         </div>
     </section>
+<!-- === Review Section with Header and Button === -->
+<section class="reviews-section lazy-section">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2>What Our Customers Say</h2>
+            <p class="text-muted">Read reviews from our satisfied clients</p>
+            <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#reviewModal">
+                <i class="fas fa-star"></i> Write a Review
+            </button>
+        </div>
 
-<!-- === Carousel Section (manual only, no auto slide) === -->
-<section id="reviewsCarousel" class="carousel slide" data-bs-ride="false" data-bs-interval="false">
-    <div class="carousel-inner">
-        <asp:Repeater ID="rptReviews" runat="server">
-            <ItemTemplate>
-                <%# GetCarouselSlideOpen(Container.ItemIndex) %>
+        <!-- === Carousel Section (manual only, no auto slide) === -->
+        <div id="reviewsCarousel" class="carousel slide" data-bs-ride="false" data-bs-interval="false">
+            <div class="carousel-inner">
+                <asp:Repeater ID="rptReviews" runat="server">
+                    <ItemTemplate>
+                        <%# GetCarouselSlideOpen(Container.ItemIndex) %>
 
-                <div class="col-md-4 col-sm-6">
-                    <div class="review-card h-100 mx-auto">
-                        <div class="review-header">
-                            <strong><%# Eval("CustomerName") %></strong>
-                            <%# Eval("ReviewSource") != null && Eval("ReviewSource").ToString() == "Facebook" ? 
-                                "<span class='fb-badge'><i class=\"fab fa-facebook\"></i> Facebook</span>" : "" %>
-                        </div>
-                        <%# Convert.ToBoolean(Eval("Recommends")) ? "<p class='recommends'>❤️ recommends</p>" : "" %>
+                        <div class="col-md-4 col-sm-6">
+                            <div class="review-card h-100 mx-auto">
+                                <div class="review-header">
+                                    <strong><%# Eval("CustomerName") %></strong>
+                                    <%# Eval("ReviewSource") != null && Eval("ReviewSource").ToString() == "Facebook" ? 
+                                        "<span class='fb-badge'><i class=\"fab fa-facebook\"></i> Facebook</span>" : "" %>
+                                </div>
+                                <%# Convert.ToBoolean(Eval("Recommends")) ? "<p class='recommends'>❤️ recommends</p>" : "" %>
 
-                        <p class="review-text" data-fulltext='<%# Eval("ReviewText").ToString().Replace("'", "\\'") %>'>
-                            <%# GetShortReviewText(Eval("ReviewText").ToString()) %>
-                        </p>
+                                <p class="review-text" data-fulltext='<%# Eval("ReviewText").ToString().Replace("'", "\\'") %>'>
+                                    <%# GetShortReviewText(Eval("ReviewText").ToString()) %>
+                                </p>
 
-                        <button type="button" class="btn btn-link p-0 see-more-btn text-primary small" style="display:none;">
-                            See more
-                        </button>
+                                <button type="button" class="btn btn-link p-0 see-more-btn text-primary small" style="display:none;">
+                                    See more
+                                </button>
 
-                        <div class="review-rating mt-2">
-                            <%# GetStarRatingForReview(Convert.ToInt32(Eval("Rating"))) %>
-                        </div>
-                    </div>
-                </div>
-
-                <%# GetCarouselSlideClose(Container.ItemIndex, GetTotalReviews()) %>
-            </ItemTemplate>
-        </asp:Repeater>
-    </div>
-
-    <!-- Carousel Controls -->
-    <button class="carousel-control-prev" type="button" data-bs-target="#reviewsCarousel" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon bg-dark rounded-circle p-3"></span>
-    </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#reviewsCarousel" data-bs-slide="next">
-        <span class="carousel-control-next-icon bg-dark rounded-circle p-3"></span>
-    </button>
-</section>
-
-
-        <!-- === Modal Section === -->
-        <section class="review-modal">
-            <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content shadow-lg">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title" id="reviewModalLabel">Share Your Experience</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body bg-light">
-                            <asp:TextBox ID="txtName" runat="server" CssClass="form-control mb-3" Placeholder="Your name"></asp:TextBox>
-                            <asp:DropDownList ID="ddlRating" runat="server" CssClass="form-select mb-3">
-                                <asp:ListItem Text="Select Rating" Value="" />
-                                <asp:ListItem Text="⭐ (1)" Value="1" />
-                                <asp:ListItem Text="⭐⭐ (2)" Value="2" />
-                                <asp:ListItem Text="⭐⭐⭐ (3)" Value="3" />
-                                <asp:ListItem Text="⭐⭐⭐⭐ (4)" Value="4" />
-                                <asp:ListItem Text="⭐⭐⭐⭐⭐ (5)" Value="5" />
-                            </asp:DropDownList>
-                            <asp:TextBox ID="txtReview" runat="server" CssClass="form-control mb-3"
-                                         TextMode="MultiLine" Rows="4" Placeholder="Write your review..."></asp:TextBox>
-                            <div class="form-check mb-3">
-                                <asp:CheckBox ID="chkRecommend" runat="server" CssClass="form-check-input" />
-                                <label class="form-check-label">I recommend RRC Termite & Pest Control ❤️</label>
+                                <div class="review-rating mt-2">
+                                    <%# GetStarRatingForReview(Convert.ToInt32(Eval("Rating"))) %>
+                                </div>
                             </div>
-                            <asp:Button ID="btnSubmitReview" runat="server" CssClass="btn btn-primary w-100"
-                                        Text="Submit Review" OnClick="btnSubmitReview_Click" />
                         </div>
-                    </div>
-                </div>
-            </div>
-        </section>
 
+                        <%# GetCarouselSlideClose(Container.ItemIndex, GetTotalReviews()) %>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </div>
+
+            <!-- Carousel Controls -->
+            <button class="carousel-control-prev" type="button" data-bs-target="#reviewsCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon bg-dark rounded-circle p-3"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#reviewsCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon bg-dark rounded-circle p-3"></span>
+            </button>
+        </div>
     </div>
 </section>
 
+<!-- === Modal Section === -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="reviewModalLabel">Share Your Experience</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <asp:TextBox ID="txtName" runat="server" CssClass="form-control mb-3" Placeholder="Your name"></asp:TextBox>
+                <asp:DropDownList ID="ddlRating" runat="server" CssClass="form-select mb-3">
+                    <asp:ListItem Text="Select Rating" Value="" />
+                    <asp:ListItem Text="⭐ (1)" Value="1" />
+                    <asp:ListItem Text="⭐⭐ (2)" Value="2" />
+                    <asp:ListItem Text="⭐⭐⭐ (3)" Value="3" />
+                    <asp:ListItem Text="⭐⭐⭐⭐ (4)" Value="4" />
+                    <asp:ListItem Text="⭐⭐⭐⭐⭐ (5)" Value="5" />
+                </asp:DropDownList>
+                <asp:TextBox ID="txtReview" runat="server" CssClass="form-control mb-3"
+                             TextMode="MultiLine" Rows="4" Placeholder="Write your review..."></asp:TextBox>
+                <div class="form-check mb-3">
+                    <asp:CheckBox ID="chkRecommend" runat="server" CssClass="form-check-input" />
+                    <label class="form-check-label">I recommend RRC Termite & Pest Control ❤️</label>
+                </div>
+                <asp:Button ID="btnSubmitReview" runat="server" CssClass="btn btn-primary w-100"
+                            Text="Submit Review" OnClick="btnSubmitReview_Click" />
+            </div>
+        </div>
+    </div>
+</div>
 
 
     <!-- SweetAlert2 -->

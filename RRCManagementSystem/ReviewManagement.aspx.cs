@@ -26,10 +26,10 @@ namespace RRCManagementSystem
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
-                        SELECT ReviewID, CustomerName, ReviewText, Rating, Recommends, IsActive, CreatedDate
-                        FROM [EJBasilan_RRCDB].[EJBasilan_admin].[Reviews]
+                        SELECT ReviewID, CustomerName, ReviewText, Rating, Recommends, IsActive
+                        FROM Reviews
                         WHERE IsActive = 1
-                        ORDER BY DisplayOrder, ReviewID";
+                        ORDER BY ISNULL(DisplayOrder, 999999), ReviewID DESC";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
@@ -64,7 +64,7 @@ namespace RRCManagementSystem
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 using (SqlCommand cmd = new SqlCommand(
-                    "UPDATE [EJBasilan_RRCDB].[EJBasilan_admin].[Reviews] SET IsActive = 0, LastUpdated = GETDATE() WHERE ReviewID = @ReviewID", conn))
+                    "UPDATE Reviews SET IsActive = 0 WHERE ReviewID = @ReviewID", conn))
                 {
                     cmd.Parameters.AddWithValue("@ReviewID", reviewId);
                     conn.Open();
@@ -99,7 +99,6 @@ namespace RRCManagementSystem
                     icon: '{icon}',
                     confirmButtonColor: '#667eea'
                 }});";
-
             ScriptManager.RegisterStartupScript(this, GetType(), "SweetAlert", script, true);
         }
     }

@@ -231,7 +231,6 @@ namespace RRCManagementSystem
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(reviewText) ||
                 !int.TryParse(ddlRating.SelectedValue, out rating))
             {
-                // You can show a SweetAlert or simple message here
                 ScriptManager.RegisterStartupScript(this, GetType(), "alert",
                     "Swal.fire('Incomplete!', 'Please fill out all fields before submitting.', 'warning');", true);
                 return;
@@ -242,9 +241,8 @@ namespace RRCManagementSystem
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     string query = @"
-                INSERT INTO Reviews (CustomerName, ReviewText, Rating, Recommends, IsActive, CreatedAt)
-                VALUES (@Name, @Text, @Rating, @Recommends, 1, GETDATE())";
-                    // Set IsActive = 1 if you want auto-publish
+        INSERT INTO Reviews (CustomerName, ReviewText, Rating, Recommends, IsActive, CreatedAt)
+        VALUES (@Name, @Text, @Rating, @Recommends, 1, GETDATE())";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
@@ -263,8 +261,13 @@ namespace RRCManagementSystem
                 ddlRating.SelectedIndex = 0;
                 chkRecommend.Checked = false;
 
+                // ✅ ADD THIS: Reload reviews to show the new one
+                LoadReviews();
+
+                // ✅ ADD THIS: Close modal and show success message
                 ScriptManager.RegisterStartupScript(this, GetType(), "success",
-                    "Swal.fire('Thank you!', 'Your review has been submitted for approval.', 'success');", true);
+                    @"Swal.fire('Thank you!', 'Your review has been submitted!', 'success');
+              $('#reviewModal').modal('hide');", true);
             }
             catch (Exception ex)
             {
