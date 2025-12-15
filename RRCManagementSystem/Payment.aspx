@@ -8,6 +8,17 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
 <script src="https://www.paypal.com/sdk/js?client-id=AXUxUohfga-5TSDyZurxJ07QF4gdpG4uxPWGSn6rqc8Gt3lQSPiYLJyKDGdqOYjhZgRw9vQMWpqHG1Fj&currency=PHP"></script>
 
 <style>
+    /* Fix: Force PayPal iframe to go behind modals */
+.paypal-overlay-fix iframe,
+.paypal-overlay-fix .zoid-outlet,
+.paypal-overlay-fix .paypal-checkout-sandbox,
+.paypal-overlay-fix .paypal-checkout-overlay {
+    z-index: 0 !important;
+}
+
+/* PayPal default iframe usually uses z-index: 9999999 */
+
+
     /* Card hover effects */
     .stat-card {
         transition: all 0.3s ease;
@@ -486,10 +497,123 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
 
     var currentReceiptUrl = '';
 
-    // ------- Receipt Modal Functions -------
-    function openReceiptModal(file) {
-        if (!file || file === 'No Receipt') {
+    // ✅ SIMPLIFIED: Direct file loading (no DecryptReceipt.aspx)
+    function openReceiptModal(fileUrl) {
+        if (!fileUrl || fileUrl === 'No Receipt') {
             Swal.fire('No Receipt', 'No receipt available for this transaction.', 'info');
+            return false;
+        }
+
+        var modal = document.getElementById('receiptModal');
+        var loader = document.getElementById('receiptLoader');
+        var frame = document.getElementById('receiptFrame');
+        var img = document.getElementById('receiptImage');
+
+        // Lock body scroll on mobile
+        document.body.classList.add('modal-open');
+
+        // Show modal and loader
+        modal.classList.remove('hidden');
+        hidePayPalBehindModal();
+        loader.classList.remove('hidden');
+        frame.classList.add('hidden');
+        img.classList.add('hidden');
+
+        // Store URL for download
+        currentReceiptUrl = fileUrl;
+
+        // Detect file type from extension
+        var ext = fileUrl.toLowerCase().split('.').pop().split('?')[0]; // Handle query strings
+
+        if (ext === 'pdf') {
+            // Load PDF in iframe
+            frame.src = fileUrl;
+
+            frame.onload = function () {
+                loader.classList.add('hidden');
+                frame.classList.remove('hidden');
+            };
+
+            // Fallback timeout for PDFs that might not trigger onload
+            setTimeout(function () {
+                if (!frame.classList.contains('hidden')) return;
+                loader.classList.add('hidden');
+                frame.classList.remove('hidden');
+            }, 3000);
+        }
+        else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) > -1) {
+            // Load image
+            img.src = fileUrl;
+
+            img.onload = function () {
+                loader.classList.add('hidden');
+                img.classList.remove('hidden');
+            };
+
+            img.onerror = function () {
+                loader.classList.add('hidden');
+                Swal.fire('Error', 'Failed to load receipt image.', 'error');
+                closeReceiptModal();
+            };
+        }
+        else {
+            // Unsupported format - open in new tab
+            loader.classList.add('hidden');
+            window.open(fileUrl, '_blank');
+            closeReceiptModal();
+        }
+
+        return false;
+    }
+
+    function closeReceiptModal() {
+        var modal = document.getElementById('receiptModal');
+        modal.classList.add('hidden');
+        showPayPalBack();
+
+
+        // Unlock body scroll
+        document.body.classList.remove('modal-open');
+
+        // Clear sources to free memory
+        document.getElementById('receiptFrame').src = '';
+        document.getElementById('receiptImage').src = '';
+        currentReceiptUrl = '';
+    }
+
+    function downloadReceipt() {
+        if (currentReceiptUrl) {
+            // Create temporary link and trigger download
+            var link = document.createElement('a');
+            link.href = currentReceiptUrl;
+            link.download = currentReceiptUrl.split('/').pop(); // Get filename
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            Swal.fire('Error', 'No receipt available to download.', 'error');
+        }
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function (e) {
+        var modal = document.getElementById('receiptModal');
+        if (modal && e.target === modal) {
+            closeReceiptModal();
+        }
+    });
+
+    // Close modal on ESC key press
+    document.addEventListener('keydown', function (e) {
+        var modal = document.getElementById('receiptModal');
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            closeReceiptModal();
+        }
+    });
+    // ✅ NEW FUNCTION: Open receipt modal using TransactionID
+    function openReceiptModalByTx(txId) {
+        if (!txId || txId <= 0) {
+            Swal.fire('Error', 'Invalid transaction ID.', 'error');
             return false;
         }
 
@@ -507,66 +631,25 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
         frame.classList.add('hidden');
         img.classList.add('hidden');
 
-        // Build URL
-        currentReceiptUrl = 'DecryptReceipt.aspx?file=' + encodeURIComponent(file);
+        // ✅ Build URL with TransactionID (not filename)
+        currentReceiptUrl = 'DecryptReceipt.aspx?tx=' + txId;
 
-        // Detect file type
-        var ext = file.toLowerCase().split('.').pop();
+        // Load PDF in iframe (receipts are always PDFs from PayMongo)
+        frame.src = currentReceiptUrl;
 
-        if (ext === 'pdf') {
-            // Load PDF in iframe
-            frame.src = currentReceiptUrl;
-            frame.onload = function () {
-                loader.classList.add('hidden');
-                frame.classList.remove('hidden');
-            };
-            // Fallback timeout for PDFs that might not trigger onload
-            setTimeout(function () {
-                if (!frame.classList.contains('hidden')) return;
-                loader.classList.add('hidden');
-                frame.classList.remove('hidden');
-            }, 3000);
-        } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) > -1) {
-            // Load image
-            img.src = currentReceiptUrl;
-            img.onload = function () {
-                loader.classList.add('hidden');
-                img.classList.remove('hidden');
-            };
-            img.onerror = function () {
-                loader.classList.add('hidden');
-                Swal.fire('Error', 'Failed to load receipt image.', 'error');
-                closeReceiptModal();
-            };
-        } else {
-            // Unsupported format - open in new tab
+        frame.onload = function () {
             loader.classList.add('hidden');
-            window.open(currentReceiptUrl, '_blank');
-            closeReceiptModal();
-        }
+            frame.classList.remove('hidden');
+        };
+
+        // Fallback timeout for PDFs that might not trigger onload
+        setTimeout(function () {
+            if (!frame.classList.contains('hidden')) return;
+            loader.classList.add('hidden');
+            frame.classList.remove('hidden');
+        }, 3000);
 
         return false;
-    }
-
-    function closeReceiptModal() {
-        var modal = document.getElementById('receiptModal');
-        modal.classList.add('hidden');
-
-        // Unlock body scroll
-        document.body.classList.remove('modal-open');
-
-        // Clear sources
-        document.getElementById('receiptFrame').src = '';
-        document.getElementById('receiptImage').src = '';
-        currentReceiptUrl = '';
-    }
-
-    function downloadReceipt() {
-        if (currentReceiptUrl) {
-            window.open(currentReceiptUrl, '_blank');
-        } else {
-            Swal.fire('Error', 'No receipt available to download.', 'error');
-        }
     }
 
     // ✅ CONSOLIDATED DOMContentLoaded - Only ONE listener
@@ -574,7 +657,7 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
         hookUpdatePanelVisuals();
         updatePayMongoButton();
         renderPayPalButtons();
-
+        document.body.classList.remove('paypal-overlay-fix');
         // Update minimum amount display
         var minReq = document.getElementById('<%= hfMinRequired.ClientID %>').value || '0';
         var minDisplay = document.getElementById('minRequiredAmount');
@@ -597,6 +680,16 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
             }
         });
     });
+
+    function hidePayPalBehindModal() {
+        document.body.classList.add('paypal-overlay-fix');
+    }
+
+    function showPayPalBack() {
+        document.body.classList.remove('paypal-overlay-fix');
+    }
+
+
 </script>
 
 
@@ -843,47 +936,55 @@ AutoEventWireup="true" CodeBehind="Payment.aspx.cs" Inherits="RRCManagementSyste
         </h3>
         
         <div class="overflow-x-auto rounded-lg border border-gray-200">
-            <asp:GridView ID="gvPaymentHistory" runat="server"
-                AutoGenerateColumns="False"
-                CssClass="payment-grid w-full text-sm"
-                GridLines="None"
-                OnRowDataBound="gvPaymentHistory_RowDataBound">
-                <HeaderStyle CssClass="bg-gradient-to-r from-blue-600 to-blue-700" />
-                <RowStyle CssClass="bg-white hover:bg-gray-50 transition-colors" />
-                <AlternatingRowStyle CssClass="bg-gray-50 hover:bg-gray-100 transition-colors" />
-                <Columns>
-                    <asp:BoundField DataField="TransactionDate" HeaderText="Date" DataFormatString="{0:MMM dd, yyyy}" NullDisplayText="—" 
-                        HeaderStyle-CssClass="px-6 py-4 text-left text-white" 
-                        ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-gray-800" />
-                    
-                    <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="₱{0:N2}" NullDisplayText="₱0.00" 
-                        HeaderStyle-CssClass="px-6 py-4 text-left text-white" 
-                        ItemStyle-CssClass="px-6 py-4 whitespace-nowrap font-semibold text-gray-900" />
-                    
-                    <asp:BoundField DataField="PaymentMethod" HeaderText="Method" NullDisplayText="—" 
-                        HeaderStyle-CssClass="px-6 py-4 text-left text-white" 
-                        ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-gray-800" />
-                    
-                    <asp:BoundField DataField="Remarks" HeaderText="Remarks" NullDisplayText="—" 
-                        HeaderStyle-CssClass="px-6 py-4 text-left text-white" 
-                        ItemStyle-CssClass="px-6 py-4 text-gray-700" />
-                    
-                    <asp:TemplateField HeaderText="Receipt">
-                        <HeaderStyle CssClass="px-6 py-4 text-left text-white" />
-                        <ItemStyle CssClass="px-6 py-4 whitespace-nowrap" />
-                        <ItemTemplate>
-                            <%# GetReceiptLink(Eval("Receipt")) %>
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-                <EmptyDataTemplate>
-                    <div class="p-8 text-center">
-                        <i class="fas fa-inbox text-4xl text-gray-300 mb-3"></i>
-                        <p class="text-gray-500 font-medium">No payment records found</p>
-                        <p class="text-gray-400 text-sm mt-1">Your payment history will appear here</p>
-                    </div>
-                </EmptyDataTemplate>
-            </asp:GridView>
+          <asp:GridView ID="gvPaymentHistory" runat="server"
+    AutoGenerateColumns="False"
+    CssClass="payment-grid w-full text-sm"
+    GridLines="None"
+    OnRowDataBound="gvPaymentHistory_RowDataBound">
+    <HeaderStyle CssClass="bg-gradient-to-r from-blue-600 to-blue-700" />
+    <RowStyle CssClass="bg-white hover:bg-gray-50 transition-colors" />
+    <AlternatingRowStyle CssClass="bg-gray-50 hover:bg-gray-100 transition-colors" />
+    <Columns>
+        <asp:TemplateField HeaderText="Transaction ID">
+            <HeaderStyle CssClass="px-6 py-4 text-left text-white" />
+            <ItemStyle CssClass="px-6 py-4 whitespace-nowrap font-mono text-gray-800" />
+            <ItemTemplate>
+                <%# FormatTransactionID(Eval("TransactionID")) %>
+            </ItemTemplate>
+        </asp:TemplateField>
+
+        <asp:BoundField DataField="TransactionDate" HeaderText="Date" DataFormatString="{0:MMM dd, yyyy}" NullDisplayText="—" 
+            HeaderStyle-CssClass="px-6 py-4 text-left text-white" 
+            ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-gray-800" />
+        
+        <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="₱{0:N2}" NullDisplayText="₱0.00" 
+            HeaderStyle-CssClass="px-6 py-4 text-left text-white" 
+            ItemStyle-CssClass="px-6 py-4 whitespace-nowrap font-semibold text-gray-900" />
+        
+        <asp:BoundField DataField="PaymentMethod" HeaderText="Method" NullDisplayText="—" 
+            HeaderStyle-CssClass="px-6 py-4 text-left text-white" 
+            ItemStyle-CssClass="px-6 py-4 whitespace-nowrap text-gray-800" />
+        
+        <asp:BoundField DataField="Remarks" HeaderText="Remarks" NullDisplayText="—" 
+            HeaderStyle-CssClass="px-6 py-4 text-left text-white" 
+            ItemStyle-CssClass="px-6 py-4 text-gray-700" />
+        
+        <asp:TemplateField HeaderText="Receipt">
+            <HeaderStyle CssClass="px-6 py-4 text-left text-white" />
+            <ItemStyle CssClass="px-6 py-4 whitespace-nowrap" />
+            <ItemTemplate>
+                <%# GetReceiptLink(Eval("Receipt"), Eval("TransactionID")) %>
+            </ItemTemplate>
+        </asp:TemplateField>
+    </Columns>
+    <EmptyDataTemplate>
+        <div class="p-8 text-center">
+            <i class="fas fa-inbox text-4xl text-gray-300 mb-3"></i>
+            <p class="text-gray-500 font-medium">No payment records found</p>
+            <p class="text-gray-400 text-sm mt-1">Your payment history will appear here</p>
+        </div>
+    </EmptyDataTemplate>
+</asp:GridView>
         </div>
     </div>
 </div>

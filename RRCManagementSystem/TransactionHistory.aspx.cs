@@ -124,16 +124,16 @@ namespace RRCManagementSystem
             }
         }
 
+        // ✅ UPDATED: Direct file path (no DecryptReceipt.aspx)
         protected string GetReceiptLink(object receiptObj)
         {
-            var v = (receiptObj == null || receiptObj == DBNull.Value) ? "" : receiptObj.ToString();
-            if (string.IsNullOrWhiteSpace(v)) return "";
+            var receiptValue = (receiptObj == null || receiptObj == DBNull.Value) ? "" : receiptObj.ToString();
+            if (string.IsNullOrWhiteSpace(receiptValue)) return "";
 
-            var file = System.IO.Path.GetFileName(v);
-            var url = "DecryptReceipt.aspx?file=" + Server.UrlEncode(file);
+            // ✅ DIRECT PATH - Same as Payment.aspx
+            string receiptUrl = ResolveUrl($"~/Receipts/{receiptValue}");
 
-            // Instead of opening in new tab, call JavaScript function to show modal
-            return $"<a class='pill pill-view' href='#' onclick=\"viewReceipt('{url}', '{file}'); return false;\">View Receipt</a>";
+            return $"<a class='pill pill-view' href='#' onclick=\"viewReceipt('{receiptUrl}', '{receiptValue}'); return false;\">View Receipt</a>";
         }
 
         #region Permissions

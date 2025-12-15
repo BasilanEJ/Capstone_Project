@@ -19,7 +19,7 @@
     .message-label { text-align:center; color:#ef4444; font-weight:500; margin-bottom:15px; }
     .grid-container { width:95%; margin:0 auto 50px auto; background:#fff; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.05); overflow-x:auto; }
     .table { width:100%; border-collapse:collapse; }
-    .table th { background:#1e3a8a; color:#fff; padding:12px; text-align:center; font-weight:600; }
+    .table th { background:#1e3a8a; color:#fff; padding:12px; text-align:center; font-weight:600; font-size:13px; }
     .table td { padding:10px; text-align:center; font-size:14px; color:#374151; border:1px solid #e5e7eb; }
     .table tr:nth-child(even){ background:#f9fafb; }
     .table tr:hover{ background:#f1f5f9; }
@@ -228,10 +228,11 @@
                   EmptyDataText="No transaction records found."
                   OnRowDataBound="gvTransactions_RowDataBound">
         <Columns>
-            <asp:BoundField DataField="TransactionID" HeaderText="Transaction ID" />
+            <asp:BoundField DataField="FormattedTransactionID" HeaderText="Transaction ID" />
             <asp:BoundField DataField="SaleID" HeaderText="Sale ID" />
             <asp:BoundField DataField="Amount" HeaderText="Amount" DataFormatString="₱{0:N2}" HtmlEncode="false" />
             <asp:BoundField DataField="PaymentMethod" HeaderText="Payment Method" />
+            <asp:BoundField DataField="Reference" HeaderText="Reference Number" />
             <asp:BoundField DataField="TransactionDate" HeaderText="Transaction Date" DataFormatString="{0:yyyy-MM-dd HH:mm}" />
 
             <asp:TemplateField HeaderText="Receipt">

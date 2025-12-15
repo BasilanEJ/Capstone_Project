@@ -6,7 +6,6 @@ using System.Globalization;
 using System.IO;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using RRCManagementSystem.Helpers; // AESHelper
 
 namespace RRCManagementSystem
 {
@@ -22,6 +21,23 @@ namespace RRCManagementSystem
                 return;
             }
 
+            string role = Session["Role"].ToString();
+            if (role == "SuperAdmin" || role == "Inspector")
+            {
+                Response.Redirect("~/Login.aspx");
+                return;
+            }
+
+            int userId = Convert.ToInt32(Session["UserID"]);
+
+            // Check CanAdd permission for Sales&Transaction module
+            if (!HasAddPermission(userId, "Sales&Transaction"))
+            {
+                ShowError("You do not have permission to add receipts.");
+                btnSaveReal.Enabled = false;
+                return;
+            }
+
             if (!IsPostBack)
             {
                 if (int.TryParse(Request.QueryString["tx"], out int txId))
@@ -32,8 +48,30 @@ namespace RRCManagementSystem
                 else
                 {
                     ShowError("Invalid transaction.");
-                    btnSave.Enabled = false;
+                    btnSaveReal.Enabled = false;
                 }
+            }
+        }
+
+        private bool HasAddPermission(int userId, string moduleName)
+        {
+            try
+            {
+                using (var con = new SqlConnection(cs))
+                using (var cmd = new SqlCommand("dbo.spAdminPermission_CanAdd", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+                    cmd.Parameters.Add("@ModuleName", SqlDbType.NVarChar, 100).Value = moduleName;
+
+                    con.Open();
+                    object result = cmd.ExecuteScalar();
+                    return result != null && Convert.ToInt32(result) == 1;
+                }
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -51,7 +89,7 @@ namespace RRCManagementSystem
                     if (!r.Read())
                     {
                         ShowError("Transaction not found.");
-                        btnSave.Enabled = false;
+                        btnSaveReal.Enabled = false;
                         return;
                     }
 
@@ -67,24 +105,22 @@ namespace RRCManagementSystem
                     string existing = r["Receipt"] as string;
                     if (!string.IsNullOrWhiteSpace(existing))
                     {
-                        var link = new HyperLink
+                        // ✅ Use direct link (no DecryptReceipt.aspx)
+                        string receiptUrl = ResolveUrl($"~/Receipts/{existing}");
+
+                        var link = new Literal
                         {
-                            Text = "View Receipt",
-                            CssClass = "pill pill-view",
-                            NavigateUrl = "ReceiptViewer.aspx?tx=" + txId,
-                            Target = "_blank"
+                            Text = $"<a href='#' class='pill pill-view' onclick=\"viewReceipt('{receiptUrl}', '{existing}'); return false;\">View Current Receipt</a>"
                         };
                         phReceipt.Controls.Add(link);
                     }
                     else
                     {
-                        var add = new HyperLink
+                        var noReceipt = new Literal
                         {
-                            Text = "Add Receipt",
-                            CssClass = "pill pill-add",
-                            NavigateUrl = "#"
+                            Text = "<span class='pill pill-add'>No Receipt Yet</span>"
                         };
-                        phReceipt.Controls.Add(add);
+                        phReceipt.Controls.Add(noReceipt);
                     }
                 }
             }
@@ -92,11 +128,14 @@ namespace RRCManagementSystem
 
         protected void btnSave_Click(object sender, EventArgs e)
         {
-            // Check if user confirmed via SweetAlert
+            // ✅ CRITICAL: Check if user confirmed via SweetAlert
             if (hfConfirmed.Value != "true")
             {
-                return; // User hasn't confirmed yet
+                return; // User didn't confirm, stop processing
             }
+
+            // Reset confirmation flag
+            hfConfirmed.Value = "false";
 
             if (string.IsNullOrEmpty(hfTransactionID.Value))
             {
@@ -123,31 +162,27 @@ namespace RRCManagementSystem
                     return;
                 }
 
-                string fileName = $"receipt_tx{txId}_{DateTime.UtcNow.Ticks}{ext}";
+                // ✅ Generate unique filename (matching webhook pattern)
+                string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+                string random = Guid.NewGuid().ToString("N").Substring(0, 8);
+                string fileName = $"Receipt_tx{txId}_Manual_{timestamp}_{random}{ext}";
                 string fullPath = Path.Combine(folder, fileName);
 
-                // Encrypt before saving
-                using (var ms = new MemoryStream())
-                {
-                    fuReceipt.PostedFile.InputStream.CopyTo(ms);
-                    byte[] original = ms.ToArray();
-                    byte[] encrypted = AESHelper.Encrypt(original);
-                    File.WriteAllBytes(fullPath, encrypted);
-                }
+                // ✅ Save as PLAIN file (no encryption)
+                fuReceipt.SaveAs(fullPath);
 
-                string dbPath = "~/Receipts/" + fileName;
-
+                // ✅ Store PLAIN filename in database
                 using (var con = new SqlConnection(cs))
                 using (var cmd = new SqlCommand("dbo.usp_Transactions_SetReceipt", con))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add("@TransactionID", SqlDbType.Int).Value = txId;
-                    cmd.Parameters.Add("@Receipt", SqlDbType.NVarChar, 255).Value = dbPath;
+                    cmd.Parameters.Add("@Receipt", SqlDbType.NVarChar, 500).Value = fileName;  // ✅ Plain filename only
                     con.Open();
                     cmd.ExecuteNonQuery();
                 }
 
-                // Register success script with SweetAlert
+                // ✅ Show success and redirect
                 string script = @"
                     Swal.fire({
                         icon: 'success',
@@ -172,6 +207,7 @@ namespace RRCManagementSystem
             lblMessage.Text = "✅ " + msg;
             lblMessage.CssClass = "message-label msg-ok";
         }
+
         private void ShowError(string msg)
         {
             lblMessage.Text = "❌ " + msg;

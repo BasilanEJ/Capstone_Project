@@ -130,6 +130,15 @@ namespace RRCManagementSystem
             return DateTime.UtcNow.Date; // fallback if no date
         }
 
+        // ✅ Format Transaction ID with D6 (RRC-TX-000123)
+        protected string FormatTransactionID(object transactionIdObj)
+        {
+            if (transactionIdObj == null || transactionIdObj == DBNull.Value)
+                return "—";
+
+            int txId = Convert.ToInt32(transactionIdObj);
+            return $"RRC-TX-{txId:D6}";
+        }
 
         private List<DateTime> GetSuccessfulTransactionDatesBySale(int saleId)
         {
@@ -669,20 +678,23 @@ namespace RRCManagementSystem
         }
 
         // Helper used by the Receipt TemplateField
-        protected string GetReceiptLink(object receiptObj)
+        // Helper used by the Receipt TemplateField
+        protected string GetReceiptLink(object receiptObj, object transactionIdObj)
         {
-            var v = (receiptObj == null || receiptObj == DBNull.Value) ? "" : receiptObj.ToString();
-            if (string.IsNullOrWhiteSpace(v))
+            var receiptValue = (receiptObj == null || receiptObj == DBNull.Value) ? "" : receiptObj.ToString();
+
+            if (string.IsNullOrWhiteSpace(receiptValue))
                 return "<span class='text-gray-400 text-sm'>No Receipt</span>";
 
-            var file = System.IO.Path.GetFileName(v);
-            var encodedFile = HttpUtility.HtmlAttributeEncode(file);
+            // ✅ DIRECT LINK - No decryption needed!
+            string receiptUrl = $"~/Receipts/{receiptValue}";
 
-            return $@"<button onclick=""return openReceiptModal('{encodedFile}');"" 
+            return $@"<button type='button' 
+              onclick='openReceiptModal(""{ResolveUrl(receiptUrl)}""); return false;' 
               class='bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2'>
-                <i class='fas fa-eye'></i>
-                View
-              </button>";
+        <i class='fas fa-eye'></i>
+        View
+      </button>";
         }
 
         protected void gvPaymentHistory_RowDataBound(object sender, GridViewRowEventArgs e)

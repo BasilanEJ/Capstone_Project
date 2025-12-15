@@ -1,7 +1,8 @@
-﻿<%@ Page Language="C#" AutoEventWireup="false"
+﻿<%@ Page Language="C#" AutoEventWireup="true"
     CodeBehind="DecryptReceipt.aspx.cs"
     Inherits="RRCManagementSystem.DecryptReceipt"
-    OnLoad="DecryptReceipt_Load" %>
+    EnableViewState="false" 
+    EnableSessionState="ReadOnly" %>
 
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">

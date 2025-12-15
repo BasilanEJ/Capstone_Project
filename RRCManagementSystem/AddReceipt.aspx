@@ -44,7 +44,7 @@
   <div class="inner">
 
     <asp:HiddenField ID="hfTransactionID" runat="server" />
-    <asp:HiddenField ID="hfConfirmed" runat="server" Value="false" />
+    <asp:HiddenField ID="hfConfirmed" runat="server" Value="false" ClientIDMode="Static" />
 
     <div class="form-grid">
       <div class="form-group">
@@ -76,22 +76,64 @@
 
     <div class="form-group" style="margin-top:8px;">
       <span class="label">Upload Receipt (JPG/PNG/PDF)</span>
-      <asp:FileUpload ID="fuReceipt" runat="server" CssClass="control" />
-      <div class="hint">Files are stored encrypted on disk. Only the relative path is saved in the database.</div>
+      <asp:FileUpload ID="fuReceipt" runat="server" CssClass="control" ClientIDMode="Static" />
+      <div class="hint">Files are stored securely. Only the filename is saved in the database.</div>
     </div>
 
     <div class="btn-row">
-      <asp:Button ID="btnSave" runat="server" Text="Save Receipt" CssClass="btn btn-primary" OnClick="btnSave_Click" OnClientClick="return confirmUpload();" />
+      <!-- Hidden button that actually submits -->
+      <asp:Button ID="btnSaveReal" runat="server" Text="Save Receipt" CssClass="btn btn-primary" 
+                  OnClick="btnSave_Click" Style="display:none;" ClientIDMode="Static" />
+      
+      <!-- Visible button that triggers confirmation -->
+      <button type="button" class="btn btn-primary" onclick="confirmUpload()">Save Receipt</button>
+      
       <a class="btn btn-light" href="TransactionHistory.aspx">Back to Transaction History</a>
     </div>
   </div>
 </div>
 
 <script>
+    // ✅ Function to view existing receipt in modal
+    function viewReceipt(url, fileName) {
+        const ext = fileName.toLowerCase().split('.').pop();
+        const isPdf = ext === 'pdf';
+        const isMobile = window.innerWidth <= 768;
+
+        let htmlContent = '';
+
+        if (isPdf) {
+            htmlContent = `
+                <div style="width:100%;max-height:75vh;overflow:auto;display:flex;justify-content:center;background:#f3f4f6;border-radius:8px;padding:15px;">
+                    <embed src="${url}" type="application/pdf" style="width:100%;height:70vh;min-height:500px;border:none;border-radius:4px;" />
+                </div>
+            `;
+        } else {
+            htmlContent = `
+                <div style="width:100%;max-height:75vh;overflow:auto;display:flex;justify-content:center;background:#f3f4f6;border-radius:8px;padding:15px;">
+                    <img src="${url}" alt="Receipt" loading="lazy" style="max-width:100%;height:auto;max-height:70vh;object-fit:contain;box-shadow:0 4px 6px rgba(0,0,0,0.1);border-radius:4px;" />
+                </div>
+            `;
+        }
+
+        Swal.fire({
+            title: '📄 Current Receipt',
+            html: htmlContent,
+            width: isMobile ? '98%' : '90%',
+            showCloseButton: true,
+            showConfirmButton: true,
+            confirmButtonText: isMobile ? 'Close' : 'Close Receipt',
+            confirmButtonColor: '#2563eb'
+        });
+
+        return false;
+    }
+
+    // ✅ Function to confirm upload
     function confirmUpload() {
-        var fileUpload = document.getElementById('<%= fuReceipt.ClientID %>');
-        var confirmed = document.getElementById('<%= hfConfirmed.ClientID %>');
-        
+        var fileUpload = document.getElementById('fuReceipt');
+
+        // Check if file selected
         if (!fileUpload.files || fileUpload.files.length === 0) {
             Swal.fire({
                 icon: 'warning',
@@ -101,15 +143,28 @@
             });
             return false;
         }
-        
-        if (confirmed.value === 'true') {
-            confirmed.value = 'false';
-            return true;
+
+        // Validate file type
+        var fileName = fileUpload.files[0].name.toLowerCase();
+        var validExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
+        var isValid = validExtensions.some(function (ext) {
+            return fileName.endsWith(ext);
+        });
+
+        if (!isValid) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid File Type',
+                text: 'Only JPG, PNG, or PDF files are allowed.',
+                confirmButtonColor: '#2563eb'
+            });
+            return false;
         }
-        
+
+        // Show confirmation dialog
         Swal.fire({
             title: 'Upload Receipt?',
-            text: 'Do you want to upload this receipt to the client?',
+            text: 'Do you want to upload this receipt?',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#2563eb',
@@ -118,11 +173,12 @@
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
-                confirmed.value = 'true';
-                document.getElementById('<%= btnSave.ClientID %>').click();
+                // Set confirmation flag and trigger postback
+                document.getElementById('hfConfirmed').value = 'true';
+                document.getElementById('btnSaveReal').click();
             }
         });
-        
+
         return false;
     }
 </script>

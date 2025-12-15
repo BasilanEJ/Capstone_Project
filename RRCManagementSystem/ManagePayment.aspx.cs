@@ -6,14 +6,14 @@ using System.Globalization;
 using System.IO;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using RRCManagementSystem.Helpers; // AESHelper, BlockchainLogger
+using RRCManagementSystem.Helpers; // BlockchainLogger
 
 namespace RRCManagementSystem
 {
     public partial class ManagePayment : Page
     {
         private readonly string cs = ConfigurationManager.ConnectionStrings["RRCDB"].ConnectionString;
-        private static string lastGeneratedEncryptedPDF = "";
+        private static string lastGeneratedPDF = "";
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -39,9 +39,9 @@ namespace RRCManagementSystem
             {
                 lblMessage.Text = "❌ You do not have permission to manage payment.";
                 lblMessage.CssClass = "message error";
-                pnlChosen.Visible = false; // hide the payment panel
+                pnlChosen.Visible = false;
                 pnlResults.Visible = false;
-                btnSaveReal.Enabled = false; // disable save button
+                btnSaveReal.Enabled = false;
                 btnPrintReceipt.Visible = false;
                 btnDownloadReceipt.Visible = false;
                 return;
@@ -78,7 +78,6 @@ namespace RRCManagementSystem
             }
         }
 
-
         // -------- Search / pick client ----------
         protected void btnSearchClient_Click(object sender, EventArgs e)
         {
@@ -97,8 +96,6 @@ namespace RRCManagementSystem
             pnlChosen.Visible = false;
             hfClientID.Value = "";
             txtRemainingBalance.Text = "0.00";
-           // txtProjectedBalance.Text = "0.00";
-           // txtLatestBooking.Text = "-";
             hfBookingId.Value = "";
         }
 
@@ -109,16 +106,13 @@ namespace RRCManagementSystem
             int clientId = int.Parse(e.CommandArgument.ToString());
             hfClientID.Value = clientId.ToString(CultureInfo.InvariantCulture);
 
-            // show chosen label
             var (display, bookingId, remaining) = LoadClientSummary(clientId);
             lblChosen.Text = display;
             pnlChosen.Visible = true;
             pnlResults.Visible = false;
 
             hfBookingId.Value = bookingId > 0 ? bookingId.ToString() : "";
-           // txtLatestBooking.Text = bookingId > 0 ? $"Booking #{bookingId}" : "—";
             txtRemainingBalance.Text = remaining.ToString("N2", new CultureInfo("en-PH"));
-           // txtProjectedBalance.Text = remaining.ToString("N2", new CultureInfo("en-PH"));
         }
 
         private DataTable SearchClients(string query)
@@ -157,10 +151,8 @@ namespace RRCManagementSystem
             return dt;
         }
 
-
         private (string display, int bookingId, decimal remaining) LoadClientSummary(int clientId)
         {
-            // chosen display name
             string display = "";
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand(@"SELECT TOP 1 
@@ -174,10 +166,8 @@ namespace RRCManagementSystem
                 display = (cmd.ExecuteScalar() ?? "").ToString();
             }
 
-            // latest payable booking
             var (bookingId, _) = GetLatestPayableBooking(clientId);
 
-            // ensure sale & remaining
             decimal remaining = 0m;
             if (bookingId > 0)
             {
@@ -188,7 +178,6 @@ namespace RRCManagementSystem
             return (display, bookingId, remaining);
         }
 
-        // -------- Enable/disable Payment 2 UI ----------
         protected void chkUseSecond_CheckedChanged(object sender, EventArgs e)
         {
             bool on = chkUseSecond.Checked;
@@ -259,7 +248,6 @@ namespace RRCManagementSystem
                 }
             }
 
-            // remaining & booking
             var (bookingId, _) = GetLatestPayableBooking(clientId);
             if (bookingId <= 0)
             {
@@ -281,8 +269,8 @@ namespace RRCManagementSystem
             {
                 string performedBy = Session["AdminName"]?.ToString() ?? "Admin";
 
-                // --- Payment 1 ---
-                string receipt1 = SaveEncryptedReceiptFile(bookingId, fuReceipt1, "p1");
+                // ✅ Payment 1 - PLAIN FILE (no encryption)
+                string receipt1 = SavePlainReceiptFile(bookingId, fuReceipt1, "Manual");
                 int tx1 = InsertTransaction(
                     saleId, amount1, ddlMethod1.SelectedValue, "Completed",
                     (txtRemarks1.Text ?? "").Trim(), MakeManualReference(bookingId), receipt1);
@@ -300,13 +288,13 @@ namespace RRCManagementSystem
                     PaidAtUtc = DateTime.UtcNow
                 });
 
-                // generate a printable for the last one (tx2 will overwrite path if present)
-                lastGeneratedEncryptedPDF = GenerateReceiptPDF(tx1, clientId, bookingId, amount1, ddlMethod1.SelectedValue, txtRemarks1.Text ?? "", performedBy);
+                // Generate PDF receipt
+                lastGeneratedPDF = GenerateReceiptPDF(tx1, clientId, bookingId, amount1, ddlMethod1.SelectedValue, txtRemarks1.Text ?? "", performedBy);
 
-                // --- Payment 2 (optional) ---
+                // ✅ Payment 2 (optional) - PLAIN FILE (no encryption)
                 if (use2)
                 {
-                    string receipt2 = SaveEncryptedReceiptFile(bookingId, fuReceipt2, "p2");
+                    string receipt2 = SavePlainReceiptFile(bookingId, fuReceipt2, "Manual");
                     int tx2 = InsertTransaction(
                         saleId, amount2, ddlMethod2.SelectedValue, "Completed",
                         (txtRemarks2.Text ?? "").Trim(), MakeManualReference(bookingId), receipt2);
@@ -324,21 +312,17 @@ namespace RRCManagementSystem
                         PaidAtUtc = DateTime.UtcNow
                     });
 
-                    lastGeneratedEncryptedPDF = GenerateReceiptPDF(tx2, clientId, bookingId, amount2, ddlMethod2.SelectedValue, txtRemarks2.Text ?? "", performedBy);
+                    lastGeneratedPDF = GenerateReceiptPDF(tx2, clientId, bookingId, amount2, ddlMethod2.SelectedValue, txtRemarks2.Text ?? "", performedBy);
                 }
 
-                // recompute balances
                 decimal newRemaining = GetRemainingBySale(saleId);
                 txtRemainingBalance.Text = newRemaining.ToString("N2", new CultureInfo("en-PH"));
-               // txtProjectedBalance.Text = newRemaining.ToString("N2", new CultureInfo("en-PH"));
-                //txtLatestBooking.Text = $"Booking #{bookingId}";
 
                 lblMessage.Text = "✅ Payment(s) recorded and balance updated.";
                 lblMessage.CssClass = "message success";
                 btnPrintReceipt.Visible = true;
                 btnDownloadReceipt.Visible = true;
 
-                // clear amounts (keep client locked)
                 txtAmount1.Text = "";
                 txtRemarks1.Text = "";
                 txtAmount2.Text = "";
@@ -419,7 +403,7 @@ namespace RRCManagementSystem
         private int InsertTransaction(int saleId, decimal amount, string method, string status, string remarks, string reference, string receiptPath)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("dbo.usp_Transactions_Insert", con))
+            using (var cmd = new SqlCommand("dbo.usp_Transactions_InsertWithReceipt", con))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@SaleID", SqlDbType.Int).Value = saleId;
@@ -431,7 +415,7 @@ namespace RRCManagementSystem
                 cmd.Parameters.Add("@Status", SqlDbType.NVarChar, 50).Value = status ?? "Completed";
                 cmd.Parameters.Add("@Remarks", SqlDbType.NVarChar, 255).Value = (remarks ?? "").Trim();
                 cmd.Parameters.Add("@Reference", SqlDbType.NVarChar, 200).Value = (object)reference ?? DBNull.Value;
-                cmd.Parameters.Add("@Receipt", SqlDbType.NVarChar, 255).Value =
+                cmd.Parameters.Add("@Receipt", SqlDbType.NVarChar, 500).Value =
                     string.IsNullOrWhiteSpace(receiptPath) ? (object)DBNull.Value : receiptPath;
 
                 var pTx = cmd.Parameters.Add("@TransactionID", SqlDbType.Int);
@@ -443,22 +427,23 @@ namespace RRCManagementSystem
             }
         }
 
-        private string SaveEncryptedReceiptFile(int bookingId, FileUpload fu, string suffix)
+        // ✅ NEW METHOD: Save PLAIN receipt file (no encryption)
+        private string SavePlainReceiptFile(int bookingId, FileUpload fu, string method)
         {
             string folder = Server.MapPath("~/Receipts/");
             Directory.CreateDirectory(folder);
+
+            string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            string random = Guid.NewGuid().ToString("N").Substring(0, 8);
             string ext = Path.GetExtension(fu.FileName) ?? ".jpg";
-            string fileName = $"receipt_{bookingId}_{suffix}_{DateTime.UtcNow.Ticks}{ext}";
+            string fileName = $"Receipt_{bookingId}_{method}_{timestamp}_{random}{ext}";
+
             string fullPath = Path.Combine(folder, fileName);
 
-            using (var ms = new MemoryStream())
-            {
-                fu.PostedFile.InputStream.CopyTo(ms);
-                byte[] original = ms.ToArray();
-                byte[] encrypted = AESHelper.Encrypt(original);
-                File.WriteAllBytes(fullPath, encrypted);
-            }
-            return "~/Receipts/" + fileName; // stored encrypted on disk; path saved in DB
+            // ✅ Save as PLAIN file (no encryption)
+            fu.SaveAs(fullPath);
+
+            return fileName; // Return just filename, not full path
         }
 
         private bool IsJpgOrPng(string name)
@@ -482,11 +467,13 @@ namespace RRCManagementSystem
 
         private string GenerateReceiptPDF(int transactionId, int clientId, int bookingId, decimal amount, string method, string remarks, string performedBy)
         {
-            string folderPath = Server.MapPath("~/ReceiptsPDF/");
+            string folderPath = Server.MapPath("~/Receipts/");
             Directory.CreateDirectory(folderPath);
 
-            string plainPDF = Path.Combine(folderPath, $"Receipt_{transactionId}.pdf");
-            using (var fs = new FileStream(plainPDF, FileMode.Create, FileAccess.Write))
+            string pdfFileName = $"Receipt_{transactionId}_{DateTime.UtcNow:yyyyMMddHHmmss}.pdf";
+            string pdfPath = Path.Combine(folderPath, pdfFileName);
+
+            using (var fs = new FileStream(pdfPath, FileMode.Create, FileAccess.Write))
             {
                 var doc = new iTextSharp.text.Document();
                 iTextSharp.text.pdf.PdfWriter.GetInstance(doc, fs);
@@ -503,34 +490,28 @@ namespace RRCManagementSystem
                 doc.Close();
             }
 
-            byte[] pdfBytes = File.ReadAllBytes(plainPDF);
-            byte[] encrypted = AESHelper.Encrypt(pdfBytes);
-            string encryptedPath = Path.Combine(folderPath, $"Receipt_{transactionId}_encrypted.pdf");
-            File.WriteAllBytes(encryptedPath, encrypted);
-            return encryptedPath;
+            return pdfPath;
         }
 
         protected void btnPrintReceipt_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(lastGeneratedEncryptedPDF)) return;
+            if (string.IsNullOrEmpty(lastGeneratedPDF) || !File.Exists(lastGeneratedPDF)) return;
+
             Response.Clear();
             Response.ContentType = "application/pdf";
             Response.AddHeader("content-disposition", "inline; filename=Receipt.pdf");
-            byte[] enc = File.ReadAllBytes(lastGeneratedEncryptedPDF);
-            byte[] dec = AESHelper.Decrypt(enc);
-            Response.BinaryWrite(dec);
+            Response.WriteFile(lastGeneratedPDF);
             Response.End();
         }
 
         protected void btnDownloadReceipt_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(lastGeneratedEncryptedPDF)) return;
+            if (string.IsNullOrEmpty(lastGeneratedPDF) || !File.Exists(lastGeneratedPDF)) return;
+
             Response.Clear();
             Response.ContentType = "application/pdf";
             Response.AddHeader("content-disposition", "attachment; filename=Receipt.pdf");
-            byte[] enc = File.ReadAllBytes(lastGeneratedEncryptedPDF);
-            byte[] dec = AESHelper.Decrypt(enc);
-            Response.BinaryWrite(dec);
+            Response.WriteFile(lastGeneratedPDF);
             Response.End();
         }
 
