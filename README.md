@@ -76,32 +76,32 @@
 - Blockchain Ledger - Immutable sales records
 
 
-## User Roles
-### ROOT ADMIN
+### User Roles
+#### ROOT ADMIN
 
 - System administration and maintenance mode control
 
-### SYSTEM ADMIN / SUPER ADMIN
+#### SYSTEM ADMIN / SUPER ADMIN
 
 - Full system control, CMS management, reports, and audit logs
 
-### ADMIN
+#### ADMIN
 
 - Operations management, approvals, and monitoring
 
-### HEAD TECHNICIAN
+#### HEAD TECHNICIAN
 
 - Assignment oversight and inventory supervision
 
-### INSPECTOR
+#### INSPECTOR
 
 - Inspection execution, quotation generation, and booking creation
 
-### CLIENT
+#### CLIENT
 
 - Booking confirmation, payments, and contract access
 
-### PUBLIC USER
+#### PUBLIC USER
 
 - Inquiry submission without login requirement
 
