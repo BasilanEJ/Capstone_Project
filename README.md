@@ -174,25 +174,25 @@ bashgit clone https://github.com/BasilanEJ/Capstone_Project.git
 - Claiming authorship or partial ownership
 
 
-Development Team
+#### Development Team
 | Role | Name |
 |------|------|
-| Lead Developer / System Architect | Edgar Joseph Basilan |
+| Lead Programmer & System Architect | Edgar Joseph Basilan |
 | Project Manager | Dan Adrian Austria |
 | System Analyst | Zeth Nikolai Pagarigan |
 | Quality Assurance | Dan Fredricck Dela Cruz |
 
-License and Copyright
+### License and Copyright
 © 2025 Edgar Joseph Basilan. All rights reserved.
 This repository and all associated materials are the original intellectual property of the author(s).
 Unauthorized reproduction, modification, redistribution, or use beyond academic evaluation constitutes a violation of intellectual property rights and academic integrity policies.
 
-Contact
+### Contact
 For academic inquiries or evaluation purposes, please contact:
-Lead Developer: Edgar Joseph Basilan
+Lead Programmer: Edgar Joseph Basilan
 Email: [edgarjosephbasilan@gmail.com]
 
-Acknowledgments
-Special thanks to our capstone advisers, thesis panelists, and academic evaluators for their guidance and support throughout this project.
+### Acknowledgments
+Special thanks to our capstone advisers, thesis panelists, capstone coordinator, and academic evaluators for their guidance and support throughout this project.
 
 Made with dedication for Academic Excellence
