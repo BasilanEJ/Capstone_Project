@@ -188,9 +188,10 @@ This repository and all associated materials are the original intellectual prope
 Unauthorized reproduction, modification, redistribution, or use beyond academic evaluation constitutes a violation of intellectual property rights and academic integrity policies.
 
 ### Contact
-For academic inquiries or evaluation purposes, please contact:
-Lead Programmer: Edgar Joseph Basilan
+For academic inquiries or evaluation purposes, 
+please contact:
 Email: [edgarjosephbasilan@gmail.com]
+
 
 ### Acknowledgments
 Special thanks to our capstone advisers, thesis panelists, capstone coordinator, and academic evaluators for their guidance and support throughout this project.
