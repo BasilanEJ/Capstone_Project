@@ -188,8 +188,9 @@ This repository and all associated materials are the original intellectual prope
 Unauthorized reproduction, modification, redistribution, or use beyond academic evaluation constitutes a violation of intellectual property rights and academic integrity policies.
 
 ### Contact
-For academic inquiries or evaluation purposes, 
-please contact:
+For academic inquiries or evaluation purposes, please contact:
+
+
 Email: [edgarjosephbasilan@gmail.com]
 
 
