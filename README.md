@@ -3,7 +3,7 @@ Overview
 
 The RRC Management System is an enterprise-grade Inspection, Booking, and Operations Management Platform developed as a Capstone Project. The system automates inspector and technician assignment, enforces real-time availability validation, supports dynamic service quotations, and ensures secure, transparent, and auditable business operations.
 
-Built using ASP.NET Web Forms (C#) and Microsoft SQL Server, the system integrates advanced scheduling logic, role-based access control, cryptographic security mechanisms, and blockchain-backed sales transparency. It is designed to support end-to-end workflows—from public inquiry and inspection booking to service execution, reporting, payments, and audit tracking.
+Built using ASP.NET Web Forms (C#) and Microsoft SQL Server, the system integrates advanced scheduling logic, role-based access control, cryptographic security mechanisms, and blockchain-backed sales transparency. It is designed to support end-to-end workflows from public inquiry and inspection booking to service execution, reporting, payments, and audit tracking.
 
 Instructions for Use
 
