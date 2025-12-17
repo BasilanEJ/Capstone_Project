@@ -2,7 +2,7 @@
 #### An enterprise-grade Inspection, Booking, and Operations Management Platform for Pest Control Services
 
 ## Overview
-#### The RRC Management System is a comprehensive platform designed to automate and streamline pest control operations. Built as a Capstone Project, it delivers end-to-end workflow automation from initial inquiry through service execution, payment processing, and audit tracking.
+#### The RRC Management System is a comprehensive digital solution developed for R.R.C Termite and Pest Control to revolutionize their service delivery and operational efficiency. Built as a Capstone Project, this platform automates the complete business workflow—from customer inquiry and booking through inspection, service execution, payment processing, and audit tracking—while implementing enterprise-level security, intelligent resource allocation, and transparent record-keeping to support sustainable business growth.
 ## Key Highlights
 
 - Intelligent Assignment - Automated round-robin inspector and technician scheduling
