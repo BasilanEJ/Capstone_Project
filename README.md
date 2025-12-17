@@ -1,269 +1,198 @@
-RRC Management System
-Overview
+# RRC Management System
+#### An enterprise-grade Inspection, Booking, and Operations Management Platform for Pest Control Services
 
-The RRC Management System is an enterprise-grade Inspection, Booking, and Operations Management Platform developed as a Capstone Project. The system automates inspector and technician assignment, enforces real-time availability validation, supports dynamic service quotations, and ensures secure, transparent, and auditable business operations.
+## Overview
+#### The RRC Management System is a comprehensive platform designed to automate and streamline pest control operations. Built as a Capstone Project, it delivers end-to-end workflow automation from initial inquiry through service execution, payment processing, and audit tracking.
+## Key Highlights
 
-Built using ASP.NET Web Forms (C#) and Microsoft SQL Server, the system integrates advanced scheduling logic, role-based access control, cryptographic security mechanisms, and blockchain-backed sales transparency. It supports end-to-end workflows from public inquiry and inspection booking to service execution, reporting, payments, and audit tracking.
+- Intelligent Assignment - Automated round-robin inspector and technician scheduling
+- Dynamic Quotations - Real-time pricing based on service area and requirements
+- Enterprise Security - Multi-layered authentication with blockchain-backed transparency
+- Smart Inventory - Service-aware equipment and chemical management
+- Comprehensive Auditing - Full activity logging and reporting capabilities
 
-Instructions for Use
 
-This system is provided strictly for academic demonstration, evaluation, and research purposes as part of a Capstone Project.
+## Features
+### Automated Assignment and Scheduling
+### Inspector Assignment
 
-Authorized Use
+- Round-robin allocation system
+- Availability-based filtering
+- Geographic service location matching
+- Workload balancing
+- Real-time booking validation
 
-The following actions are permitted:
+### Technician Scheduling
 
-System execution for capstone evaluation, grading, and defense
+- Morning and evening shift support
+- Availability-based assignment
+- Overbooking prevention
+- Automatic workload distribution
 
-Code inspection for academic review and technical validation
+### Booking and Quotation System
 
-Local deployment for testing and assessment purposes only
+- Dynamic pricing calculation based on square meters
+- Automatic travel expense inclusion
+- Configurable miscellaneous fees
+- Real-time availability validation
+- Time slot conflict prevention
 
-Intended users include:
+### Inspection and Reporting
 
-Capstone advisers
+- Integrated Inspector Report Module
+- Findings and recommendations documentation
+- Automatic report distribution to stakeholders
+- Service insights tracking
+- Post-assignment routing to Head Technician
 
-Thesis panelists
+### Inventory and Equipment Management
 
-Authorized academic evaluators
+- Service-specific item filtering
+- Automatic inventory deduction
+- Chemical usage tracking
+- Safety gear monitoring
+- Equipment availability management
 
-Restrictions
 
-The following actions are strictly prohibited without explicit written consent from the author(s):
+## Security Architecture
+### Authentication and Access Control
 
-Reuse or integration of any system components into other academic or commercial projects
+- Single Sign-On - One active session per account
+- Time-based OTP - Enhanced verification
+- Google reCAPTCHA - Bot protection
+- Session Management - Automatic logout on concurrent logins
 
-Redistribution of source code or compiled system artifacts
+### Device and Network Security
 
-Modification and redeployment for institutional or commercial use
+- Device Fingerprinting - Hardware identification
+- Browser Fingerprinting - Client validation
+- Smart Lockout - IP and device-based protection
+- Account Security - Failed attempt monitoring
 
-Claiming authorship or partial ownership of the system
+### Cryptography
 
-Any usage beyond academic evaluation constitutes unauthorized use and may result in academic, institutional, and legal consequences.
+- Password Hashing - Argon2id algorithm
+- Data Encryption - AES-256 for sensitive data
+- Blockchain Ledger - Immutable sales records
 
-Core System Logic
-Automated Assignment & Scheduling
-Inspector Assignment
 
-Automatic Round-Robin allocation
+## User Roles
+### ROOT ADMIN
 
-Assignment is filtered by:
+- System administration and maintenance mode control
 
-Inspector availability
+### SYSTEM ADMIN / SUPER ADMIN
 
-Geographic service location
+- Full system control, CMS management, reports, and audit logs
 
-Existing workload
+### ADMIN
 
-Booking is blocked if no inspector is available for the selected date, time slot, and location
+- Operations management, approvals, and monitoring
 
-Technician Assignment
+### HEAD TECHNICIAN
 
-Supports Morning and Evening shifts
+- Assignment oversight and inventory supervision
 
-Availability-based scheduling (no location constraint)
+### INSPECTOR
 
-Prevents overbooking per shift
+- Inspection execution, quotation generation, and booking creation
 
-Head Technician Routing
+### CLIENT
 
-Once approved, bookings are forwarded to the Head Technician
+- Booking confirmation, payments, and contract access
 
-Includes assigned:
+### PUBLIC USER
 
-Inspector report
+- Inquiry submission without login requirement
 
-Equipment
 
-Chemicals (service-specific only)
+## Technology Stack
+### Backend
 
-Booking & Quotation System
+- Framework: ASP.NET Web Forms (C#)
+- Database: Microsoft SQL Server
+- Security: Argon2id, AES-256, TOTP (Google Authenticator, Microsoft Authenticator)
 
-Dynamic quotation based on:
+### Frontend
 
-Square meters (SQM) per selected service
+- Markup: HTML5, CSS3
+- Styling: Tailwind CSS
+- Scripts: JavaScript, jQuery, SweetAlert
 
-Automatic inclusion of:
+### Additional Technologies
 
-Travel expenses (if applicable)
+- Blockchain: Custom sales ledger implementation
+- Authentication: reCAPTCHA, OTP verification
+- Development Tools: Visual Studio, Git
 
-Miscellaneous fees (configurable)
+## Installation and Setup
+### Prerequisites
 
-Real-time validation of:
+- Visual Studio 2019 or later
+- .NET Framework 4.8
+- Microsoft SQL Server 2016 or later
+- IIS 10.0 or later (for deployment)
 
-Inspector availability
+### Configuration Steps
+1. Clone the repository
+bashgit clone https://github.com/BasilanEJ/Capstone_Project.git
+2. Set up configuration
 
-Technician availability
+- Create Web.config.secrets file
+- Configure database connection strings
+- Add API keys and encryption keys
 
-Time slot conflicts
+3. Database setup
 
-Inspection & Reporting
+- Restore database backup
+- Run migration scripts if provided
+- Update connection string in Web.config
 
-Integrated Inspector Report Module
+4. Build and run
 
-Inspectors can submit:
+- Open solution in Visual Studio
+- Restore NuGet packages
+- Build the solution
+- Run on IIS Express or local IIS
 
-Findings
 
-Recommendations
+## Usage Instructions
+### For Academic Evaluation
+#### This system is provided strictly for academic demonstration, evaluation, and research purposes.
+### Authorized Use
 
-Service insights
+- System execution for capstone evaluation, grading, and defense
+- Code inspection for academic review and technical validation
+- Local deployment for testing and assessment purposes
 
-Reports are automatically distributed to:
+### Restrictions
+#### The following actions are strictly prohibited without explicit written consent:
 
-Admin
+- Reuse or integration into other academic or commercial projects
+- Redistribution of source code or compiled artifacts
+- Modification and redeployment for institutional or commercial use
+- Claiming authorship or partial ownership
 
-Client
 
-Head Technician (post-assignment)
+Development Team
+| Role | Name |
+|------|------|
+| Lead Developer / System Architect | Edgar Joseph Basilan |
+| Project Manager | Dan Adrian Austria |
+| System Analyst | Zeth Nikolai Pagarigan |
+| Quality Assurance | Dan Fredricck Dela Cruz |
 
-Inventory & Equipment Management
-
-Service-aware item assignment
-
-Only equipment and chemicals relevant to the selected service are displayed
-
-Prevents incorrect item usage
-
-Inventory tracking includes:
-
-Chemical usage
-
-Safety gear
-
-Equipment availability
-
-Automatic inventory deduction upon assignment
-
-Security Architecture
-
-The system implements enterprise-level security controls:
-
-Authentication & Access
-
-Single Sign-On (SSO)
-
-One active session per account
-
-Automatic logout on previously logged-in devices
-
-Time-based One-Time Password (TOTP)
-
-OTP verification
-
-Google reCAPTCHA protection
-
-Device & Network Security
-
-Device fingerprinting
-
-Browser fingerprinting
-
-Device lockout
-
-IP lockout
-
-Account lockout after repeated failed attempts
-
-Cryptography
-
-Password hashing using Argon2id
-
-Sensitive data encryption using AES-256
-
-Blockchain Integration
-
-Sales transactions are recorded using a blockchain-based ledger
-
-Ensures:
-
-Transparency
-
-Immutability
-
-Tamper-resistant sales records
-
-Supports audit and financial verification
-
-Audit & Reporting
-
-Comprehensive Audit Logs across all modules
-
-Role-based reporting access
-
-Reports available for:
-
-System Admin
-
-Business Admin
-
-Exportable summaries for:
-
-Bookings
-
-Inspections
-
-Inventory usage
-
-Payments
-
-User activity
-
-Content Management System (CMS)
-
-Public-facing Inquiry Page CMS
-
-Managed by System Admin / Super Admin
-
-Supports:
-
-Announcements
-
-Service content
-
-Informational updates
-
-User Roles & Dashboards
-Role	Description
-ROOT Admin	Manages system administration accounts and controls maintenance mode
-System Admin / Super Admin	System-wide control, CMS management, reports, audit logs
-Admin	Operations management, approvals, and monitoring
-Head Technician	Assignment oversight, inventory & equipment supervision
-Inspector	Inspection execution, quotation generation, booking creation
-Client	Booking confirmation, payments, and contract access
-Public User	Inquiry submission (no login required)
-Technologies Used
-
-Backend: ASP.NET Web Forms (C#)
-
-Database: Microsoft SQL Server
-
-Frontend: HTML5, CSS3, Tailwind
-
-Client Scripts: JavaScript, jQuery, SweetAlert
-
-Security: Argon2id, AES-256, TOTP, OTP, reCAPTCHA
-
-Blockchain: Custom sales ledger implementation
-
-Development Tools: Visual Studio, Git, GitHub
-
-Credits
-
-Developed as a Capstone Project by:
-
-Basilan, Edgar Joseph – Lead Developer / System Architect
-
-Austria, Dan Adrian – Project Manager
-
-Pagarigan, Zeth Nikolai – System Analyst
-
-Dela Cruz, Dan Fredricck – Quality Assurance
-
-Ownership, Rights, and Legal Notice
-
+License and Copyright
+© 2025 Edgar Joseph Basilan. All rights reserved.
 This repository and all associated materials are the original intellectual property of the author(s).
-
-© 2025 Basilan, Edgar Joseph. All rights reserved.
-
 Unauthorized reproduction, modification, redistribution, or use beyond academic evaluation constitutes a violation of intellectual property rights and academic integrity policies.
+
+Contact
+For academic inquiries or evaluation purposes, please contact:
+Lead Developer: Edgar Joseph Basilan
+Email: [edgarjosephbasilan@gmail.com]
+
+Acknowledgments
+Special thanks to our capstone advisers, thesis panelists, and academic evaluators for their guidance and support throughout this project.
+
+Made with dedication for Academic Excellence
