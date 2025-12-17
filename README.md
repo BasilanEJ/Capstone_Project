@@ -3,7 +3,7 @@ Overview
 
 The RRC Management System is an enterprise-grade Inspection, Booking, and Operations Management Platform developed as a Capstone Project. The system automates inspector and technician assignment, enforces real-time availability validation, supports dynamic service quotations, and ensures secure, transparent, and auditable business operations.
 
-Built using ASP.NET Web Forms (C#) and Microsoft SQL Server, the system integrates advanced scheduling logic, role-based access control, cryptographic security mechanisms, and blockchain-backed sales transparency. It is designed to support end-to-end workflows from public inquiry and inspection booking to service execution, reporting, payments, and audit tracking.
+Built using ASP.NET Web Forms (C#) and Microsoft SQL Server, the system integrates advanced scheduling logic, role-based access control, cryptographic security mechanisms, and blockchain-backed sales transparency. It supports end-to-end workflows from public inquiry and inspection booking to service execution, reporting, payments, and audit tracking.
 
 Instructions for Use
 
@@ -11,7 +11,7 @@ This system is provided strictly for academic demonstration, evaluation, and res
 
 Authorized Use
 
-The following are permitted:
+The following actions are permitted:
 
 System execution for capstone evaluation, grading, and defense
 
@@ -43,12 +43,11 @@ Any usage beyond academic evaluation constitutes unauthorized use and may result
 
 Core System Logic
 Automated Assignment & Scheduling
-
 Inspector Assignment
 
 Automatic Round-Robin allocation
 
-Filtered by:
+Assignment is filtered by:
 
 Inspector availability
 
@@ -102,7 +101,7 @@ Inspection & Reporting
 
 Integrated Inspector Report Module
 
-Inspectors submit:
+Inspectors can submit:
 
 Findings
 
@@ -120,7 +119,7 @@ Head Technician (post-assignment)
 
 Inventory & Equipment Management
 
-Service-aware item assignment:
+Service-aware item assignment
 
 Only equipment and chemicals relevant to the selected service are displayed
 
@@ -134,7 +133,7 @@ Safety gear
 
 Equipment availability
 
-Automatic deduction upon assignment
+Automatic inventory deduction upon assignment
 
 Security Architecture
 
@@ -214,7 +213,7 @@ Content Management System (CMS)
 
 Public-facing Inquiry Page CMS
 
-Managed by System/Super Admin
+Managed by System Admin / Super Admin
 
 Supports:
 
@@ -226,12 +225,12 @@ Informational updates
 
 User Roles & Dashboards
 Role	Description
-ROOT Admin	Manages system administrators and controls maintenance mode
+ROOT Admin	Manages system administration accounts and controls maintenance mode
 System Admin / Super Admin	System-wide control, CMS management, reports, audit logs
-Admin	Operations management, approvals, monitoring
+Admin	Operations management, approvals, and monitoring
 Head Technician	Assignment oversight, inventory & equipment supervision
 Inspector	Inspection execution, quotation generation, booking creation
-Client	Booking confirmation, payments, contract access
+Client	Booking confirmation, payments, and contract access
 Public User	Inquiry submission (no login required)
 Technologies Used
 
@@ -253,18 +252,18 @@ Credits
 
 Developed as a Capstone Project by:
 
-[Basilan, Edgar Joseph] – Lead Developer / System Architect
+Basilan, Edgar Joseph – Lead Developer / System Architect
 
-[Austria, Dan Adrian] – Project Manager
+Austria, Dan Adrian – Project Manager
 
-[Pagarigan, Zeth Nikolai] – System Analyst
+Pagarigan, Zeth Nikolai – System Analyst
 
-[Dela Cruz, Dan Fredricck] – Quality Assurance
+Dela Cruz, Dan Fredricck – Quality Assurance
 
 Ownership, Rights, and Legal Notice
 
 This repository and all associated materials are the original intellectual property of the author(s).
 
-© 2025 [Basilan, Edgar Joseph]. All rights reserved.
+© 2025 Basilan, Edgar Joseph. All rights reserved.
 
 Unauthorized reproduction, modification, redistribution, or use beyond academic evaluation constitutes a violation of intellectual property rights and academic integrity policies.
